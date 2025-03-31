@@ -231,12 +231,20 @@ class Point():
     """
     Cell complex representation of a finite element cell
 
-    :param: d: dimension of the cell
-    :param: edges: list of subcells (either as edge or point objects)
-    :param: vertex_num: Optional argument, number of vertices
-    :param: oriented: adds orientation to the cell
-    :param: group: Symmetry group of the cell
-    :param: edge_orientations: dictionary of the orientations of the subcells
+    Attributes
+    ----------
+    d: :obj:`int`
+        dimension of the cell
+    edges: List
+        list of subcells of type:obj:`Edge` or :obj:`Point`
+    vertex_num: :obj:`int` (optional)
+        number of vertices
+    oriented: GroupMemberRep (optional)
+        Adds orientation to the cell
+    group: GroupRepresentation (optional)
+        Symmetry group of the cell
+    edge_orientations: dict
+        Dictionary of the orientations of the subcells {subcell_id: orientation}
 
     """
 
@@ -445,6 +453,12 @@ class Point():
         return self.d_entities(d, get_class=False)
 
     def d_entities(self, d, get_class=True):
+        """Get all the d dimensional entities of the cell complex.
+
+        :param: d: Dimension of required entities
+        :param: get_class: (Optional) Returns Point classes
+
+        Default return value is list of id numbers of the entities in the cell complex graph."""
         levels = [sorted(generation)
                   for generation in nx.topological_generations(self.G)]
         if get_class:
@@ -470,6 +484,14 @@ class Point():
         raise ValueError("Node not found in graph")
 
     def vertices(self, get_class=True, return_coords=False):
+        """
+        Get vertices (0 dimensional entities) of the cell complex.
+
+        :param: get_class: (Optional) Returns Point classes
+        :param: return_coords: (Optional) returns coordinates of vertices
+
+        Default return value is list of id numbers of the vertices in the cell complex graph.
+        """
         # TODO maybe refactor with get_node
         verts = self.d_entities(0, get_class)
         if return_coords:
@@ -481,6 +503,13 @@ class Point():
         return verts
 
     def edges(self, get_class=True):
+        """
+        Get edges (1 dimensional entities) of the cell complex.
+
+        :param: get_class: (Optional) Returns Point classes
+
+        Default return value is list of id numbers of the 1 dimensional entities in the cell complex graph.
+        """
         return self.d_entities(1, get_class)
 
     def permute_entities(self, g, d):

@@ -5,7 +5,7 @@ This page will describe the foundational element definitions and how they are wr
 
 DG0  
 --------------------------
-.. literalinclude:: ../../test/test_2d_examples_docs.py
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
    :language: python3
    :dedent:
    :start-after: [test_dg0 0]
@@ -15,7 +15,7 @@ DG0
 DG1 on interval 
 --------------------------
 
-.. literalinclude:: ../../test/test_2d_examples_docs.py
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
    :language: python3
    :dedent:
    :start-after: [test_dg1_int 0]
@@ -46,7 +46,7 @@ DG1 on interval
 
 DG1 on triangle
 --------------------------
-.. literalinclude:: ../../test/test_2d_examples_docs.py
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
    :language: python3
    :dedent:
    :start-after: [test_dg1_tri 0]
@@ -58,7 +58,7 @@ DG1 on triangle
 CG1 on interval
 --------------------------
 
-.. literalinclude:: ../../test/test_2d_examples_docs.py
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
    :language: python3
    :dedent:
    :start-after: [test_cg1 0]
@@ -70,7 +70,7 @@ CG1 on interval
 CG3 on triangle
 --------------------------
 
-.. literalinclude:: ../../test/test_2d_examples_docs.py
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
    :language: python3
    :dedent:
    :start-after: [test_cg3 0]
