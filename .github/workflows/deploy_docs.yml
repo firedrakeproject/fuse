@@ -1,0 +1,43 @@
+name: Build and deploy docs
+
+on:
+  # Run on pushes to main
+  push:
+    branches:
+      - main
+
+jobs:
+  build_docs:
+    permissions:
+      contents: write
+    name: Run doc build and deploy
+    # Run on the Github hosted runner
+    runs-on: ubuntu-latest
+    container:
+      image: firedrakeproject/firedrake-docdeps:latest
+      volumes:
+        - ${{ github.workspace }}:/home/firedrake/output
+    # Steps represent a sequence of tasks that will be executed as
+    # part of the jobs
+    steps:
+      - name: fix home
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - name: Install checkedout fuse
+        run: |
+          python3 -m pip install --break-system-packages -e '.[docs]'
+      - name: Build docs
+        run: |
+          cd docs
+          make html
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build/html
+          publish_branch: gh-pages
+          enable_jekyll: false
+          allow_empty_commit: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          

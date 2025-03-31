@@ -1,10 +1,6 @@
 name: Check docs build cleanly
 
 on:
-  # Run on pushes to main
-  push:
-    branches:
-      - main
   # And all pull requests
   pull_request:
 
@@ -15,18 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: firedrakeproject/firedrake-docdeps:latest
-      # Github hosted runners require running as root user:
-      # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
-      options: --user root
-      env:
-       # Since we are running as root we need to set PYTHONPATH to be able to find the installed
-       # packages
-       PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/.local/lib/python3.12/site-packages
       volumes:
         - ${{ github.workspace }}:/home/firedrake/output
     # Steps represent a sequence of tasks that will be executed as
     # part of the jobs
     steps:
+      - name: fix home
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - name: Install checkedout fuse
         run: |
@@ -35,4 +26,18 @@ jobs:
         run: |
           cd docs
           make html SPHINXOPTS="-W --keep-going -n"
+      # - name: Publish Image
+      #   # Develop branch only
+      #   if: github.ref == 'refs/heads/indiamai/deploy-docs'
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: ./docs/build/html
+      #     publish_branch: gh-pages
+      #     enable_jekyll: false
+      #     allow_empty_commit: false
+      #     user_name: 'github-actions[bot]'
+      #     user_email: 'github-actions[bot]@users.noreply.github.com'
           
+
+    
