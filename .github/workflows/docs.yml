@@ -22,6 +22,7 @@ jobs:
       - name: Install checkedout fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[docs]'
+          pip list
       - name: Build docs
         run: |
           cd docs
