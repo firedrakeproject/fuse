@@ -31,7 +31,7 @@ Repository = "https://github.com/indiamai/fuse.git"
 doc = [
   "sphinx",
   "numpydoc",
-  "sphinx_bootstrap_theme",
+  "sphinx-bootstrap-theme",
   "sphinx_design",
 ]
 dev = [
