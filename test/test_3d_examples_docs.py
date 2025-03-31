@@ -5,7 +5,6 @@ import numpy as np
 
 def test_dg1():
     tetra = make_tetrahedron()
-    
 
     xs = [DOF(DeltaPairing(), PointKernel(tuple(tetra.vertices(return_coords=True)[0])))]
     dg1 = ElementTriple(tetra, (P1, CellL2, "C0"),
@@ -70,7 +69,7 @@ def test_tet_cg3():
 def construct_tet_rt(cell):
     face = cell.d_entities(2, get_class=True)[0]
     deg = 1
-    # [test_tet_rt 0] 
+    # [test_tet_rt 0]
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
@@ -105,7 +104,7 @@ def test_tet_rt():
 def test_tet_ned():
     tetra = make_tetrahedron()
     edge = tetra.edges()[0]
-    # [test_tet_ned 0] 
+    # [test_tet_ned 0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, "C0"), dofs)
