@@ -9,7 +9,7 @@ Interpolation Spaces
 
 
 Element Sobolev Spaces
----------------------
+------------------------
 
 .. automodule:: fuse.spaces.element_sobolev_spaces
    :members:

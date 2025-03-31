@@ -1,7 +1,7 @@
 :orphan: true
 
 API documentation
---------------
+-------------------
 
 .. toctree::
     :hidden:

@@ -5,6 +5,7 @@ import numpy as np
 
 def test_dg1():
     tetra = make_tetrahedron()
+    
 
     xs = [DOF(DeltaPairing(), PointKernel(tuple(tetra.vertices(return_coords=True)[0])))]
     dg1 = ElementTriple(tetra, (P1, CellL2, "C0"),
@@ -22,10 +23,13 @@ def test_dg1():
 
 
 def test_tet_cg3():
+    # [make_tet 0]
     tetra = make_tetrahedron()
+    # [make_tet 1]
     vert = tetra.vertices()[0]
     edge = tetra.edges()[0]
     face = tetra.d_entities(2)[0]
+    # [make_tet 2]
 
     # [test_tet_cg3 0]
     xs = [DOF(DeltaPairing(), PointKernel(()))]

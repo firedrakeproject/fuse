@@ -8,6 +8,6 @@
 ..    :align: right
 
 FUSE: A finite, unifed, serialisable finite element.
-===========================
+======================================================
 
 FUSE 

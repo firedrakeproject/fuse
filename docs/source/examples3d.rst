@@ -18,8 +18,8 @@ and then components of the tetrahedron may be extracted using either the helper 
 .. literalinclude:: ../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
-    :start-after: [make_tet 2]
-    :end-before: [make_tet 3]
+    :start-after: [make_tet 1]
+    :end-before: [make_tet 2]
 
 CG3 on a tetrahedron
 --------------------------
