@@ -5,9 +5,10 @@ ifeq ($(GITHUB_ACTIONS_FORMATTING), 1)
 else
 	FLAKE8_FORMAT=
 endif
+.PHONY: test docs
 
 docs:
-	@(cd docs/ && make html)
+	@(cd docs/ && (make html SPHINXOPTS="-W --keep-going -n"))
 
 lint:
 	@echo "    Linting FUSE codebase"
