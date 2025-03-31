@@ -33,6 +33,7 @@ docs = [
   "numpydoc",
   "sphinx-bootstrap-theme",
   "sphinx_design",
+  "sphinxcontrib-fulltoc",
 ]
 dev = [
   "pytest",
