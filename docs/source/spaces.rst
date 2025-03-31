@@ -1,13 +1,15 @@
+Spaces
+===================
 
 Interpolation Spaces
-========================
+---------------------
 .. automodule:: fuse.spaces.interpolation_spaces
    :members:
    :show-inheritance:
 
 
 Element Sobolev Spaces
-========================
+---------------------
 
 .. automodule:: fuse.spaces.element_sobolev_spaces
    :members:
@@ -16,7 +18,7 @@ Element Sobolev Spaces
 
 
 Polynomial Spaces
-=====================
+---------------------
 
 .. automodule:: fuse.spaces.polynomial_spaces
    :members:

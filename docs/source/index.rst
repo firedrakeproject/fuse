@@ -6,13 +6,11 @@
 Welcome to FUSE's documentation!
 ========================================
 
+
 .. toctree::
-    groups
-    cells
-    spaces
-    triples
-    dof
-    examples2d
-    examples3d
-    modules
-    serialisation
+    :maxdepth: 2
+
+    about
+    install
+    api
+

@@ -14,13 +14,17 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
 sys.path.append(os.path.abspath('sphinxext'))
-
+import sphinx_bootstrap_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'RedefiningFE'
-copyright = '2023, India Marsden, David A. Ham, Patrick E. Farrell'
+project = 'FUSE'
+copyright = '2025, India Marsden, David A. Ham, Patrick E. Farrell'
 author = 'India Marsden, David A. Ham, Patrick E. Farrell'
+
+
+# The full version, including alpha/beta/rc tags
+release = '2025.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -34,7 +38,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.intersphinx',
               "matplotlib.sphinxext.plot_directive",
-              "numpydoc"]
+              "sphinx_design",
+              'sphinxcontrib.fulltoc']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -69,3 +74,38 @@ intersphinx_mapping = {
     'matplotlib': ('https://matplotlib.org/', None),
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None)}
+
+
+
+# -- Options for HTML output -------------------------------------------------
+
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+#
+html_theme = 'bootstrap'
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
+
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
+html_theme_options = {
+    'navbar_links': [
+        ("About", "about"),
+        ("Installation", "install"),
+        ("Documentation", "api"),
+    ],
+    'bootswatch_theme': 'cosmo',
+    'source_link_position': None,
+    #  Render the next and previous page links in navbar. (Default: true)
+    'navbar_sidebarrel': False,
+
+    # Render the current pages TOC in the navbar. (Default: true)
+    'navbar_pagenav': False,
+
+    # Tab name for the current pages TOC. (Default: "Page")
+    'navbar_pagenav_name': "Page",
+}
+
+html_sidebars = { '**': ['localtoc.html'] }

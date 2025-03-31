@@ -30,6 +30,7 @@ Repository = "https://github.com/indiamai/fuse.git"
 [project.optional-dependencies]
 doc = [
   "sphinx",
+  "numpydoc",
 ]
 dev = [
   "pytest",
