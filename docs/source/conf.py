@@ -18,8 +18,8 @@ sys.path.append(os.path.abspath('sphinxext'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'RedefiningFE'
-copyright = '2023, India Marsden, David A. Ham, Patrick E. Farrell'
+project = 'FUSE'
+copyright = '2025, India Marsden, David A. Ham, Patrick E. Farrell'
 author = 'India Marsden, David A. Ham, Patrick E. Farrell'
 
 
@@ -65,6 +65,7 @@ html_theme = 'alabaster'
 intersphinx_mapping = {
     'ufl': ('https://docs.fenicsproject.org/ufl/main/', None),
     'FIAT': ('https://firedrakeproject.org/fiat', None),
+    'basix': ('https://docs.fenicsproject.org/basix/main/python', None),
     'matplotlib': ('https://matplotlib.org/', None),
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None)}

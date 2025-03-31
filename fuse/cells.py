@@ -11,6 +11,7 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce
+from fuse.geometry import compute_attachment_1d, compute_attachment_2d, compute_attachment_3d
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from ufl.cell import Cell, TensorProductCell
 
@@ -61,91 +62,6 @@ def make_arrow_3d(ax, mid, edge, direction=1):
     dir_x, dir_y, dir_z = edge(mid + delta)
     a = Arrow3D([x, dir_x], [y, dir_y], [z, dir_z], mutation_scale=10, arrowstyle="-|>", color="black")
     ax.add_artist(a)
-
-
-def construct_attach_2d(a, b, c, d):
-    """
-    Compute polynomial attachment in x based on two points (a,b) and (c,d)
-
-    :param: a,b,c,d: two points (a,b) and (c,d)
-    """
-    x = sp.Symbol("x")
-    return [((c-a)/2)*(x+1) + a, ((d-b)/2)*(x+1) + b]
-
-
-def construct_attach_3d(res):
-    """
-    Convert matrix of coefficients into a vector of polynomials in x and y
-
-    :param: res: matrix of coefficients
-    """
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    xy = sp.Matrix([1, x, y])
-    return (xy.T * res)
-
-
-def compute_scaled_verts(d, n):
-    """
-    Construct default cell vertices
-
-    :param: d: dimension of cell
-    :param: n: number of vertices
-    """
-    if d == 2:
-        source = np.array([0, 1])
-        rot_coords = [source for i in range(0, n)]
-
-        rot_mat = np.array([[np.cos((2*np.pi)/n), -np.sin((2*np.pi)/n)], [np.sin((2*np.pi)/n), np.cos((2*np.pi)/n)]])
-        for i in range(1, n):
-            rot_coords[i] = np.matmul(rot_mat, rot_coords[i-1])
-        xdiff, ydiff = (rot_coords[0][0] - rot_coords[1][0],
-                        rot_coords[0][1] - rot_coords[1][1])
-        scale = 2 / np.sqrt(xdiff**2 + ydiff**2)
-        scaled_coords = np.array([[scale*x, scale*y] for (x, y) in rot_coords])
-        return scaled_coords
-    elif d == 3:
-        if n == 4:
-            A = [-1, 1, -1]
-            B = [1, -1, -1]
-            C = [1, 1, 1]
-            D = [-1, -1, 1]
-            coords = [A, B, C, D]
-            face1 = np.array([A, D, C])
-            face2 = np.array([A, B, D])
-            face3 = np.array([A, C, B])
-            face4 = np.array([B, D, C])
-            faces = [face1, face2, face3, face4]
-        elif n == 8:
-            coords = []
-            faces = [[] for i in range(6)]
-            for i in [-1, 1]:
-                for j in [-1, 1]:
-                    for k in [-1, 1]:
-                        coords.append([i, j, k])
-
-            for j in [-1, 1]:
-                for k in [-1, 1]:
-                    faces[0].append([1, j, k])
-                    faces[1].append([-1, j, k])
-                    faces[2].append([j, 1, k])
-                    faces[3].append([j, -1, k])
-                    faces[4].append([j, k, 1])
-                    faces[5].append([j, k, -1])
-
-        else:
-            raise ValueError("Polyhedron with {} vertices not supported".format(n))
-
-        xdiff, ydiff, zdiff = (coords[0][0] - coords[1][0],
-                               coords[0][1] - coords[1][1],
-                               coords[0][2] - coords[1][2])
-        scale = 2 / np.sqrt(xdiff**2 + ydiff**2 + zdiff**2)
-        scaled_coords = np.array([[scale*x, scale*y, scale*z] for (x, y, z) in coords])
-        scaled_faces = np.array([[[scale*x, scale*y, scale*z] for (x, y, z) in face] for face in faces])
-
-        return scaled_coords, scaled_faces
-    else:
-        raise ValueError("Dimension {} not supported".format(d))
 
 
 def polygon(n):
@@ -242,7 +158,7 @@ class Point():
 
     id_iter = itertools.count()
 
-    def __init__(self, d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
+    def __init__(self, d, edges=[], vertex_num=None, variant="equilateral", oriented=False, group=None, edge_orientations=None, cell_id=None):
         if not cell_id:
             cell_id = next(self.id_iter)
         self.id = cell_id
@@ -254,7 +170,7 @@ class Point():
         if d == 0:
             assert (edges == [])
         if vertex_num:
-            edges = self.compute_attachments(vertex_num, edges, edge_orientations)
+            edges = self.compute_attachments(vertex_num, edges, edge_orientations, variant)
 
         self.oriented = oriented
         self.G = nx.DiGraph()
@@ -268,11 +184,13 @@ class Point():
 
         self.group = group
         if not group:
+            if variant != "equilateral":
+                raise ValueError("Group discovery only supported for equilateral elements")
             self.group = self.compute_cell_group()
 
         self.group = self.group.add_cell(self)
 
-    def compute_attachments(self, n, points, orientations=None):
+    def compute_attachments(self, n, points, orientations=None, variant="equilateral"):
         """
         Compute the attachment function between two nodes
 
@@ -284,40 +202,17 @@ class Point():
             orientations = {}
 
         if self.dimension == 1:
-            edges = [Edge(points[0], sp.sympify((-1,))),
-                     Edge(points[1], sp.sympify((1,)))]
+            attachments = compute_attachment_1d(n, variant)
         if self.dimension == 2:
-            coords = compute_scaled_verts(2, n)
-            edges = []
-
-            for i in range(n):
-                a, b = coords[i]
-                c, d = coords[(i + 1) % n]
-
-                if i in orientations.keys():
-                    edges.append(Edge(points[i], construct_attach_2d(a, b, c, d), o=points[i].group.get_member(orientations[i])))
-                else:
-                    edges.append(Edge(points[i], construct_attach_2d(a, b, c, d)))
+            attachments = compute_attachment_2d(n, variant)
         if self.dimension == 3:
-            coords, faces = compute_scaled_verts(3, n)
-            coords_2d = np.c_[np.ones(len(faces[0])), compute_scaled_verts(2, len(faces[0]))]
-            res = []
-            edges = []
-
-            for i in range(len(faces)):
-                res = np.linalg.solve(coords_2d, faces[i])
-
-                res_fn = construct_attach_3d(res)
-                # breakpoint()
-                assert np.allclose(np.array(res_fn.subs({"x": coords_2d[0][1], "y": coords_2d[0][2]})).astype(np.float64), faces[i][0])
-                assert np.allclose(np.array(res_fn.subs({"x": coords_2d[1][1], "y": coords_2d[1][2]})).astype(np.float64), faces[i][1])
-                assert np.allclose(np.array(res_fn.subs({"x": coords_2d[2][1], "y": coords_2d[2][2]})).astype(np.float64), faces[i][2])
-                if i in orientations.keys():
-                    edges.append(Edge(points[i], construct_attach_3d(res), o=points[i].group.get_member(orientations[i])))
-                else:
-                    edges.append(Edge(points[i], construct_attach_3d(res)))
-
-                # breakpoint()
+            attachments = compute_attachment_3d(n, variant)
+        edges = []
+        for i in range(n):
+            if i in orientations.keys():
+                edges.append(Edge(points[i], attachments[i], o=points[i].group.get_member(orientations[i])))
+            else:
+                edges.append(Edge(points[i], attachments[i]))
         return edges
 
     def compute_cell_group(self):
@@ -337,7 +232,9 @@ class Point():
                 reordered = element(verts)
                 for edge in edges:
                     diff = np.subtract(v_coords[reordered.index(edge[0])], v_coords[reordered.index(edge[1])]).squeeze()
+
                     edge_len = np.sqrt(np.dot(diff, diff))
+
                     if not np.allclose(edge_len, 2):
                         accepted_perms.remove(element)
                         break
@@ -515,13 +412,17 @@ class Point():
         return reordered_entities
 
     def basis_vectors(self, return_coords=True, entity=None):
+        """
+        Compute basis vectors of the cell defined as:
+            t_i = v_{i+1} - v_0
+
+        Orientation comes from ordered_vertices - using self.graph() to avoid orientation in G.
+        """
         if not entity:
             entity = self
-        entity_levels = [sorted(generation) for generation in nx.topological_generations(entity.G)]
-        self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
-        vertices = entity_levels[entity.graph_dim()]
+        self_levels = [sorted(generation) for generation in nx.topological_generations(self.graph())]
+        vertices = entity.ordered_vertices()
         if self.dimension == 0:
-            # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
         top_level_node = self_levels[0][0]
         v_0 = vertices[0]
@@ -569,7 +470,7 @@ class Point():
                     vert_coords += [plotted]
                     if not plain:
                         plt.plot(plotted[0], plotted[1], 'bo')
-                        plt.annotate(node, (plotted[0], plotted[1]))
+                        plt.annotate(self.ordered_vertices().index(node), (plotted[0], plotted[1]))
                 elif i == 1:
                     edgevals = np.array([attach(x) for x in xs])
                     if len(edgevals[0]) < 2:
@@ -633,6 +534,7 @@ class Point():
             if dst_dim == 0:
                 vals = [fold_reduce(attachment) for attachment in attachments]
                 assert all(np.isclose(val, vals[0]).all() for val in vals)
+
             else:
                 for i in range(dst_dim):
                     vals = [fold_reduce(attachment, *tuple(basis[i].tolist()))
@@ -712,7 +614,7 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    if len(attach_comp.atoms(sp.Symbol)) == len(x):
+                    if len(attach_comp.atoms(sp.Symbol)) <= len(x):
                         res.append(sympy_to_numpy(attach_comp, syms, x))
                     else:
                         res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
@@ -797,7 +699,7 @@ class CellComplexToFiatSimplex(Simplex):
     def __init__(self, cell, name=None):
         self.fe_cell = cell
         if name is None:
-            name = "FuseCell"
+            name = generic_cellname(cell)
         self.name = name
 
         # verts = [cell.get_node(v, return_coords=True) for v in cell.ordered_vertices()]
@@ -914,28 +816,7 @@ class CellComplexToUFL(Cell):
 
         # TODO work out generic way around the naming issue
         if not name:
-            num_verts = len(cell.vertices())
-            if num_verts == 1:
-                # Point
-                name = "vertex"
-            elif num_verts == 2:
-                # Line
-                name = "interval"
-            elif num_verts == 3:
-                # Triangle
-                name = "triangle"
-            elif num_verts == 4:
-                if cell.dimension == 2:
-                    # quadrilateral
-                    name = "quadrilateral"
-                elif cell.dimension == 3:
-                    # tetrahedron
-                    name = "tetrahedron"
-            elif num_verts == 8:
-                # hexahedron
-                name = "hexahedron"
-            else:
-                raise TypeError("UFL cell conversion undefined for {}".format(str(cell)))
+            name = generic_cellname(cell)
         super(CellComplexToUFL, self).__init__(name)
 
     def to_fiat(self):
@@ -980,3 +861,23 @@ def constructCellComplex(name):
         return TensorProductPoint(*components).to_ufl(name)
     else:
         raise TypeError("Cell complex construction undefined for {}".format(str(name)))
+
+
+def generic_cellname(cell):
+    num_verts = len(cell.vertices())
+    if num_verts == 1:
+        name = "vertex"
+    elif num_verts == 2:
+        name = "interval"
+    elif num_verts == 3:
+        name = "triangle"
+    elif num_verts == 4:
+        if cell.dimension == 2:
+            name = "quadrilateral"
+        elif cell.dimension == 3:
+            name = "tetrahedron"
+    elif num_verts == 8:
+        name = "hexahedron"
+    else:
+        raise TypeError("Generic cell conversion undefined for {}".format(str(cell)))
+    return name

@@ -37,7 +37,6 @@ def test_basis_vectors(C):
 
 def test_orientation():
     cell = Point(1, [Point(0), Point(0)], vertex_num=2)
-    print(cell.get_topology())
     for g in cell.group.members():
         if not g.perm.is_Identity:
             oriented = cell.orient(g)

@@ -99,7 +99,7 @@ class ElementTriple():
     def to_fiat(self):
         ref_el = self.cell.to_fiat()
         dofs = self.generate()
-        degree = self.spaces[0].degree()
+        degree = self.degree()
         entity_ids = {}
         entity_perms = {}
         nodes = []
@@ -138,6 +138,13 @@ class ElementTriple():
         else:
             dual = DualSet(nodes, ref_el, entity_ids)
         return CiarletElement(poly_set, dual, degree, form_degree)
+
+    def to_basix(self):
+        try:
+            from fuse_basix.basix_interface import convert_to_basix_element
+            return convert_to_basix_element(self)
+        except ImportError:
+            raise ImportError("Basix needs to be installed to convert FUSE to Basix")
 
     def plot(self, filename="temp.png"):
         # point evaluation nodes only

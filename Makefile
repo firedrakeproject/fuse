@@ -37,3 +37,4 @@ test_cells:
 	@python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect1]
 
 prepush: lint tests doc
+	@rm .coverage.*
