@@ -28,7 +28,7 @@ dependencies = [
 Repository = "https://github.com/indiamai/fuse.git"
 
 [project.optional-dependencies]
-doc = [
+docs = [
   "sphinx",
   "numpydoc",
   "sphinx-bootstrap-theme",
