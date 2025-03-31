@@ -7,7 +7,7 @@ Describing a tetrahedron
 --------------------------
 A tetrahedron is initially set up like this:
 
-.. literalinclude:: ../../test/test_3d_examples_docs.py
+.. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
     :start-after: [make_tet 0]
@@ -15,7 +15,7 @@ A tetrahedron is initially set up like this:
 
 and then components of the tetrahedron may be extracted using either the helper functions :any:`Point.vertices` and :any:`Point.edges` or the generic function :any:`Point.d_entities`.
 
-.. literalinclude:: ../../test/test_3d_examples_docs.py
+.. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
     :start-after: [make_tet 1]
@@ -24,7 +24,7 @@ and then components of the tetrahedron may be extracted using either the helper 
 CG3 on a tetrahedron
 --------------------------
 
-.. literalinclude:: ../../test/test_3d_examples_docs.py
+.. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
     :start-after: [test_tet_cg3 0]
@@ -33,7 +33,7 @@ CG3 on a tetrahedron
 Raviart Thomas on a tetrahedron
 ------------------------------------
 
-.. literalinclude:: ../../test/test_3d_examples_docs.py
+.. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
     :start-after: [test_tet_rt 0]
@@ -43,7 +43,7 @@ Raviart Thomas on a tetrahedron
 Nedelec on a tetrahedron
 -----------------------------------
 
-.. literalinclude:: ../../test/test_3d_examples_docs.py
+.. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
     :dedent:
     :start-after: [test_tet_ned 0]

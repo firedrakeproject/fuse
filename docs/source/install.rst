@@ -3,4 +3,7 @@
 Installing FUSE
 ----------------
 
-`pip install fuse-element`
+
+.. code-block:: bash
+
+   pip install fuse-element

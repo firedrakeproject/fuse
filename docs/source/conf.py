@@ -56,17 +56,6 @@ autodoc_mock_imports = ["firedrake", "networkx", "FIAT", "finat"]
 
 # Make sure the target is unique
 autosectionlabel_prefix_document = True
-# -- Options for HTML output -------------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = "haiku"
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
 
 intersphinx_mapping = {
     'ufl': ('https://docs.fenicsproject.org/ufl/main/', None),
@@ -88,7 +77,10 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
+# html_css_files = ["additional.css"]
+def setup(app):
+    app.add_css_file('additional.css')  
 
 html_theme_options = {
     'navbar_links': [
@@ -106,6 +98,11 @@ html_theme_options = {
 
     # Tab name for the current pages TOC. (Default: "Page")
     'navbar_pagenav_name': "Page",
+    'globaltoc_depth': 2,
 }
 
-html_sidebars = { '**': ['localtoc.html'] }
+html_sidebars = { 'api/*': ['localtoc.html'], 
+                  'api': ['localtoc.html'],
+                  'about': [],
+                  'install': [],
+                  'index': ['localtoc.html']}

@@ -1,18 +1,18 @@
 :orphan: true
-
+:tocdepth: 2 
 API documentation
 -------------------
 
 .. toctree::
     :hidden:
+    :maxdepth: 2
 
-    groups
-    cells
-    spaces
-    triples
-    dof
-    examples2d
-    examples3d
-    modules
-    serialisation
+    api/groups
+    api/cells
+    api/spaces
+    api/triples
+    api/dof
+    api/examples2d
+    api/examples3d
+    api/serialisation
 

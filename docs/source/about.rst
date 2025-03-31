@@ -10,4 +10,4 @@
 FUSE: A finite, unifed, serialisable finite element.
 ======================================================
 
-FUSE 
+FUSE is an implementation of a complete finite element definition

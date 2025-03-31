@@ -1,0 +1,10 @@
+div.documentwrapper div.bodywrapper { margin-left: 350px;}
+div.document div.sphinxsidebar { width: 40px; }
+
+div.sphinxsidebarwrapper div {
+    overflow: auto;
+}
+
+div.bs-sidenav div {
+    overflow: auto;
+}
