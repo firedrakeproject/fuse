@@ -40,4 +40,4 @@ test_cells:
 clean:
 	@(cd docs/ && make clean)
 
-prepush: lint tests docs
+prepush: lint tests clean docs

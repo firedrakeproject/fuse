@@ -1,5 +1,6 @@
 :orphan: true
-:tocdepth: 2 
+:tocdepth: 2
+
 API documentation
 -------------------
 
