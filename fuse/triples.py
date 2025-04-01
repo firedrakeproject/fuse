@@ -181,6 +181,7 @@ class ElementTriple():
                     else:
                         ax.scatter(*coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
+                    coord = center
                     dof.target_space.plot(ax, center, dof.trace_entity, dof.g, color=color, length=0.2)
                 ax.text(*coord, dof.id)
 
