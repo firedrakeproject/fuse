@@ -127,4 +127,5 @@ def test_flattening(A, B, res):
         with pytest.raises(AssertionError):
             tensor_cell.flatten()
     else:
-        tensor_cell.flatten()
+        cell = tensor_cell.flatten()
+        cell.construct_fuse_rep()

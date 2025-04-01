@@ -775,8 +775,8 @@ class TensorProductPoint():
     def get_spatial_dimension(self):
         return self.dimension
 
-    def dimension(self):
-        return tuple(self.A.dimension, self.B.dimension)
+    def dim(self):
+        return (self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
@@ -815,6 +815,26 @@ class FlattenedPoint(TensorProductPoint):
     def to_fiat(self, name=None):
         # TODO this should check if it actually is a hypercube
         return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+
+    def construct_fuse_rep(self):
+        sub_cells = [self.A, self.B]
+        dims = self.dim()
+        points = {i: [] for i in range(max(dims))}
+
+        for d in range(max(dims)):
+            points = []
+            attachments = []
+            for cell in sub_cells:
+                if d <= cell.dimension:
+                    points.append(cell.d_entities(d))
+                attachments.append(cell.edges())
+            for i in itertools.product(*points):
+                print(i)
+            print(attachments)
+            new_attachments = []
+            # for a in attachments:
+            #     old_attach = a.attachment
+                # new_attachments.append()
 
     def flatten(self):
         return self
