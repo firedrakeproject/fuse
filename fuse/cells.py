@@ -766,11 +766,11 @@ class Edge():
 
 class TensorProductPoint():
 
-    def __init__(self, A, B, flat=False):
+    def __init__(self, A, B):
         self.A = A
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
-        self.flat = flat
+        self.flat = False
 
     def get_spatial_dimension(self):
         return self.dimension
@@ -791,18 +791,33 @@ class TensorProductPoint():
         return verts
 
     def to_ufl(self, name=None):
-        if self.flat:
-            return CellComplexToUFL(self, "quadrilateral")
         return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
 
     def to_fiat(self, name=None):
-        if self.flat:
-            return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
         assert self.A == self.B
-        return TensorProductPoint(self.A, self.B, True)
+        return FlattenedPoint(self.A, self.B)
+
+
+class FlattenedPoint(TensorProductPoint):
+
+    def __init__(self, A, B):
+        self.A = A
+        self.B = B
+        self.dimension = self.A.dimension + self.B.dimension
+        self.flat = True
+
+    def to_ufl(self, name=None):
+        return CellComplexToUFL(self, "quadrilateral")
+
+    def to_fiat(self, name=None):
+        # TODO this should check if it actually is a hypercube
+        return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+
+    def flatten(self):
+        return self
 
 
 class CellComplexToFiatSimplex(Simplex):

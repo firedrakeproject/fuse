@@ -472,10 +472,10 @@ def test_quad(elem_gen):
     assert (run_test(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
-# def test_non_tensor_quad():
-#     elem = create_cg1_quad()
-#     ufl_elem = elem.to_ufl()
-#     assert (run_test(0, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+def test_non_tensor_quad():
+    elem = create_cg1_quad()
+    ufl_elem = elem.to_ufl()
+    assert (run_test(0, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
