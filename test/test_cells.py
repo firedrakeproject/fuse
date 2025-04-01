@@ -182,3 +182,13 @@ def test_comparison():
     print(tensor_product >= tensor_product1)
     # print(tensor_product1 >= tensor_product)
     # print(tensor_product1 >= tensor_product1)
+
+
+def test_self_equality(C):
+    assert C == C
+
+
+@pytest.mark.parametrize(["A", "B", "res"], [(firedrake_triangle(), polygon(3), False),
+                                             (line(), line(), True),])
+def test_equality(A, B, res):
+    assert (A == B) == res

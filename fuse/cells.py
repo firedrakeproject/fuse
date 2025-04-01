@@ -148,6 +148,13 @@ def compute_scaled_verts(d, n):
         raise ValueError("Dimension {} not supported".format(d))
 
 
+def line():
+    """
+    Constructs the default 1D interval
+    """
+    return Point(1, [Point(0), Point(0)], vertex_num=2)
+
+
 def polygon(n):
     """
     Constructs the 2D default cell with n sides/vertices
@@ -441,6 +448,9 @@ class Point():
                 return self.oriented.permute(verts)
             return verts
 
+    def ordered_vertex_coords(self):
+        return [self.get_node(o, return_coords=True) for o in self.ordered_vertices()]
+
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
@@ -457,7 +467,7 @@ class Point():
         if return_coords:
             top_level_node = self.d_entities_ids(self.graph_dim())[0]
             if self.dimension == 0:
-                return [()]
+                return ()
             return self.attachment(top_level_node, node)()
         return self.G.nodes.data("point_class")[node]
 
@@ -521,7 +531,6 @@ class Point():
         self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
         vertices = entity_levels[entity.graph_dim()]
         if self.dimension == 0:
-            # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
         top_level_node = self_levels[0][0]
         v_0 = vertices[0]
@@ -689,6 +698,16 @@ class Point():
     def _from_dict(o_dict):
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
+    def __eq__(self, other):
+        if self.dimension != other.dimension:
+            return False
+        if set(self.ordered_vertex_coords()) != set(other.ordered_vertex_coords()):
+            return False
+        return self.get_topology() == other.get_topology()
+
+    def __hash__(self):
+        return hash(self.id)
+
 
 class Edge():
     """
@@ -782,6 +801,7 @@ class TensorProductPoint():
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
+        assert self.A == self.B
         return TensorProductPoint(self.A, self.B, True)
 
 
