@@ -406,6 +406,15 @@ class Point():
         min_ids = [min(dimension) for dimension in structure]
         return min_ids
 
+    def local_id(self, node):
+        structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        structure.reverse()
+        min_id = self.get_starter_ids()
+        for d in range(len(structure)):
+            if node.id in structure[d]:
+                return node.id - min_id[d]
+        raise ValueError("Node not found in cell")
+
     def graph_dim(self):
         if self.oriented:
             dim = self.dimension + 1
@@ -697,16 +706,14 @@ class Point():
 
     def _from_dict(o_dict):
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
-
-    def __eq__(self, other):
+    
+    def equivalent(self, other):
         if self.dimension != other.dimension:
             return False
         if set(self.ordered_vertex_coords()) != set(other.ordered_vertex_coords()):
             return False
         return self.get_topology() == other.get_topology()
 
-    def __hash__(self):
-        return hash(self.id)
 
 
 class Edge():
@@ -797,7 +804,7 @@ class TensorProductPoint():
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
-        assert self.A == self.B
+        assert self.A.equivalent(self.B)
         return FlattenedPoint(self.A, self.B)
 
 
@@ -819,22 +826,75 @@ class FlattenedPoint(TensorProductPoint):
     def construct_fuse_rep(self):
         sub_cells = [self.A, self.B]
         dims = self.dim()
-        points = {i: [] for i in range(max(dims))}
+        points = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
+        attachments = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
 
-        for d in range(max(dims)):
-            points = []
-            attachments = []
+        for d in range(max(dims) + 1):
             for cell in sub_cells:
+
+                # if d <= cell.dimension:
+                #     points[d].extend([cell.get_node(e, return_coords=True) for e in cell.d_entities(d, get_class=False)])
                 if d <= cell.dimension:
-                    points.append(cell.d_entities(d))
-                attachments.append(cell.edges())
-            for i in itertools.product(*points):
-                print(i)
+                    sub_ent = cell.d_entities(d, get_class=True)
+
+                    # points[d].extend([cell.get_node(e, return_coords=True) for e in cell.d_entities(d, get_class=False)])
+                    points[cell][d].extend(sub_ent)
+                    for s in sub_ent:
+                        attachments[cell][d].extend(s.connections)
+
+                new_attachments = []
+                for a in attachments[cell][d]:
+                    print(cell)
+                    print(a, " res: ", a.attachment)
             print(attachments)
-            new_attachments = []
-            # for a in attachments:
-            #     old_attach = a.attachment
-                # new_attachments.append()
+            print(points)
+
+
+        # old_attach = a.attachment
+        # new_attachments.append()
+        prod_points = list(itertools.product(*[points[cell][0] for cell in sub_cells]))
+        print(len(prod_points))
+        point_cls = [Point(0) for i in range(len(prod_points))]
+        edges = []
+
+        # generate edges of tensor product result
+        for a in prod_points:
+            for b in prod_points:
+                # of all combinations of point, take those where at least one changes and at least one is the same
+                if any(a[i] == b[i] for i in range(len(a))) and any(a[i] != b[i] for i in range(len(sub_cells))):
+                    # ensure if they change, that edge exists in the existing topology
+                    if all([a[i]== b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i].topology[1].values()) for i in range(len(sub_cells))]):
+                        edges.append((a, b))
+        
+        # hasse level 1
+        edge_cls1 = {e: [] for e in edges}
+        print(prod_points)
+        for i in range(len(sub_cells)):
+            for (a, b) in edges:
+                a_idx = prod_points.index(a)
+                b_idx = prod_points.index(b)
+                if a[i] != b[i]:
+                    a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
+                    b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
+                    edge_cls1[(a,b)].append(Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
+                                               Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)]))
+        print(edge_cls1)
+        # hasse level 2
+        # for i in range(len(sub_cells)):
+        #     for (a, b) in edges:
+        #         a_idx = prod_points.index(a)
+        #         b_idx = prod_points.index(b)
+        #         print(a, a_idx)
+        #         print(b, b_idx)
+        #         # breakpoint()
+        #         if a[i] != b[i]:
+        #             a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
+        #             b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
+        #             edge_cls1.append(Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
+        #                                        Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)]))
+        # print(attachments)
+        # for i in itertools.product(attachments, repeat=2):
+        #     print(i)
 
     def flatten(self):
         return self
