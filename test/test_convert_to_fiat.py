@@ -117,6 +117,7 @@ def create_cg1_quad():
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg, deg + 1)
+    breakpoint()
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
@@ -545,7 +546,7 @@ def test_quad(elem_gen):
 def test_non_tensor_quad():
     elem = create_cg1_quad()
     ufl_elem = elem.to_ufl()
-    assert (run_test(0, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+    assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 def project(U, mesh, func):
