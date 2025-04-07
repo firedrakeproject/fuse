@@ -335,7 +335,7 @@ class Point():
         """
         verts = self.ordered_vertices()
         v_coords = [self.get_node(v, return_coords=True) for v in verts]
-        
+
         n = len(verts)
         max_group = SymmetricGroup(n)
         edges = [edge.ordered_vertices() for edge in self.edges()]
@@ -707,14 +707,13 @@ class Point():
 
     def _from_dict(o_dict):
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
-    
+
     def equivalent(self, other):
         if self.dimension != other.dimension:
             return False
         if set(self.ordered_vertex_coords()) != set(other.ordered_vertex_coords()):
             return False
         return self.get_topology() == other.get_topology()
-
 
 
 class Edge():
@@ -743,7 +742,6 @@ class Edge():
                         res.append(sympy_to_numpy(attach_comp, syms, x))
                     else:
                         res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
-                    
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -847,7 +845,6 @@ class FlattenedPoint(Point, TensorProductPoint):
                     for s in sub_ent:
                         attachments[cell][d].extend(s.connections)
 
-                new_attachments = []
                 for a in attachments[cell][d]:
                     print(cell)
                     print(a, " res: ", a.attachment)
@@ -867,9 +864,9 @@ class FlattenedPoint(Point, TensorProductPoint):
                 # of all combinations of point, take those where at least one changes and at least one is the same
                 if any(a[i] == b[i] for i in range(len(a))) and any(a[i] != b[i] for i in range(len(sub_cells))):
                     # ensure if they change, that edge exists in the existing topology
-                    if all([a[i]== b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i].topology[1].values()) for i in range(len(sub_cells))]):
+                    if all([a[i] == b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i].topology[1].values()) for i in range(len(sub_cells))]):
                         edges.append((a, b))
-        
+
         # hasse level 1
         edge_cls1 = {e: None for e in edges}
         print(prod_points)
@@ -880,8 +877,8 @@ class FlattenedPoint(Point, TensorProductPoint):
                 if a[i] != b[i]:
                     a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
                     b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
-                    edge_cls1[(a,b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
-                                               Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
+                    edge_cls1[(a, b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
+                                                  Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
         edge_cls2 = []
         # hasse level 2
         for i in range(len(sub_cells)):
