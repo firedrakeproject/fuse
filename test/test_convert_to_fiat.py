@@ -115,9 +115,9 @@ def create_cg1_quad():
 
     vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
+    x = sp.Symbol("y")
 
-    Pk = PolynomialSpace(deg, deg + 1)
-    breakpoint()
+    Pk = PolynomialSpace(deg) + P2.restrict(1, 1)*x
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
@@ -535,7 +535,7 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
+                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='How to make quad poly set correctly'))])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
@@ -547,6 +547,20 @@ def test_non_tensor_quad():
     elem = create_cg1_quad()
     ufl_elem = elem.to_ufl()
     assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+
+
+def project(U, mesh, func):
+    f = assemble(interpolate(func, U))
+
+    out = Function(U)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)
+
+    res = sqrt(assemble(dot(out - func, out - func) * dx))
+    return res
 
 
 def project(U, mesh, func):

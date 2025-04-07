@@ -41,11 +41,23 @@ def test_restriction():
 
     res_on_set = restricted.to_ON_polynomial_set(cell)
     P3_on_set = P3.to_ON_polynomial_set(cell)
+
     assert res_on_set.get_num_members() < P3_on_set.get_num_members()
 
     not_restricted = P3.restrict(0, 3)
     assert isinstance(not_restricted, PolynomialSpace)
     assert not_restricted.mindegree == 0
+
+
+@pytest.mark.xfail(reason="Quad space WIP")
+def test_square_space():
+    cell = polygon(3)
+    q2 = PolynomialSpace(3, 1)
+
+    q2_on_set = q2.to_ON_polynomial_set(cell)
+    P3_on_set = P3.to_ON_polynomial_set(cell)
+
+    assert q2_on_set.get_num_members() < P3_on_set.get_num_members()
 
 
 @pytest.mark.parametrize("deg", [1, 2, 3, 4])
