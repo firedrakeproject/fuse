@@ -3,7 +3,7 @@ from FIAT.quadrature_schemes import create_quadrature
 from FIAT.reference_element import cell_to_simplex
 from FIAT import expansions, polynomial_set, reference_element
 from itertools import chain
-from fuse.utils import tabulate_sympy, max_deg_sp_mat
+from fuse.utils import tabulate_sympy, max_deg_sp_expr
 import sympy as sp
 import numpy as np
 from functools import total_ordering
@@ -56,9 +56,27 @@ class PolynomialSpace(object):
             shape = (sd,)
         else:
             shape = tuple()
+        base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+
+        # if self.contains:
+        #     expansion_set = expansions.ExpansionSet(ref_el)
+        #     num_exp_functions = expansion_set.get_num_members(self.maxdegree)
+        #     dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
+        #     dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
+        #     indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
+        #     from math import comb
+        #     print(list(chain(*[range(0, 0), range(2, 3)])))
+        # base_ON.expansion_set._tabulate_on_cell(3, np.array([[0,0]]))
+        # if self.set_shape:
+        #     indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
+        # else:
+        #     indices = list(range(dimPmin, dimPmax))
+        # restricted_ON = base_ON.take(indices)
+        # return restricted_ON
+
+        # breakpoint()
 
         if self.mindegree > 0:
-            base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
             dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
             dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
             if self.set_shape:
@@ -67,7 +85,8 @@ class PolynomialSpace(object):
                 indices = list(range(dimPmin, dimPmax))
             restricted_ON = base_ON.take(indices)
             return restricted_ON
-        return ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+
+        return base_ON
 
     def __repr__(self):
         res = ""
@@ -161,12 +180,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         k = max([s.maxdegree for s in self.spaces])
-        space_poly_sets = [s.to_ON_polynomial_set(ref_el) for s in self.spaces]
         sd = ref_el.get_spatial_dimension()
         ref_el = cell_to_simplex(ref_el)
-
-        if all([w == 1 for w in self.weights]):
-            weighted_sets = space_poly_sets
 
         # otherwise have to work on this through tabulation
 
@@ -174,24 +189,40 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         Qpts, Qwts = Q.get_points(), Q.get_weights()
         weighted_sets = []
 
-        for (space, w) in zip(space_poly_sets, self.weights):
+        for (s, w) in zip(self.spaces, self.weights):
+            space = s.to_ON_polynomial_set(ref_el)
+            if s.set_shape:
+                shape = (sd,)
+            else:
+                shape = tuple()
             if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)):
                 weighted_sets.append(space)
             else:
-                w_deg = max_deg_sp_mat(w)
-                Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, scale="orthonormal")
-                vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, (sd,), scale="orthonormal")
+                if isinstance(w, sp.Expr):
+                    w = sp.Matrix([[w]])
+                    vec = False
+                else:
+                    vec = True
+                w_deg = max_deg_sp_expr(w)
+                Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, shape, scale="orthonormal")
+                # vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, (sd,), scale="orthonormal")
 
                 space_at_Qpts = space.tabulate(Qpts)[(0,) * sd]
                 Pkpw_at_Qpts = Pkpw.tabulate(Qpts)[(0,) * sd]
 
                 tabulated_expr = tabulate_sympy(w, Qpts).T
-                scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                if s.set_shape or vec:
+                    scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                else:
+                    # breakpoint()
+                    scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                    scaled_at_Qpts = scaled_at_Qpts.squeeze()
                 PkHw_coeffs = np.dot(np.multiply(scaled_at_Qpts, Qwts), Pkpw_at_Qpts.T)
+                # breakpoint()
                 weighted_sets.append(polynomial_set.PolynomialSet(ref_el,
                                                                   space.degree + w_deg,
                                                                   space.degree + w_deg,
-                                                                  vec_Pkpw.get_expansion_set(),
+                                                                  Pkpw.get_expansion_set(),
                                                                   PkHw_coeffs))
         combined_sets = weighted_sets[0]
         for i in range(1, len(weighted_sets)):
