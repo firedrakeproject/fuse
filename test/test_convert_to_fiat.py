@@ -94,13 +94,13 @@ def create_cg1(cell):
 
 def create_cg1_quad():
     deg = 1
-    # cell = polygon(4)
-    cell = constructCellComplex("quadrilateral").cell_complex
+    cell = TensorProductPoint(line(), line()).flatten()
 
     vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg, deg + 1)
+    breakpoint()
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
@@ -475,7 +475,7 @@ def test_quad(elem_gen):
 def test_non_tensor_quad():
     elem = create_cg1_quad()
     ufl_elem = elem.to_ufl()
-    assert (run_test(0, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+    assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
@@ -563,3 +563,12 @@ def test_investigate_dpc():
 
     U = FunctionSpace(mesh, "DPC", 1)
     print(U)
+    f = Function(U)
+    f.assign(1)
+
+    out = Function(U)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)

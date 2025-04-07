@@ -335,6 +335,7 @@ class Point():
         """
         verts = self.ordered_vertices()
         v_coords = [self.get_node(v, return_coords=True) for v in verts]
+        
         n = len(verts)
         max_group = SymmetricGroup(n)
         edges = [edge.ordered_vertices() for edge in self.edges()]
@@ -686,8 +687,8 @@ class Point():
     def to_fiat(self, name=None):
         if len(self.vertices()) == self.dimension + 1:
             return CellComplexToFiatSimplex(self, name)
-        if len(self.vertices()) == 2 ** self.dimension:
-            return CellComplexToFiatHypercube(self, name)
+        # if len(self.vertices()) == 2 ** self.dimension:
+        #     return CellComplexToFiatHypercube(self, name)
         raise NotImplementedError("Custom shape elements/ First class quads are not yet supported")
 
     def to_ufl(self, name=None):
@@ -738,10 +739,11 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    if len(attach_comp.atoms(sp.Symbol)) == len(x):
+                    if len(attach_comp.atoms(sp.Symbol)) <= len(x):
                         res.append(sympy_to_numpy(attach_comp, syms, x))
                     else:
                         res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
+                    
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -808,13 +810,15 @@ class TensorProductPoint():
         return FlattenedPoint(self.A, self.B)
 
 
-class FlattenedPoint(TensorProductPoint):
+class FlattenedPoint(Point, TensorProductPoint):
 
     def __init__(self, A, B):
         self.A = A
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = True
+        fuse_edges = self.construct_fuse_rep()
+        super().__init__(self.dimension, fuse_edges)
 
     def to_ufl(self, name=None):
         return CellComplexToUFL(self, "quadrilateral")
@@ -825,7 +829,8 @@ class FlattenedPoint(TensorProductPoint):
 
     def construct_fuse_rep(self):
         sub_cells = [self.A, self.B]
-        dims = self.dim()
+        dims = (self.A.dimension, self.B.dimension)
+
         points = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
         attachments = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
 
@@ -849,7 +854,6 @@ class FlattenedPoint(TensorProductPoint):
             print(attachments)
             print(points)
 
-
         # old_attach = a.attachment
         # new_attachments.append()
         prod_points = list(itertools.product(*[points[cell][0] for cell in sub_cells]))
@@ -867,7 +871,7 @@ class FlattenedPoint(TensorProductPoint):
                         edges.append((a, b))
         
         # hasse level 1
-        edge_cls1 = {e: [] for e in edges}
+        edge_cls1 = {e: None for e in edges}
         print(prod_points)
         for i in range(len(sub_cells)):
             for (a, b) in edges:
@@ -876,25 +880,23 @@ class FlattenedPoint(TensorProductPoint):
                 if a[i] != b[i]:
                     a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
                     b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
-                    edge_cls1[(a,b)].append(Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
-                                               Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)]))
-        print(edge_cls1)
+                    edge_cls1[(a,b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
+                                               Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
+        edge_cls2 = []
         # hasse level 2
-        # for i in range(len(sub_cells)):
-        #     for (a, b) in edges:
-        #         a_idx = prod_points.index(a)
-        #         b_idx = prod_points.index(b)
-        #         print(a, a_idx)
-        #         print(b, b_idx)
-        #         # breakpoint()
-        #         if a[i] != b[i]:
-        #             a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
-        #             b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
-        #             edge_cls1.append(Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
-        #                                        Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)]))
-        # print(attachments)
-        # for i in itertools.product(attachments, repeat=2):
-        #     print(i)
+        for i in range(len(sub_cells)):
+            for (a, b) in edges:
+                if a[i] == b[i]:
+                    x = sp.Symbol("x")
+                    a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
+                    if i == 0:
+                        attach = (x,) + a_edge.attachment
+                    else:
+                        attach = a_edge.attachment + (x,)
+                    print(edge_cls1[(a, b)].ordered_vertices())
+                    edge_cls2.append(Edge(edge_cls1[(a, b)], attach, a_edge.o))
+        print(edge_cls2)
+        return edge_cls2
 
     def flatten(self):
         return self
@@ -1079,8 +1081,7 @@ def constructCellComplex(name):
         return polygon(3).to_ufl(name)
         # return firedrake_triangle().to_ufl(name)
     elif name == "quadrilateral":
-        interval = Point(1, [Point(0), Point(0)], vertex_num=2)
-        return TensorProductPoint(interval, interval).flatten().to_ufl(name)
+        return TensorProductPoint(line(), line()).flatten().to_ufl(name)
         # return firedrake_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
