@@ -62,3 +62,11 @@ def max_deg_sp_mat(sp_mat):
         if sp.sympify(comp).as_poly():
             degs += [sp.sympify(comp).as_poly().degree()]
     return max(degs)
+
+
+def numpy_to_str_tuple(arr, scale=1):
+    str_as = []
+    for a in arr:
+        str_a = str(scale*a)
+        str_as += [str_a]
+    return f"({",".join(str_as)})"

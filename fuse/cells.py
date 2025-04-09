@@ -10,7 +10,7 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
-from fuse.utils import sympy_to_numpy, fold_reduce
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from ufl.cell import Cell, TensorProductCell
 
@@ -540,6 +540,22 @@ class Point():
                 basis_vecs.append((v, v_0))
         return basis_vecs
 
+    def to_tikz(self, show=True, scale=3):
+        tikz_commands = []
+        if show:
+            tikz_commands += ['\\begin{tikzpicture}']
+        bs = '\\'
+        arw = "\\tikz \\draw[-{Stealth[length=3mm, width=2mm]}] (-1pt,0) -- (1pt,0);"
+        # only need to draw edges
+        d_ents = self.d_entities(1)
+        for e in d_ents:
+            coords = "--".join([numpy_to_str_tuple(self.get_node(v, return_coords=True), scale=scale) for v in e.ordered_vertices()])
+            tikz_commands += [f"{bs}draw[thick] {coords} node[midway,sloped, allow upside down] {{ {arw} }};"]
+        if show:
+            tikz_commands += ['\\end{tikzpicture}']
+            return "\n".join(tikz_commands)
+        return tikz_commands
+
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
 
@@ -547,7 +563,7 @@ class Point():
         xs = np.linspace(-1, 1, 20)
         if ax is None:
             ax = plt.gca()
-
+        print("plotting")
         if self.dimension == 1:
             # line plot in 1D case
             nodes = self.d_entities(0, get_class=False)
@@ -555,6 +571,7 @@ class Point():
             for node in nodes:
                 attach = self.attachment(top_level_node, node)
                 points.extend(attach())
+            print(np.array(points))
             plt.plot(np.array(points), np.zeros_like(points), color="black")
 
         for i in range(self.dimension - 1, -1, -1):
@@ -567,6 +584,7 @@ class Point():
                     if len(plotted) < 2:
                         plotted = (plotted[0], 0)
                     vert_coords += [plotted]
+                    print(np.array(plotted))
                     if not plain:
                         plt.plot(plotted[0], plotted[1], 'bo')
                         plt.annotate(node, (plotted[0], plotted[1]))

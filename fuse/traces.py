@@ -1,7 +1,7 @@
 import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
-from fuse.utils import sympy_to_numpy
+from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
 
 
 class Trace():
@@ -51,6 +51,9 @@ class TrH1(Trace):
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         ax.scatter(*coord, **kwargs)
 
+    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+        return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
+
     def tabulate(self, Qpts, trace_entity, g):
         return np.ones_like(Qpts)
 
@@ -74,16 +77,7 @@ class TrHDiv(Trace):
 
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         # plot dofs of the type associated with this space
-        permuted = self.domain.permute_entities(g, trace_entity.dimension)
-        orientation = [o for (ent, o) in permuted if ent == trace_entity.id][0]
-
-        entityBasis = np.array(trace_entity.orient(orientation).basis_vectors())
-        cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        basis = np.matmul(entityBasis, cellEntityBasis)
-        if len(coord) == 2:
-            vec = np.matmul(np.array([[0, 1], [-1, 0]]), basis.T)
-        else:
-            vec = np.cross(basis[0], basis[1])
+        vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
     def tabulate(self, Qpts, trace_entity, g):
@@ -99,6 +93,12 @@ class TrHDiv(Trace):
             raise ValueError("Immersion of HDiv edges not defined in 3D")
 
         return result
+
+    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+        vec = self.tabulate([], trace_entity, g).squeeze()
+        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
+        arw = "-{Stealth[length=3mm, width=2mm]}"
+        return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
 
     def __repr__(self):
         return "HDiv"
@@ -124,13 +124,14 @@ class TrHCurl(Trace):
         return result
 
     def plot(self, ax, coord, trace_entity, g, **kwargs):
-        permuted = self.domain.permute_entities(g, trace_entity.dimension)
-        orientation = [o for (ent, o) in permuted if ent == trace_entity.id][0]
-
-        tangent = np.array(trace_entity.orient(orientation).basis_vectors())
-        subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        vec = np.matmul(tangent, subEntityBasis)[0]
+        vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
+
+    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+        vec = self.tabulate([], trace_entity, g).squeeze()
+        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
+        arw = "-{Stealth[length=3mm, width=2mm]}"
+        return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
 
     def __repr__(self):
         return "HCurl"
@@ -162,6 +163,9 @@ class TrGrad(Trace):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
 
+    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+        return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
+
     def __repr__(self):
         return "Grad"
 
@@ -191,6 +195,9 @@ class TrHess(Trace):
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
+
+    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+        return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (6pt) node[anchor = south] {{}};"
 
     def __repr__(self):
         return "Hess"
