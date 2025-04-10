@@ -49,7 +49,6 @@ def test_restriction():
     assert not_restricted.mindegree == 0
 
 
-@pytest.mark.xfail(reason="Quad space WIP")
 def test_square_space():
     cell = polygon(3)
     q2 = PolynomialSpace(3, 1)
