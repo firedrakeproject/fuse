@@ -1,4 +1,5 @@
 from FIAT.polynomial_set import ONPolynomialSet
+from FIAT.expansions import morton_index2, morton_index3
 from FIAT.quadrature_schemes import create_quadrature
 from FIAT.reference_element import cell_to_simplex
 from FIAT import expansions, polynomial_set, reference_element
@@ -7,6 +8,8 @@ from fuse.utils import tabulate_sympy, max_deg_sp_expr
 import sympy as sp
 import numpy as np
 from functools import total_ordering
+
+morton_index = {2: morton_index2, 3: morton_index3}
 
 
 @total_ordering
@@ -47,7 +50,6 @@ class PolynomialSpace(object):
         return self.maxdegree
 
     def to_ON_polynomial_set(self, ref_el, k=None):
-        # how does super/sub degrees work here
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         sd = ref_el.get_spatial_dimension()
@@ -57,24 +59,7 @@ class PolynomialSpace(object):
         else:
             shape = tuple()
         base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
-
-        # if self.contains:
-        #     expansion_set = expansions.ExpansionSet(ref_el)
-        #     num_exp_functions = expansion_set.get_num_members(self.maxdegree)
-        #     dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
-        #     dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
-        #     indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
-        #     from math import comb
-        #     print(list(chain(*[range(0, 0), range(2, 3)])))
-        # base_ON.expansion_set._tabulate_on_cell(3, np.array([[0,0]]))
-        # if self.set_shape:
-        #     indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
-        # else:
-        #     indices = list(range(dimPmin, dimPmax))
-        # restricted_ON = base_ON.take(indices)
-        # return restricted_ON
-
-        # breakpoint()
+        indices = None
 
         if self.mindegree > 0:
             dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
@@ -83,10 +68,15 @@ class PolynomialSpace(object):
                 indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
             else:
                 indices = list(range(dimPmin, dimPmax))
-            restricted_ON = base_ON.take(indices)
-            return restricted_ON
 
-        return base_ON
+        if self.contains != self.maxdegree and self.contains != -1:
+            indices = [morton_index[sd](p, q) for p in range(self.contains + 1) for q in range(self.contains + 1)]
+
+        if indices is None:
+            return base_ON
+
+        restricted_ON = base_ON.take(indices)
+        return restricted_ON
 
     def __repr__(self):
         res = ""
