@@ -109,10 +109,9 @@ def create_cg1(cell):
 
 def create_cg1_quad():
     deg = 1
-    cell = polygon(4)
-    # cell = constructCellComplex("quadrilateral").cell_complex
-
-    vert_dg = create_dg0(cell.vertices()[0])
+    cell = TensorProductPoint(line(), line()).flatten()
+    print(cell, type(cell))
+    vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
     Pk = PolynomialSpace(deg + 1, deg)
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
@@ -532,7 +531,7 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='How to make quad poly set correctly'))])
+                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Issue with cell/mesh'))])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
@@ -540,7 +539,7 @@ def test_quad(elem_gen):
     assert (poisson_solve(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
-@pytest.mark.xfail(reason="Issue with quad cell")
+# @pytest.mark.xfail(reason="Issue with quad cell")
 def test_non_tensor_quad():
     elem = create_cg1_quad()
     ufl_elem = elem.to_ufl()
