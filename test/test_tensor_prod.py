@@ -116,3 +116,16 @@ def test_quad_mesh_helmholtz():
     conv = np.log2(res[:-1] / res[1:])
     print("convergence order:", conv)
     assert (np.array(conv) > 1.8).all()
+
+
+@pytest.mark.parametrize(["A", "B", "res"], [(Point(0), line(), False),
+                                             (line(), line(), True),
+                                             (polygon(3), line(), False),])
+def test_flattening(A, B, res):
+    tensor_cell = TensorProductPoint(A, B)
+    if not res:
+        with pytest.raises(AssertionError):
+            tensor_cell.flatten()
+    else:
+        cell = tensor_cell.flatten()
+        cell.construct_fuse_rep()

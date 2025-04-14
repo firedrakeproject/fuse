@@ -41,7 +41,7 @@ def tabulate_sympy(expr, pts):
     # expr: sp matrix expression in x,y,z for components of R^d
     # pts: n values in R^d
     # returns: evaluation of expr at pts
-    res = np.array(pts)
+    res = np.zeros((pts.shape[0],) + (expr.shape[-1],))
     i = 0
     syms = ["x", "y", "z"]
     for pt in pts:
@@ -51,14 +51,19 @@ def tabulate_sympy(expr, pts):
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]
         i += 1
-    final = res.squeeze()
-    return final
+    # final = res.squeeze()
+    return res
 
 
-def max_deg_sp_mat(sp_mat):
+def max_deg_sp_expr(sp_expr):
     degs = []
-    for comp in sp_mat:
-        # only compute degree if component is a polynomial
-        if sp.sympify(comp).as_poly():
-            degs += [sp.sympify(comp).as_poly().degree()]
+    if isinstance(sp_expr, sp.Matrix):
+        for comp in sp_expr:
+            # only compute degree if component is a polynomial
+            if sp.sympify(comp).as_poly():
+                degs += [sp.sympify(comp).as_poly().degree()]
+    else:
+        if sp.sympify(sp_expr).as_poly():
+            degs += [sp.sympify(sp_expr).as_poly().degree()]
+
     return max(degs)
