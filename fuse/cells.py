@@ -823,7 +823,8 @@ class FlattenedPoint(Point, TensorProductPoint):
 
     def to_fiat(self, name=None):
         # TODO this should check if it actually is a hypercube
-        return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+        fiat = CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+        return fiat
 
     def construct_fuse_rep(self):
         sub_cells = [self.A, self.B]
@@ -834,27 +835,16 @@ class FlattenedPoint(Point, TensorProductPoint):
 
         for d in range(max(dims) + 1):
             for cell in sub_cells:
-
-                # if d <= cell.dimension:
-                #     points[d].extend([cell.get_node(e, return_coords=True) for e in cell.d_entities(d, get_class=False)])
                 if d <= cell.dimension:
                     sub_ent = cell.d_entities(d, get_class=True)
-
-                    # points[d].extend([cell.get_node(e, return_coords=True) for e in cell.d_entities(d, get_class=False)])
                     points[cell][d].extend(sub_ent)
                     for s in sub_ent:
                         attachments[cell][d].extend(s.connections)
 
-                for a in attachments[cell][d]:
-                    print(cell)
-                    print(a, " res: ", a.attachment)
-            print(attachments)
-            print(points)
-
-        # old_attach = a.attachment
-        # new_attachments.append()
         prod_points = list(itertools.product(*[points[cell][0] for cell in sub_cells]))
-        print(len(prod_points))
+        # temp = prod_points[1]
+        # prod_points[1] = prod_points[2]
+        # prod_points[2] = temp
         point_cls = [Point(0) for i in range(len(prod_points))]
         edges = []
 
@@ -866,10 +856,8 @@ class FlattenedPoint(Point, TensorProductPoint):
                     # ensure if they change, that edge exists in the existing topology
                     if all([a[i] == b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i].topology[1].values()) for i in range(len(sub_cells))]):
                         edges.append((a, b))
-
         # hasse level 1
         edge_cls1 = {e: None for e in edges}
-        print(prod_points)
         for i in range(len(sub_cells)):
             for (a, b) in edges:
                 a_idx = prod_points.index(a)
@@ -890,9 +878,7 @@ class FlattenedPoint(Point, TensorProductPoint):
                         attach = (x,) + a_edge.attachment
                     else:
                         attach = a_edge.attachment + (x,)
-                    print(edge_cls1[(a, b)].ordered_vertices())
                     edge_cls2.append(Edge(edge_cls1[(a, b)], attach, a_edge.o))
-        print(edge_cls2)
         return edge_cls2
 
     def flatten(self):

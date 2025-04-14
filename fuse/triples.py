@@ -127,11 +127,13 @@ class ElementTriple():
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
-        print("my", [n.pt_dict for n in nodes])
-        print(entity_perms)
-        print(entity_ids)
-        print(ref_el.vertices)
-        print()
+        # print("my", [n.pt_dict for n in nodes])
+        print(self.cell)
+        print(ref_el)
+        print("first class", ref_el.topology)
+        # print(entity_ids)
+        # print(ref_el.vertices)
+        # print()
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
             dual = DualSet(nodes, ref_el, entity_ids, entity_perms)
