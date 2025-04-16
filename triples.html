@@ -52,6 +52,19 @@
 <dd class="field-odd"><p>dof_gen: Generator Triple to generate the degrees of freedom.</p>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="fuse.triples.ElementTriple.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'temp.png'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.triples.ElementTriple.plot" title="Link to this definition">¶</a></dt>
+<dd><p>Generates Matplotlib code for the element diagrams.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="fuse.triples.ElementTriple.to_tikz">
+<span class="sig-name descname"><span class="pre">to_tikz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.triples.ElementTriple.to_tikz" title="Link to this definition">¶</a></dt>
+<dd><p>Generates tikz code for the element diagram</p>
+<p>Requires the usetikzlibrary{arrows.meta} library</p>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -89,7 +102,11 @@
 <li class="toctree-l1"><a class="reference internal" href="spaces.html#module-fuse.spaces.element_sobolev_spaces">Element Sobolev Spaces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="spaces.html#module-fuse.spaces.polynomial_spaces">Polynomial Spaces</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Triples</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#fuse.triples.ElementTriple"><code class="docutils literal notranslate"><span class="pre">ElementTriple</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fuse.triples.ElementTriple"><code class="docutils literal notranslate"><span class="pre">ElementTriple</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fuse.triples.ElementTriple.plot"><code class="docutils literal notranslate"><span class="pre">ElementTriple.plot()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fuse.triples.ElementTriple.to_tikz"><code class="docutils literal notranslate"><span class="pre">ElementTriple.to_tikz()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dof.html">DOFs</a></li>
