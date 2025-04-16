@@ -13,7 +13,7 @@ A tetrahedron is initially set up like this:
     :start-after: [make_tet 0]
     :end-before: [make_tet 1]
 
-and then components of the tetrahedron may be extracted using either the helper functions :any:`Point.vertices` and :any:`Point.edges` or the generic function :any:`Point.d_entities`.
+and then components of the tetrahedron may be extracted using either the helper functions Point.vertices and Point.edges or the generic function Point.d_entities.
 
 .. literalinclude:: ../../../test/test_3d_examples_docs.py
     :language: python3
