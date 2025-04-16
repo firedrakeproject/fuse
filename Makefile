@@ -5,9 +5,10 @@ ifeq ($(GITHUB_ACTIONS_FORMATTING), 1)
 else
 	FLAKE8_FORMAT=
 endif
+.PHONY: test docs
 
-doc:
-	@(cd docs/ && make html)
+docs:
+	@(cd docs/ && (make html SPHINXOPTS="-W --keep-going -n"))
 
 lint:
 	@echo "    Linting FUSE codebase"
@@ -36,4 +37,7 @@ test_cells:
 	@firedrake-clean
 	@python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect1]
 
-prepush: lint tests doc
+clean:
+	@(cd docs/ && make clean)
+
+prepush: lint tests clean docs

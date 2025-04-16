@@ -86,9 +86,7 @@ def construct_cg1():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
 
-    # [test_cg1 2]
     xs = [immerse(edge, dg0, TrH1)]
-
     cg1 = ElementTriple(edge, (P1, CellH1, C0),
                         DOFGenerator(xs, S2, S1))
     # [test_cg1 1]
@@ -115,6 +113,7 @@ def construct_cg3(tri=None):
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/3)))]
     dg0_int = ElementTriple(edge, (P1, CellH1, C0), DOFGenerator(xs, S2, S1))
+    print([d.generation for d in dg0_int.generate()])
 
     e_xs = [immerse(tri, dg0_int, TrH1)]
     e_dofs = DOFGenerator(e_xs, C3, S1)
@@ -196,6 +195,7 @@ def test_nd_example():
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
+
     phi_2 = MyTestFunction(sp.Matrix([1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]), symbols=(x, y))
     phi_0 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
     phi_1 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y,
