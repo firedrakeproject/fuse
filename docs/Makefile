@@ -5,6 +5,7 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   =python3 -m sphinx
+SPHINXAUTOBUILD ?= sphinx-autobuild
 SOURCEDIR     = source
 BUILDDIR      = build
 
@@ -16,6 +17,10 @@ help:
 
 autodoc:
 	@sphinx-apidoc -o "$(SOURCEDIR)" "."
+
+auto-%: Makefile
+	@$(SPHINXAUTOBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile

@@ -15,35 +15,28 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: firedrakeproject/firedrake-vanilla-default:latest
-      # Github hosted runners require running as root user:
-      # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
-      options: --user root
-      env:
-       # Since we are running as root we need to set PYTHONPATH to be able to find the installed
-       # packages
-       PYTHONPATH: /home/firedrake/firedrake:/home/firedrake/.local/lib/python3.12/site-packages
-      volumes:
-        - ${{ github.workspace }}:/home/firedrake/output
     # Steps represent a sequence of tasks that will be executed as
     # part of the jobs
     steps:
+      - name: fix home
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - name: Checkout correct firedrake branch
         run: |
-          /usr/bin/git config --global --add safe.directory /home/firedrake/firedrake
-          cd /home/firedrake/firedrake/
+          /usr/bin/git config --global --add safe.directory /opt/firedrake/
+          cd /opt/firedrake/
           git fetch
-          git checkout indiamai/new_def_integration
+          git checkout indiamai/fuse-quads
           git pull
       - name: Install checkedout fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[dev]'
       - name: Checkout correct FIAT branch
         run: |
-          /usr/bin/git config --global --add safe.directory /home/firedrake/
-          cd /home/firedrake/
+          /usr/bin/git config --global --add safe.directory ~/
+          cd ~
           git clone https://github.com/firedrakeproject/fiat.git
-          /usr/bin/git config --global --add safe.directory /home/firedrake/fiat
+          /usr/bin/git config --global --add safe.directory ~/fiat
           cd fiat
           git fetch
           git checkout indiamai/integrate_fuse
@@ -51,10 +44,10 @@ jobs:
           python3 -m pip install --break-system-packages -e .
       - name: Checkout correct UFL branch
         run: |
-          /usr/bin/git config --global --add safe.directory /home/firedrake/
-          cd /home/firedrake/
+          /usr/bin/git config --global --add safe.directory ~
+          cd ~
           git clone https://github.com/firedrakeproject/ufl.git
-          /usr/bin/git config --global --add safe.directory /home/firedrake/ufl
+          /usr/bin/git config --global --add safe.directory ~/ufl
           cd ufl
           git fetch
           git checkout indiamai/integrate-fuse
@@ -75,13 +68,9 @@ jobs:
       name: Coverage
       needs: test
       runs-on: ubuntu-latest
+      if: success() && github.ref == 'refs/heads/main'
       container:
         image: firedrakeproject/firedrake-vanilla-default:latest
-        # Github hosted runners require running as root user:
-        # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
-        options: --user root
-        # volumes:
-        #   - ${{ github.workspace }}:/home/firedrake/output
       # Steps represent a sequence of tasks that will be executed as
       # part of the jobs
       steps:
@@ -98,7 +87,7 @@ jobs:
         - name: "Combine"
           run: |
             make coverage
-            export TOTAL=$(python -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+            export TOTAL=$(python3 -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
             echo "total=$TOTAL" >> $GITHUB_ENV
             echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
 

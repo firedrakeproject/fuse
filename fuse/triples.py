@@ -3,6 +3,7 @@ from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, MyTestFunction, PointKernel
 from fuse.traces import Trace
 from fuse.groups import perm_matrix_to_perm_array
+from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
 import matplotlib as mpl
@@ -70,21 +71,19 @@ class ElementTriple():
         # TODO this isn't really correct
         return self.spaces[0].degree()
 
-    def get_dof_info(self, dof):
+    def get_dof_info(self, dof, tikz=True):
+        colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
+                   True: {0: "blue", 1: "red", 2: "green", 3: "black"}}
         if dof.trace_entity.dimension == 0:
             center = self.cell.cell_attachment(dof.trace_entity.id)()
-            color = "b"
         elif dof.trace_entity.dimension == 1:
-            color = "r"
             center = self.cell.cell_attachment(dof.trace_entity.id)(0)
         elif dof.trace_entity.dimension == 2:
-            color = "g"
             center = self.cell.cell_attachment(dof.trace_entity.id)(0, 0)
         else:
-            color = "b"
-            center = None
+            center = list(sum(np.array(self.cell.vertices(return_coords=True))))
 
-        return center, color
+        return center, colours[tikz][dof.trace_entity.dimension]
 
     def get_value_shape(self):
         # TODO Shape should be specificed somewhere else probably
@@ -139,8 +138,37 @@ class ElementTriple():
             dual = DualSet(nodes, ref_el, entity_ids)
         return CiarletElement(poly_set, dual, degree, form_degree)
 
+    def to_tikz(self, show=True, scale=3):
+        """Generates tikz code for the element diagram
+
+        Requires the \\usetikzlibrary{arrows.meta} library
+        """
+        tikz_commands = []
+        if show:
+            tikz_commands += ['\\begin{tikzpicture}']
+        tikz_commands += self.cell.to_tikz(show=False, scale=scale)
+
+        dofs = self.generate()
+        identity = MyTestFunction(lambda *x: x)
+        for dof in dofs:
+            center, color = self.get_dof_info(dof)
+            if isinstance(dof.pairing, DeltaPairing):
+                coord = dof.eval(identity, pullback=False)
+                if isinstance(dof.target_space, Trace):
+                    tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+                else:
+                    tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
+            elif isinstance(dof.pairing, L2Pairing):
+                coord = center
+                tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+        if show:
+            tikz_commands += ['\\end{tikzpicture}']
+            return "\n".join(tikz_commands)
+        return tikz_commands
+
     def plot(self, filename="temp.png"):
-        # point evaluation nodes only
+        """
+        Generates Matplotlib code for the element diagrams."""
         dofs = self.generate()
         identity = MyTestFunction(lambda *x: x)
 
@@ -181,6 +209,7 @@ class ElementTriple():
                     else:
                         ax.scatter(*coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
+                    coord = center
                     dof.target_space.plot(ax, center, dof.trace_entity, dof.g, color=color, length=0.2)
                 ax.text(*coord, dof.id)
 
