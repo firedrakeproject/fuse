@@ -8,3 +8,10 @@ div.sphinxsidebarwrapper div {
 div.bs-sidenav div {
     overflow: auto;
 }
+
+.bs-sidenav .nav > li > a {
+    display: block;
+    /* color: #716b7a; */
+    color: #672cbf;
+    padding: 5px 20px;
+  }

@@ -1,12 +1,10 @@
-:orphan: true
-:tocdepth: 2
+:tocdepth: 1
 
 API documentation
 -------------------
 
 .. toctree::
-    :hidden:
-    :maxdepth: 2
+    :maxdepth: 1
 
     api/groups
     api/cells
@@ -16,4 +14,3 @@ API documentation
     api/examples2d
     api/examples3d
     api/serialisation
-
