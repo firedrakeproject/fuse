@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Groups &#8212; FUSE 2025.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=9f61996d" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/additional.css?v=acc97bfc" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <script src="../_static/documentation_options.js?v=0e25812e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Cells" href="cells.html" />
+    <link rel="prev" title="API documentation" href="../api.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          FUSE</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../about.html">About</a></li>
+                <li><a href="../install.html">Installation</a></li>
+                <li><a href="../api.html">Documentation</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cells.html">Cells</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html">Spaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#module-fuse.spaces.interpolation_spaces">Interpolation Spaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.interpolation_spaces.Continuous"><code class="docutils literal notranslate"><span class="pre">Continuous</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.interpolation_spaces.InterpolationSpace"><code class="docutils literal notranslate"><span class="pre">InterpolationSpace</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.interpolation_spaces.Sobolev"><code class="docutils literal notranslate"><span class="pre">Sobolev</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#module-fuse.spaces.element_sobolev_spaces">Element Sobolev Spaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.CellH1"><code class="docutils literal notranslate"><span class="pre">CellH1</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.CellH2"><code class="docutils literal notranslate"><span class="pre">CellH2</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.CellHCurl"><code class="docutils literal notranslate"><span class="pre">CellHCurl</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.CellHDiv"><code class="docutils literal notranslate"><span class="pre">CellHDiv</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.CellL2"><code class="docutils literal notranslate"><span class="pre">CellL2</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.element_sobolev_spaces.ElementSobolevSpace"><code class="docutils literal notranslate"><span class="pre">ElementSobolevSpace</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#module-fuse.spaces.polynomial_spaces">Polynomial Spaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace"><code class="docutils literal notranslate"><span class="pre">ConstructedPolynomialSpace</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="spaces.html#fuse.spaces.polynomial_spaces.PolynomialSpace"><code class="docutils literal notranslate"><span class="pre">PolynomialSpace</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="triples.html">Triples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="triples.html#fuse.triples.ElementTriple"><code class="docutils literal notranslate"><span class="pre">ElementTriple</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="triples.html#fuse.triples.ElementTriple.plot"><code class="docutils literal notranslate"><span class="pre">ElementTriple.plot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="triples.html#fuse.triples.ElementTriple.to_tikz"><code class="docutils literal notranslate"><span class="pre">ElementTriple.to_tikz()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dof.html">DOFs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dof.html#fuse.dof.DeltaPairing"><code class="docutils literal notranslate"><span class="pre">DeltaPairing</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dof.html#fuse.dof.L2Pairing"><code class="docutils literal notranslate"><span class="pre">L2Pairing</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="dof.html#fuse.dof.Pairing"><code class="docutils literal notranslate"><span class="pre">Pairing</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples2d.html">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples2d.html#dg0">DG0</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples2d.html#dg1-on-interval">DG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples2d.html#dg1-on-triangle">DG1 on triangle</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples2d.html#cg1-on-interval">CG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples2d.html#cg3-on-triangle">CG3 on triangle</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples3d.html">Examples in 3D</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#describing-a-tetrahedron">Describing a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#cg3-on-a-tetrahedron">CG3 on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#raviart-thomas-on-a-tetrahedron">Raviart Thomas on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#nedelec-on-a-tetrahedron">Nedelec on a tetrahedron</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="serialisation.html">Serialisation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="serialisation.html#fuse.serialisation.ElementSerialiser"><code class="docutils literal notranslate"><span class="pre">ElementSerialiser</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="serialisation.html#usage">Usage</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+      <div class="col-md-3">
+        <div id="sidebar" class="bs-sidenav" role="complementary"><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cells.html">Cells</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html">Spaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="triples.html">Triples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dof.html">DOFs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples2d.html">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples3d.html">Examples in 3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialisation.html">Serialisation</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    <div class="body col-md-9 content" role="main">
+      
+  <section id="groups">
+<h1>Groups<a class="headerlink" href="#groups" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.groups.</span></span><span class="sig-name descname"><span class="pre">GroupRepresentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">PermutationSetRepresentation</span></code></p>
+<p>A representation of a group by its matrix operations.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>base_group: the sympy group that is being represented
+cell (optional): the cell the group is representing the operations on</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.groups.</span></span><span class="sig-name descname"><span class="pre">PermutationSetRepresentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">perm_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A representation of a set of permutations (can be a full group) on a cell.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>[permutations]: the list of permutations in the set
+cell (optional): the cell the group is representing the operations on</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">compute_num_reps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Compute the numerical represention of each member as compared to the identity.
+Where the numerical rep is:</p>
+<p>M.index(id[0]) = a; M.remove(id[0])
+M.index(id[1]) = b; M.remove(id[1])
+M.index(id[2]) = c; M.remove(id[2])</p>
+<p>o = (a * 2!) + (b * 1!) + (c * 0!)</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 8.2.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

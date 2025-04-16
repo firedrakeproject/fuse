@@ -1,0 +1,17 @@
+div.documentwrapper div.bodywrapper { margin-left: 350px;}
+div.document div.sphinxsidebar { width: 40px; }
+
+div.sphinxsidebarwrapper div {
+    overflow: auto;
+}
+
+div.bs-sidenav div {
+    overflow: auto;
+}
+
+.bs-sidenav .nav > li > a {
+    display: block;
+    /* color: #716b7a; */
+    color: #672cbf;
+    padding: 5px 20px;
+  }
