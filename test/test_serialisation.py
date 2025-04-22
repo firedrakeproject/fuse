@@ -51,12 +51,12 @@ def test_cg_examples():
     for cell in cells:
         triple = create_cg1(cell)
 
-        dofs = [d.eval(MyTestFunction(lambda *x: x)) for d in triple.generate()]
+        dofs = [d.eval(FuseFunction(lambda *x: x)) for d in triple.generate()]
         converter = ElementSerialiser()
         encoded = converter.encode(triple)
         decoded = converter.decode(encoded)
         for d in decoded.generate():
-            dof_val = d.eval(MyTestFunction(lambda *x: x))
+            dof_val = d.eval(FuseFunction(lambda *x: x))
             assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
 
 

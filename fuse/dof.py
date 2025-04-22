@@ -35,7 +35,7 @@ class DeltaPairing(Pairing):
         return v(*kernel.pt)
 
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
-        pt = dof.eval(MyTestFunction(lambda *x: x))
+        pt = dof.eval(FuseFunction(lambda *x: x))
         return PointEvaluation(ref_el, pt)
 
     def add_entity(self, entity):
@@ -313,7 +313,7 @@ class ImmersedDOF(DOF):
         raise RuntimeError("Error: Immersing twice not supported")
 
 
-class MyTestFunction():
+class FuseFunction():
 
     def __init__(self, eq, attach_func=None, symbols=None):
         self.eq = eq
@@ -339,16 +339,16 @@ class MyTestFunction():
 
     def attach(self, attachment):
         if not self.attach_func:
-            return MyTestFunction(self.eq, attach_func=attachment, symbols=self.symbols)
+            return FuseFunction(self.eq, attach_func=attachment, symbols=self.symbols)
         else:
             old_attach = self.attach_func
             if self.symbols:
-                return MyTestFunction(self.eq,
-                                      attach_func=attachment(old_attach(*self.symbols)),
-                                      symbols=self.symbols)
+                return FuseFunction(self.eq,
+                                    attach_func=attachment(old_attach(*self.symbols)),
+                                    symbols=self.symbols)
             else:
-                return MyTestFunction(self.eq,
-                                      attach_func=lambda *x: attachment(old_attach(*x)))
+                return FuseFunction(self.eq,
+                                    attach_func=lambda *x: attachment(old_attach(*x)))
 
     def __repr__(self):
         if self.attach_func:
