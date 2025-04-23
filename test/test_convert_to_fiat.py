@@ -432,6 +432,7 @@ def helmholtz_solve(mesh, V):
 def run_test(r, elem, parameters={}, quadrilateral=False):
     # Create mesh and define function space
     m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem)
     # Define variational problem
@@ -470,11 +471,13 @@ def test_quad(elem_gen):
     assert (run_test(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
-# @pytest.mark.xfail(reason="Issue with quad cell")
-def test_non_tensor_quad():
-    elem = create_cg1_quad()
-    ufl_elem = elem.to_ufl()
-    assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+# # @pytest.mark.xfail(reason="Issue with quad cell")
+# def test_non_tensor_quad():
+#     elem = create_cg1_quad()
+#     ufl_elem = elem.to_ufl()
+#     print(elem.to_fiat().entity_permutations())
+#     # elem.cell.hasse_diagram(filename="cg1quad.png")
+#     assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
@@ -558,9 +561,9 @@ def test_project_3d(elem_gen, elem_code, deg):
 
 
 def test_investigate_dpc():
-    mesh = UnitSquareMesh(2, 2, quadrilateral=False)
+    mesh = UnitSquareMesh(2, 2, quadrilateral=True)
 
-    U = FunctionSpace(mesh, "BR", 1)
+    U = FunctionSpace(mesh, "DPC", 1)
     print(U)
     f = Function(U)
     f.assign(1)

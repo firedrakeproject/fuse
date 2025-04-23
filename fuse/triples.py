@@ -131,9 +131,9 @@ class ElementTriple():
         print(self.cell)
         print(ref_el)
         print("first class", ref_el.topology)
-        # print(entity_ids)
-        # print(ref_el.vertices)
-        # print()
+        print(pure_perm)
+        print(entity_perms)
+        print()
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
             dual = DualSet(nodes, ref_el, entity_ids, entity_perms)
@@ -351,7 +351,6 @@ class ElementTriple():
                         if g in dof_gen_class[dim].g1.members() or (pure_perm and len(dof_gen_class[dim].g1.members()) > 1):
                             sub_mat = g.matrix_form()
                             oriented_mats_overall[val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-
         for val, mat in oriented_mats_overall.items():
             cell_dofs = entity_ids[dim][0]
             flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])

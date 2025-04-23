@@ -124,3 +124,10 @@ def test_perm_mat_conversion():
         mat_form = g.matrix_form()
         array_form = perm_matrix_to_perm_array(mat_form)
         assert np.allclose(g.perm.array_form, array_form)
+
+
+def test_numeric_reps():
+    cell = polygon(4)
+    rot4 = get_cyc_group(4).add_cell(cell)
+
+    assert sorted([m.numeric_rep() for m in rot4.members()]) == list(range(len(rot4.members())))
