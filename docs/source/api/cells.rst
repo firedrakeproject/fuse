@@ -1,3 +1,5 @@
+:tocdepth: 0
+
 Cells
 ============
 
@@ -6,3 +8,4 @@ Cells
    :members:
    :exclude-members: Arrow3D
    :show-inheritance:
+   :no-index:

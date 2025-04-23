@@ -13,7 +13,7 @@ def test_dg1():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
-    test_func = MyTestFunction(x + y + z, symbols=(x, y, z))
+    test_func = FuseFunction(x + y + z, symbols=(x, y, z))
 
     dof_vals = [x+y+z for (x, y, z) in tetra.vertices(return_coords=True)]
 
@@ -21,12 +21,16 @@ def test_dg1():
         assert any(np.isclose(val, dof.eval(test_func)) for val in dof_vals)
 
 
-def test_tet_cg3():
+def construct_tet_cg3():
+    # [make_tet 0]
     tetra = make_tetrahedron()
+    # [make_tet 1]
     vert = tetra.vertices()[0]
     edge = tetra.edges()[0]
     face = tetra.d_entities(2)[0]
+    # [make_tet 2]
 
+    # [test_tet_cg3 0]
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
                         DOFGenerator(xs, S1, S1))
@@ -50,21 +54,30 @@ def test_tet_cg3():
 
     cg3 = ElementTriple(tetra, (P1, CellH1, "C0"),
                         [cgverts, cgedges, cgfaces])
+    # [test_tet_cg3 1]
+    return cg3
+
+
+def test_tet_cg3():
+    cg3 = construct_tet_cg3()
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
-    test_func = MyTestFunction(sp.Matrix([10*x, 3*y/np.sqrt(3), z*4]), symbols=(x, y, z))
-
+    test_func = FuseFunction(sp.Matrix([10*x, 3*y/np.sqrt(3), z*4]), symbols=(x, y, z))
+    cg3.plot(filename="tet_cg3.png")
+    print(cg3.to_tikz())
     for dof in cg3.generate():
         print(dof)
         dof.eval(test_func)
 
 
-def construct_tet_rt(cell):
+def construct_tet_rt(cell=None):
+    if cell is None:
+        cell = make_tetrahedron()
     face = cell.d_entities(2, get_class=True)[0]
     deg = 1
-
+    # [test_tet_rt 0]
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
@@ -83,6 +96,7 @@ def construct_tet_rt(cell):
 
     rt1 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
                         [face])
+    # [test_tet_rt 1]
     return rt1
 
 
@@ -95,20 +109,26 @@ def test_tet_rt():
         print(dof)
 
 
-def test_tet_ned():
+def construct_tet_ned():
     tetra = make_tetrahedron()
     edge = tetra.edges()[0]
-
+    # [test_tet_ned 0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, "C0"), dofs)
-    ls = int_ned.generate()
 
     im_xs = [immerse(tetra, int_ned, TrHCurl)]
     edge = DOFGenerator(im_xs, tet_edges, Z4)
 
     ned = ElementTriple(tetra, (P1, CellHCurl, "C0"),
                         [edge])
+    # [test_tet_ned 1]
+
+    return ned
+
+
+def test_tet_ned():
+    ned = construct_tet_ned()
     ls = ned.generate()
     # TODO make this a proper test
     for dof in ls:

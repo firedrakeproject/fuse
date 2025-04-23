@@ -52,7 +52,7 @@ def test_permute_rt():
     rt = construct_rt(cell)
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    func = MyTestFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
+    func = FuseFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
 
     for dof in rt.generate():
         print(dof)
@@ -69,16 +69,16 @@ def test_permute_nd():
     nd = construct_nd(cell)
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    # func = MyTestFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
+    # func = FuseFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
 
-    # phi_0 = MyTestFunction(sp.Matrix([-0.333333333333333*y - 0.192450089729875, 0.333333333333333*x + 0.333333333333333]), symbols=(x, y))
-    # phi_1 = MyTestFunction(sp.Matrix([0.333333333333333*y + 0.192450089729875, 0.333333333333333 - 0.333333333333333*x]), symbols=(x, y))
+    # phi_0 = FuseFunction(sp.Matrix([-0.333333333333333*y - 0.192450089729875, 0.333333333333333*x + 0.333333333333333]), symbols=(x, y))
+    # phi_1 = FuseFunction(sp.Matrix([0.333333333333333*y + 0.192450089729875, 0.333333333333333 - 0.333333333333333*x]), symbols=(x, y))
 
     # # original dofs
-    phi_2 = MyTestFunction(sp.Matrix([1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]), symbols=(x, y))
-    phi_0 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
-    phi_1 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y,
-                                     (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
+    phi_2 = FuseFunction(sp.Matrix([1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]), symbols=(x, y))
+    phi_0 = FuseFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
+    phi_1 = FuseFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y,
+                                    (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
 
     for g in nd.cell.group.members():
         print(g)
@@ -86,9 +86,9 @@ def test_permute_nd():
             print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
 
     # reflected dofs
-    phi_2 = MyTestFunction(sp.Matrix([0.288675134594813*y - 0.333333333333333, -0.288675134594813*x]), symbols=(x, y))
-    phi_0 = MyTestFunction(sp.Matrix([0.288675134594813*y + 0.166666666666667, -0.288675134594813*x - 0.288675134594813]), symbols=(x, y))
-    phi_1 = MyTestFunction(sp.Matrix([0.288675134594813*y + 0.166666666666667, 0.288675134594813 - 0.288675134594813*x]), symbols=(x, y))
+    phi_2 = FuseFunction(sp.Matrix([0.288675134594813*y - 0.333333333333333, -0.288675134594813*x]), symbols=(x, y))
+    phi_0 = FuseFunction(sp.Matrix([0.288675134594813*y + 0.166666666666667, -0.288675134594813*x - 0.288675134594813]), symbols=(x, y))
+    phi_1 = FuseFunction(sp.Matrix([0.288675134594813*y + 0.166666666666667, 0.288675134594813 - 0.288675134594813*x]), symbols=(x, y))
     reflect = nd.cell.group.get_member([0, 1, 2])
     print(nd.cell.permute_entities(reflect, 1))
     reflect = nd.cell.group.get_member([2, 0, 1])
