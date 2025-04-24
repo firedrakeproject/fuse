@@ -1,7 +1,7 @@
 
 from fuse.cells import Point, Edge, polygon, make_tetrahedron, constructCellComplex
 from fuse.groups import S1, S2, S3, D4, Z3, Z4, C3, C4, S4, A4, tri_C3, tet_edges, tet_faces, sq_edges, GroupRepresentation, PermutationSetRepresentation, get_cyc_group, get_sym_group
-from fuse.dof import DeltaPairing, DOF, L2Pairing, MyTestFunction, PointKernel, PolynomialKernel
+from fuse.dof import DeltaPairing, DOF, L2Pairing, FuseFunction, PointKernel, PolynomialKernel
 from fuse.triples import ElementTriple, DOFGenerator, immerse
 from fuse.traces import TrH1, TrGrad, TrHess, TrHCurl, TrHDiv
 from fuse.tensor_products import tensor_product

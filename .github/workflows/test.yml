@@ -68,6 +68,7 @@ jobs:
       name: Coverage
       needs: test
       runs-on: ubuntu-latest
+      if: success() && github.ref == 'refs/heads/main'
       container:
         image: firedrakeproject/firedrake-vanilla-default:latest
       # Steps represent a sequence of tasks that will be executed as
@@ -86,7 +87,7 @@ jobs:
         - name: "Combine"
           run: |
             make coverage
-            export TOTAL=$(python -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+            export TOTAL=$(python3 -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
             echo "total=$TOTAL" >> $GITHUB_ENV
             echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
 

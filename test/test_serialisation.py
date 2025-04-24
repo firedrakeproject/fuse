@@ -16,9 +16,11 @@ def test_dg_examples():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(decoded, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
 
+    # [test_serialise 0]
     converter = ElementSerialiser()
     encoded = converter.encode(dg0)
     decoded = converter.decode(encoded)
+    # [test_serialise 1]
 
     for dof in decoded.generate():
         assert dof.eval(lambda: 1) == 1
@@ -49,12 +51,12 @@ def test_cg_examples():
     for cell in cells:
         triple = create_cg1(cell)
 
-        dofs = [d.eval(MyTestFunction(lambda *x: x)) for d in triple.generate()]
+        dofs = [d.eval(FuseFunction(lambda *x: x)) for d in triple.generate()]
         converter = ElementSerialiser()
         encoded = converter.encode(triple)
         decoded = converter.decode(encoded)
         for d in decoded.generate():
-            dof_val = d.eval(MyTestFunction(lambda *x: x))
+            dof_val = d.eval(FuseFunction(lambda *x: x))
             assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
 
 

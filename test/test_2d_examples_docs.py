@@ -51,14 +51,14 @@ def plot_dg1_tri():
 
 def test_dg_examples():
     dg0 = construct_dg0()
-    test_func = MyTestFunction(lambda: 3)
+    test_func = FuseFunction(lambda: 3)
 
     for dof in dg0.generate():
         assert np.allclose(dof.eval(test_func), 3)
 
     dg1 = construct_dg1()
     x = sp.Symbol("x")
-    test_func = MyTestFunction(2*x, symbols=(x,))
+    test_func = FuseFunction(2*x, symbols=(x,))
 
     dof_vals = [-2, 2]
 
@@ -72,7 +72,7 @@ def test_dg_examples():
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    test_func = MyTestFunction(10*x + 3*y/np.sqrt(3), symbols=(x, y))
+    test_func = FuseFunction(10*x + 3*y/np.sqrt(3), symbols=(x, y))
 
     for dof in dg1.generate():
         assert any(np.isclose(val, dof.eval(test_func)) for val in dof_vals)
@@ -86,9 +86,7 @@ def construct_cg1():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
 
-    # [test_cg1 2]
     xs = [immerse(edge, dg0, TrH1)]
-
     cg1 = ElementTriple(edge, (P1, CellH1, C0),
                         DOFGenerator(xs, S2, S1))
     # [test_cg1 1]
@@ -115,6 +113,7 @@ def construct_cg3(tri=None):
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/3)))]
     dg0_int = ElementTriple(edge, (P1, CellH1, C0), DOFGenerator(xs, S2, S1))
+    print([d.generation for d in dg0_int.generate()])
 
     e_xs = [immerse(tri, dg0_int, TrH1)]
     e_dofs = DOFGenerator(e_xs, C3, S1)
@@ -127,9 +126,10 @@ def construct_cg3(tri=None):
     return cg3
 
 
-def plot_cg3():
+def test_plot_cg3():
     cg3 = construct_cg3()
-    cg3.plot()
+    print(cg3.to_tikz())
+    # breakpoint()
 
 
 def test_cg_examples():
@@ -137,7 +137,7 @@ def test_cg_examples():
     cg1 = construct_cg1()
 
     x = sp.Symbol("x")
-    test_func = MyTestFunction(2*x, symbols=(x,))
+    test_func = FuseFunction(2*x, symbols=(x,))
 
     val_set = set([-2, 2])
 
@@ -149,7 +149,7 @@ def test_cg_examples():
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    test_func = MyTestFunction(sp.Matrix([10*x, 3*y/np.sqrt(3)]), symbols=(x, y))
+    test_func = FuseFunction(sp.Matrix([10*x, 3*y/np.sqrt(3)]), symbols=(x, y))
 
     dof_vals = np.array([[-10, -1], [0, 2], [10, -1],
                          [-10/3, 1], [-20/3, 0], [10/3, 1],
@@ -162,7 +162,9 @@ def test_cg_examples():
         assert any([np.allclose(val, dof.eval(test_func).flatten()) for val in dof_vals])
 
 
-def construct_nd(tri):
+def construct_nd(tri=None):
+    if tri is None:
+        tri = polygon(3)
     deg = 1
     edge = tri.edges()[0]
     x = sp.Symbol("x")
@@ -193,10 +195,11 @@ def test_nd_example():
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    phi_2 = MyTestFunction(sp.Matrix([1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]), symbols=(x, y))
-    phi_0 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
-    phi_1 = MyTestFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y,
-                                     (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
+
+    phi_2 = FuseFunction(sp.Matrix([1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]), symbols=(x, y))
+    phi_0 = FuseFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
+    phi_1 = FuseFunction(sp.Matrix([-1/6 - (np.sqrt(3)/6)*y,
+                                    (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]), symbols=(x, y))
     basis_funcs = [phi_0, phi_1, phi_2]
 
     for dof in ned.generate():
@@ -233,12 +236,12 @@ def construct_rt(tri=None):
 def test_rt_example():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    phi_2 = MyTestFunction(sp.Matrix([(np.sqrt(3)/6)*x,
-                                      -1/3 + (np.sqrt(3)/6)*y]), symbols=(x, y))
-    phi_0 = MyTestFunction(sp.Matrix([(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
-                                      1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
-    phi_1 = MyTestFunction(sp.Matrix([(np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
-                                      1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
+    phi_2 = FuseFunction(sp.Matrix([(np.sqrt(3)/6)*x,
+                                    -1/3 + (np.sqrt(3)/6)*y]), symbols=(x, y))
+    phi_0 = FuseFunction(sp.Matrix([(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
+                                    1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
+    phi_1 = FuseFunction(sp.Matrix([(np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
+                                    1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
 
     rt = construct_rt()
 
@@ -249,7 +252,7 @@ def test_rt_example():
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
 
 
-def test_hermite_example():
+def construct_hermite():
     tri = polygon(3)
     vert = tri.vertices()[0]
 
@@ -270,11 +273,16 @@ def test_hermite_example():
 
     her = ElementTriple(tri, (P3, CellH2, C0),
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
+    return her
+
+
+def test_hermite_example():
+    her = construct_hermite()
 
     # TODO improve this test
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    phi_0 = MyTestFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
+    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
     ls = her.generate()
     print("num dofs ", her.num_dofs())
     for dof in ls:
@@ -309,7 +317,7 @@ def test_square_cg():
                         [v_dofs, e_dofs, i_dofs])
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    test_func = MyTestFunction(x**2 + y**2, symbols=(x, y))
+    test_func = FuseFunction(x**2 + y**2, symbols=(x, y))
 
     dof_vals = np.array([0, 1, 2])
     for dof in cg3.generate():
@@ -336,8 +344,8 @@ def test_rt_second_order():
     vecP3 = PolynomialSpace(3, set_shape=True)
     rt2 = ElementTriple(tri, (vecP3, CellHDiv, C0), [tri_dofs, i_dofs])
 
-    phi = MyTestFunction(sp.Matrix([(np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
-                                    1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
+    phi = FuseFunction(sp.Matrix([(np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
+                                  1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))
 
     for dof in rt2.generate():
         dof.eval(phi)
