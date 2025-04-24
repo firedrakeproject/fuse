@@ -165,7 +165,8 @@ def create_hermite(tri):
     v_dofs = DOFGenerator(v_xs, S3/S2, S1)
 
     v_derv_xs = [immerse(tri, dg0, TrGrad)]
-    v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S1)
+    # TODO fix perms so this can be S1
+    v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S3)
 
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1, S1)
@@ -505,6 +506,7 @@ def test_non_tensor_quad():
                                                     (lambda cell: CR_n(cell, 3), "CR", 1),
                                                     (create_cf, "CR", 1),  # Don't think Crouzeix Falk in in Firedrake
                                                     (construct_cg3, "CG", 3),
+                                                    (create_hermite, "HER", 3),
                                                     pytest.param(construct_nd, "N1curl", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed')),
                                                     pytest.param(construct_rt, "RT", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed'))])
 def test_project(elem_gen, elem_code, deg):
@@ -577,7 +579,7 @@ def test_project_3d(elem_gen, elem_code, deg):
     assert np.allclose(out.dat.data, f.dat.data, rtol=1e-5)
 
 
-@pytest.mark.xfail(reason='Handling generation of multiple fiat nodes from one in permutations')
+# @pytest.mark.xfail(reason='Handling generation of multiple fiat nodes from one in permutations')
 def test_create_hermite():
     deg = 3
     cell = polygon(3)

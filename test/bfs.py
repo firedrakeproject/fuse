@@ -11,7 +11,8 @@ def her_int():
     xs = [immerse(cell, vert_dg, TrH1), immerse(cell, vert_dg, TrGrad)]
 
     Pk = PolynomialSpace(deg)
-    her = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, S2, S1))
+    # TODO fix faking out permutations
+    her = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, S2, S2))
     return her
 
 

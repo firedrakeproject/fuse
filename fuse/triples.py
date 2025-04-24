@@ -128,10 +128,12 @@ class ElementTriple():
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         # self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
-        print("my", [n.pt_dict for n in nodes])
+        print("pts", [n.pt_dict for n in nodes])
+        print("derivs", [n.deriv_dict for n in nodes])
         print(entity_perms)
         print(entity_ids)
         print(nodes)
+        print(len(nodes))
         print()
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
@@ -140,6 +142,7 @@ class ElementTriple():
         else:
             self.matrices = None
             dual = DualSet(nodes, ref_el, entity_ids)
+        # breakpoint()
         return CiarletElement(poly_set, dual, degree, form_degree)
 
     def to_tikz(self, show=True, scale=3):
@@ -290,7 +293,8 @@ class ElementTriple():
 
         if pure_perm is False:
             # TODO think about where this call goes
-            return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), pure_perm
+            return None, False
+            # return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), pure_perm
 
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}

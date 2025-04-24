@@ -180,10 +180,10 @@ class TrGrad(Trace):
         return apply
 
     def convert_to_fiat(self, qpts, pts, wts):
-        shp = tuple(pts.shape[0:])
+        shp = (self.domain.get_spatial_dimension(),)
         alphas = []
         for i in range(pts.shape[0]):
-            new = np.zeros_like(shp)
+            new = np.zeros(shp, dtype=int)
             new[i] = 1
             alphas += [tuple(new)]
         deriv_dicts = []
