@@ -452,6 +452,29 @@ def run_test(r, elem, parameters={}, quadrilateral=False):
     return sqrt(assemble(inner(u - f, u - f) * dx))
 
 
+def run_test_original(r, elem_code, deg, parameters={}, quadrilateral=False):
+    # Create mesh and define function space
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem_code, deg)
+    # Define variational problem
+    u = Function(V)
+    v = TestFunction(V)
+    a = inner(grad(u), grad(v)) * dx
+
+    bcs = [DirichletBC(V, Constant(0), 3),
+           DirichletBC(V, Constant(42), 4)]
+
+    # Compute solution
+    solve(a == 0, u, solver_parameters=parameters, bcs=bcs)
+
+    f = Function(V)
+    f.interpolate(42*x[1])
+
+    return sqrt(assemble(inner(u - f, u - f) * dx))
+
+
 @pytest.mark.parametrize(['params', 'elem_gen'],
                          [(p, d)
                           for p in [{}, {'snes_type': 'ksponly', 'ksp_type': 'preonly', 'pc_type': 'lu'}]
@@ -477,7 +500,7 @@ def test_quad(elem_gen):
 #     ufl_elem = elem.to_ufl()
 #     print(elem.to_fiat().entity_permutations())
 #     # elem.cell.hasse_diagram(filename="cg1quad.png")
-#     assert (run_test(1, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
+#     assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
