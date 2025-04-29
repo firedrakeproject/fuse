@@ -40,4 +40,6 @@ test_cells:
 clean:
 	@(cd docs/ && make clean)
 
-prepush: lint tests clean docs
+prepush: lint tests
+	@rm .coverage.*
+	make clean docs

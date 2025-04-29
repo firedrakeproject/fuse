@@ -1,6 +1,6 @@
 from fuse.cells import Point, TensorProductPoint
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
-from fuse.dof import DeltaPairing, L2Pairing, MyTestFunction, PointKernel
+from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
 from fuse.groups import perm_matrix_to_perm_array
 from fuse.utils import numpy_to_str_tuple
@@ -149,7 +149,7 @@ class ElementTriple():
         tikz_commands += self.cell.to_tikz(show=False, scale=scale)
 
         dofs = self.generate()
-        identity = MyTestFunction(lambda *x: x)
+        identity = FuseFunction(lambda *x: x)
         for dof in dofs:
             center, color = self.get_dof_info(dof)
             if isinstance(dof.pairing, DeltaPairing):
@@ -170,7 +170,7 @@ class ElementTriple():
         """
         Generates Matplotlib code for the element diagrams."""
         dofs = self.generate()
-        identity = MyTestFunction(lambda *x: x)
+        identity = FuseFunction(lambda *x: x)
 
         if self.cell.dimension == 0:
             raise ValueError(" Dimension 0 cells cannot be plotted")

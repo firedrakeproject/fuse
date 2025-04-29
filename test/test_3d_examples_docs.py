@@ -13,7 +13,7 @@ def test_dg1():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
-    test_func = MyTestFunction(x + y + z, symbols=(x, y, z))
+    test_func = FuseFunction(x + y + z, symbols=(x, y, z))
 
     dof_vals = [x+y+z for (x, y, z) in tetra.vertices(return_coords=True)]
 
@@ -64,7 +64,7 @@ def test_tet_cg3():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
-    test_func = MyTestFunction(sp.Matrix([10*x, 3*y/np.sqrt(3), z*4]), symbols=(x, y, z))
+    test_func = FuseFunction(sp.Matrix([10*x, 3*y/np.sqrt(3), z*4]), symbols=(x, y, z))
     cg3.plot(filename="tet_cg3.png")
     print(cg3.to_tikz())
     for dof in cg3.generate():
