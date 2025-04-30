@@ -341,10 +341,12 @@ def helmholtz_solve(mesh, V):
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
     L = inner(f, v) * dx
     u = Function(V)
+
     # l_a = assemble(L)
     # elem = V.finat_element.fiat_equivalent
     # W = VectorFunctionSpace(mesh, V.ufl_element())
     # X = assemble(interpolate(mesh.coordinates, W))
+
     solve(a == L, u)
     f.interpolate(cos(x*pi*2)*cos(y*pi*2))
     return sqrt(assemble(dot(u - f, u - f) * dx))

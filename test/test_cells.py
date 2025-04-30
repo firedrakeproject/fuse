@@ -124,11 +124,13 @@ def test_compare_cell_to_firedrake():
     for i in range(n):
         edges.append(
             Point(1, [vertices[(i) % n], vertices[(i+1) % n]], vertex_num=2))
+
     cellS3 = S3.add_cell(tri1)
     for g in cellS3.members():
         print(g.perm.array_form)
         try:
             p = g.perm.array_form
+
             tri3 = Point(2, [edges[p[0]], edges[p[1]], edges[p[2]]], vertex_num=n)
             print(tri1.orient(g).get_topology())
         except AssertionError:
@@ -142,7 +144,7 @@ def test_compare_cell_to_firedrake():
 
 @pytest.fixture
 def mock_cell_complex(mocker, expect):
-    mocker.patch('firedrake.mesh.constructCellComplex', return_value=expect.to_ufl("triangle"))
+    mocker.patch('firedrake.mesh.as_cell', return_value=expect.to_ufl("triangle"))
 
 
 @pytest.mark.skipif("not config.getoption('--run-cleared')", reason="Only run when --run-cleared is given")
@@ -150,7 +152,7 @@ def mock_cell_complex(mocker, expect):
 @pytest.mark.parametrize(["expect"], [(firedrake_triangle(),), (polygon(3),)])
 def test_ref_els(expect):
     scale_range = range(3, 6)
-
+    print(expect)
     diff2 = [0 for i in scale_range]
     for i in scale_range:
         mesh = UnitSquareMesh(2 ** i, 2 ** i)
