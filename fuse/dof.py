@@ -98,11 +98,7 @@ class L2Pairing(Pairing):
         Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref)
         Jdet = Q.jacobian_determinant()
         qpts, _ = Q.get_points(), Q.get_weights()
-        print(qpts)
-        print(dof.tabulate(qpts))
         f_at_qpts = dof.tabulate(qpts).T / Jdet
-        print(len(Q.pts))
-        print(f_at_qpts.shape)
         functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
