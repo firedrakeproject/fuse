@@ -1,5 +1,5 @@
 from fuse import *
-from test_convert_to_fiat import create_cg1, create_dg1, construct_cg3, construct_rt, construct_nd
+from test_convert_to_fiat import create_cg1, create_dg1, construct_cg3, construct_rt, construct_nd, create_hermite
 import sympy as sp
 import numpy as np
 
@@ -106,3 +106,33 @@ def test_permute_nd():
     #     print(g)
     #     print(nd.cell.permute_entities(g, 0))
     #     print(nd.cell.permute_entities(g, 1))
+
+
+def test_convert_dofs():
+    cell = polygon(3)
+
+    cg3 = create_hermite(cell)
+
+    # for dof in cg3.generate():
+    #     print(dof)
+    #     # print("old")
+    #     # # old = dof.convert_to_fiat(cell.to_fiat(), 5).pt_dict
+    #     # print(old)
+    #     # print("new")
+    #     new = dof.convert_to_fiat(cell.to_fiat(), 5)[0].pt_dict
+    #     print(new)
+    #     new = dof.convert_to_fiat(cell.to_fiat(), 5)[0].deriv_dict
+    #     print(new)
+    # print(len(cg3.generate()))
+    fuse_elem = cg3.to_fiat()
+    for n in fuse_elem.dual.nodes:
+        print(n.pt_dict)
+        print(n.deriv_dict)
+
+    from FIAT.hermite import CubicHermite
+    fiat_elem = CubicHermite(cell.to_fiat(), 3)
+
+    print(len([n.pt_dict for n in fiat_elem.dual.nodes]))
+    for n in fiat_elem.dual.nodes:
+        print(n.pt_dict)
+        print(n.deriv_dict)

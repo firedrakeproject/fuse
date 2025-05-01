@@ -57,6 +57,10 @@ class TrH1(Trace):
     def tabulate(self, Qpts, trace_entity, g):
         return np.ones_like(Qpts)
 
+    def convert_to_fiat(self, qpts, pts, wts):
+        pt_dict = {tuple(p): [(w, tuple())] for (p, w) in zip(pts.T, wts)}
+        return [(pt_dict, {})]
+
     def __repr__(self):
         return "H1"
 
@@ -79,6 +83,14 @@ class TrHDiv(Trace):
         # plot dofs of the type associated with this space
         vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
+
+    def convert_to_fiat(self, qpts, pts, wts):
+        f_at_qpts = pts
+        shp = tuple(f_at_qpts.shape[:-1])
+        weights = np.transpose(np.multiply(f_at_qpts, wts), (-1,) + tuple(range(len(shp))))
+        alphas = list(np.ndindex(shp))
+        pt_dict = {tuple(pt): [(wt[alpha], alpha) for alpha in alphas] for pt, wt in zip(qpts, weights)}
+        return [(pt_dict, {})]
 
     def tabulate(self, Qpts, trace_entity, g):
         entityBasis = np.array(trace_entity.basis_vectors())
@@ -123,6 +135,14 @@ class TrHCurl(Trace):
         result = np.matmul(tangent, subEntityBasis)
         return result
 
+    def convert_to_fiat(self, qpts, pts, wts):
+        f_at_qpts = pts
+        shp = tuple(f_at_qpts.shape[:-1])
+        weights = np.transpose(np.multiply(f_at_qpts, wts), (-1,) + tuple(range(len(shp))))
+        alphas = list(np.ndindex(shp))
+        pt_dict = {tuple(pt): [(wt[alpha], alpha) for alpha in alphas] for pt, wt in zip(qpts, weights)}
+        return [(pt_dict, {})]
+
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
@@ -159,9 +179,27 @@ class TrGrad(Trace):
             return tuple(result)
         return apply
 
+    def convert_to_fiat(self, qpts, pts, wts):
+        shp = (self.domain.get_spatial_dimension(),)
+        alphas = []
+        for i in range(pts.shape[0]):
+            new = np.zeros(shp, dtype=int)
+            new[i] = 1
+            alphas += [tuple(new)]
+        deriv_dicts = []
+        for alpha in alphas:
+            deriv_dicts += [{tuple(p): [(1.0, tuple(alpha), tuple())] for p in pts.T}]
+
+        # self.alpha = tuple(alpha)
+        # self.order = sum(self.alpha)
+        return [({}, d) for d in deriv_dicts]
+
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
+
+    def tabulate(self, Qpts, trace_entity, g):
+        return np.ones_like(Qpts)
 
     def to_tikz(self, coord, trace_entity, g, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"

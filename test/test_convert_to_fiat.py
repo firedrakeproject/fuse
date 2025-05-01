@@ -155,6 +155,27 @@ def create_cg2_tri(cell):
     return cg
 
 
+def create_hermite(tri):
+    vert = tri.vertices()[0]
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(tri, dg0, TrH1)]
+    v_dofs = DOFGenerator(v_xs, S3/S2, S1)
+
+    v_derv_xs = [immerse(tri, dg0, TrGrad)]
+    # TODO fix perms so this can be S1
+    v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S3)
+
+    i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
+    i_dofs = DOFGenerator(i_xs, S1, S1)
+
+    her = ElementTriple(tri, (P3, CellH2, C0),
+                        [v_dofs, v_derv_dofs, i_dofs])
+    return her
+
+
 def test_create_fiat_nd():
     cell = polygon(3)
     nd = construct_nd(cell)
@@ -487,6 +508,7 @@ def test_non_tensor_quad():
                                                     (lambda cell: CR_n(cell, 3), "CR", 1),
                                                     (create_cf, "CR", 1),  # Don't think Crouzeix Falk in in Firedrake
                                                     (construct_cg3, "CG", 3),
+                                                    (create_hermite, "HER", 3),
                                                     pytest.param(construct_nd, "N1curl", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed')),
                                                     pytest.param(construct_rt, "RT", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed'))])
 def test_project(elem_gen, elem_code, deg):
@@ -557,6 +579,35 @@ def test_project_3d(elem_gen, elem_code, deg):
     solve(a == L, out)
 
     assert np.allclose(out.dat.data, f.dat.data, rtol=1e-5)
+
+
+# @pytest.mark.xfail(reason='Handling generation of multiple fiat nodes from one in permutations')
+def test_create_hermite():
+    deg = 3
+    cell = polygon(3)
+    elem = create_hermite(cell)
+    ref_el = cell.to_fiat()
+    sd = ref_el.get_spatial_dimension()
+
+    from FIAT.hermite import CubicHermite
+    fiat_elem = CubicHermite(ref_el, deg)
+
+    my_elem = elem.to_fiat()
+
+    Q = create_quadrature(ref_el, 2*(deg+1))
+    Qpts, _ = Q.get_points(), Q.get_weights()
+
+    fiat_vals = fiat_elem.tabulate(0, Qpts)
+    my_vals = my_elem.tabulate(0, Qpts)
+
+    fiat_vals = flatten(fiat_vals[(0,) * sd])
+    my_vals = flatten(my_vals[(0,) * sd])
+
+    (x, res, _, _) = np.linalg.lstsq(fiat_vals.T, my_vals.T)
+    x1 = np.linalg.inv(x)
+    assert np.allclose(np.linalg.norm(my_vals.T - fiat_vals.T @ x), 0)
+    assert np.allclose(np.linalg.norm(fiat_vals.T - my_vals.T @ x1), 0)
+    assert np.allclose(res, 0)
 
 
 def test_investigate_dpc():

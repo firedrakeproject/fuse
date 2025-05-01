@@ -1,6 +1,6 @@
 from FIAT.quadrature_schemes import create_quadrature
 from FIAT.quadrature import FacetQuadratureRule
-from FIAT.functional import PointEvaluation, FrobeniusIntegralMoment
+from FIAT.functional import PointEvaluation, FrobeniusIntegralMoment, Functional
 from fuse.utils import sympy_to_numpy
 import numpy as np
 import sympy as sp
@@ -37,6 +37,10 @@ class DeltaPairing(Pairing):
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
         pt = dof.eval(FuseFunction(lambda *x: x))
         return PointEvaluation(ref_el, pt)
+
+    def get_pts(self, ref_el, total_degree):
+        entity = ref_el.construct_subelement(self.entity.dim())
+        return [(0,) * entity.get_spatial_dimension()], [1], 1
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -90,6 +94,18 @@ class L2Pairing(Pairing):
         res.entity = entity
         return res
 
+    def get_pts(self, ref_el, total_degree):
+        entity = ref_el.construct_subelement(self.entity.dim())
+        Q_ref = create_quadrature(entity, total_degree)
+
+        ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
+        Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref)
+        Jdet = Q.jacobian_determinant()
+        # TODO work out how to get J from attachment
+
+        qpts, qwts = Q_ref.get_points(), Q_ref.get_weights()
+        return qpts, qwts, Jdet
+
     def convert_to_fiat(self, ref_el, dof, interpolant_degree):
         total_deg = interpolant_degree + dof.kernel.degree()
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
@@ -98,11 +114,7 @@ class L2Pairing(Pairing):
         Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref)
         Jdet = Q.jacobian_determinant()
         qpts, _ = Q.get_points(), Q.get_weights()
-        print(qpts)
-        print(dof.tabulate(qpts))
         f_at_qpts = dof.tabulate(qpts).T / Jdet
-        print(len(Q.pts))
-        print(f_at_qpts.shape)
         functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
@@ -154,8 +166,11 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def tabulate(self, Qpts):
-        return np.array([self.pt for _ in Qpts]).astype(np.float64)
+    def tabulate(self, Qpts, attachment=None):
+        if attachment is None:
+            return np.array([self.pt for _ in Qpts]).astype(np.float64)
+        else:
+            return np.array([attachment(*self.pt) for _ in Qpts]).astype(np.float64)
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -195,8 +210,10 @@ class PolynomialKernel(BaseKernel):
             return [res]
         return res
 
-    def tabulate(self, Qpts):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+    def tabulate(self, Qpts, attachment=None):
+        if attachment is None:
+            return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+        return np.array([self(*attachment(*pt)) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -255,8 +272,20 @@ class DOF():
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree):
-        return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
-        raise NotImplementedError("Fiat conversion only implemented for Point eval")
+        total_degree = self.kernel.degree() + interpolant_degree
+        pts, wts, jdet = self.pairing.get_pts(ref_el, total_degree)
+        f_pts = self.kernel.tabulate(pts).T / jdet
+        # TODO need to work out how i can discover the shape in a better way
+        if isinstance(self.pairing, DeltaPairing):
+            shp = tuple()
+            pt_dict = {tuple(p): [(w, tuple())] for (p, w) in zip(f_pts.T, wts)}
+        else:
+            shp = tuple(f_pts.shape[:-1])
+            weights = np.transpose(np.multiply(f_pts, wts), (-1,) + tuple(range(len(shp))))
+            alphas = list(np.ndindex(shp))
+            pt_dict = {tuple(pt): [(wt[alpha], alpha) for alpha in alphas] for pt, wt in zip(pts, weights)}
+
+        return [Functional(ref_el, shp, pt_dict, {}, self.__repr__())]
 
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)
@@ -296,6 +325,24 @@ class ImmersedDOF(DOF):
         immersion = self.target_space.tabulate(Qpts, self.trace_entity, self.g)
         res = self.kernel.tabulate(Qpts)
         return immersion*res
+
+    def convert_to_fiat(self, ref_el, interpolant_degree):
+        total_degree = self.kernel.degree() + interpolant_degree
+        pts, wts, jdet = self.pairing.get_pts(ref_el, total_degree)
+        f_pts = self.kernel.tabulate(pts, self.attachment)
+        attached_pts = [self.attachment(*p) for p in pts]
+        immersion = self.target_space.tabulate(f_pts, self.trace_entity, self.g)
+
+        f_pts = (f_pts * immersion).T / jdet
+        dict_list = self.target_space.convert_to_fiat(attached_pts, f_pts, wts)
+
+        # breakpoint()
+        # TODO need to work out how i can discover the shape in a better way
+        if isinstance(self.pairing, DeltaPairing):
+            shp = tuple()
+        else:
+            shp = tuple(f_pts.shape[:-1])
+        return [Functional(ref_el, shp, pt_dict, deriv_dict, self.__repr__()) for (pt_dict, deriv_dict) in dict_list]
 
     def __call__(self, g):
         permuted = self.cell.permute_entities(g, self.trace_entity.dim())

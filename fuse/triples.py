@@ -120,21 +120,27 @@ class ElementTriple():
             dim = entity[0]
             for i in range(len(dofs)):
                 if entity[1] == dofs[i].trace_entity.id - min_ids[dim]:
-                    entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
-                    nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
-                    counter += 1
+                    fiat_dofs = dofs[i].convert_to_fiat(ref_el, degree)
+                    nodes.extend(fiat_dofs)
+                    entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].extend([counter + i for i in range(len(fiat_dofs))])
+                    counter += len(fiat_dofs)
+        print("nodes", nodes)
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
+        # self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
-        print("my", [n.pt_dict for n in nodes])
+        print("pts", [n.pt_dict for n in nodes])
+        print("derivs", [n.deriv_dict for n in nodes])
         print(entity_perms)
         print(entity_ids)
-        print(ref_el.vertices)
+        print(nodes)
+        print(len(nodes))
         print()
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
+            self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
             dual = DualSet(nodes, ref_el, entity_ids, entity_perms)
         else:
+            self.matrices = None
             dual = DualSet(nodes, ref_el, entity_ids)
         return CiarletElement(poly_set, dual, degree, form_degree)
 
@@ -227,7 +233,7 @@ class ElementTriple():
         A = dualmat.reshape((shp[0], -1))
         B = old_coeffs.reshape((shp[0], -1))
         V = np.dot(A, np.transpose(B))
-
+        print(V)
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             try:
@@ -249,7 +255,7 @@ class ElementTriple():
             if g.perm.is_Identity:
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
-                new_nodes = [d(g).convert_to_fiat(ref_el, degree) for d in self.generate()]
+                new_nodes = sum([d(g).convert_to_fiat(ref_el, degree) for d in self.generate()], [])
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
@@ -286,7 +292,8 @@ class ElementTriple():
 
         if pure_perm is False:
             # TODO think about where this call goes
-            return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), pure_perm
+            return None, False
+            # return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), pure_perm
 
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}
