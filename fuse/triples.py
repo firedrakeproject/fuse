@@ -142,7 +142,6 @@ class ElementTriple():
         else:
             self.matrices = None
             dual = DualSet(nodes, ref_el, entity_ids)
-        # breakpoint()
         return CiarletElement(poly_set, dual, degree, form_degree)
 
     def to_tikz(self, show=True, scale=3):
