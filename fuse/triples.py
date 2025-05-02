@@ -1,4 +1,4 @@
-from fuse.cells import Point, TensorProductPoint
+from fuse.cells import Point, TensorProductPoint, compare_topologies
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
@@ -6,6 +6,7 @@ from fuse.groups import perm_matrix_to_perm_array
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
+from FIAT.reference_element import ufc_cell
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -123,6 +124,8 @@ class ElementTriple():
                     entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
+        entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
+        print(entity_orientations)
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0

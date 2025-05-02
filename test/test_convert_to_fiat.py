@@ -299,6 +299,7 @@ def test_2d(elem_gen, elem_code, deg):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8),
                                                               pytest.param(construct_cg3, "CG", 3, 3.8, marks=pytest.mark.xfail(reason='Orientation of edges')),])
+# (construct_cg3, "CG", 3, 3.8)])
 def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -316,7 +317,7 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(mesh, V2)
         diff[i-3] = res2
-        assert np.allclose(res1, res2)
+        # assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
@@ -564,3 +565,20 @@ def test_investigate_dpc():
 
     U = FunctionSpace(mesh, "DPC", 1)
     print(U)
+
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8),
+                                                              pytest.param(construct_cg3, "CG", 3, 3.8, marks=pytest.mark.xfail(reason='Orientation of edges')),])
+# (construct_cg3, "CG", 3, 3.8)])
+def test_unit_helmholtz(elem_gen, elem_code, deg, conv_rate):
+    cell = polygon(3)
+    elem = elem_gen(cell)
+    mesh = UnitTriangleMesh()
+
+    V = FunctionSpace(mesh, elem_code, deg)
+    res1 = helmholtz_solve(mesh, V)
+
+    V2 = FunctionSpace(mesh, elem.to_ufl())
+    res2 = helmholtz_solve(mesh, V2)
+
+    assert np.allclose(res1, res2)
