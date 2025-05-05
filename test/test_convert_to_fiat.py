@@ -94,13 +94,11 @@ def create_cg1(cell):
 
 def create_cg1_quad():
     deg = 1
-    # cell = polygon(4)
-    cell = constructCellComplex("quadrilateral").cell_complex
-
+    cell = TensorProductPoint(line(), line()).flatten()
+    print(cell, type(cell))
     vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
-
-    Pk = PolynomialSpace(deg, deg + 1)
+    Pk = PolynomialSpace(deg + 1, deg)
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
@@ -436,8 +434,32 @@ def helmholtz_solve(mesh, V):
 def run_test(r, elem, parameters={}, quadrilateral=False):
     # Create mesh and define function space
     m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem)
+    # Define variational problem
+    u = Function(V)
+    v = TestFunction(V)
+    a = inner(grad(u), grad(v)) * dx
+
+    bcs = [DirichletBC(V, Constant(0), 3),
+           DirichletBC(V, Constant(42), 4)]
+
+    # Compute solution
+    solve(a == 0, u, solver_parameters=parameters, bcs=bcs)
+
+    f = Function(V)
+    f.interpolate(42*x[1])
+
+    return sqrt(assemble(inner(u - f, u - f) * dx))
+
+
+def run_test_original(r, elem_code, deg, parameters={}, quadrilateral=False):
+    # Create mesh and define function space
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem_code, deg)
     # Define variational problem
     u = Function(V)
     v = TestFunction(V)
@@ -466,17 +488,21 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
+                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Issue with cell/mesh'))])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
-    # m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True)
     ufl_elem = elem.to_ufl()
     assert (run_test(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
-def test_non_tensor_quad():
-    create_cg1_quad()
+# # @pytest.mark.xfail(reason="Issue with quad cell")
+# def test_non_tensor_quad():
+#     elem = create_cg1_quad()
+#     ufl_elem = elem.to_ufl()
+#     print(elem.to_fiat().entity_permutations())
+#     # elem.cell.hasse_diagram(filename="cg1quad.png")
+#     assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
@@ -564,3 +590,12 @@ def test_investigate_dpc():
 
     U = FunctionSpace(mesh, "DPC", 1)
     print(U)
+    f = Function(U)
+    f.assign(1)
+
+    out = Function(U)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)

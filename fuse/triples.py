@@ -126,10 +126,12 @@ class ElementTriple():
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
-        print("my", [n.pt_dict for n in nodes])
+        # print("my", [n.pt_dict for n in nodes])
+        print(self.cell)
+        print(ref_el)
+        print("first class", ref_el.topology)
+        print(pure_perm)
         print(entity_perms)
-        print(entity_ids)
-        print(ref_el.vertices)
         print()
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
@@ -378,7 +380,6 @@ class ElementTriple():
                         if g in dof_gen_class[dim].g1.members() or (pure_perm and len(dof_gen_class[dim].g1.members()) > 1):
                             sub_mat = g.matrix_form()
                             oriented_mats_overall[val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-
         for val, mat in oriented_mats_overall.items():
             cell_dofs = entity_ids[dim][0]
             flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])

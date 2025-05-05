@@ -55,6 +55,9 @@ class GroupMemberRep(object):
         return val, val_list
 
     def numeric_rep(self):
+        """ Uses a standard formula to number permutations in the group.
+        For the case where this doesn't automatically number from 0..n (ie the group is not the full symmetry group),
+        a mapping is constructed on group creation"""
         identity = self.group.identity.perm.array_form
         m_array = self.perm.array_form
         val = 0
@@ -62,6 +65,8 @@ class GroupMemberRep(object):
             loc = m_array.index(identity[i])
             m_array.remove(identity[i])
             val += loc * math.factorial(len(identity) - i - 1)
+        if self.group.group_rep_numbering is not None:
+            return self.group.group_rep_numbering[val]
         return val
 
     def __eq__(self, x):
@@ -133,6 +138,11 @@ class PermutationSetRepresentation():
                     self.identity = p_rep
                 self._members.append(p_rep)
                 counter += 1
+
+            self.group_rep_numbering = None
+            numeric_reps = [m.numeric_rep() for m in self.members()]
+            if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
 
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell)
@@ -223,6 +233,11 @@ class GroupRepresentation(PermutationSetRepresentation):
                 if g.is_Identity:
                     self.identity = p_rep
                 counter += 1
+
+            self.group_rep_numbering = None
+            numeric_reps = [m.numeric_rep() for m in self.members()]
+            if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
 
             # this order produces simpler generator lists
             # self.generators.reverse()
