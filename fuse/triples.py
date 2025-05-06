@@ -125,15 +125,11 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
         entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
-        print(entity_orientations)
+
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
-        # print("my", [n.pt_dict for n in nodes])
-        print(entity_perms)
-        # print(entity_ids)
-        # print(ref_el.vertices)
-        # print()
+
         # TODO: Change this when Dense case in Firedrake
         if pure_perm:
             dual = DualSet(nodes, ref_el, entity_ids, entity_perms)
@@ -287,7 +283,6 @@ class ElementTriple():
         return entity_associations, pure_perm
 
     def _initialise_entity_dicts(self, dofs):
-        print(self)
         min_ids = self.cell.get_starter_ids()
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}
@@ -329,7 +324,7 @@ class ElementTriple():
                     for dof_gen in entity_associations[dim][e_id].keys():
                         ent_dofs = entity_associations[dim][e_id][dof_gen]
                         ent_dofs_ids = np.array([ed.id for ed in ent_dofs], dtype=int)
-                        # print(dof_gen, ent_dofs)
+                        # (dof_gen, ent_dofs)
                         total_ent_dof_ids += [ed.id for ed in ent_dofs]
                         dof_gen_class = ent_dofs[0].generation
 

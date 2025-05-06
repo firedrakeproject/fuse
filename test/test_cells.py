@@ -193,3 +193,27 @@ def test_compare_topologies():
     res = compare_topologies(fiat_top, fuse_top)
     print(res)
     assert res[4] == 1
+
+@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
+def test_connectivity(cell):
+    cell = cell.to_fiat()
+    for dim0 in range(cell.get_spatial_dimension()+1):
+        connectivity = cell.get_connectivity()[(dim0, 0)]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+        
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+
+def test_tensor_connectivity():
+    from test_2d_examples_docs import construct_cg1
+    A = construct_cg1()
+    B = construct_cg1()
+    cell = tensor_product(A, B).cell
+    cell = cell.to_fiat() 
+    for dim0 in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        connectivity = cell.get_connectivity()[(dim0, (0, 0))]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+        
+        assert all(connectivity[i] == t for i, t in topology.items())
