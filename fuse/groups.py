@@ -1,10 +1,10 @@
 import fuse.cells as cells
+from fuse.utils import orientation_value
 from sympy.combinatorics import PermutationGroup, Permutation
 from sympy.combinatorics.named_groups import SymmetricGroup, DihedralGroup, CyclicGroup, AlternatingGroup
 from sympy.matrices.expressions import PermutationMatrix
 import numpy as np
 import sympy as sp
-import math
 
 
 def perm_matrix_to_perm_array(p_mat):
@@ -57,12 +57,7 @@ class GroupMemberRep(object):
     def numeric_rep(self):
         identity = self.group.identity.perm.array_form
         m_array = self.perm.array_form
-        val = 0
-        for i in range(len(identity)):
-            loc = m_array.index(identity[i])
-            m_array.remove(identity[i])
-            val += loc * math.factorial(len(identity) - i - 1)
-        return val
+        return orientation_value(identity, m_array)
 
     def __eq__(self, x):
         assert isinstance(x, GroupMemberRep)

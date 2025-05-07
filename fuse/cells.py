@@ -10,7 +10,7 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
-from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from ufl.cell import Cell, TensorProductCell
 
@@ -1027,3 +1027,33 @@ def constructCellComplex(name):
         return TensorProductPoint(*components).to_ufl(name)
     else:
         raise TypeError("Cell complex construction undefined for {}".format(str(name)))
+
+
+def compare_topologies(base, new):
+    """Compute orientations of sub entities against a base topology
+
+       base topology is assumed to follow the FIAT numbering convention,
+       ie edges are ordered from lower to higher
+       """
+    if list(base.keys()) != list(new.keys()):
+        raise ValueError("Topologies of different sizes cannot be compared")
+    orientations = []
+    for dim in sorted(base.keys()):
+        for entity in sorted(base[dim].keys()):
+            assert entity in new[dim].keys()
+            base_array = list(base[dim][entity])
+            new_array = list(new[dim][entity])
+            if sorted(base_array) == sorted(new_array):
+                orientations += [orientation_value(base_array, new_array)]
+            else:
+                # numbering does not match - renumber
+                # base is treated as ordered list
+                # new is renumbered by sorting the values
+                base_numbering = {base_array[i]: i for i in range(len(base_array))}
+                sorted_new = sorted(new_array)
+                new_numbering = {sorted_new[i]: i for i in range(len(new_array))}
+                base_renumbered = [base_numbering[b] for b in base_array]
+                new_renumbered = [new_numbering[n] for n in new_array]
+                orientations += [orientation_value(base_renumbered, new_renumbered)]
+
+    return orientations
