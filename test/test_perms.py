@@ -66,7 +66,10 @@ def test_nd_perms(cell):
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
     ned = ElementTriple(cell, (nd, CellHCurl, C0), [tri_dofs])
-    ned.to_fiat()
+    ned_fiat = ned.to_fiat()
+    for i, mat in ned.matrices[2][0].items():
+        print(i)
+        print(mat)
 
 
 @pytest.mark.xfail(reason='Conversion of non simplex ref els to fiat needed')

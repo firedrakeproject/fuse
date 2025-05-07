@@ -856,13 +856,18 @@ class CellComplexToFiatSimplex(Simplex):
     def cellname(self):
         return self.name
 
-    def construct_subelement(self, dimension):
+    def construct_subelement(self, dimension, e_id=0, o=None):
         """Constructs the reference element of a cell
         specified by subelement dimension.
 
         :arg dimension: subentity dimension (integer)
+        :arg e_id: subentity id, default 0, (integer)
+        :arg o: orientation of subentity, default None (GroupMemberRep)
         """
-        return self.fe_cell.d_entities(dimension)[0].to_fiat()
+        if o:
+            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat()
+        else:
+            return self.fe_cell.d_entities(dimension)[e_id].to_fiat()
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()

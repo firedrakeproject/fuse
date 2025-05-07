@@ -49,6 +49,7 @@ def tabulate_sympy(expr, pts):
         if not hasattr(pt, "__iter__"):
             pt = (pt,)
         subbed = expr.evalf(subs={syms[i]: pt[i] for i in range(len(pt))})
+        print(subbed)
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]
         i += 1

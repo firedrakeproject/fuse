@@ -125,9 +125,7 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
         entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
-        print(entity_orientations)
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        print(entity_perms)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
 
@@ -247,9 +245,15 @@ class ElementTriple():
         for g in self.cell.group.members():
             val = g.numeric_rep()
             if g.perm.is_Identity:
+                for i in range(len(nodes)):
+                    print(val, nodes[i].pt_dict)
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
                 new_nodes = [d(g).convert_to_fiat(ref_el, degree) for d in self.generate()]
+                if val == 1:
+                    breakpoint()
+                    for i in range(len(new_nodes)):
+                        print(val, new_nodes[i].pt_dict)
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
@@ -342,6 +346,10 @@ class ElementTriple():
                         else:
                             # TODO what if an orientation is not in G1
                             pass
+                        if not pure_perm:
+                            breakpoint()
+                            poly_set2 = dofs[ent_dofs_ids[0]].triple.spaces[0].to_ON_polynomial_set(e.to_fiat())
+                            self.compute_dense_matrix(e.to_fiat(), {0: {0: [], 1: []}, 1: {0: [0]}}, [nodes[0]], poly_set2)
 
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
                             # Handle immersion - can only happen once so number of keys is max 2

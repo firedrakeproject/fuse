@@ -1,5 +1,5 @@
 from FIAT.quadrature_schemes import create_quadrature
-from FIAT.quadrature import FacetQuadratureRule
+from FIAT.quadrature import FacetQuadratureRule, map_quadrature, pseudo_determinant
 from FIAT.functional import PointEvaluation, FrobeniusIntegralMoment
 from fuse.utils import sympy_to_numpy
 import numpy as np
@@ -13,6 +13,7 @@ class Pairing():
 
     def __init__(self):
         self.entity = None
+        self.orientation = None
 
     def _to_dict(self):
         o_dict = {"entity": self.entity}
@@ -41,6 +42,15 @@ class DeltaPairing(Pairing):
     def add_entity(self, entity):
         res = DeltaPairing()
         res.entity = entity
+        if self.orientation:
+            res = res.permute(self.orientation)
+        return res
+
+    def permute(self, g):
+        res = L2Pairing()
+        if self.entity:
+            res.entity = self.entity.orient(g)
+        res.orientation = g
         return res
 
     def __repr__(self):
@@ -56,9 +66,7 @@ class DeltaPairing(Pairing):
 
 
 class L2Pairing(Pairing):
-    """ need to think about the abstraction level here -
-    are we wanting to define them as quadrature now? or defer this?
-    """
+
     def __init__(self):
         super(L2Pairing, self).__init__()
 
@@ -88,22 +96,39 @@ class L2Pairing(Pairing):
     def add_entity(self, entity):
         res = L2Pairing()
         res.entity = entity
+        if self.orientation:
+            res = res.permute(self.orientation)
+        return res
+
+    def permute(self, g):
+        if self.orientation:
+            print("REORIENTING", self.orientation, g)
+        res = L2Pairing()
+        if self.entity:
+            res.entity = self.entity.orient(g)
+        res.orientation = g
         return res
 
     def convert_to_fiat(self, ref_el, dof, interpolant_degree):
         total_deg = interpolant_degree + dof.kernel.degree()
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
-        entity = ref_el.construct_subelement(self.entity.dim())
+        entity_ref = ref_el.construct_subelement(self.entity.dim())
+        entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
+        print(entity)
         Q_ref = create_quadrature(entity, total_deg)
-        Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref)
-        Jdet = Q.jacobian_determinant()
-        qpts, _ = Q.get_points(), Q.get_weights()
-        f_at_qpts = dof.tabulate(qpts).T / Jdet
-        functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
+        pts_ref, wts_ref = Q_ref.get_points(), Q_ref.get_weights()
+
+        pts, wts, J = map_quadrature(pts_ref, wts_ref, Q_ref.ref_el, entity_ref, jacobian=True)
+        Jdet = pseudo_determinant(J)
+
+        print(pts)
+        f_at_qpts = dof.tabulate(pts).T / Jdet
+        print(f_at_qpts)
+        functional = FrobeniusIntegralMoment(ref_el, Q_ref, f_at_qpts)
         return functional
 
     def __repr__(self):
-        return "integral_{}({{kernel}} * {{fn}}) dx)".format(str(self.entity))
+        return "integral_{}({{kernel}} * {{fn}}) dx) ".format(str(self.entity)) +  str(self.orientation)
 
     def dict_id(self):
         return "L2Inner"
@@ -228,7 +253,7 @@ class DOF():
 
     def __call__(self, g):
         new_generation = self.generation.copy()
-        return DOF(self.pairing, self.kernel.permute(g), self.trace_entity, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
+        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.trace_entity, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
 
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
@@ -252,7 +277,6 @@ class DOF():
 
     def convert_to_fiat(self, ref_el, interpolant_degree):
         return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
-        raise NotImplementedError("Fiat conversion only implemented for Point eval")
 
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)
@@ -298,7 +322,7 @@ class ImmersedDOF(DOF):
         index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
         new_trace_entity = self.cell.get_node(permuted[index_trace][0]).orient(permuted[index_trace][1])
 
-        return ImmersedDOF(self.pairing, self.kernel.permute(permuted[index_trace][1]), new_trace_entity,
+        return ImmersedDOF(self.pairing.permute(permuted[index_trace][1]), self.kernel.permute(permuted[index_trace][1]), new_trace_entity,
                            self.attachment, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
 
     def __repr__(self):
