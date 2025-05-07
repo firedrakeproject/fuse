@@ -28,6 +28,7 @@ jobs:
           git fetch
           git checkout indiamai/fuse-quads
           git pull
+          make
       - name: Install checkedout fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[dev]'

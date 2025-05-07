@@ -8,8 +8,6 @@ from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, con
 from test_3d_examples_docs import construct_tet_rt
 from test_polynomial_space import flatten
 from element_examples import CR_n
-from fuse.cells import firedrake_triangle
-
 
 
 def create_dg1(cell):
@@ -300,7 +298,6 @@ def test_2d(elem_gen, elem_code, deg):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8), (construct_cg3, "CG", 3, 3.8)])
-   
 def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -344,7 +341,7 @@ def helmholtz_solve(mesh, V):
     L = inner(f, v) * dx
     u = Function(V)
 
-    l_a = assemble(L)
+    # l_a = assemble(L)
     # elem = V.finat_element.fiat_equivalent
     # W = VectorFunctionSpace(mesh, V.ufl_element())
     # X = assemble(interpolate(mesh.coordinates, W))
