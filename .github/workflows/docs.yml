@@ -10,7 +10,7 @@ jobs:
     # Run on the Github hosted runner
     runs-on: ubuntu-latest
     container:
-      image: firedrakeproject/firedrake-docdeps:latest
+      image: firedrakeproject/firedrake-vanilla-default:latest
       volumes:
         - ${{ github.workspace }}:/home/firedrake/output
     # Steps represent a sequence of tasks that will be executed as
