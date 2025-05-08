@@ -27,19 +27,6 @@ def test_cg3_perms():
     cg3.to_fiat()
 
 
-def test_cg2_perms_min():
-    cell = edge
-    cg3 = create_cg2(cell)
-    dofs = cg3.generate()
-    degree = cg3.spaces[0].degree()
-    ref_el = cg3.cell.to_fiat()
-    d = dofs[0].convert_to_fiat(ref_el, degree)
-    print(dofs[0])
-    print(type(dofs[0].pairing))
-    print(dofs[0].kernel)
-
-
-
 @pytest.mark.parametrize("cell", [edge])
 def test_dg_perms(cell):
     dg1 = create_dg1(cell)
@@ -79,7 +66,7 @@ def test_nd_perms(cell):
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
     ned = ElementTriple(cell, (nd, CellHCurl, C0), [tri_dofs])
-    ned_fiat = ned.to_fiat()
+    ned.to_fiat()
     for i, mat in ned.matrices[2][0].items():
         print(i)
         print(mat)

@@ -1,5 +1,5 @@
 from FIAT.quadrature_schemes import create_quadrature
-from FIAT.quadrature import FacetQuadratureRule, map_quadrature, pseudo_determinant
+from FIAT.quadrature import FacetQuadratureRule
 from FIAT.functional import PointEvaluation, FrobeniusIntegralMoment
 from fuse.utils import sympy_to_numpy
 import numpy as np
@@ -119,7 +119,7 @@ class L2Pairing(Pairing):
     def convert_to_fiat(self, ref_el, dof, interpolant_degree):
         total_deg = interpolant_degree + dof.kernel.degree()
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
-        entity_ref = ref_el.construct_subelement(self.entity.dim())
+        # entity_ref = ref_el.construct_subelement(self.entity.dim())
         entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
         Q_ref = create_quadrature(entity, total_deg)
         # pts_ref, wts_ref = Q_ref.get_points(), Q_ref.get_weights()
@@ -335,7 +335,7 @@ class ImmersedDOF(DOF):
         print("qpts", Qpts)
         res = self.kernel.tabulate(Qpts, self.attachment)
         # attached_res = np.array([list(self.attachment(*r)) for r in res])
-        print("attac", attached_res)
+        # print("attac", attached_res)
         print("res", res)
         return immersion*res
 

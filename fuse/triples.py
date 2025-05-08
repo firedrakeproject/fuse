@@ -1,4 +1,4 @@
-from fuse.cells import Point, TensorProductPoint, compare_topologies
+from fuse.cells import Point, TensorProductPoint
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
@@ -6,7 +6,7 @@ from fuse.groups import perm_matrix_to_perm_array
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
-from FIAT.reference_element import ufc_cell
+# from FIAT.reference_element import ufc_cell
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt

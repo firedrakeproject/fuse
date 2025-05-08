@@ -85,7 +85,7 @@ def test_permute_nd():
             print(g)
             for dof in nd.generate():
                 print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1).pt_dict)
-                # print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
+                print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
 
     # reflected dofs
     phi_2 = FuseFunction(sp.Matrix([0.288675134594813*y - 0.333333333333333, -0.288675134594813*x]), symbols=(x, y))
@@ -103,7 +103,7 @@ def test_permute_nd():
             print(g)
             for dof in nd.generate():
                 print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1).pt_dict)
-                # print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
+                print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
     #     # print(dof.convert_to_fiat(cell.to_fiat(), 1)(lambda x: np.array([1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]])))
 
     # for g in nd.cell.group.members():
