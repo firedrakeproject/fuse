@@ -37,6 +37,9 @@ class DeltaPairing(Pairing):
 
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
         pt = dof.eval(FuseFunction(lambda *x: x))
+        print("eval", pt)
+        pt1 = dof.tabulate([[1]])
+        print("tabulate", pt1)
         return PointEvaluation(ref_el, pt)
 
     def add_entity(self, entity):
