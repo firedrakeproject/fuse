@@ -182,7 +182,6 @@ class PointKernel(BaseKernel):
         return self.pt
 
     def tabulate(self, Qpts):
-        print(Qpts)
         print(self.pt)
         print("in kernel", np.array([self.pt for _ in Qpts]).astype(np.float64))
         return np.array([self.pt for _ in Qpts]).astype(np.float64)
@@ -286,6 +285,7 @@ class DOF():
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree):
+        print("converting")
         return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
 
     def __repr__(self, fn="v"):
