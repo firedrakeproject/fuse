@@ -39,8 +39,8 @@ class DeltaPairing(Pairing):
         pt = dof.eval(FuseFunction(lambda *x: x))
         print("eval", pt)
         pt1 = dof.tabulate([[1]])
-        print("tabulate", pt1)
-        return PointEvaluation(ref_el, pt)
+        print("tabulate", tuple(pt1[0]))
+        return PointEvaluation(ref_el, tuple(pt1[0]))
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -50,7 +50,7 @@ class DeltaPairing(Pairing):
         return res
 
     def permute(self, g):
-        res = L2Pairing()
+        res = DeltaPairing()
         if self.entity:
             res.entity = self.entity.orient(g)
         res.orientation = g
@@ -74,24 +74,25 @@ class L2Pairing(Pairing):
         super(L2Pairing, self).__init__()
 
     def __call__(self, kernel, v, cell):
-        # print(self.entity)
+        # TODO get degree of v
         # if cell == self.entity:
+        #     ref_el = self.entity.to_fiat()
         #     # print("evaluating", kernel, v, "on", self.entity)
-        #     quadrature = create_quadrature(self.entity.to_fiat(), 5)
+        #     Q = create_quadrature(self.entity.to_fiat(), 5)
         #     # need quadrature here too - therefore need the information from the triple.
         # else:
         #     ref_el = cell.to_fiat()
-        #     print(cell)
         #     ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
-        #     entity = ref_el.construct_subelement(self.entity.dim())
+        #     entity_ref = ref_el.construct_subelement(self.entity.dim())
+        #     entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
         #     Q_ref = create_quadrature(entity, 5)
-        #     quadrature = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref)
-        quadrature = create_quadrature(self.entity.to_fiat(), 5)
+        #     Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref, self.orientation)
+        Q = create_quadrature(self.entity.to_fiat(), 5)
 
         def kernel_dot(x):
             return np.dot(kernel(*x), v(*x))
 
-        return quadrature.integrate(kernel_dot)
+        return Q.integrate(kernel_dot)
 
     def tabulate(self):
         pass
@@ -181,9 +182,11 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def tabulate(self, Qpts):
+    def tabulate(self, Qpts, attachment=None):
         print(self.pt)
-        print("in kernel", np.array([self.pt for _ in Qpts]).astype(np.float64))
+        print("in kernel", np.array([attachment(*self.pt)for _ in Qpts]).astype(np.float64))
+        if attachment:
+            return np.array([attachment(*self.pt) for _ in Qpts]).astype(np.float64)
         return np.array([self.pt for _ in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -225,7 +228,10 @@ class PolynomialKernel(BaseKernel):
             return [res]
         return res
 
-    def tabulate(self, Qpts):
+    def tabulate(self, Qpts, attachment=None):
+        # TODO do we need to attach qpts
+        if attachment:
+            return np.array([attachment(*self(*pt)) for pt in Qpts]).astype(np.float64)
         return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -327,11 +333,11 @@ class ImmersedDOF(DOF):
         immersion = self.target_space.tabulate(Qpts, self.trace_entity, self.g)
         print("immerse", immersion)
         print("qpts", Qpts)
-        res = self.kernel.tabulate(Qpts)
-        attached_res = np.array([list(self.attachment(*r)) for r in res])
+        res = self.kernel.tabulate(Qpts, self.attachment)
+        # attached_res = np.array([list(self.attachment(*r)) for r in res])
         print("attac", attached_res)
         print("res", res)
-        return immersion*attached_res
+        return immersion*res
 
     def __call__(self, g):
         permuted = self.cell.permute_entities(g, self.trace_entity.dim())

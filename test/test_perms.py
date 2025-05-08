@@ -26,12 +26,19 @@ def test_cg3_perms():
     cg3 = construct_cg3()
     cg3.to_fiat()
 
-def test_cg3_perms():
-    cg3 = construct_cg3()
+
+def test_cg2_perms_min():
+    cell = edge
+    cg3 = create_cg2(cell)
     dofs = cg3.generate()
     degree = cg3.spaces[0].degree()
     ref_el = cg3.cell.to_fiat()
-    dofs[0].convert_to_fiat(ref_el, degree)
+    d = dofs[0].convert_to_fiat(ref_el, degree)
+    print(dofs[0])
+    print(type(dofs[0].pairing))
+    print(dofs[0].kernel)
+
+
 
 @pytest.mark.parametrize("cell", [edge])
 def test_dg_perms(cell):
