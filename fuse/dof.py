@@ -101,6 +101,9 @@ class L2Pairing(Pairing):
         return res
 
     def permute(self, g):
+        if g.perm.is_Identity:
+            return self
+
         if self.orientation:
             print("REORIENTING", self.orientation, g)
         res = L2Pairing()
@@ -114,21 +117,21 @@ class L2Pairing(Pairing):
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
         entity_ref = ref_el.construct_subelement(self.entity.dim())
         entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
-        print(entity)
         Q_ref = create_quadrature(entity, total_deg)
-        pts_ref, wts_ref = Q_ref.get_points(), Q_ref.get_weights()
+        # pts_ref, wts_ref = Q_ref.get_points(), Q_ref.get_weights()
 
-        pts, wts, J = map_quadrature(pts_ref, wts_ref, Q_ref.ref_el, entity_ref, jacobian=True)
-        Jdet = pseudo_determinant(J)
+        # pts, wts, J = map_quadrature(pts_ref, wts_ref, Q_ref.ref_el, entity_ref, jacobian=True)
+        Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref, self.orientation)
+        Jdet = Q.jacobian_determinant()
+        # Jdet = pseudo_determinant(J)
+        qpts, _ = Q.get_points(), Q.get_weights()
 
-        print(pts)
-        f_at_qpts = dof.tabulate(pts).T / Jdet
-        print(f_at_qpts)
-        functional = FrobeniusIntegralMoment(ref_el, Q_ref, f_at_qpts)
+        f_at_qpts = dof.tabulate(qpts).T / Jdet
+        functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
     def __repr__(self):
-        return "integral_{}({{kernel}} * {{fn}}) dx) ".format(str(self.entity)) +  str(self.orientation)
+        return "integral_{}({{kernel}} * {{fn}}) dx) ".format(str(self.entity))
 
     def dict_id(self):
         return "L2Inner"
@@ -176,6 +179,9 @@ class PointKernel(BaseKernel):
         return self.pt
 
     def tabulate(self, Qpts):
+        print(Qpts)
+        print(self.pt)
+        print("in kernel", np.array([self.pt for _ in Qpts]).astype(np.float64))
         return np.array([self.pt for _ in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -207,8 +213,9 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree()
 
     def permute(self, g):
-        new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
-        return PolynomialKernel(new_fn, symbols=self.syms)
+        return self
+        # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        # return PolynomialKernel(new_fn, symbols=self.syms)
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
@@ -313,15 +320,21 @@ class ImmersedDOF(DOF):
         return self.pairing(self.kernel, attached_fn, self.cell)
 
     def tabulate(self, Qpts):
+        print("tabuating", self.trace_entity, self.trace_entity.oriented)
         immersion = self.target_space.tabulate(Qpts, self.trace_entity, self.g)
+        print("immerse", immersion)
+        print("qpts", Qpts)
         res = self.kernel.tabulate(Qpts)
-        return immersion*res
+        attached_res = np.array([list(self.attachment(*r)) for r in res])
+        print("attac", attached_res)
+        print("res", res)
+        return immersion*attached_res
 
     def __call__(self, g):
         permuted = self.cell.permute_entities(g, self.trace_entity.dim())
         index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
         new_trace_entity = self.cell.get_node(permuted[index_trace][0]).orient(permuted[index_trace][1])
-
+        print("new trace", new_trace_entity, new_trace_entity.oriented)
         return ImmersedDOF(self.pairing.permute(permuted[index_trace][1]), self.kernel.permute(permuted[index_trace][1]), new_trace_entity,
                            self.attachment, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
 

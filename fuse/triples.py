@@ -124,7 +124,7 @@ class ElementTriple():
                     entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
-        entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
+        # entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
         entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         form_degree = 1 if self.spaces[0].set_shape else 0
@@ -245,15 +245,9 @@ class ElementTriple():
         for g in self.cell.group.members():
             val = g.numeric_rep()
             if g.perm.is_Identity:
-                for i in range(len(nodes)):
-                    print(val, nodes[i].pt_dict)
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
                 new_nodes = [d(g).convert_to_fiat(ref_el, degree) for d in self.generate()]
-                if val == 1:
-                    breakpoint()
-                    for i in range(len(new_nodes)):
-                        print(val, new_nodes[i].pt_dict)
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
