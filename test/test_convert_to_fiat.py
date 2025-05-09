@@ -259,6 +259,9 @@ def test_entity_perms(elem_gen, cell):
     elem = elem_gen(cell)
 
     print(elem.to_fiat())
+    dim = cell.get_spatial_dimension()
+    for i in elem.matrices[dim][0].keys():
+        print(elem.matrices[dim][0][i])
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
