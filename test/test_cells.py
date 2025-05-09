@@ -186,7 +186,7 @@ def test_compare_topologies():
     assert res[4] == 1
 
 
-@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), pytest.param(polygon(3), marks=pytest.mark.xfail(reason='Connectivity')),])
+@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
 def test_connectivity(cell):
     cell = cell.to_fiat()
     for dim0 in range(cell.get_spatial_dimension()+1):
@@ -205,6 +205,17 @@ def test_tensor_connectivity():
     cell = cell.to_fiat()
     for dim0 in [(0, 0), (1, 0), (0, 1), (1, 1)]:
         connectivity = cell.get_connectivity()[(dim0, (0, 0))]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
+def test_new_connectivity(cell):
+    print(cell.get_sub_entities())
+    cell = cell.to_fiat()
+    for dim0 in range(cell.get_spatial_dimension()+1):
+        connectivity = cell.get_connectivity()[(dim0, 0)]
         topology = cell.get_topology()[dim0]
         assert len(connectivity) == len(topology)
 

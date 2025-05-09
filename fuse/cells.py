@@ -400,6 +400,46 @@ class Point():
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
         return self.topology_unrelabelled
 
+    def get_sub_entities(self):
+        # breakpoint()
+        min_ids = self.get_starter_ids()
+        sub_entities = {}
+        for d in range(self.get_spatial_dimension() + 1):
+            sub_entities[d] = {}
+            for e in self.d_entities(d):
+                sub_entities[d][e.id - min_ids[d]] = []
+        # sub_entities = {d: {e: []} for d in range(self.get_spatial_dimension()) for e in self.d_entities(d)}
+        self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
+        return self.sub_entities
+        # for dim, entities in self.get_topology().items():
+        #     self.sub_entities[dim] = {}
+        #     for e, v in entities.items():
+        #         vertices = frozenset(v)
+        #         sub_entities = []
+
+        #         for dim_, entities_ in topology.items():
+        #             for e_, vertices_ in entities_.items():
+        #                 if vertices.issuperset(vertices_):
+        #                     sub_entities.append((dim_, e_))
+
+    def _subentity_traversal(self, sub_ents, min_ids):
+        dim = self.get_spatial_dimension()
+        self_id = self.id - min_ids[dim]
+        for d in range(dim):
+            for e in self.d_entities(d):
+                # p = e.point
+                p_dim = e.get_spatial_dimension()
+                p_id = e.id - min_ids[p_dim]
+                sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
+                sub_ents = e._subentity_traversal(sub_ents, min_ids)
+                # for (d, i) in sub_ents[p_dim][p_id]:
+                #     if (d, i) not in sub_ents[dim][self_id]:
+                #         sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(d, i)]
+
+        if (dim, self_id) not in sub_ents[dim][self_id]:
+            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
+        return sub_ents
+
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
         structure.reverse()
@@ -847,7 +887,8 @@ class CellComplexToFiatSimplex(Simplex):
         verts = cell.vertices(return_coords=True)
         topology = cell.get_topology()
         shape = cell.get_shape()
-        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology)
+        sub_ents = cell.get_sub_entities()
+        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
 
     def cellname(self):
         return self.name
