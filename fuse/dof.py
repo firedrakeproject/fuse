@@ -38,7 +38,8 @@ class DeltaPairing(Pairing):
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
         pt = dof.eval(FuseFunction(lambda *x: x))
         pt1 = dof.tabulate([[1]])
-        return PointEvaluation(ref_el, tuple(pt1[0]))
+        return PointEvaluation(ref_el, pt)
+        # return PointEvaluation(ref_el, tuple(pt1[0]))
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -173,6 +174,7 @@ class PointKernel(BaseKernel):
         return 1
 
     def permute(self, g):
+        print("permuting", g, self.pt, g(self.pt))
         return PointKernel(g(self.pt))
 
     def __call__(self, *args):
@@ -262,6 +264,7 @@ class DOF():
 
     def __call__(self, g):
         new_generation = self.generation.copy()
+        print("called")
         return DOF(self.pairing.permute(g), self.kernel.permute(g), self.trace_entity, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
 
     def eval(self, fn, pullback=True):
@@ -327,6 +330,7 @@ class ImmersedDOF(DOF):
         return immersion*res
 
     def __call__(self, g):
+        print("called")
         permuted = self.cell.permute_entities(g, self.trace_entity.dim())
         index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
         new_trace_entity = self.cell.get_node(permuted[index_trace][0]).orient(permuted[index_trace][1])

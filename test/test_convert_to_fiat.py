@@ -260,6 +260,8 @@ def test_entity_perms(elem_gen, cell):
 
     print(elem.to_fiat())
     dim = cell.get_spatial_dimension()
+    
+    print(elem.matrices[dim][0].keys())
     for i in elem.matrices[dim][0].keys():
         print(elem.matrices[dim][0][i])
 
