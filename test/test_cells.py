@@ -1,6 +1,6 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import firedrake_triangle
+from fuse.cells import firedrake_triangle, compare_topologies
 import pytest
 import numpy as np
 from FIAT.reference_element import default_simplex
@@ -184,3 +184,37 @@ def test_comparison():
     print(tensor_product >= tensor_product1)
     # print(tensor_product1 >= tensor_product)
     # print(tensor_product1 >= tensor_product1)
+
+
+def test_compare_topologies():
+    fuse_top = {0: {0: (0,), 1: (1,), 2: (2,)}, 1: {0: (1, 2), 1: (0, 2), 2: (0, 1)}, 2: {0: (0, 1, 2)}}
+    fiat_top = {0: {0: (0,), 1: (1,), 2: (2,)}, 1: {0: (1, 2), 1: (2, 0), 2: (0, 1)}, 2: {0: (1, 2, 0)}}
+
+    res = compare_topologies(fiat_top, fuse_top)
+    print(res)
+    assert res[4] == 1
+
+
+@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
+def test_connectivity(cell):
+    cell = cell.to_fiat()
+    for dim0 in range(cell.get_spatial_dimension()+1):
+        connectivity = cell.get_connectivity()[(dim0, 0)]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+
+def test_tensor_connectivity():
+    from test_2d_examples_docs import construct_cg1
+    A = construct_cg1()
+    B = construct_cg1()
+    cell = tensor_product(A, B).cell
+    cell = cell.to_fiat()
+    for dim0 in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        connectivity = cell.get_connectivity()[(dim0, (0, 0))]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+
+        assert all(connectivity[i] == t for i, t in topology.items())

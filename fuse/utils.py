@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+import math
 
 
 def fold_reduce(func_list, *prev):
@@ -48,6 +49,7 @@ def tabulate_sympy(expr, pts):
         if not hasattr(pt, "__iter__"):
             pt = (pt,)
         subbed = expr.evalf(subs={syms[i]: pt[i] for i in range(len(pt))})
+        print(subbed)
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]
         i += 1
@@ -70,3 +72,16 @@ def numpy_to_str_tuple(arr, scale=1):
         str_a = str(scale*a)
         str_as += [str_a]
     return f'({",".join(str_as)})'
+
+
+def orientation_value(identity_arg, perm_arg):
+    # copy arrays as they are modified in place
+    identity = identity_arg.copy()
+    perm = perm_arg.copy()
+
+    val = 0
+    for i in range(len(identity)):
+        loc = perm.index(identity[i])
+        perm.remove(identity[i])
+        val += loc * math.factorial(len(identity) - i - 1)
+    return val
