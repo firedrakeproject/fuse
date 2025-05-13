@@ -41,6 +41,8 @@ extensions = ['sphinx.ext.autodoc',
               "sphinx_design",
               'sphinxcontrib.fulltoc']
 
+autosummary_generate = True
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
@@ -101,7 +103,7 @@ html_theme_options = {
     'globaltoc_depth': 2,
 }
 
-html_sidebars = { 'api/*': ['localtoc.html'], 
+html_sidebars = { 'api/*': ['globaltoc.html'], 
                   'api': ['localtoc.html'],
                   'about': [],
                   'install': [],
