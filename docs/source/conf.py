@@ -55,7 +55,7 @@ numpydoc_class_members_toctree = False
 
 # -- Autodoc configuration ---------------------------------------------------
 
-# autodoc_mock_imports = ["firedrake", "FIAT", "finat"]
+autodoc_mock_imports = ["matplotlib"]
 
 # Make sure the target is unique
 autosectionlabel_prefix_document = True
@@ -69,7 +69,7 @@ intersphinx_mapping = {
     'networkx': ("https://networkx.org/documentation/stable/", None)}
 
 
-remove_from_toctrees = ["_autosummary/fuse.cells.Arrow3D.rst"]
+remove_from_toctrees = ["_generated/fuse.cells.Arrow3D.rst"]
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -112,4 +112,4 @@ html_sidebars = {'api/*': ['localtoc.html'],
                  'index': ['localtoc.html'],
                  'manual': ['localtoc.html'],
                  'manual/*': ['localtoc.html'],
-                 '_autosummary/*': ['custom-sidebar.html'], }
+                 '_generated/*': ['custom-sidebar.html'], }

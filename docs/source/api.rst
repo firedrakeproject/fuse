@@ -11,3 +11,8 @@ Some words.
    :recursive:
 
    fuse
+
+.. toctree::
+    :hidden:
+    
+    modules
