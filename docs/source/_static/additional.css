@@ -12,9 +12,28 @@ div.sphinxsidebarwrapper div {
 
 /* @import url("bootstrap-sphinx.css"); */
 .bs-sidenav {
-    width: 300px;
+    width: 250px;
     overflow-wrap: anywhere;
 } 
+
+.bs-sidenav > a {
+    display: none;
+} 
+
+
+/* .localtoc > ul {
+    margin: 0;
+  }
+.localtoc > ul > li {
+list-style-type: none;
+} */
+/* .localtoc > ul > li > a {
+display: none;
+} 
+.toctree > a {
+    display: none;
+} */
+
 /*
 .bs-sidenav .nav > li > a {
     display: block;

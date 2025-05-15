@@ -7,7 +7,7 @@ Welcome to FUSE's documentation!
 
 .. toctree::
     :maxdepth: 1
-    :hidden:
 
+    manual
     api
 

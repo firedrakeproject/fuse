@@ -6,7 +6,7 @@ API documentation
 Some words.
 
 .. autosummary::
-   :toctree: _autosummary
+   :toctree: _generated
    :template: custom-module-template.rst
    :recursive:
 

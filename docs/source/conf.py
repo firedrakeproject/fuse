@@ -39,7 +39,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               "matplotlib.sphinxext.plot_directive",
               "sphinx_design",
-              'sphinxcontrib.fulltoc']
+              'sphinxcontrib.fulltoc',
+              'sphinx_remove_toctrees']
 
 autosummary_generate = True
 
@@ -54,7 +55,7 @@ numpydoc_class_members_toctree = False
 
 # -- Autodoc configuration ---------------------------------------------------
 
-autodoc_mock_imports = ["firedrake", "networkx", "FIAT", "finat"]
+# autodoc_mock_imports = ["firedrake", "FIAT", "finat"]
 
 # Make sure the target is unique
 autosectionlabel_prefix_document = True
@@ -64,10 +65,11 @@ intersphinx_mapping = {
     'FIAT': ('https://firedrakeproject.org/fiat', None),
     'matplotlib': ('https://matplotlib.org/', None),
     'python': ('https://docs.python.org/3/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None)}
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'networkx': ("https://networkx.org/documentation/stable/", None)}
 
 
-
+remove_from_toctrees = ["_autosummary/fuse.cells.Arrow3D.rst"]
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -103,8 +105,11 @@ html_theme_options = {
     'globaltoc_depth': 2,
 }
 
-html_sidebars = { 'api/*': ['globaltoc.html'], 
-                  'api': ['localtoc.html'],
-                  'about': [],
-                  'install': [],
-                  'index': ['localtoc.html']}
+html_sidebars = {'api/*': ['localtoc.html'], 
+                 'api': ['localtoc.html'],
+                 'about': [],
+                 'install': [],
+                 'index': ['localtoc.html'],
+                 'manual': ['localtoc.html'],
+                 'manual/*': ['localtoc.html'],
+                 '_autosummary/*': ['custom-sidebar.html'], }

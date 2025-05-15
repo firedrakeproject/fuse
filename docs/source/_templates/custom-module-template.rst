@@ -1,4 +1,5 @@
 :tocdepth: 0
+
 {{ fullname | escape | underline}}
 
 .. automodule:: {{ fullname }}
@@ -8,7 +9,7 @@
    .. rubric:: Module Attributes
 
    .. autosummary::
-      :toctree:                                         
+      :toctree:                                 
    {% for item in attributes %}
       {{ item }}
    {%- endfor %}
@@ -20,7 +21,7 @@
    .. rubric:: {{ _('Functions') }}
 
    .. autosummary::
-      :toctree:                                          
+      :toctree:                                      
    {% for item in functions %}
       {{ item }}
    {%- endfor %}

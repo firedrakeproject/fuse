@@ -1,4 +1,5 @@
 :tocdepth: 0
+
 {{ fullname | escape | underline}}
 
 .. currentmodule:: {{ module }}
