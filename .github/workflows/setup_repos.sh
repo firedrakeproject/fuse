@@ -3,8 +3,6 @@ cd /opt/firedrake/
 git fetch
 git checkout indiamai/fuse-quads
 git pull
-python3 -m pip install --break-system-packages -e '.[dev,test]'
-pip install pyrsistent
 make
 
 /usr/bin/git config --global --add safe.directory ~/
