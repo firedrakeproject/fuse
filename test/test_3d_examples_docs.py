@@ -136,6 +136,7 @@ def construct_tet_ned():
 
     return ned
 
+
 def plot_tet_ned():
     ned = construct_tet_ned()
     ned.plot()
