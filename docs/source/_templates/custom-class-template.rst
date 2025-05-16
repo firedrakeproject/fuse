@@ -1,13 +1,12 @@
 :tocdepth: 0
 
-{{ fullname | escape | underline}}
+{{ objname | escape | underline}}
 
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
    :members:                                    
-   :show-inheritance:                           
-   :inherited-members:                          
+   :show-inheritance:                        
 
    {% block methods %}
    .. automethod:: __init__

@@ -1,6 +1,6 @@
 :tocdepth: 0
 
-{{ fullname | escape | underline}}
+{{ objname | escape | underline}}
 
 .. automodule:: {{ fullname }}
   
@@ -21,9 +21,11 @@
    .. rubric:: {{ _('Functions') }}
 
    .. autosummary::
-      :toctree:                                      
+      :toctree:                                     
    {% for item in functions %}
-      {{ item }}
+      {% if not "arrow" in item %}
+        {{ item }}
+      {%- endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}
@@ -33,10 +35,12 @@
    .. rubric:: {{ _('Classes') }}
 
    .. autosummary::
-      :toctree:                                          
+      :toctree:                                        
       :template: custom-class-template.rst               
    {% for item in classes %}
-      {{ item }}
+        {% if not "Arrow" in item %}
+        {{ item }}
+        {%- endif %}
    {%- endfor %}
    {% endif %}
    {% endblock %}

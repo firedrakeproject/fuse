@@ -63,13 +63,17 @@ autosectionlabel_prefix_document = True
 intersphinx_mapping = {
     'ufl': ('https://docs.fenicsproject.org/ufl/main/', None),
     'FIAT': ('https://firedrakeproject.org/fiat', None),
-    'matplotlib': ('https://matplotlib.org/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'networkx': ("https://networkx.org/documentation/stable/", None)}
 
 
 remove_from_toctrees = ["_generated/fuse.cells.Arrow3D.rst"]
+
+suppress_warnings = [
+    'toc.not_readable',  # Suppress warnings about excluded toctree entries
+]
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

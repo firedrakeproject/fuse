@@ -18,10 +18,10 @@ help:
 autodoc:
 	@sphinx-apidoc -o "$(SOURCEDIR)" "."
 
-auto-%: autodoc Makefile
-	@$(SPHINXAUTOBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) --port 8001
+auto-%: Makefile
+	@$(SPHINXAUTOBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) --port 8000
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: autodoc Makefile
+%: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
