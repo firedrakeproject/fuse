@@ -321,8 +321,7 @@ def test_2d(elem_gen, elem_code, deg):
     assert np.allclose(res, 0)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8),
-                                                              pytest.param(construct_cg3, "CG", 3, 3.8, marks=pytest.mark.xfail(reason='Connectivity')),])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8), (construct_cg3, "CG", 3, 3.8)])
 def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -370,6 +369,8 @@ def helmholtz_solve(mesh, V):
     # elem = V.finat_element.fiat_equivalent
     # W = VectorFunctionSpace(mesh, V.ufl_element())
     # X = assemble(interpolate(mesh.coordinates, W))
+    # print(X.dat.data)
+    # print(assemble(a).M.values)
 
     solve(a == L, u)
     f.interpolate(cos(x*pi*2)*cos(y*pi*2))

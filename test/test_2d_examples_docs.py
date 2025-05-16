@@ -111,7 +111,7 @@ def construct_cg3(tri=None):
     v_xs = [immerse(tri, dg0, TrH1)]
     v_dofs = DOFGenerator(v_xs, C3, S1)
 
-    xs = [DOF(DeltaPairing(), PointKernel((-1/3)))]
+    xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
     dg0_int = ElementTriple(edge, (P1, CellH1, C0), DOFGenerator(xs, S2, S1))
     print([d.generation for d in dg0_int.generate()])
 
