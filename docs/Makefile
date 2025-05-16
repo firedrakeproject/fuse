@@ -21,6 +21,10 @@ autodoc:
 auto-%: Makefile
 	@$(SPHINXAUTOBUILD) -M $* "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) --port 8000
 
+clean-gen: clean
+	@rm -rf $(SOURCEDIR)/_generated
+
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
