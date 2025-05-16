@@ -126,10 +126,9 @@ def construct_cg3(tri=None):
     return cg3
 
 
-def test_plot_cg3():
+def plot_cg3():
     cg3 = construct_cg3()
-    print(cg3.to_tikz())
-    # breakpoint()
+    cg3.plot()
 
 
 def test_cg_examples():
