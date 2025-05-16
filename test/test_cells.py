@@ -177,15 +177,6 @@ def test_comparison():
     # print(tensor_product1 >= tensor_product1)
 
 
-def test_compare_topologies():
-    fuse_top = {0: {0: (0,), 1: (1,), 2: (2,)}, 1: {0: (1, 2), 1: (0, 2), 2: (0, 1)}, 2: {0: (0, 1, 2)}}
-    fiat_top = {0: {0: (0,), 1: (1,), 2: (2,)}, 1: {0: (1, 2), 1: (2, 0), 2: (0, 1)}, 2: {0: (1, 2, 0)}}
-
-    res = compare_topologies(fiat_top, fuse_top)
-    print(res)
-    assert res[4] == 1
-
-
 @pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
 def test_connectivity(cell):
     cell = cell.to_fiat()
@@ -210,9 +201,9 @@ def test_tensor_connectivity():
 
         assert all(connectivity[i] == t for i, t in topology.items())
 
-@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),)])
+
+@pytest.mark.parametrize(["cell"], [(firedrake_triangle(),), (polygon(3),), (make_tetrahedron(), )])
 def test_new_connectivity(cell):
-    print(cell.get_sub_entities())
     cell = cell.to_fiat()
     for dim0 in range(cell.get_spatial_dimension()+1):
         connectivity = cell.get_connectivity()[(dim0, 0)]

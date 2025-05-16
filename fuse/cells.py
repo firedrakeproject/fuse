@@ -401,43 +401,33 @@ class Point():
         return self.topology_unrelabelled
 
     def get_sub_entities(self):
-        # breakpoint()
         min_ids = self.get_starter_ids()
-        sub_entities = {}
-        for d in range(self.get_spatial_dimension() + 1):
-            sub_entities[d] = {}
-            for e in self.d_entities(d):
-                sub_entities[d][e.id - min_ids[d]] = []
-        # sub_entities = {d: {e: []} for d in range(self.get_spatial_dimension()) for e in self.d_entities(d)}
+        sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
         self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
         return self.sub_entities
-        # for dim, entities in self.get_topology().items():
-        #     self.sub_entities[dim] = {}
-        #     for e, v in entities.items():
-        #         vertices = frozenset(v)
-        #         sub_entities = []
-
-        #         for dim_, entities_ in topology.items():
-        #             for e_, vertices_ in entities_.items():
-        #                 if vertices.issuperset(vertices_):
-        #                     sub_entities.append((dim_, e_))
 
     def _subentity_traversal(self, sub_ents, min_ids):
         dim = self.get_spatial_dimension()
         self_id = self.id - min_ids[dim]
-        for d in range(dim):
-            for e in self.d_entities(d):
-                # p = e.point
-                p_dim = e.get_spatial_dimension()
-                p_id = e.id - min_ids[p_dim]
-                sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
-                sub_ents = e._subentity_traversal(sub_ents, min_ids)
-                # for (d, i) in sub_ents[p_dim][p_id]:
-                #     if (d, i) not in sub_ents[dim][self_id]:
-                #         sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(d, i)]
+
+        if dim > 0:
+            for p in self.ordered_vertices():
+                p_id = p - min_ids[0]
+                if (0, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] += [(0, p_id)]
+                    sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
+        if dim > 1:
+            for e in self.connections:
+                p = e.point
+                p_dim = p.get_spatial_dimension()
+                p_id = p.id - min_ids[p_dim]
+                if (p_dim, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
+                    sub_ents = p._subentity_traversal(sub_ents, min_ids)
 
         if (dim, self_id) not in sub_ents[dim][self_id]:
             sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
+
         return sub_ents
 
     def get_starter_ids(self):
@@ -839,6 +829,11 @@ class TensorProductPoint():
     def get_spatial_dimension(self):
         return self.dimension
 
+    def get_sub_entities(self):
+        self.A.get_sub_entities()
+        self.B.get_sub_entities()
+        breakpoint()
+
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
 
@@ -928,7 +923,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         if name is None:
             name = " * ".join([s.name for s in self.sub_cells])
         self.name = name
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
 
     def cellname(self):
@@ -960,7 +955,7 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
