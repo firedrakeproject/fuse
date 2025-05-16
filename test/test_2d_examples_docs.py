@@ -150,11 +150,11 @@ def test_cg_examples():
     test_func = FuseFunction(sp.Matrix([10*x, 3*y/np.sqrt(3)]), symbols=(x, y))
     identity = FuseFunction(sp.Matrix([x, y]), symbols=(x, y))
 
-    dof_vals = []
     for dof in cg3.generate():
         val = dof.eval(test_func)
         position = dof.eval(identity)
         assert np.allclose([[10*position[0], 3*position[1]/np.sqrt(3)]], val)
+
 
 def construct_nd(tri=None):
     if tri is None:
