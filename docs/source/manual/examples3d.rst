@@ -30,6 +30,8 @@ CG3 on a tetrahedron
     :start-after: [test_tet_cg3 0]
     :end-before: [test_tet_cg3 1]
 
+.. plot:: ../../test/test_3d_examples_docs.py plot_tet_cg3
+
 Raviart Thomas on a tetrahedron
 ------------------------------------
 
@@ -39,6 +41,7 @@ Raviart Thomas on a tetrahedron
     :start-after: [test_tet_rt 0]
     :end-before: [test_tet_rt 1]
 
+.. plot:: ../../test/test_3d_examples_docs.py plot_tet_rt
 
 Nedelec on a tetrahedron
 -----------------------------------
@@ -48,3 +51,5 @@ Nedelec on a tetrahedron
     :dedent:
     :start-after: [test_tet_ned 0]
     :end-before: [test_tet_ned 1]
+
+.. plot:: ../../test/test_3d_examples_docs.py plot_tet_ned
