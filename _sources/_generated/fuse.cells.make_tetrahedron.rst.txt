@@ -1,0 +1,6 @@
+fuse.cells.make\_tetrahedron
+============================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: make_tetrahedron

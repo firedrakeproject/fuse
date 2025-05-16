@@ -1,0 +1,6 @@
+fuse.tensor\_products.tensor\_product
+=====================================
+
+.. currentmodule:: fuse.tensor_products
+
+.. autofunction:: tensor_product

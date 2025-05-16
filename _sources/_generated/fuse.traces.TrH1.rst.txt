@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+TrH1
+====
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: TrH1
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrH1.__init__
+      ~TrH1.dict_id
+      ~TrH1.plot
+      ~TrH1.tabulate
+      ~TrH1.to_tikz
+   
+   
+
+   
+   
+   

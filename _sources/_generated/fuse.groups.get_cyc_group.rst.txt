@@ -1,0 +1,6 @@
+fuse.groups.get\_cyc\_group
+===========================
+
+.. currentmodule:: fuse.groups
+
+.. autofunction:: get_cyc_group

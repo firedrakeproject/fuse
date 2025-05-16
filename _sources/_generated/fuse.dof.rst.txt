@@ -1,0 +1,50 @@
+:tocdepth: 0
+
+dof
+===
+
+.. automodule:: fuse.dof
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        BaseKernel
+        
+        DOF
+        
+        DeltaPairing
+        
+        FuseFunction
+        
+        ImmersedDOF
+        
+        L2Pairing
+        
+        Pairing
+        
+        PointKernel
+        
+        PolynomialKernel
+   
+   
+
+   
+   
+   
+
+
+

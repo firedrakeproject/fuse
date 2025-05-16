@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+CellH2
+======
+
+.. currentmodule:: fuse.spaces.element_sobolev_spaces
+
+.. autoclass:: CellH2
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellH2.__init__
+      ~CellH2.dict_id
+   
+   
+
+   
+   
+   

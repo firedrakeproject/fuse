@@ -1,0 +1,6 @@
+fuse.utils.sympy\_to\_numpy
+===========================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: sympy_to_numpy

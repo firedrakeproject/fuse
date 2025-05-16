@@ -1,0 +1,26 @@
+:tocdepth: 0
+
+Pairing
+=======
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: Pairing
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Pairing.__init__
+   
+   
+
+   
+   
+   

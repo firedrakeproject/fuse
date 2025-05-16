@@ -1,0 +1,70 @@
+:tocdepth: 0
+
+CellComplexToFiatSimplex
+========================
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: CellComplexToFiatSimplex
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellComplexToFiatSimplex.__init__
+      ~CellComplexToFiatSimplex.cell_orientation_reflection_map
+      ~CellComplexToFiatSimplex.cellname
+      ~CellComplexToFiatSimplex.compute_barycentric_coordinates
+      ~CellComplexToFiatSimplex.compute_bubble
+      ~CellComplexToFiatSimplex.compute_edge_tangent
+      ~CellComplexToFiatSimplex.compute_face_edge_tangents
+      ~CellComplexToFiatSimplex.compute_face_tangents
+      ~CellComplexToFiatSimplex.compute_normal
+      ~CellComplexToFiatSimplex.compute_normalized_edge_tangent
+      ~CellComplexToFiatSimplex.compute_normalized_tangents
+      ~CellComplexToFiatSimplex.compute_reference_normal
+      ~CellComplexToFiatSimplex.compute_scaled_normal
+      ~CellComplexToFiatSimplex.compute_tangents
+      ~CellComplexToFiatSimplex.construct_subcomplex
+      ~CellComplexToFiatSimplex.construct_subelement
+      ~CellComplexToFiatSimplex.contains_point
+      ~CellComplexToFiatSimplex.distance_to_point_l1
+      ~CellComplexToFiatSimplex.extract_extrinsic_orientation
+      ~CellComplexToFiatSimplex.extract_intrinsic_orientation
+      ~CellComplexToFiatSimplex.get_connectivity
+      ~CellComplexToFiatSimplex.get_dimension
+      ~CellComplexToFiatSimplex.get_entity_transform
+      ~CellComplexToFiatSimplex.get_facet_element
+      ~CellComplexToFiatSimplex.get_interior_facets
+      ~CellComplexToFiatSimplex.get_parent
+      ~CellComplexToFiatSimplex.get_parent_complex
+      ~CellComplexToFiatSimplex.get_shape
+      ~CellComplexToFiatSimplex.get_spatial_dimension
+      ~CellComplexToFiatSimplex.get_topology
+      ~CellComplexToFiatSimplex.get_vertices
+      ~CellComplexToFiatSimplex.get_vertices_of_subcomplex
+      ~CellComplexToFiatSimplex.is_macrocell
+      ~CellComplexToFiatSimplex.is_parent
+      ~CellComplexToFiatSimplex.is_simplex
+      ~CellComplexToFiatSimplex.make_points
+      ~CellComplexToFiatSimplex.symmetry_group_size
+      ~CellComplexToFiatSimplex.volume
+      ~CellComplexToFiatSimplex.volume_of_subcomplex
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CellComplexToFiatSimplex.extrinsic_orientation_permutation_map
+   
+   

@@ -1,0 +1,32 @@
+:tocdepth: 0
+
+PermutationSetRepresentation
+============================
+
+.. currentmodule:: fuse.groups
+
+.. autoclass:: PermutationSetRepresentation
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PermutationSetRepresentation.__init__
+      ~PermutationSetRepresentation.add_cell
+      ~PermutationSetRepresentation.compute_num_reps
+      ~PermutationSetRepresentation.get_member
+      ~PermutationSetRepresentation.members
+      ~PermutationSetRepresentation.size
+      ~PermutationSetRepresentation.transform_between_perms
+   
+   
+
+   
+   
+   

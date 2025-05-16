@@ -1,0 +1,29 @@
+:tocdepth: 0
+
+DeltaPairing
+============
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: DeltaPairing
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DeltaPairing.__init__
+      ~DeltaPairing.add_entity
+      ~DeltaPairing.convert_to_fiat
+      ~DeltaPairing.dict_id
+   
+   
+
+   
+   
+   

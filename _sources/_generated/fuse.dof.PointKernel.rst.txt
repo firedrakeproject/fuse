@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+PointKernel
+===========
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: PointKernel
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PointKernel.__init__
+      ~PointKernel.degree
+      ~PointKernel.dict_id
+      ~PointKernel.permute
+      ~PointKernel.tabulate
+   
+   
+
+   
+   
+   

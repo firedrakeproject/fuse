@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+TrHCurl
+=======
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: TrHCurl
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrHCurl.__init__
+      ~TrHCurl.dict_id
+      ~TrHCurl.plot
+      ~TrHCurl.tabulate
+      ~TrHCurl.to_tikz
+   
+   
+
+   
+   
+   

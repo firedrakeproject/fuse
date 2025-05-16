@@ -1,0 +1,42 @@
+:tocdepth: 0
+
+TensorProductTriple
+===================
+
+.. currentmodule:: fuse.tensor_products
+
+.. autoclass:: TensorProductTriple
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TensorProductTriple.__init__
+      ~TensorProductTriple.compute_dense_matrix
+      ~TensorProductTriple.degree
+      ~TensorProductTriple.dict_id
+      ~TensorProductTriple.flatten
+      ~TensorProductTriple.generate
+      ~TensorProductTriple.get_dof_info
+      ~TensorProductTriple.get_value_shape
+      ~TensorProductTriple.make_dof_perms
+      ~TensorProductTriple.make_overall_dense_matrices
+      ~TensorProductTriple.num_dofs
+      ~TensorProductTriple.plot
+      ~TensorProductTriple.sub_elements
+      ~TensorProductTriple.to_fiat
+      ~TensorProductTriple.to_tikz
+      ~TensorProductTriple.to_ufl
+      ~TensorProductTriple.unflatten
+   
+   
+
+   
+   
+   

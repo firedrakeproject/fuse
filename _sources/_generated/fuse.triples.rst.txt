@@ -1,0 +1,46 @@
+:tocdepth: 0
+
+triples
+=======
+
+.. automodule:: fuse.triples
+  
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        immerse
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        DOFGenerator
+        
+        ElementTriple
+        
+        ImmersedDOFs
+   
+   
+
+   
+   
+   
+
+
+

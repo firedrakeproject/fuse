@@ -1,0 +1,6 @@
+fuse.cells.firedrake\_triangle
+==============================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: firedrake_triangle

@@ -1,0 +1,42 @@
+﻿:tocdepth: 0
+
+fuse
+====
+
+.. automodule:: fuse
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :template: custom-module-template.rst                 
+   :recursive:
+
+   cells
+   dof
+   groups
+   serialisation
+   spaces
+   tensor_products
+   traces
+   triples
+   utils
+

@@ -1,0 +1,36 @@
+:tocdepth: 0
+
+polynomial\_spaces
+==================
+
+.. automodule:: fuse.spaces.polynomial_spaces
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        ConstructedPolynomialSpace
+        
+        PolynomialSpace
+   
+   
+
+   
+   
+   
+
+
+

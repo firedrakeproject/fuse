@@ -1,0 +1,31 @@
+:tocdepth: 0
+
+GroupMemberRep
+==============
+
+.. currentmodule:: fuse.groups
+
+.. autoclass:: GroupMemberRep
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~GroupMemberRep.__init__
+      ~GroupMemberRep.compute_perm
+      ~GroupMemberRep.lin_combination_form
+      ~GroupMemberRep.matrix_form
+      ~GroupMemberRep.numeric_rep
+      ~GroupMemberRep.permute
+   
+   
+
+   
+   
+   

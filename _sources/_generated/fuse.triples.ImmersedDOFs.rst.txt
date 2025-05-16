@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+ImmersedDOFs
+============
+
+.. currentmodule:: fuse.triples
+
+.. autoclass:: ImmersedDOFs
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ImmersedDOFs.__init__
+      ~ImmersedDOFs.dict_id
+   
+   
+
+   
+   
+   

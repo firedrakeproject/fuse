@@ -1,0 +1,32 @@
+:tocdepth: 0
+
+ImmersedDOF
+===========
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: ImmersedDOF
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ImmersedDOF.__init__
+      ~ImmersedDOF.add_context
+      ~ImmersedDOF.convert_to_fiat
+      ~ImmersedDOF.dict_id
+      ~ImmersedDOF.eval
+      ~ImmersedDOF.immerse
+      ~ImmersedDOF.tabulate
+   
+   
+
+   
+   
+   

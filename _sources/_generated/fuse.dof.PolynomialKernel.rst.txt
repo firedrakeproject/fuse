@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+PolynomialKernel
+================
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: PolynomialKernel
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~PolynomialKernel.__init__
+      ~PolynomialKernel.degree
+      ~PolynomialKernel.dict_id
+      ~PolynomialKernel.permute
+      ~PolynomialKernel.tabulate
+   
+   
+
+   
+   
+   

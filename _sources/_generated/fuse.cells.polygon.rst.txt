@@ -1,0 +1,6 @@
+fuse.cells.polygon
+==================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: polygon

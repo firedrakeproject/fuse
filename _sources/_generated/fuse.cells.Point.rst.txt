@@ -1,0 +1,61 @@
+:tocdepth: 0
+
+Point
+=====
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: Point
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Point.__init__
+      ~Point.attachment
+      ~Point.basis_vectors
+      ~Point.cell_attachment
+      ~Point.compute_attachments
+      ~Point.compute_cell_group
+      ~Point.copy
+      ~Point.d_entities
+      ~Point.d_entities_ids
+      ~Point.dict_id
+      ~Point.dim
+      ~Point.dim_of_node
+      ~Point.edges
+      ~Point.get_node
+      ~Point.get_shape
+      ~Point.get_spatial_dimension
+      ~Point.get_starter_ids
+      ~Point.get_topology
+      ~Point.graph
+      ~Point.graph_dim
+      ~Point.hasse_diagram
+      ~Point.ordered_vertices
+      ~Point.orient
+      ~Point.permute_entities
+      ~Point.plot
+      ~Point.plot3d
+      ~Point.to_fiat
+      ~Point.to_tikz
+      ~Point.to_ufl
+      ~Point.vertices
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Point.id_iter
+   
+   

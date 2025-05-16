@@ -1,0 +1,53 @@
+:tocdepth: 0
+
+CellComplexToUFL
+================
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: CellComplexToUFL
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellComplexToUFL.__init__
+      ~CellComplexToUFL.cellname
+      ~CellComplexToUFL.edge_types
+      ~CellComplexToUFL.edges
+      ~CellComplexToUFL.face_types
+      ~CellComplexToUFL.faces
+      ~CellComplexToUFL.facet_types
+      ~CellComplexToUFL.facets
+      ~CellComplexToUFL.has_simplex_facets
+      ~CellComplexToUFL.is_simplex
+      ~CellComplexToUFL.num_edges
+      ~CellComplexToUFL.num_faces
+      ~CellComplexToUFL.num_facets
+      ~CellComplexToUFL.num_peaks
+      ~CellComplexToUFL.num_ridges
+      ~CellComplexToUFL.num_sub_entities
+      ~CellComplexToUFL.num_vertices
+      ~CellComplexToUFL.peak_types
+      ~CellComplexToUFL.peaks
+      ~CellComplexToUFL.reconstruct
+      ~CellComplexToUFL.ridge_types
+      ~CellComplexToUFL.ridges
+      ~CellComplexToUFL.sub_entities
+      ~CellComplexToUFL.sub_entity_types
+      ~CellComplexToUFL.to_fiat
+      ~CellComplexToUFL.topological_dimension
+      ~CellComplexToUFL.vertex_types
+      ~CellComplexToUFL.vertices
+   
+   
+
+   
+   
+   

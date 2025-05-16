@@ -1,0 +1,32 @@
+:tocdepth: 0
+
+DOF
+===
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: DOF
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DOF.__init__
+      ~DOF.add_context
+      ~DOF.convert_to_fiat
+      ~DOF.dict_id
+      ~DOF.eval
+      ~DOF.immerse
+      ~DOF.tabulate
+   
+   
+
+   
+   
+   

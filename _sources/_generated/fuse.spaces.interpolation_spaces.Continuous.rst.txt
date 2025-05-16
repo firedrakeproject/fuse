@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+Continuous
+==========
+
+.. currentmodule:: fuse.spaces.interpolation_spaces
+
+.. autoclass:: Continuous
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Continuous.__init__
+      ~Continuous.dict_id
+   
+   
+
+   
+   
+   

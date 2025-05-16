@@ -1,0 +1,6 @@
+fuse.cells.firedrake\_quad
+==========================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: firedrake_quad

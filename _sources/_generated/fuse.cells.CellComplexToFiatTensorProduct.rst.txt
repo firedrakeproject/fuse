@@ -1,0 +1,60 @@
+:tocdepth: 0
+
+CellComplexToFiatTensorProduct
+==============================
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: CellComplexToFiatTensorProduct
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellComplexToFiatTensorProduct.__init__
+      ~CellComplexToFiatTensorProduct.cell_orientation_reflection_map
+      ~CellComplexToFiatTensorProduct.cellname
+      ~CellComplexToFiatTensorProduct.compare
+      ~CellComplexToFiatTensorProduct.compute_reference_normal
+      ~CellComplexToFiatTensorProduct.construct_subcomplex
+      ~CellComplexToFiatTensorProduct.construct_subelement
+      ~CellComplexToFiatTensorProduct.contains_point
+      ~CellComplexToFiatTensorProduct.distance_to_point_l1
+      ~CellComplexToFiatTensorProduct.extract_extrinsic_orientation
+      ~CellComplexToFiatTensorProduct.extract_intrinsic_orientation
+      ~CellComplexToFiatTensorProduct.flatten
+      ~CellComplexToFiatTensorProduct.get_connectivity
+      ~CellComplexToFiatTensorProduct.get_dimension
+      ~CellComplexToFiatTensorProduct.get_entity_transform
+      ~CellComplexToFiatTensorProduct.get_facet_element
+      ~CellComplexToFiatTensorProduct.get_interior_facets
+      ~CellComplexToFiatTensorProduct.get_parent
+      ~CellComplexToFiatTensorProduct.get_parent_complex
+      ~CellComplexToFiatTensorProduct.get_shape
+      ~CellComplexToFiatTensorProduct.get_spatial_dimension
+      ~CellComplexToFiatTensorProduct.get_topology
+      ~CellComplexToFiatTensorProduct.get_vertices
+      ~CellComplexToFiatTensorProduct.get_vertices_of_subcomplex
+      ~CellComplexToFiatTensorProduct.is_macrocell
+      ~CellComplexToFiatTensorProduct.is_parent
+      ~CellComplexToFiatTensorProduct.is_simplex
+      ~CellComplexToFiatTensorProduct.symmetry_group_size
+      ~CellComplexToFiatTensorProduct.volume
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CellComplexToFiatTensorProduct.extrinsic_orientation_permutation_map
+   
+   

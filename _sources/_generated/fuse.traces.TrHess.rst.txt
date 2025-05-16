@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+TrHess
+======
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: TrHess
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrHess.__init__
+      ~TrHess.dict_id
+      ~TrHess.plot
+      ~TrHess.tabulate
+      ~TrHess.to_tikz
+   
+   
+
+   
+   
+   

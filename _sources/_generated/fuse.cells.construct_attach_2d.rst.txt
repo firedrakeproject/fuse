@@ -1,0 +1,6 @@
+fuse.cells.construct\_attach\_2d
+================================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: construct_attach_2d

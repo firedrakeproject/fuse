@@ -1,0 +1,6 @@
+fuse.triples.immerse
+====================
+
+.. currentmodule:: fuse.triples
+
+.. autofunction:: immerse

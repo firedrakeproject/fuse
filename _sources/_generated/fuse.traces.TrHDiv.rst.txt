@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+TrHDiv
+======
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: TrHDiv
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrHDiv.__init__
+      ~TrHDiv.dict_id
+      ~TrHDiv.plot
+      ~TrHDiv.tabulate
+      ~TrHDiv.to_tikz
+   
+   
+
+   
+   
+   

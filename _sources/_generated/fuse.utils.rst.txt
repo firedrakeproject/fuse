@@ -1,0 +1,41 @@
+:tocdepth: 0
+
+utils
+=====
+
+.. automodule:: fuse.utils
+  
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        fold_reduce
+      
+        max_deg_sp_mat
+      
+        numpy_to_str_tuple
+      
+        sympy_to_numpy
+      
+        tabulate_sympy
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

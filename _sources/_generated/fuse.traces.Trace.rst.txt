@@ -1,0 +1,29 @@
+:tocdepth: 0
+
+Trace
+=====
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: Trace
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Trace.__init__
+      ~Trace.dict_id
+      ~Trace.plot
+      ~Trace.tabulate
+   
+   
+
+   
+   
+   

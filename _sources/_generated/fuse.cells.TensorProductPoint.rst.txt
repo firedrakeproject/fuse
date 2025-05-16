@@ -1,0 +1,33 @@
+:tocdepth: 0
+
+TensorProductPoint
+==================
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: TensorProductPoint
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TensorProductPoint.__init__
+      ~TensorProductPoint.d_entities
+      ~TensorProductPoint.dimension
+      ~TensorProductPoint.flatten
+      ~TensorProductPoint.get_spatial_dimension
+      ~TensorProductPoint.to_fiat
+      ~TensorProductPoint.to_ufl
+      ~TensorProductPoint.vertices
+   
+   
+
+   
+   
+   

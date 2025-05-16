@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+Sobolev
+=======
+
+.. currentmodule:: fuse.spaces.interpolation_spaces
+
+.. autoclass:: Sobolev
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Sobolev.__init__
+      ~Sobolev.dict_id
+   
+   
+
+   
+   
+   

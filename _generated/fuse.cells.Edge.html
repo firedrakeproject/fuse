@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Edge &#8212; FUSE 2025.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=9f61996d" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/additional.css?v=584b47eb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <script src="../_static/documentation_options.js?v=0e25812e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Point" href="fuse.cells.Point.html" />
+    <link rel="prev" title="CellComplexToUFL" href="fuse.cells.CellComplexToUFL.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          FUSE</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../about.html">About</a></li>
+                <li><a href="../install.html">Installation</a></li>
+                <li><a href="../api.html">Documentation</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../manual/dof.html">DOFs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/examples2d.html">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples2d.html#dg0">DG0</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples2d.html#dg1-on-interval">DG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples2d.html#dg1-on-triangle">DG1 on triangle</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples2d.html#cg1-on-interval">CG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples2d.html#cg3-on-triangle">CG3 on triangle</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/examples3d.html">Examples in 3D</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples3d.html#describing-a-tetrahedron">Describing a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples3d.html#cg3-on-a-tetrahedron">CG3 on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples3d.html#raviart-thomas-on-a-tetrahedron">Raviart Thomas on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/examples3d.html#nedelec-on-a-tetrahedron">Nedelec on a tetrahedron</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/cells.html">Cells</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/groups.html">Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/serialisation.html">Serialisation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../manual/serialisation.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/triples.html">Triples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../manual/spaces.html">Spaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../manual/spaces.html#interpolation-spaces">Interpolation Spaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/spaces.html#element-sobolev-spaces">Element Sobolev Spaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../manual/spaces.html#polynomial-spaces">Polynomial Spaces</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html#fuse.cells.compute_scaled_verts"><code class="docutils literal notranslate"><span class="pre">compute_scaled_verts()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.constructCellComplex.html">fuse.cells.constructCellComplex</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.constructCellComplex.html#fuse.cells.constructCellComplex"><code class="docutils literal notranslate"><span class="pre">constructCellComplex()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_2d.html">fuse.cells.construct_attach_2d</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.construct_attach_2d.html#fuse.cells.construct_attach_2d"><code class="docutils literal notranslate"><span class="pre">construct_attach_2d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_3d.html">fuse.cells.construct_attach_3d</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.construct_attach_3d.html#fuse.cells.construct_attach_3d"><code class="docutils literal notranslate"><span class="pre">construct_attach_3d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.firedrake_quad.html">fuse.cells.firedrake_quad</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.firedrake_quad.html#fuse.cells.firedrake_quad"><code class="docutils literal notranslate"><span class="pre">firedrake_quad()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.firedrake_triangle.html">fuse.cells.firedrake_triangle</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.firedrake_triangle.html#fuse.cells.firedrake_triangle"><code class="docutils literal notranslate"><span class="pre">firedrake_triangle()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.make_tetrahedron.html">fuse.cells.make_tetrahedron</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.make_tetrahedron.html#fuse.cells.make_tetrahedron"><code class="docutils literal notranslate"><span class="pre">make_tetrahedron()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.normalise.html">fuse.cells.normalise</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.normalise.html#fuse.cells.normalise"><code class="docutils literal notranslate"><span class="pre">normalise()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.polygon.html">fuse.cells.polygon</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.polygon.html#fuse.cells.polygon"><code class="docutils literal notranslate"><span class="pre">polygon()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.topo_pos.html">fuse.cells.topo_pos</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.topo_pos.html#fuse.cells.topo_pos"><code class="docutils literal notranslate"><span class="pre">topo_pos()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html">CellComplexToFiatHypercube</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatHypercube</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.__init__"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatHypercube.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.construct_subelement"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatHypercube.construct_subelement()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.get_dimension"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatHypercube.get_dimension()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html">CellComplexToFiatSimplex</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html#fuse.cells.CellComplexToFiatSimplex"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatSimplex</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html#fuse.cells.CellComplexToFiatSimplex.__init__"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatSimplex.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html#fuse.cells.CellComplexToFiatSimplex.construct_subelement"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatSimplex.construct_subelement()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html">CellComplexToFiatTensorProduct</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html#fuse.cells.CellComplexToFiatTensorProduct"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatTensorProduct</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html#fuse.cells.CellComplexToFiatTensorProduct.__init__"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatTensorProduct.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html#fuse.cells.CellComplexToFiatTensorProduct.construct_subelement"><code class="docutils literal notranslate"><span class="pre">CellComplexToFiatTensorProduct.construct_subelement()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html">CellComplexToUFL</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html#fuse.cells.CellComplexToUFL"><code class="docutils literal notranslate"><span class="pre">CellComplexToUFL</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html#fuse.cells.CellComplexToUFL.__init__"><code class="docutils literal notranslate"><span class="pre">CellComplexToUFL.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html#fuse.cells.CellComplexToUFL.reconstruct"><code class="docutils literal notranslate"><span class="pre">CellComplexToUFL.reconstruct()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Edge</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#fuse.cells.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#fuse.cells.Edge.__init__"><code class="docutils literal notranslate"><span class="pre">Edge.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.Point.html">Point</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point"><code class="docutils literal notranslate"><span class="pre">Point</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.__init__"><code class="docutils literal notranslate"><span class="pre">Point.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.compute_attachments"><code class="docutils literal notranslate"><span class="pre">Point.compute_attachments()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.compute_cell_group"><code class="docutils literal notranslate"><span class="pre">Point.compute_cell_group()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.d_entities"><code class="docutils literal notranslate"><span class="pre">Point.d_entities()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.edges"><code class="docutils literal notranslate"><span class="pre">Point.edges()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.orient"><code class="docutils literal notranslate"><span class="pre">Point.orient()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.plot"><code class="docutils literal notranslate"><span class="pre">Point.plot()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.Point.html#fuse.cells.Point.vertices"><code class="docutils literal notranslate"><span class="pre">Point.vertices()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.TensorProductPoint.html">TensorProductPoint</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.TensorProductPoint.html#fuse.cells.TensorProductPoint"><code class="docutils literal notranslate"><span class="pre">TensorProductPoint</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.cells.TensorProductPoint.html#fuse.cells.TensorProductPoint.__init__"><code class="docutils literal notranslate"><span class="pre">TensorProductPoint.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.dof.html">dof</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.BaseKernel.html">BaseKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel"><code class="docutils literal notranslate"><span class="pre">BaseKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.__init__"><code class="docutils literal notranslate"><span class="pre">BaseKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.DOF.html">DOF</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.DOF.html#fuse.dof.DOF"><code class="docutils literal notranslate"><span class="pre">DOF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.DOF.html#fuse.dof.DOF.__init__"><code class="docutils literal notranslate"><span class="pre">DOF.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.DeltaPairing.html">DeltaPairing</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.DeltaPairing.html#fuse.dof.DeltaPairing"><code class="docutils literal notranslate"><span class="pre">DeltaPairing</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.DeltaPairing.html#fuse.dof.DeltaPairing.__init__"><code class="docutils literal notranslate"><span class="pre">DeltaPairing.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.FuseFunction.html">FuseFunction</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.FuseFunction.html#fuse.dof.FuseFunction"><code class="docutils literal notranslate"><span class="pre">FuseFunction</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.FuseFunction.html#fuse.dof.FuseFunction.__init__"><code class="docutils literal notranslate"><span class="pre">FuseFunction.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.ImmersedDOF.html">ImmersedDOF</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF"><code class="docutils literal notranslate"><span class="pre">ImmersedDOF</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF.__init__"><code class="docutils literal notranslate"><span class="pre">ImmersedDOF.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.L2Pairing.html">L2Pairing</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.L2Pairing.html#fuse.dof.L2Pairing"><code class="docutils literal notranslate"><span class="pre">L2Pairing</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.L2Pairing.html#fuse.dof.L2Pairing.__init__"><code class="docutils literal notranslate"><span class="pre">L2Pairing.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.Pairing.html">Pairing</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.Pairing.html#fuse.dof.Pairing"><code class="docutils literal notranslate"><span class="pre">Pairing</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.Pairing.html#fuse.dof.Pairing.__init__"><code class="docutils literal notranslate"><span class="pre">Pairing.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.PointKernel.html">PointKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.PointKernel.html#fuse.dof.PointKernel"><code class="docutils literal notranslate"><span class="pre">PointKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.PointKernel.html#fuse.dof.PointKernel.__init__"><code class="docutils literal notranslate"><span class="pre">PointKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.PolynomialKernel.html">PolynomialKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.PolynomialKernel.html#fuse.dof.PolynomialKernel"><code class="docutils literal notranslate"><span class="pre">PolynomialKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.PolynomialKernel.html#fuse.dof.PolynomialKernel.__init__"><code class="docutils literal notranslate"><span class="pre">PolynomialKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.groups.html">groups</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.get_cyc_group.html">fuse.groups.get_cyc_group</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.get_cyc_group.html#fuse.groups.get_cyc_group"><code class="docutils literal notranslate"><span class="pre">get_cyc_group()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.get_sym_group.html">fuse.groups.get_sym_group</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.get_sym_group.html#fuse.groups.get_sym_group"><code class="docutils literal notranslate"><span class="pre">get_sym_group()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.perm_matrix_to_perm_array.html">fuse.groups.perm_matrix_to_perm_array</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.perm_matrix_to_perm_array.html#fuse.groups.perm_matrix_to_perm_array"><code class="docutils literal notranslate"><span class="pre">perm_matrix_to_perm_array()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.GroupMemberRep.html">GroupMemberRep</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.GroupMemberRep.html#fuse.groups.GroupMemberRep"><code class="docutils literal notranslate"><span class="pre">GroupMemberRep</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.groups.GroupMemberRep.html#fuse.groups.GroupMemberRep.__init__"><code class="docutils literal notranslate"><span class="pre">GroupMemberRep.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.GroupRepresentation.html">GroupRepresentation</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.GroupRepresentation.html#fuse.groups.GroupRepresentation"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.groups.GroupRepresentation.html#fuse.groups.GroupRepresentation.__init__"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html">PermutationSetRepresentation</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation"><code class="docutils literal notranslate"><span class="pre">PermutationSetRepresentation</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.__init__"><code class="docutils literal notranslate"><span class="pre">PermutationSetRepresentation.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.compute_num_reps"><code class="docutils literal notranslate"><span class="pre">PermutationSetRepresentation.compute_num_reps()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.serialisation.html">serialisation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.serialisation.ElementSerialiser.html">ElementSerialiser</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.serialisation.ElementSerialiser.html#fuse.serialisation.ElementSerialiser"><code class="docutils literal notranslate"><span class="pre">ElementSerialiser</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.serialisation.ElementSerialiser.html#fuse.serialisation.ElementSerialiser.__init__"><code class="docutils literal notranslate"><span class="pre">ElementSerialiser.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.spaces.html">spaces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.html">element_sobolev_spaces</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH1.html">CellH1</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH1.html#fuse.spaces.element_sobolev_spaces.CellH1"><code class="docutils literal notranslate"><span class="pre">CellH1</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH1.html#fuse.spaces.element_sobolev_spaces.CellH1.__init__"><code class="docutils literal notranslate"><span class="pre">CellH1.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH2.html">CellH2</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH2.html#fuse.spaces.element_sobolev_spaces.CellH2"><code class="docutils literal notranslate"><span class="pre">CellH2</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellH2.html#fuse.spaces.element_sobolev_spaces.CellH2.__init__"><code class="docutils literal notranslate"><span class="pre">CellH2.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHCurl.html">CellHCurl</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHCurl.html#fuse.spaces.element_sobolev_spaces.CellHCurl"><code class="docutils literal notranslate"><span class="pre">CellHCurl</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHCurl.html#fuse.spaces.element_sobolev_spaces.CellHCurl.__init__"><code class="docutils literal notranslate"><span class="pre">CellHCurl.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHDiv.html">CellHDiv</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHDiv.html#fuse.spaces.element_sobolev_spaces.CellHDiv"><code class="docutils literal notranslate"><span class="pre">CellHDiv</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellHDiv.html#fuse.spaces.element_sobolev_spaces.CellHDiv.__init__"><code class="docutils literal notranslate"><span class="pre">CellHDiv.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellL2.html">CellL2</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellL2.html#fuse.spaces.element_sobolev_spaces.CellL2"><code class="docutils literal notranslate"><span class="pre">CellL2</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.CellL2.html#fuse.spaces.element_sobolev_spaces.CellL2.__init__"><code class="docutils literal notranslate"><span class="pre">CellL2.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.ElementSobolevSpace.html">ElementSobolevSpace</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.ElementSobolevSpace.html#fuse.spaces.element_sobolev_spaces.ElementSobolevSpace"><code class="docutils literal notranslate"><span class="pre">ElementSobolevSpace</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.element_sobolev_spaces.ElementSobolevSpace.html#fuse.spaces.element_sobolev_spaces.ElementSobolevSpace.__init__"><code class="docutils literal notranslate"><span class="pre">ElementSobolevSpace.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.spaces.interpolation_spaces.html">interpolation_spaces</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Continuous.html">Continuous</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Continuous.html#fuse.spaces.interpolation_spaces.Continuous"><code class="docutils literal notranslate"><span class="pre">Continuous</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Continuous.html#fuse.spaces.interpolation_spaces.Continuous.__init__"><code class="docutils literal notranslate"><span class="pre">Continuous.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.interpolation_spaces.InterpolationSpace.html">InterpolationSpace</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.interpolation_spaces.InterpolationSpace.html#fuse.spaces.interpolation_spaces.InterpolationSpace"><code class="docutils literal notranslate"><span class="pre">InterpolationSpace</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.interpolation_spaces.InterpolationSpace.html#fuse.spaces.interpolation_spaces.InterpolationSpace.__init__"><code class="docutils literal notranslate"><span class="pre">InterpolationSpace.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Sobolev.html">Sobolev</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Sobolev.html#fuse.spaces.interpolation_spaces.Sobolev"><code class="docutils literal notranslate"><span class="pre">Sobolev</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.interpolation_spaces.Sobolev.html#fuse.spaces.interpolation_spaces.Sobolev.__init__"><code class="docutils literal notranslate"><span class="pre">Sobolev.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.spaces.polynomial_spaces.html">polynomial_spaces</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace.html">ConstructedPolynomialSpace</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace.html#fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace"><code class="docutils literal notranslate"><span class="pre">ConstructedPolynomialSpace</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace.html#fuse.spaces.polynomial_spaces.ConstructedPolynomialSpace.__init__"><code class="docutils literal notranslate"><span class="pre">ConstructedPolynomialSpace.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="fuse.spaces.polynomial_spaces.PolynomialSpace.html">PolynomialSpace</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.spaces.polynomial_spaces.PolynomialSpace.html#fuse.spaces.polynomial_spaces.PolynomialSpace"><code class="docutils literal notranslate"><span class="pre">PolynomialSpace</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="fuse.spaces.polynomial_spaces.PolynomialSpace.html#fuse.spaces.polynomial_spaces.PolynomialSpace.__init__"><code class="docutils literal notranslate"><span class="pre">PolynomialSpace.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.tensor_products.html">tensor_products</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.tensor_products.tensor_product.html">fuse.tensor_products.tensor_product</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.tensor_products.tensor_product.html#fuse.tensor_products.tensor_product"><code class="docutils literal notranslate"><span class="pre">tensor_product()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.tensor_products.TensorProductTriple.html">TensorProductTriple</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.tensor_products.TensorProductTriple.html#fuse.tensor_products.TensorProductTriple"><code class="docutils literal notranslate"><span class="pre">TensorProductTriple</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.tensor_products.TensorProductTriple.html#fuse.tensor_products.TensorProductTriple.__init__"><code class="docutils literal notranslate"><span class="pre">TensorProductTriple.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.traces.html">traces</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.TrGrad.html">TrGrad</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.TrGrad.html#fuse.traces.TrGrad"><code class="docutils literal notranslate"><span class="pre">TrGrad</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.TrGrad.html#fuse.traces.TrGrad.__init__"><code class="docutils literal notranslate"><span class="pre">TrGrad.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.TrH1.html">TrH1</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.TrH1.html#fuse.traces.TrH1"><code class="docutils literal notranslate"><span class="pre">TrH1</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.TrH1.html#fuse.traces.TrH1.__init__"><code class="docutils literal notranslate"><span class="pre">TrH1.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.TrHCurl.html">TrHCurl</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.TrHCurl.html#fuse.traces.TrHCurl"><code class="docutils literal notranslate"><span class="pre">TrHCurl</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.TrHCurl.html#fuse.traces.TrHCurl.__init__"><code class="docutils literal notranslate"><span class="pre">TrHCurl.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.TrHDiv.html">TrHDiv</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.TrHDiv.html#fuse.traces.TrHDiv"><code class="docutils literal notranslate"><span class="pre">TrHDiv</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.TrHDiv.html#fuse.traces.TrHDiv.__init__"><code class="docutils literal notranslate"><span class="pre">TrHDiv.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.TrHess.html">TrHess</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.TrHess.html#fuse.traces.TrHess"><code class="docutils literal notranslate"><span class="pre">TrHess</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.TrHess.html#fuse.traces.TrHess.__init__"><code class="docutils literal notranslate"><span class="pre">TrHess.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.traces.Trace.html">Trace</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.traces.Trace.html#fuse.traces.Trace"><code class="docutils literal notranslate"><span class="pre">Trace</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.traces.Trace.html#fuse.traces.Trace.__init__"><code class="docutils literal notranslate"><span class="pre">Trace.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.triples.html">triples</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.triples.immerse.html">fuse.triples.immerse</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.triples.immerse.html#fuse.triples.immerse"><code class="docutils literal notranslate"><span class="pre">immerse()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.triples.DOFGenerator.html">DOFGenerator</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator"><code class="docutils literal notranslate"><span class="pre">DOFGenerator</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.__init__"><code class="docutils literal notranslate"><span class="pre">DOFGenerator.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.triples.ElementTriple.html">ElementTriple</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.triples.ElementTriple.html#fuse.triples.ElementTriple"><code class="docutils literal notranslate"><span class="pre">ElementTriple</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.__init__"><code class="docutils literal notranslate"><span class="pre">ElementTriple.__init__()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.plot"><code class="docutils literal notranslate"><span class="pre">ElementTriple.plot()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.to_tikz"><code class="docutils literal notranslate"><span class="pre">ElementTriple.to_tikz()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.triples.ImmersedDOFs.html">ImmersedDOFs</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.triples.ImmersedDOFs.html#fuse.triples.ImmersedDOFs"><code class="docutils literal notranslate"><span class="pre">ImmersedDOFs</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.triples.ImmersedDOFs.html#fuse.triples.ImmersedDOFs.__init__"><code class="docutils literal notranslate"><span class="pre">ImmersedDOFs.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.utils.html">utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.fold_reduce.html">fuse.utils.fold_reduce</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.fold_reduce.html#fuse.utils.fold_reduce"><code class="docutils literal notranslate"><span class="pre">fold_reduce()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.max_deg_sp_mat.html">fuse.utils.max_deg_sp_mat</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.max_deg_sp_mat.html#fuse.utils.max_deg_sp_mat"><code class="docutils literal notranslate"><span class="pre">max_deg_sp_mat()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.numpy_to_str_tuple.html">fuse.utils.numpy_to_str_tuple</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.numpy_to_str_tuple.html#fuse.utils.numpy_to_str_tuple"><code class="docutils literal notranslate"><span class="pre">numpy_to_str_tuple()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html">fuse.utils.sympy_to_numpy</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html#fuse.utils.sympy_to_numpy"><code class="docutils literal notranslate"><span class="pre">sympy_to_numpy()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.tabulate_sympy.html">fuse.utils.tabulate_sympy</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.tabulate_sympy.html#fuse.utils.tabulate_sympy"><code class="docutils literal notranslate"><span class="pre">tabulate_sympy()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+      <div class="col-md-3">
+        <div id="sidebar" class="bs-sidenav" role="complementary"><ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.constructCellComplex.html">fuse.cells.constructCellComplex</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_2d.html">fuse.cells.construct_attach_2d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_3d.html">fuse.cells.construct_attach_3d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.firedrake_quad.html">fuse.cells.firedrake_quad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.firedrake_triangle.html">fuse.cells.firedrake_triangle</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.make_tetrahedron.html">fuse.cells.make_tetrahedron</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.normalise.html">fuse.cells.normalise</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.polygon.html">fuse.cells.polygon</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.topo_pos.html">fuse.cells.topo_pos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html">CellComplexToFiatHypercube</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html">CellComplexToFiatSimplex</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html">CellComplexToFiatTensorProduct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html">CellComplexToUFL</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Edge</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#fuse.cells.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#fuse.cells.Edge.__init__"><code class="docutils literal notranslate"><span class="pre">Edge.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.Point.html">Point</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.TensorProductPoint.html">TensorProductPoint</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.dof.html">dof</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.groups.html">groups</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.serialisation.html">serialisation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.spaces.html">spaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.tensor_products.html">tensor_products</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.traces.html">traces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.triples.html">triples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.utils.html">utils</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    <div class="body col-md-9 content" role="main">
+      
+  <section id="edge">
+<h1>Edge<a class="headerlink" href="#edge" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="fuse.cells.Edge">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.cells.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attachment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">o</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.Edge" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.13)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Representation of the connections in a cell complex.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Param<span class="colon">:</span></dt>
+<dd class="field-odd"><p>point: the point being connected (lower level)</p>
+</dd>
+<dt class="field-even">Param<span class="colon">:</span></dt>
+<dd class="field-even"><p>attachment: the function describing how the point is attached</p>
+</dd>
+<dt class="field-odd">Param<span class="colon">:</span></dt>
+<dd class="field-odd"><p>o: orientation function (optional)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="fuse.cells.Edge.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attachment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">o</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.Edge.__init__" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Edge.__init__" title="fuse.cells.Edge.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(point[, attachment, o])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict_id</span></code>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">lower_dim</span></code>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ordered_vertices</span></code>([get_class])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 8.2.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

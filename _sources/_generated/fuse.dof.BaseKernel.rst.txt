@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+BaseKernel
+==========
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: BaseKernel
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BaseKernel.__init__
+      ~BaseKernel.permute
+   
+   
+
+   
+   
+   

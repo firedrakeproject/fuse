@@ -1,0 +1,6 @@
+fuse.utils.fold\_reduce
+=======================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: fold_reduce

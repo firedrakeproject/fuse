@@ -1,0 +1,39 @@
+:tocdepth: 0
+
+ElementTriple
+=============
+
+.. currentmodule:: fuse.triples
+
+.. autoclass:: ElementTriple
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ElementTriple.__init__
+      ~ElementTriple.compute_dense_matrix
+      ~ElementTriple.degree
+      ~ElementTriple.dict_id
+      ~ElementTriple.generate
+      ~ElementTriple.get_dof_info
+      ~ElementTriple.get_value_shape
+      ~ElementTriple.make_dof_perms
+      ~ElementTriple.make_overall_dense_matrices
+      ~ElementTriple.num_dofs
+      ~ElementTriple.plot
+      ~ElementTriple.to_fiat
+      ~ElementTriple.to_tikz
+      ~ElementTriple.to_ufl
+   
+   
+
+   
+   
+   

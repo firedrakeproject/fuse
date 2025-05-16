@@ -1,0 +1,6 @@
+fuse.groups.get\_sym\_group
+===========================
+
+.. currentmodule:: fuse.groups
+
+.. autofunction:: get_sym_group

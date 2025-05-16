@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+ElementSobolevSpace
+===================
+
+.. currentmodule:: fuse.spaces.element_sobolev_spaces
+
+.. autoclass:: ElementSobolevSpace
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ElementSobolevSpace.__init__
+      ~ElementSobolevSpace.dict_id
+   
+   
+
+   
+   
+   

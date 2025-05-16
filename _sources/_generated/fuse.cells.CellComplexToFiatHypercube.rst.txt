@@ -1,0 +1,58 @@
+:tocdepth: 0
+
+CellComplexToFiatHypercube
+==========================
+
+.. currentmodule:: fuse.cells
+
+.. autoclass:: CellComplexToFiatHypercube
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellComplexToFiatHypercube.__init__
+      ~CellComplexToFiatHypercube.cell_orientation_reflection_map
+      ~CellComplexToFiatHypercube.cellname
+      ~CellComplexToFiatHypercube.compute_reference_normal
+      ~CellComplexToFiatHypercube.construct_subcomplex
+      ~CellComplexToFiatHypercube.construct_subelement
+      ~CellComplexToFiatHypercube.contains_point
+      ~CellComplexToFiatHypercube.distance_to_point_l1
+      ~CellComplexToFiatHypercube.extract_extrinsic_orientation
+      ~CellComplexToFiatHypercube.extract_intrinsic_orientation
+      ~CellComplexToFiatHypercube.get_connectivity
+      ~CellComplexToFiatHypercube.get_dimension
+      ~CellComplexToFiatHypercube.get_entity_transform
+      ~CellComplexToFiatHypercube.get_facet_element
+      ~CellComplexToFiatHypercube.get_interior_facets
+      ~CellComplexToFiatHypercube.get_parent
+      ~CellComplexToFiatHypercube.get_parent_complex
+      ~CellComplexToFiatHypercube.get_shape
+      ~CellComplexToFiatHypercube.get_spatial_dimension
+      ~CellComplexToFiatHypercube.get_topology
+      ~CellComplexToFiatHypercube.get_vertices
+      ~CellComplexToFiatHypercube.get_vertices_of_subcomplex
+      ~CellComplexToFiatHypercube.is_macrocell
+      ~CellComplexToFiatHypercube.is_parent
+      ~CellComplexToFiatHypercube.is_simplex
+      ~CellComplexToFiatHypercube.symmetry_group_size
+      ~CellComplexToFiatHypercube.volume
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~CellComplexToFiatHypercube.extrinsic_orientation_permutation_map
+   
+   

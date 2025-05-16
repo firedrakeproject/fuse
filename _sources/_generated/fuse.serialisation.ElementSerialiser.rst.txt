@@ -1,0 +1,32 @@
+:tocdepth: 0
+
+ElementSerialiser
+=================
+
+.. currentmodule:: fuse.serialisation
+
+.. autoclass:: ElementSerialiser
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ElementSerialiser.__init__
+      ~ElementSerialiser.decode
+      ~ElementSerialiser.decode_traverse
+      ~ElementSerialiser.encode
+      ~ElementSerialiser.encode_traverse
+      ~ElementSerialiser.get_id
+      ~ElementSerialiser.store_obj
+   
+   
+
+   
+   
+   

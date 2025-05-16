@@ -1,0 +1,6 @@
+fuse.utils.tabulate\_sympy
+==========================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: tabulate_sympy

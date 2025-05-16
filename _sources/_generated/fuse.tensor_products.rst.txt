@@ -1,0 +1,42 @@
+:tocdepth: 0
+
+tensor\_products
+================
+
+.. automodule:: fuse.tensor_products
+  
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        tensor_product
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        TensorProductTriple
+   
+   
+
+   
+   
+   
+
+
+

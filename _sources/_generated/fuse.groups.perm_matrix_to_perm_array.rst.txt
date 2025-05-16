@@ -1,0 +1,6 @@
+fuse.groups.perm\_matrix\_to\_perm\_array
+=========================================
+
+.. currentmodule:: fuse.groups
+
+.. autofunction:: perm_matrix_to_perm_array

@@ -1,0 +1,36 @@
+:tocdepth: 0
+
+spaces
+======
+
+.. automodule:: fuse.spaces
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :template: custom-module-template.rst                 
+   :recursive:
+
+   element_sobolev_spaces
+   interpolation_spaces
+   polynomial_spaces
+

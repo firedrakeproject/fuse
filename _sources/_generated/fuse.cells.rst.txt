@@ -1,0 +1,75 @@
+:tocdepth: 0
+
+cells
+=====
+
+.. automodule:: fuse.cells
+  
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        compute_scaled_verts
+      
+        constructCellComplex
+      
+        construct_attach_2d
+      
+        construct_attach_3d
+      
+        firedrake_quad
+      
+        firedrake_triangle
+      
+      
+      
+        make_tetrahedron
+      
+        normalise
+      
+        polygon
+      
+        topo_pos
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        
+        CellComplexToFiatHypercube
+        
+        CellComplexToFiatSimplex
+        
+        CellComplexToFiatTensorProduct
+        
+        CellComplexToUFL
+        
+        Edge
+        
+        Point
+        
+        TensorProductPoint
+   
+   
+
+   
+   
+   
+
+
+

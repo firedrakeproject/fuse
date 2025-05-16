@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+TrGrad
+======
+
+.. currentmodule:: fuse.traces
+
+.. autoclass:: TrGrad
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~TrGrad.__init__
+      ~TrGrad.dict_id
+      ~TrGrad.plot
+      ~TrGrad.tabulate
+      ~TrGrad.to_tikz
+   
+   
+
+   
+   
+   

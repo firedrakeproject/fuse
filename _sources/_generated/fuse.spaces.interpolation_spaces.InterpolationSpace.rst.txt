@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+InterpolationSpace
+==================
+
+.. currentmodule:: fuse.spaces.interpolation_spaces
+
+.. autoclass:: InterpolationSpace
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~InterpolationSpace.__init__
+      ~InterpolationSpace.dict_id
+   
+   
+
+   
+   
+   

@@ -1,0 +1,31 @@
+:tocdepth: 0
+
+DOFGenerator
+============
+
+.. currentmodule:: fuse.triples
+
+.. autoclass:: DOFGenerator
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~DOFGenerator.__init__
+      ~DOFGenerator.add_cell
+      ~DOFGenerator.dict_id
+      ~DOFGenerator.generate
+      ~DOFGenerator.make_entity_ids
+      ~DOFGenerator.num_dofs
+   
+   
+
+   
+   
+   

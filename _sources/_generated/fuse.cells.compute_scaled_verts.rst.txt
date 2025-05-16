@@ -1,0 +1,6 @@
+fuse.cells.compute\_scaled\_verts
+=================================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: compute_scaled_verts

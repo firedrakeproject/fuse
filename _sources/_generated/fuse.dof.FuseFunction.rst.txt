@@ -1,0 +1,28 @@
+:tocdepth: 0
+
+FuseFunction
+============
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: FuseFunction
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~FuseFunction.__init__
+      ~FuseFunction.attach
+      ~FuseFunction.dict_id
+   
+   
+
+   
+   
+   

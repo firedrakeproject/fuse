@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Examples &#8212; FUSE 2025.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=9f61996d" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/additional.css?v=584b47eb" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <script src="../_static/documentation_options.js?v=0e25812e"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples in 3D" href="examples3d.html" />
+    <link rel="prev" title="DOFs" href="dof.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-3.4.1/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js"></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          FUSE</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+                <li><a href="../about.html">About</a></li>
+                <li><a href="../install.html">Installation</a></li>
+                <li><a href="../api.html">Documentation</a></li>
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../manual.html">Manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dof.html">DOFs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dg0">DG0</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dg1-on-interval">DG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dg1-on-triangle">DG1 on triangle</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cg1-on-interval">CG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cg3-on-triangle">CG3 on triangle</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples3d.html">Examples in 3D</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#describing-a-tetrahedron">Describing a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#cg3-on-a-tetrahedron">CG3 on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#raviart-thomas-on-a-tetrahedron">Raviart Thomas on a tetrahedron</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples3d.html#nedelec-on-a-tetrahedron">Nedelec on a tetrahedron</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cells.html">Cells</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups.html">Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialisation.html">Serialisation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="serialisation.html#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="triples.html">Triples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html">Spaces</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#interpolation-spaces">Interpolation Spaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#element-sobolev-spaces">Element Sobolev Spaces</a></li>
+<li class="toctree-l3"><a class="reference internal" href="spaces.html#polynomial-spaces">Polynomial Spaces</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API documentation</a></li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+            
+            
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+      <div class="col-md-3">
+        <div id="sidebar" class="bs-sidenav" role="complementary"><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../manual.html">Manual</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dof.html">DOFs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#dg0">DG0</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dg1-on-interval">DG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dg1-on-triangle">DG1 on triangle</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cg1-on-interval">CG1 on interval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cg3-on-triangle">CG3 on triangle</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples3d.html">Examples in 3D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cells.html">Cells</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups.html">Groups</a></li>
+<li class="toctree-l2"><a class="reference internal" href="serialisation.html">Serialisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="triples.html">Triples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="spaces.html">Spaces</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    <div class="body col-md-9 content" role="main">
+      
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h1>
+<p>This page will describe the foundational element definitions and how they are written in this software.</p>
+<section id="dg0">
+<h2>DG0<a class="headerlink" href="#dg0" title="Link to this heading">¶</a></h2>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">vert</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">(()))]</span>
+<span class="n">dg0</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">vert</span><span class="p">,</span> <span class="p">(</span><span class="n">P0</span><span class="p">,</span> <span class="n">CellL2</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="dg1-on-interval">
+<h2>DG1 on interval<a class="headerlink" href="#dg1-on-interval" title="Link to this heading">¶</a></h2>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">edge</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">vertex_num</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,)))]</span>
+<span class="n">dg1</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellL2</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S2</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>(<a class="reference download internal" download="" href="../_downloads/f1db5a8f17af3b0f143256f60f611f06/test_2d_examples_docs.py"><code class="xref download docutils literal notranslate"><span class="pre">Source</span> <span class="pre">code</span></code></a>, <a class="reference download internal" download="" href="../_downloads/c4bb96e0e44f3c27ae37b95f8eccdfc7/test_2d_examples_docs_plot_dg1.png"><code class="xref download docutils literal notranslate"><span class="pre">png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/5797676d1992810911fc06185f906477/test_2d_examples_docs_plot_dg1.hires.png"><code class="xref download docutils literal notranslate"><span class="pre">hires.png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/04c8c9bad4195bd6e6c9865ee37327aa/test_2d_examples_docs_plot_dg1.pdf"><code class="xref download docutils literal notranslate"><span class="pre">pdf</span></code></a>)</p>
+<figure class="align-default">
+<img alt="../_images/test_2d_examples_docs_plot_dg1.png" class="plot-directive" src="../_images/test_2d_examples_docs_plot_dg1.png" />
+</figure>
+</section>
+<section id="dg1-on-triangle">
+<h2>DG1 on triangle<a class="headerlink" href="#dg1-on-triangle" title="Link to this heading">¶</a></h2>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">tri</span> <span class="o">=</span> <span class="n">polygon</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="mi">3</span><span class="p">)))]</span>
+<span class="n">dg1</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">tri</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellL2</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S3</span><span class="o">/</span><span class="n">S2</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>(<a class="reference download internal" download="" href="../_downloads/f1db5a8f17af3b0f143256f60f611f06/test_2d_examples_docs.py"><code class="xref download docutils literal notranslate"><span class="pre">Source</span> <span class="pre">code</span></code></a>, <a class="reference download internal" download="" href="../_downloads/91ccae9102ec0b6e8f369205b3433ea9/test_2d_examples_docs_plot_dg1_tri.png"><code class="xref download docutils literal notranslate"><span class="pre">png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/1afba95e3e668a4b05325337fd08a1f4/test_2d_examples_docs_plot_dg1_tri.hires.png"><code class="xref download docutils literal notranslate"><span class="pre">hires.png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/02cac2dab8d09e284c439fe7c7458917/test_2d_examples_docs_plot_dg1_tri.pdf"><code class="xref download docutils literal notranslate"><span class="pre">pdf</span></code></a>)</p>
+<figure class="align-default">
+<img alt="../_images/test_2d_examples_docs_plot_dg1_tri.png" class="plot-directive" src="../_images/test_2d_examples_docs_plot_dg1_tri.png" />
+</figure>
+</section>
+<section id="cg1-on-interval">
+<h2>CG1 on interval<a class="headerlink" href="#cg1-on-interval" title="Link to this heading">¶</a></h2>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">edge</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">Point</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">vertex_num</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">vert</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">vertices</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">(()))]</span>
+<span class="n">dg0</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">vert</span><span class="p">,</span> <span class="p">(</span><span class="n">P0</span><span class="p">,</span> <span class="n">CellL2</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">dg0</span><span class="p">,</span> <span class="n">TrH1</span><span class="p">)]</span>
+<span class="n">cg1</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellH1</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span>
+                    <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S2</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>(<a class="reference download internal" download="" href="../_downloads/f1db5a8f17af3b0f143256f60f611f06/test_2d_examples_docs.py"><code class="xref download docutils literal notranslate"><span class="pre">Source</span> <span class="pre">code</span></code></a>, <a class="reference download internal" download="" href="../_downloads/b6940d057d4a587bad75079bef74eb8c/test_2d_examples_docs_plot_cg1.png"><code class="xref download docutils literal notranslate"><span class="pre">png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/71378bb1278f01be8db78cd6c703343b/test_2d_examples_docs_plot_cg1.hires.png"><code class="xref download docutils literal notranslate"><span class="pre">hires.png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/8368a5ab21b8c2db711ec66ce140eb75/test_2d_examples_docs_plot_cg1.pdf"><code class="xref download docutils literal notranslate"><span class="pre">pdf</span></code></a>)</p>
+<figure class="align-default">
+<img alt="../_images/test_2d_examples_docs_plot_cg1.png" class="plot-directive" src="../_images/test_2d_examples_docs_plot_cg1.png" />
+</figure>
+</section>
+<section id="cg3-on-triangle">
+<h2>CG3 on triangle<a class="headerlink" href="#cg3-on-triangle" title="Link to this heading">¶</a></h2>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">tri</span> <span class="o">=</span> <span class="n">polygon</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">edge</span> <span class="o">=</span> <span class="n">tri</span><span class="o">.</span><span class="n">edges</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">vert</span> <span class="o">=</span> <span class="n">tri</span><span class="o">.</span><span class="n">vertices</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">(()))]</span>
+<span class="n">dg0</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">vert</span><span class="p">,</span> <span class="p">(</span><span class="n">P0</span><span class="p">,</span> <span class="n">CellL2</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+
+<span class="n">v_xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">tri</span><span class="p">,</span> <span class="n">dg0</span><span class="p">,</span> <span class="n">TrH1</span><span class="p">)]</span>
+<span class="n">v_dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">v_xs</span><span class="p">,</span> <span class="n">C3</span><span class="p">,</span> <span class="n">S1</span><span class="p">)</span>
+
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="mi">3</span><span class="p">)))]</span>
+<span class="n">dg0_int</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellH1</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S2</span><span class="p">,</span> <span class="n">S1</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">([</span><span class="n">d</span><span class="o">.</span><span class="n">generation</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dg0_int</span><span class="o">.</span><span class="n">generate</span><span class="p">()])</span>
+
+<span class="n">e_xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">tri</span><span class="p">,</span> <span class="n">dg0_int</span><span class="p">,</span> <span class="n">TrH1</span><span class="p">)]</span>
+<span class="n">e_dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">e_xs</span><span class="p">,</span> <span class="n">C3</span><span class="p">,</span> <span class="n">S1</span><span class="p">)</span>
+
+<span class="n">i_xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">DeltaPairing</span><span class="p">(),</span> <span class="n">PointKernel</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))]</span>
+<span class="n">i_dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">i_xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S1</span><span class="p">)</span>
+
+<span class="n">cg3</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">tri</span><span class="p">,</span> <span class="p">(</span><span class="n">P3</span><span class="p">,</span> <span class="n">CellH1</span><span class="p">,</span> <span class="n">C0</span><span class="p">),</span> <span class="p">[</span><span class="n">v_dofs</span><span class="p">,</span> <span class="n">e_dofs</span><span class="p">,</span> <span class="n">i_dofs</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>(<a class="reference download internal" download="" href="../_downloads/f1db5a8f17af3b0f143256f60f611f06/test_2d_examples_docs.py"><code class="xref download docutils literal notranslate"><span class="pre">Source</span> <span class="pre">code</span></code></a>, <a class="reference download internal" download="" href="../_downloads/78c4b145bb0d97d4d7d20e0e91af61f0/test_2d_examples_docs_plot_cg3.png"><code class="xref download docutils literal notranslate"><span class="pre">png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/4832a48b71b59aae7525404867bf1616/test_2d_examples_docs_plot_cg3.hires.png"><code class="xref download docutils literal notranslate"><span class="pre">hires.png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/b999ab3b4a11cb9706e26a25127d8090/test_2d_examples_docs_plot_cg3.pdf"><code class="xref download docutils literal notranslate"><span class="pre">pdf</span></code></a>)</p>
+<figure class="align-default">
+<img alt="../_images/test_2d_examples_docs_plot_cg3.png" class="plot-directive" src="../_images/test_2d_examples_docs_plot_cg3.png" />
+</figure>
+</section>
+</section>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 8.2.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

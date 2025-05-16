@@ -1,0 +1,6 @@
+fuse.utils.numpy\_to\_str\_tuple
+================================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: numpy_to_str_tuple

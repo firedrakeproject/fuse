@@ -1,0 +1,27 @@
+:tocdepth: 0
+
+CellHDiv
+========
+
+.. currentmodule:: fuse.spaces.element_sobolev_spaces
+
+.. autoclass:: CellHDiv
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~CellHDiv.__init__
+      ~CellHDiv.dict_id
+   
+   
+
+   
+   
+   

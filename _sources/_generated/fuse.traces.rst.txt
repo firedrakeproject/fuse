@@ -1,0 +1,44 @@
+:tocdepth: 0
+
+traces
+======
+
+.. automodule:: fuse.traces
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        TrGrad
+        
+        TrH1
+        
+        TrHCurl
+        
+        TrHDiv
+        
+        TrHess
+        
+        Trace
+   
+   
+
+   
+   
+   
+
+
+

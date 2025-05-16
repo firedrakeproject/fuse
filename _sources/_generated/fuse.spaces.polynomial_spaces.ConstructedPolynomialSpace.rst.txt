@@ -1,0 +1,31 @@
+:tocdepth: 0
+
+ConstructedPolynomialSpace
+==========================
+
+.. currentmodule:: fuse.spaces.polynomial_spaces
+
+.. autoclass:: ConstructedPolynomialSpace
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~ConstructedPolynomialSpace.__init__
+      ~ConstructedPolynomialSpace.complete
+      ~ConstructedPolynomialSpace.degree
+      ~ConstructedPolynomialSpace.dict_id
+      ~ConstructedPolynomialSpace.restrict
+      ~ConstructedPolynomialSpace.to_ON_polynomial_set
+   
+   
+
+   
+   
+   

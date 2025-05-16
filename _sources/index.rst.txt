@@ -1,4 +1,4 @@
-:tocdepth: 2
+:tocdepth: 1
 
 
 Welcome to FUSE's documentation!
@@ -6,8 +6,8 @@ Welcome to FUSE's documentation!
 
 
 .. toctree::
-    :maxdepth: 2
-    :hidden:
+    :maxdepth: 1
 
+    manual
     api
 

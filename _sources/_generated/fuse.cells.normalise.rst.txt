@@ -1,0 +1,6 @@
+fuse.cells.normalise
+====================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: normalise

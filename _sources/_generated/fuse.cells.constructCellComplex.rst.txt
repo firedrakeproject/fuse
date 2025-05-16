@@ -1,0 +1,6 @@
+fuse.cells.constructCellComplex
+===============================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: constructCellComplex

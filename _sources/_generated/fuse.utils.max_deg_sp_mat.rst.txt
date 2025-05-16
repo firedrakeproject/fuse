@@ -1,0 +1,6 @@
+fuse.utils.max\_deg\_sp\_mat
+============================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: max_deg_sp_mat

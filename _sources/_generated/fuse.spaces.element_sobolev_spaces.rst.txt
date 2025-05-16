@@ -1,0 +1,44 @@
+:tocdepth: 0
+
+element\_sobolev\_spaces
+========================
+
+.. automodule:: fuse.spaces.element_sobolev_spaces
+  
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:                                        
+      :template: custom-class-template.rst               
+   
+        
+        CellH1
+        
+        CellH2
+        
+        CellHCurl
+        
+        CellHDiv
+        
+        CellL2
+        
+        ElementSobolevSpace
+   
+   
+
+   
+   
+   
+
+
+
