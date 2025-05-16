@@ -400,6 +400,36 @@ class Point():
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
         return self.topology_unrelabelled
 
+    def get_sub_entities(self):
+        min_ids = self.get_starter_ids()
+        sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
+        self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
+        return self.sub_entities
+
+    def _subentity_traversal(self, sub_ents, min_ids):
+        dim = self.get_spatial_dimension()
+        self_id = self.id - min_ids[dim]
+
+        if dim > 0:
+            for p in self.ordered_vertices():
+                p_id = p - min_ids[0]
+                if (0, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] += [(0, p_id)]
+                    sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
+        if dim > 1:
+            for e in self.connections:
+                p = e.point
+                p_dim = p.get_spatial_dimension()
+                p_id = p.id - min_ids[p_dim]
+                if (p_dim, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
+                    sub_ents = p._subentity_traversal(sub_ents, min_ids)
+
+        if (dim, self_id) not in sub_ents[dim][self_id]:
+            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
+
+        return sub_ents
+
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
         structure.reverse()
@@ -803,6 +833,11 @@ class TensorProductPoint():
     def get_spatial_dimension(self):
         return self.dimension
 
+    def get_sub_entities(self):
+        self.A.get_sub_entities()
+        self.B.get_sub_entities()
+        breakpoint()
+
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
 
@@ -851,7 +886,8 @@ class CellComplexToFiatSimplex(Simplex):
         verts = cell.vertices(return_coords=True)
         topology = cell.get_topology()
         shape = cell.get_shape()
-        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology)
+        sub_ents = cell.get_sub_entities()
+        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
 
     def cellname(self):
         return self.name
@@ -886,7 +922,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         if name is None:
             name = " * ".join([s.name for s in self.sub_cells])
         self.name = name
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
 
     def cellname(self):
@@ -918,7 +954,7 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
