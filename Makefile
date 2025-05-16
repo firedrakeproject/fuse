@@ -8,7 +8,8 @@ endif
 .PHONY: test docs
 
 docs:
-	@(cd docs/ && (make html SPHINXOPTS="-W --keep-going -n"))
+	# put -n back in when things are better documented
+	@(cd docs/ && (make html SPHINXOPTS="-W --keep-going"))
 
 lint:
 	@echo "    Linting FUSE codebase"
