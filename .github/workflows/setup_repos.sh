@@ -3,7 +3,7 @@ cd /opt/firedrake/
 git fetch
 git checkout indiamai/fuse-quads
 git pull
-pip install pybind11 pyrsistent
+pip install pybind11 pyrsistent Cython
 make
 
 /usr/bin/git config --global --add safe.directory ~/
