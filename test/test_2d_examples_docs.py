@@ -113,7 +113,6 @@ def construct_cg3(tri=None):
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
     dg0_int = ElementTriple(edge, (P1, CellH1, C0), DOFGenerator(xs, S2, S1))
-    print([d.generation for d in dg0_int.generate()])
 
     e_xs = [immerse(tri, dg0_int, TrH1)]
     e_dofs = DOFGenerator(e_xs, C3, S1)
@@ -149,17 +148,13 @@ def test_cg_examples():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     test_func = FuseFunction(sp.Matrix([10*x, 3*y/np.sqrt(3)]), symbols=(x, y))
+    identity = FuseFunction(sp.Matrix([x, y]), symbols=(x, y))
 
-    dof_vals = np.array([[-10, -1], [0, 2], [10, -1],
-                         [-10/3, 1], [-20/3, 0], [10/3, 1],
-                         [20/3, 0], [-10/3, -1], [10/3, -1],
-                         [0, 0]])
-
+    dof_vals = []
     for dof in cg3.generate():
-        print(dof)
-        print(dof.sub_id)
-        assert any([np.allclose(val, dof.eval(test_func).flatten()) for val in dof_vals])
-
+        val = dof.eval(test_func)
+        position = dof.eval(identity)
+        assert np.allclose([[10*position[0], 3*position[1]/np.sqrt(3)]], val)
 
 def construct_nd(tri=None):
     if tri is None:
