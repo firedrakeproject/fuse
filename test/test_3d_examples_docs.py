@@ -87,7 +87,7 @@ def construct_tet_rt(cell=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1, 1)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1, 1, 1)))]
     dofs = DOFGenerator(xs, S1, S3)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 

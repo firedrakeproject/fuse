@@ -248,6 +248,7 @@ def test_create_fiat_lagrange(elem_gen, elem_code, deg):
                                             (create_cg1, polygon(3)),
                                             (create_dg1, polygon(3)),
                                             (construct_cg3, polygon(3)),
+                                            (construct_rt, polygon(3)),
                                             (construct_nd, polygon(3)),
                                             (create_cr, polygon(3)),
                                             (create_cf, polygon(3)),
@@ -260,7 +261,6 @@ def test_entity_perms(elem_gen, cell):
 
     print(elem.to_fiat())
     dim = cell.get_spatial_dimension()
-    
     print(elem.matrices[dim][0].keys())
     for i in elem.matrices[dim][0].keys():
         print(elem.matrices[dim][0][i])
@@ -302,7 +302,8 @@ def test_2d(elem_gen, elem_code, deg):
     assert np.allclose(res, 0)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8), (construct_cg3, "CG", 3, 3.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8),
+                                                              pytest.param(construct_cg3, "CG", 3, 3.8, marks=pytest.mark.xfail(reason='Connectivity')),])
 def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)

@@ -37,7 +37,7 @@ class DeltaPairing(Pairing):
 
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
         pt = dof.eval(FuseFunction(lambda *x: x))
-        pt1 = dof.tabulate([[1]])
+        # pt1 = dof.tabulate([[1]])
         return PointEvaluation(ref_el, pt)
         # return PointEvaluation(ref_el, tuple(pt1[0]))
 
@@ -174,7 +174,6 @@ class PointKernel(BaseKernel):
         return 1
 
     def permute(self, g):
-        print("permuting", g, self.pt, g(self.pt))
         return PointKernel(g(self.pt))
 
     def __call__(self, *args):
@@ -226,8 +225,8 @@ class PolynomialKernel(BaseKernel):
 
     def tabulate(self, Qpts, attachment=None):
         # TODO do we need to attach qpts
-        if attachment:
-            return np.array([attachment(*self(*pt)) for pt in Qpts]).astype(np.float64)
+        # if attachment:
+        #     return np.array([self(*attachment(*pt)) for pt in Qpts]).astype(np.float64)
         return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -264,7 +263,6 @@ class DOF():
 
     def __call__(self, g):
         new_generation = self.generation.copy()
-        print("called")
         return DOF(self.pairing.permute(g), self.kernel.permute(g), self.trace_entity, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
 
     def eval(self, fn, pullback=True):
@@ -330,13 +328,12 @@ class ImmersedDOF(DOF):
         return immersion*res
 
     def __call__(self, g):
-        print("called")
-        permuted = self.cell.permute_entities(g, self.trace_entity.dim())
         index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
-        new_trace_entity = self.cell.get_node(permuted[index_trace][0]).orient(permuted[index_trace][1])
-
-        return ImmersedDOF(self.pairing.permute(permuted[index_trace][1]), self.kernel.permute(permuted[index_trace][1]), new_trace_entity,
-                           self.attachment, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
+        permuted_e, permuted_g = self.cell.permute_entities(g, self.trace_entity.dim())[index_trace]
+        new_trace_entity = self.cell.get_node(permuted_e).orient(permuted_g)
+        new_attach = lambda *x: g(self.attachment(*x))
+        return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_trace_entity,
+                           new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
 
     def __repr__(self):
         fn = "tr_{1}_{0}(v)".format(str(self.trace_entity), str(self.target_space))

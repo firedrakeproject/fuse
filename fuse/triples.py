@@ -248,7 +248,6 @@ class ElementTriple():
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
                 new_nodes = [d(g).convert_to_fiat(ref_el, degree) for d in self.generate()]
-                breakpoint()
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict

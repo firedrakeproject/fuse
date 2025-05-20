@@ -69,6 +69,25 @@ def test_permute_nd():
     nd = construct_nd(cell)
     x = sp.Symbol("x")
     y = sp.Symbol("y")
+    func = FuseFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
+
+    # for dof in nd.generate():
+    #     print(dof)
+
+    for g in nd.cell.group.members():
+        print("g:", g.numeric_rep())
+        for dof in nd.generate():
+            # if g.perm.is_Identity:
+            print(dof(g).convert_to_fiat(cell.to_fiat(), 0).pt_dict)
+            print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
+
+
+def test_permute_nd_old():
+    cell = polygon(3)
+
+    nd = construct_nd(cell)
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
     # func = FuseFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
 
     # phi_0 = FuseFunction(sp.Matrix([-0.333333333333333*y - 0.192450089729875, 0.333333333333333*x + 0.333333333333333]), symbols=(x, y))

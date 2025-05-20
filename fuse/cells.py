@@ -546,9 +546,8 @@ class Point():
     def basis_vectors(self, return_coords=True, entity=None):
         if not entity:
             entity = self
-        entity_levels = [sorted(generation) for generation in nx.topological_generations(entity.G)]
         self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
-        vertices = entity_levels[entity.graph_dim()]
+        vertices = entity.ordered_vertices()
         if self.dimension == 0:
             # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
