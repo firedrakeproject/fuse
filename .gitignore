@@ -8,6 +8,7 @@ __pycache__
 *.egg-info
 _build
 docs/test/*
+docs/source/_generated
 PKG-INFO
 
 settings.json

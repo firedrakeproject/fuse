@@ -190,8 +190,13 @@ class ElementTriple():
                 else:
                     ax.scatter(*coord, color=color)
                 ax.text(*coord, dof.id)
-
-            fig.savefig(filename)
+            plt.axis('off')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            if filename:
+                fig.savefig(filename)
+            else:
+                plt.show()
         elif self.cell.dimension == 3:
             fig = plt.figure()
             ax = fig.add_subplot(projection='3d')
@@ -210,8 +215,13 @@ class ElementTriple():
                     coord = center
                     dof.target_space.plot(ax, center, dof.trace_entity, dof.g, color=color, length=0.2)
                 ax.text(*coord, dof.id)
-
-            fig.savefig(filename)
+            plt.axis('off')
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            if filename:
+                fig.savefig(filename)
+            else:
+                plt.show()
         else:
             raise ValueError("Plotting not supported in this dimension")
 

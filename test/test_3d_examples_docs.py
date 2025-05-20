@@ -58,6 +58,11 @@ def construct_tet_cg3():
     return cg3
 
 
+def plot_tet_cg3():
+    cg3 = construct_tet_cg3()
+    cg3.plot()
+
+
 def test_tet_cg3():
     cg3 = construct_tet_cg3()
 
@@ -100,6 +105,11 @@ def construct_tet_rt(cell=None):
     return rt1
 
 
+def plot_tet_rt():
+    rt = construct_tet_rt()
+    rt.plot()
+
+
 def test_tet_rt():
     tetra = make_tetrahedron()
     rt1 = construct_tet_rt(tetra)
@@ -125,6 +135,11 @@ def construct_tet_ned():
     # [test_tet_ned 1]
 
     return ned
+
+
+def plot_tet_ned():
+    ned = construct_tet_ned()
+    ned.plot()
 
 
 def test_tet_ned():

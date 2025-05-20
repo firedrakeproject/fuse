@@ -39,7 +39,10 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               "matplotlib.sphinxext.plot_directive",
               "sphinx_design",
-              'sphinxcontrib.fulltoc']
+              'sphinxcontrib.fulltoc',
+              'sphinx_remove_toctrees']
+
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -52,7 +55,7 @@ numpydoc_class_members_toctree = False
 
 # -- Autodoc configuration ---------------------------------------------------
 
-autodoc_mock_imports = ["firedrake", "networkx", "FIAT", "finat"]
+autodoc_mock_imports = ["matplotlib"]
 
 # Make sure the target is unique
 autosectionlabel_prefix_document = True
@@ -60,12 +63,17 @@ autosectionlabel_prefix_document = True
 intersphinx_mapping = {
     'ufl': ('https://docs.fenicsproject.org/ufl/main/', None),
     'FIAT': ('https://firedrakeproject.org/fiat', None),
-    'matplotlib': ('https://matplotlib.org/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'python': ('https://docs.python.org/3/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None)}
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'networkx': ("https://networkx.org/documentation/stable/", None)}
 
 
+remove_from_toctrees = ["_generated/fuse.cells.Arrow3D.rst"]
 
+suppress_warnings = [
+    'toc.not_readable',  # Suppress warnings about excluded toctree entries
+]
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -101,8 +109,11 @@ html_theme_options = {
     'globaltoc_depth': 2,
 }
 
-html_sidebars = { 'api/*': ['localtoc.html'], 
-                  'api': ['localtoc.html'],
-                  'about': [],
-                  'install': [],
-                  'index': ['localtoc.html']}
+html_sidebars = {'api/*': ['localtoc.html'], 
+                 'api': ['localtoc.html'],
+                 'about': [],
+                 'install': [],
+                 'index': ['localtoc.html'],
+                 'manual': ['localtoc.html'],
+                 'manual/*': ['localtoc.html'],
+                 '_generated/*': ['custom-sidebar.html'], }
