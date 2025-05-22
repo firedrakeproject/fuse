@@ -28,6 +28,8 @@ jobs:
           git fetch
           git checkout indiamai/fuse-quads
           git pull
+          pip install pybind11 Cython
+          make
       - name: Install checkedout fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[dev]'
