@@ -10,6 +10,13 @@ from test_polynomial_space import flatten
 from element_examples import CR_n
 
 
+def create_dg0(cell):
+    xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
+    Pk = PolynomialSpace(0)
+    dg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    return dg
+
+
 def create_dg1(cell):
     xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
     Pk = PolynomialSpace(1)
@@ -84,7 +91,7 @@ def create_cf(cell):
 
 def create_cg1(cell):
     deg = 1
-    vert_dg = create_dg1(cell.vertices()[0])
+    vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg)
@@ -97,7 +104,7 @@ def create_cg1_quad():
     # cell = polygon(4)
     cell = constructCellComplex("quadrilateral").cell_complex
 
-    vert_dg = create_dg1(cell.vertices()[0])
+    vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg, deg + 1)
@@ -115,7 +122,7 @@ def create_cg1_quad_tensor():
 
 def create_cg1_flipped(cell):
     deg = 1
-    vert_dg = create_dg1(cell.vertices()[0])
+    vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1, node=1)]
 
     Pk = PolynomialSpace(deg)
@@ -130,7 +137,7 @@ def create_cg2(cell):
     deg = 2
     if cell.dim() > 1:
         raise NotImplementedError("This method is for cg2 on edges, please use create_cg2_tri for triangles")
-    vert_dg = create_dg1(cell.vertices()[0])
+    vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
 
@@ -144,7 +151,7 @@ def create_cg2_tri(cell):
     deg = 2
     Pk = PolynomialSpace(deg)
 
-    vert_dg0 = create_dg1(cell.vertices()[0])
+    vert_dg0 = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg0, TrH1)]
 
     edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
@@ -259,11 +266,23 @@ def test_create_fiat_lagrange(elem_gen, elem_code, deg):
 def test_entity_perms(elem_gen, cell):
     elem = elem_gen(cell)
 
-    print(elem.to_fiat())
+    elem.to_fiat()
     dim = cell.get_spatial_dimension()
-    print(elem.matrices[dim][0].keys())
+
     for i in elem.matrices[dim][0].keys():
         print(elem.matrices[dim][0][i])
+
+
+@pytest.mark.parametrize("elem_gen, cell, expected", [(create_cg1, Point(1, [Point(0), Point(0)], vertex_num=2), (0, 0, [[[1]]])),
+                                                      (create_cg2, Point(1, [Point(0), Point(0)], vertex_num=2), (1, 0, [[[1]], [[1]]])),
+                                                      (construct_rt, polygon(3), (1, 0, [[[1]], [[-1]]]))])
+def test_immersed_entity_perms(elem_gen, cell, expected):
+    elem = elem_gen(cell)
+    elem.to_fiat()
+    dim, ent_id, matrices = expected
+
+    for key in elem.matrices_by_entity[dim][ent_id]:
+        assert any([np.allclose(e_mat, elem.matrices_by_entity[dim][ent_id][key]) for e_mat in matrices])
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),

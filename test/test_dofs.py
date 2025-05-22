@@ -77,7 +77,6 @@ def test_permute_nd():
     for g in nd.cell.group.members():
         print("g:", g.numeric_rep())
         for dof in nd.generate():
-            # if g.perm.is_Identity:
             print(dof(g).convert_to_fiat(cell.to_fiat(), 0).pt_dict)
             print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
 

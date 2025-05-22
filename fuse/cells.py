@@ -591,7 +591,6 @@ class Point():
         xs = np.linspace(-1, 1, 20)
         if ax is None:
             ax = plt.gca()
-        print("plotting")
         if self.dimension == 1:
             # line plot in 1D case
             nodes = self.d_entities(0, get_class=False)
@@ -599,7 +598,6 @@ class Point():
             for node in nodes:
                 attach = self.attachment(top_level_node, node)
                 points.extend(attach())
-            print(np.array(points))
             plt.plot(np.array(points), np.zeros_like(points), color="black")
 
         for i in range(self.dimension - 1, -1, -1):
@@ -612,7 +610,6 @@ class Point():
                     if len(plotted) < 2:
                         plotted = (plotted[0], 0)
                     vert_coords += [plotted]
-                    print(np.array(plotted))
                     if not plain:
                         plt.plot(plotted[0], plotted[1], 'bo')
                         plt.annotate(node, (plotted[0], plotted[1]))
