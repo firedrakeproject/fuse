@@ -226,6 +226,31 @@ def make_tetrahedron():
 
     return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
 
+def ufc_tetrahedron():
+    vertices = []
+    for i in range(4):
+        vertices.append(Point(0))
+    edges = []
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[1]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[1], vertices[2]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[2], vertices[0]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[3], vertices[0]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[1], vertices[3]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[2], vertices[3]]))
+
+    face1 = Point(2, vertex_num=3, edges=[edges[5], edges[3], edges[2]], edge_orientations={2: [1, 0]})
+    face2 = Point(2, vertex_num=3, edges=[edges[3], edges[0], edges[4]])
+    face3 = Point(2, vertex_num=3, edges=[edges[2], edges[0], edges[1]])
+    face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
+
+    return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+
 
 class Point():
     """
@@ -399,6 +424,36 @@ class Point():
                 self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
         return self.topology_unrelabelled
+
+    def get_sub_entities(self):
+        min_ids = self.get_starter_ids()
+        sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
+        self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
+        return self.sub_entities
+
+    def _subentity_traversal(self, sub_ents, min_ids):
+        dim = self.get_spatial_dimension()
+        self_id = self.id - min_ids[dim]
+
+        if dim > 0:
+            for p in self.ordered_vertices():
+                p_id = p - min_ids[0]
+                if (0, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] += [(0, p_id)]
+                    sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
+        if dim > 1:
+            for e in self.connections:
+                p = e.point
+                p_dim = p.get_spatial_dimension()
+                p_id = p.id - min_ids[p_dim]
+                if (p_dim, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
+                    sub_ents = p._subentity_traversal(sub_ents, min_ids)
+
+        if (dim, self_id) not in sub_ents[dim][self_id]:
+            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
+
+        return sub_ents
 
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
@@ -803,6 +858,11 @@ class TensorProductPoint():
     def get_spatial_dimension(self):
         return self.dimension
 
+    def get_sub_entities(self):
+        self.A.get_sub_entities()
+        self.B.get_sub_entities()
+        breakpoint()
+
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
 
@@ -851,7 +911,8 @@ class CellComplexToFiatSimplex(Simplex):
         verts = cell.vertices(return_coords=True)
         topology = cell.get_topology()
         shape = cell.get_shape()
-        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology)
+        sub_ents = cell.get_sub_entities()
+        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
 
     def cellname(self):
         return self.name
@@ -886,7 +947,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         if name is None:
             name = " * ".join([s.name for s in self.sub_cells])
         self.name = name
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
 
     def cellname(self):
@@ -918,7 +979,7 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
@@ -1017,6 +1078,8 @@ def constructCellComplex(name):
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
         return make_tetrahedron().to_ufl(name)
+        # import ufl
+        # return ufl.Cell(name)
     elif name == "hexahedron":
         import warnings
         warnings.warn("Hexahedron unimplemented in Fuse")
