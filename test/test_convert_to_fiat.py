@@ -449,6 +449,11 @@ def test_project(elem_gen, elem_code, deg):
     L = inner(f, v)*dx
     solve(a == L, out)
 
+    W = VectorFunctionSpace(mesh, U.ufl_element())
+    X = assemble(interpolate(mesh.coordinates, W))
+    print(X.dat.data)
+    # print(assemble(a).M.values)
+
     assert np.allclose(out.dat.data, f.dat.data, rtol=1e-5)
 
     U = FunctionSpace(mesh, elem.to_ufl())
@@ -471,7 +476,8 @@ def test_project_3d(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
-    mesh = UnitCubeMesh(3, 3, 3)
+    # mesh = UnitCubeMesh(3, 3, 3)
+    mesh = UnitTetrahedronMesh()
 
     U = FunctionSpace(mesh, elem_code, deg)
 
