@@ -165,7 +165,7 @@ def polygon(n):
     return Point(2, edges, vertex_num=n)
 
 
-def firedrake_triangle():
+def ufc_triangle():
     vertices = []
     for i in range(3):
         vertices.append(Point(0))
@@ -180,7 +180,7 @@ def firedrake_triangle():
     return tri.orient(perm)
 
 
-def firedrake_quad():
+def ufc_quad():
     """
     Constructs the a quad cell that matches the firedrake default.
     """
@@ -232,23 +232,28 @@ def ufc_tetrahedron():
         vertices.append(Point(0))
     edges = []
     edges.append(
-        Point(1, vertex_num=2, edges=[vertices[0], vertices[1]]))
-    edges.append(
-        Point(1, vertex_num=2, edges=[vertices[1], vertices[2]]))
-    edges.append(
-        Point(1, vertex_num=2, edges=[vertices[2], vertices[0]]))
-    edges.append(
-        Point(1, vertex_num=2, edges=[vertices[3], vertices[0]]))
+        Point(1, vertex_num=2, edges=[vertices[2], vertices[3]]))
     edges.append(
         Point(1, vertex_num=2, edges=[vertices[1], vertices[3]]))
     edges.append(
-        Point(1, vertex_num=2, edges=[vertices[2], vertices[3]]))
+        Point(1, vertex_num=2, edges=[vertices[1], vertices[2]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[3]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[2]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[1]]))
 
-    face1 = Point(2, vertex_num=3, edges=[edges[5], edges[3], edges[2]], edge_orientations={2: [1, 0]})
-    face2 = Point(2, vertex_num=3, edges=[edges[3], edges[0], edges[4]])
-    face3 = Point(2, vertex_num=3, edges=[edges[2], edges[0], edges[1]])
-    face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
-
+    # face1 = Point(2, vertex_num=3, edges=[edges[0], edges[1], edges[2]])
+    # face2 = Point(2, vertex_num=3, edges=[edges[0], edges[3], edges[4]])
+    # face3 = Point(2, vertex_num=3, edges=[edges[2], edges[3], edges[5]])
+    # face4 = Point(2, vertex_num=3, edges=[edges[2], edges[4], edges[5]])
+    face1 = Point(2, vertex_num=3, edges=[edges[0], edges[3], edges[4]], edge_orientations={1: [1, 0]})
+    face2 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
+    face3 = Point(2, vertex_num=3, edges=[edges[4], edges[5], edges[2]], edge_orientations={0: [1, 0]})
+    face4 = Point(2, vertex_num=3, edges=[edges[2], edges[1], edges[0]], edge_orientations={0: [1, 0], 2: [1, 0]})
+    # breakpoint()
+    #, edge_orientations={0: [2, 1, 0]}
     return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
 
 
@@ -641,6 +646,9 @@ class Point():
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
+        if self.dimension  == 3:
+            self.plot3d(show, plain, ax, filename)
+            return
 
         top_level_node = self.d_entities(self.graph_dim(), get_class=False)[0]
         xs = np.linspace(-1, 1, 20)
@@ -678,17 +686,14 @@ class Point():
                         make_arrow(ax, 0, attach)
                 else:
                     raise ValueError("General plotting not implemented")
-            # if i == 2:
-            #     if len(vert_coords) > 2:
-            #         hull = ConvexHull(vert_coords)
-            #         plt.fill(vert_coords[hull.vertices, 0], vert_coords[hull.vertices, 1], alpha=0.5)
+
         if show:
             plt.show()
         if filename:
             ax.figure.savefig(filename)
             plt.cla()
 
-    def plot3d(self, show=True, ax=None):
+    def plot3d(self, show=True, plain=False, ax=None, filename=None):
         assert self.dimension == 3
         if ax is None:
             fig = plt.figure()
@@ -697,10 +702,13 @@ class Point():
 
         top_level_node = self.d_entities_ids(self.graph_dim())[0]
         nodes = self.d_entities_ids(0)
+        min_ids = self.get_starter_ids()
         for node in nodes:
             attach = self.attachment(top_level_node, node)
             plotted = attach()
             ax.scatter(plotted[0], plotted[1], plotted[2], color="black")
+            if not plain:
+                ax.text(plotted[0], plotted[1], plotted[2], node - min_ids[0], None)
 
         nodes = self.d_entities_ids(1)
         for node in nodes:
@@ -708,8 +716,15 @@ class Point():
             edgevals = np.array([attach(x) for x in xs])
             ax.plot3D(edgevals[:, 0], edgevals[:, 1], edgevals[:, 2], color="black")
             make_arrow_3d(ax, 0, attach)
+            if not plain:
+                plotted = attach(0)
+                ax.text(plotted[0], plotted[1], plotted[2], node - min_ids[1], None)
+
         if show:
             plt.show()
+        if filename:
+            ax.figure.savefig(filename)
+            plt.cla()
 
     def attachment(self, source, dst):
         if source == dst:
@@ -1071,11 +1086,11 @@ def constructCellComplex(name):
         return Point(1, [Point(0), Point(0)], vertex_num=2).to_ufl(name)
     elif name == "triangle":
         return polygon(3).to_ufl(name)
-        # return firedrake_triangle().to_ufl(name)
+        # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
         interval = Point(1, [Point(0), Point(0)], vertex_num=2)
         return TensorProductPoint(interval, interval).flatten().to_ufl(name)
-        # return firedrake_quad().to_ufl(name)
+        # return ufc_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
         return make_tetrahedron().to_ufl(name)
