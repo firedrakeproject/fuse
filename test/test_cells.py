@@ -201,11 +201,13 @@ def test_tensor_connectivity():
 
         assert all(connectivity[i] == t for i, t in topology.items())
 
+
 def make_oriented_tet():
     tet = make_tetrahedron()
     perm = tet.group.get_member([1, 2, 0, 3])
     fuse_tet = tet.orient(perm)
     return fuse_tet
+
 
 @pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_oriented_tet(), )])
 def test_new_connectivity(cell):
@@ -219,8 +221,9 @@ def test_new_connectivity(cell):
             print(t)
         assert all(connectivity[i] == t for i, t in topology.items())
 
+
 def test_compare_tris():
-    fuse_tet =  polygon(3)
+    fuse_tet = polygon(3)
     ufc_tet = ufc_triangle()
     fiat_tet = ufc_simplex(2)
 
@@ -246,6 +249,7 @@ def test_compare_tris():
     for dim0 in range(_dim):
         connectivity = ufc_connectivity[(dim0+1, dim0)]
         print(connectivity)
+
 
 def test_compare_tets():
     tet = make_tetrahedron()
@@ -277,19 +281,20 @@ def test_compare_tets():
         connectivity = ufc_connectivity[(dim0+1, dim0)]
         print(connectivity)
 
+
 def make_entity_cone_lists(fiat_cell):
-        _dim = fiat_cell.get_dimension()
-        _connectivity = fiat_cell.connectivity
-        _list = []
-        _offset_list = [0 for _ in _connectivity[(0, 0)]]  # vertices have no cones
-        _offset = 0
-        _n = 0  # num. of entities up to dimension = _d
-        for _d in range(_dim):
-            _n1 = len(_offset_list)
-            for _conn in _connectivity[(_d + 1, _d)]:
-                _list += [_c + _n for _c in _conn]  # These are indices into cell_closure[some_cell]
-                _offset_list.append(_offset)
-                _offset += len(_conn)
-            _n = _n1
-        _offset_list.append(_offset)
-        return _list, _offset_list
+    _dim = fiat_cell.get_dimension()
+    _connectivity = fiat_cell.connectivity
+    _list = []
+    _offset_list = [0 for _ in _connectivity[(0, 0)]]  # vertices have no cones
+    _offset = 0
+    _n = 0  # num. of entities up to dimension = _d
+    for _d in range(_dim):
+        _n1 = len(_offset_list)
+        for _conn in _connectivity[(_d + 1, _d)]:
+            _list += [_c + _n for _c in _conn]  # These are indices into cell_closure[some_cell]
+            _offset_list.append(_offset)
+            _offset += len(_conn)
+        _n = _n1
+    _offset_list.append(_offset)
+    return _list, _offset_list
