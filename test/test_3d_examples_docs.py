@@ -51,10 +51,11 @@ def construct_tet_cg3():
 
     f_xs = [immerse(tetra, dg0_face, TrH1)]
     cgfaces = DOFGenerator(f_xs, tet_faces, S1)
-
+#  
     cg3 = ElementTriple(tetra, (P1, CellH1, "C0"),
                         [cgverts, cgedges, cgfaces])
     # [test_tet_cg3 1]
+
     return cg3
 
 

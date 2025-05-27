@@ -250,12 +250,12 @@ def ufc_tetrahedron():
     # face3 = Point(2, vertex_num=3, edges=[edges[2], edges[3], edges[5]])
     # face4 = Point(2, vertex_num=3, edges=[edges[2], edges[4], edges[5]])
     face1 = Point(2, vertex_num=3, edges=[edges[0], edges[3], edges[4]], edge_orientations={1: [1, 0]})
-    face2 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
-    face3 = Point(2, vertex_num=3, edges=[edges[4], edges[5], edges[2]], edge_orientations={0: [1, 0]})
-    face4 = Point(2, vertex_num=3, edges=[edges[2], edges[1], edges[0]], edge_orientations={0: [1, 0], 2: [1, 0]})
+    face2 = Point(2, vertex_num=3, edges=[edges[4], edges[5], edges[2]], edge_orientations={0: [1, 0]})
+    face3 = Point(2, vertex_num=3, edges=[edges[2], edges[1], edges[0]], edge_orientations={0: [1, 0], 2: [1, 0]})
+    face4 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
     # breakpoint()
-    # edge_orientations={0: [2, 1, 0]}
-    return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    return Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
+    # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
 
 
 class Point():
@@ -413,7 +413,7 @@ class Point():
             raise TypeError("Shape undefined for {}".format(str(self)))
 
     def get_topology(self):
-        structure = [sorted(generation) for generation in nx.topological_generations(self.graph())]
+        structure = [generation for generation in nx.topological_generations(self.graph())]
         structure.reverse()
 
         min_ids = [min(dimension) for dimension in structure]
@@ -429,6 +429,7 @@ class Point():
             for node in dimension:
                 self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
+            self.topology_unrelabelled[i] = dict(sorted(self.topology_unrelabelled[i].items()))
         return self.topology_unrelabelled
 
     def get_sub_entities(self):
@@ -448,8 +449,15 @@ class Point():
                     sub_ents[dim][self_id] += [(0, p_id)]
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
         if dim > 1:
-            for e in self.connections:
+            print("connections", [e.point for e in self.connections])
+            print("d ents", self.d_entities(dim - 1))
+            connections = zip(self.connections, [self.group.identity for i in range(len(self.connections))])
+            # if self.oriented:
+            #     connections = self.permute_entities(self.oriented, dim - 1, min_ids)
+            # print("reordered", connections)
+            for e, o in connections:
                 p = e.point
+                # p =  self.get_node(e).orient(o)
                 p_dim = p.get_spatial_dimension()
                 p_id = p.id - min_ids[p_dim]
                 if (p_dim, p_id) not in sub_ents[dim][self_id]:
@@ -575,10 +583,10 @@ class Point():
 
     def permute_entities(self, g, d):
         # TODO something is wrong here for squares it can return [()]
-        verts = self.vertices(get_class=False)
+        verts = self.ordered_vertices()
         entities = self.d_entities_ids(d)
-        reordered = g.permute(verts)
-
+        # reordered = g.permute(verts)
+        reordered = g.permute(self.ordered_vertices())
         if d == 0:
             entity_group = self.d_entities(d)[0].group
             return list(zip(reordered, [entity_group.identity for r in reordered]))
@@ -590,14 +598,17 @@ class Point():
             entity_dict[e.id] = tuple(e.ordered_vertices())
             reordered_entity_dict[e.id] = tuple([reordered[verts.index(i)] for i in e.ordered_vertices()])
 
-        reordered_entities = [tuple() for e in range(len(entities))]
+
         min_id = min(entities)
+        reordered_entities = [tuple() for e in range(len(entities))]
         entity_group = self.d_entities(d)[0].group
         for ent in entities:
             for ent1 in entities:
                 if set(entity_dict[ent]) == set(reordered_entity_dict[ent1]):
                     if entity_dict[ent] != reordered_entity_dict[ent1]:
                         o = entity_group.transform_between_perms(entity_dict[ent], reordered_entity_dict[ent1])
+                        # print(ent1-min_id)
+                        # print(reordered.index(ent1))
                         reordered_entities[ent1 - min_id] = (ent, o)
                     else:
                         reordered_entities[ent1 - min_id] = (ent, entity_group.identity)
@@ -655,6 +666,7 @@ class Point():
         xs = np.linspace(-1, 1, 20)
         if ax is None:
             ax = plt.gca()
+
         if self.dimension == 1:
             # line plot in 1D case
             nodes = self.d_entities(0, get_class=False)
@@ -1094,7 +1106,8 @@ def constructCellComplex(name):
         # return ufc_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
-        return make_tetrahedron().to_ufl(name)
+        return ufc_tetrahedron().to_ufl(name)
+        # return make_tetrahedron().to_ufl(name)
         # import ufl
         # return ufl.Cell(name)
     elif name == "hexahedron":

@@ -48,7 +48,8 @@ def test_sub_basis_vectors():
 
 
 def test_permute_entities():
-    cell = polygon(3)
+    # cell = polygon(3)
+    cell = make_tetrahedron()
     # cell.plot(filename="test_cell.png")
 
     # for dof in nd.generate():
@@ -57,13 +58,14 @@ def test_permute_entities():
 
     print(cell.vertices(return_coords=True))
     print([c.point.connections for c in cell.connections])
-    print([[c.point.get_node(c2.point.id, return_coords=True) for c2 in c.point.connections] for c in cell.connections])
+    # print([[c.point.get_node(c2.point.id, return_coords=True) for c2 in c.point.connections] for c in cell.connections])
     # cell.plot(filename="test_cell_flipped.png")
     # import matplotlib.pyplot as plt
     for i, g in enumerate(cell.group.members()):
         print(i, g)
         print(cell.permute_entities(g, 0))
         print(cell.permute_entities(g, 1))
+        print(cell.permute_entities(g, 2))
     #     oriented = cell.orient(g)
     #     print("Edges", oriented.connections)
     #     fig, ax = plt.subplots()
@@ -254,10 +256,11 @@ def test_compare_tris():
 def test_compare_tets():
     tet = make_tetrahedron()
     perm = tet.group.get_member([1, 2, 0, 3])
+    # 
     fuse_tet = tet.orient(perm)
-    ufc_tet = ufc_tetrahedron()
+    ufc_tet = ufc_tetrahedron().orient(perm)
     fiat_tet = ufc_simplex(3)
-
+    # breakpoint()
     print(fiat_tet.get_topology())
     print(fuse_tet.get_topology())
     print(ufc_tet.get_topology())
