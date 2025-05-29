@@ -174,10 +174,8 @@ def ufc_triangle():
     edges.append(Point(1, [vertices[0], vertices[2]], vertex_num=2))
     edges.append(Point(1, [vertices[0], vertices[1]], vertex_num=2))
     tri = Point(2, edges, vertex_num=3, edge_orientations={1: [1, 0]})
-    # tri = polygon(3)
-    s3 = tri.group
-    perm = s3.get_member([2, 0, 1])
-    return tri.orient(perm)
+
+    return tri
 
 
 def ufc_quad():
@@ -253,8 +251,11 @@ def ufc_tetrahedron():
     face2 = Point(2, vertex_num=3, edges=[edges[4], edges[5], edges[2]], edge_orientations={0: [1, 0]})
     face3 = Point(2, vertex_num=3, edges=[edges[2], edges[1], edges[0]], edge_orientations={0: [1, 0], 2: [1, 0]})
     face4 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
+
+    tet = Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
     # breakpoint()
-    return Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
+    return tet
+    # return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
     # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
 
 
@@ -347,7 +348,6 @@ class Point():
                 res = np.linalg.solve(coords_2d, faces[i])
 
                 res_fn = construct_attach_3d(res)
-                # breakpoint()
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[0][1], "y": coords_2d[0][2]})).astype(np.float64), faces[i][0])
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[1][1], "y": coords_2d[1][2]})).astype(np.float64), faces[i][1])
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[2][1], "y": coords_2d[2][2]})).astype(np.float64), faces[i][2])
@@ -412,7 +412,7 @@ class Point():
         else:
             raise TypeError("Shape undefined for {}".format(str(self)))
 
-    def get_topology(self):
+    def get_topology(self, renumber=False):
         structure = [generation for generation in nx.topological_generations(self.graph())]
         structure.reverse()
 
@@ -430,6 +430,8 @@ class Point():
                 self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
             self.topology_unrelabelled[i] = dict(sorted(self.topology_unrelabelled[i].items()))
+        if renumber:
+            return self.topology
         return self.topology_unrelabelled
 
     def get_sub_entities(self):
@@ -449,15 +451,12 @@ class Point():
                     sub_ents[dim][self_id] += [(0, p_id)]
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
         if dim > 1:
-            print("connections", [e.point for e in self.connections])
-            print("d ents", self.d_entities(dim - 1))
-            connections = zip(self.connections, [self.group.identity for i in range(len(self.connections))])
-            # if self.oriented:
-            #     connections = self.permute_entities(self.oriented, dim - 1, min_ids)
-            # print("reordered", connections)
+            connections = [(c.point.id, c.point.group.identity) for c in self.connections]
+            if self.oriented:
+                connections = self.permute_entities(self.oriented, dim - 1)
             for e, o in connections:
-                p = e.point
-                # p =  self.get_node(e).orient(o)
+                # p = e.point
+                p = self.get_node(e).orient(o)
                 p_dim = p.get_spatial_dimension()
                 p_id = p.id - min_ids[p_dim]
                 if (p_dim, p_id) not in sub_ents[dim][self_id]:
@@ -598,8 +597,6 @@ class Point():
             entity_dict[e.id] = tuple(e.ordered_vertices())
             reordered_entity_dict[e.id] = tuple([reordered[verts.index(i)] for i in e.ordered_vertices()])
 
-
-        min_id = min(entities)
         reordered_entities = [tuple() for e in range(len(entities))]
         entity_group = self.d_entities(d)[0].group
         for ent in entities:
@@ -607,11 +604,9 @@ class Point():
                 if set(entity_dict[ent]) == set(reordered_entity_dict[ent1]):
                     if entity_dict[ent] != reordered_entity_dict[ent1]:
                         o = entity_group.transform_between_perms(entity_dict[ent], reordered_entity_dict[ent1])
-                        # print(ent1-min_id)
-                        # print(reordered.index(ent1))
-                        reordered_entities[ent1 - min_id] = (ent, o)
+                        reordered_entities[entities.index(ent1)] = (ent, o)
                     else:
-                        reordered_entities[ent1 - min_id] = (ent, entity_group.identity)
+                        reordered_entities[entities.index(ent1)] = (ent, entity_group.identity)
 
         return reordered_entities
 
@@ -791,9 +786,9 @@ class Point():
     def copy(self):
         return copy.deepcopy(self)
 
-    def to_fiat(self, name=None):
+    def to_fiat(self, name=None, renumber=False):
         if len(self.vertices()) == self.dimension + 1:
-            return CellComplexToFiatSimplex(self, name)
+            return CellComplexToFiatSimplex(self, name, renumber)
         if len(self.vertices()) == 2 ** self.dimension:
             return CellComplexToFiatHypercube(self, name)
         raise NotImplementedError("Custom shape elements/ First class quads are not yet supported")
@@ -925,7 +920,7 @@ class CellComplexToFiatSimplex(Simplex):
     Currently assumes simplex.
     """
 
-    def __init__(self, cell, name=None):
+    def __init__(self, cell, name=None, renumber=False):
         self.fe_cell = cell
         if name is None:
             name = "FuseCell"
@@ -933,7 +928,7 @@ class CellComplexToFiatSimplex(Simplex):
 
         # verts = [cell.get_node(v, return_coords=True) for v in cell.ordered_vertices()]
         verts = cell.vertices(return_coords=True)
-        topology = cell.get_topology()
+        topology = cell.get_topology(renumber)
         shape = cell.get_shape()
         sub_ents = cell.get_sub_entities()
         super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
@@ -950,9 +945,9 @@ class CellComplexToFiatSimplex(Simplex):
         :arg o: orientation of subentity, default None (GroupMemberRep)
         """
         if o:
-            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat()
+            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat(renumber=True)
         else:
-            return self.fe_cell.d_entities(dimension)[e_id].to_fiat()
+            return self.fe_cell.d_entities(dimension)[e_id].to_fiat(renumber=True)
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()
@@ -1106,10 +1101,10 @@ def constructCellComplex(name):
         # return ufc_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
-        return ufc_tetrahedron().to_ufl(name)
-        # return make_tetrahedron().to_ufl(name)
-        # import ufl
-        # return ufl.Cell(name)
+        # return ufc_tetrahedron().to_ufl(name)
+        return make_tetrahedron().to_ufl(name)
+        import ufl
+        return ufl.Cell(name)
     elif name == "hexahedron":
         import warnings
         warnings.warn("Hexahedron unimplemented in Fuse")

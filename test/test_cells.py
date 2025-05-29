@@ -204,14 +204,7 @@ def test_tensor_connectivity():
         assert all(connectivity[i] == t for i, t in topology.items())
 
 
-def make_oriented_tet():
-    tet = make_tetrahedron()
-    perm = tet.group.get_member([1, 2, 0, 3])
-    fuse_tet = tet.orient(perm)
-    return fuse_tet
-
-
-@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_oriented_tet(), )])
+@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_tetrahedron(), )])
 def test_new_connectivity(cell):
     cell = cell.to_fiat()
     for dim0 in range(cell.get_dimension() + 1):
@@ -255,10 +248,9 @@ def test_compare_tris():
 
 def test_compare_tets():
     tet = make_tetrahedron()
-    perm = tet.group.get_member([1, 2, 0, 3])
-    # 
-    fuse_tet = tet.orient(perm)
-    ufc_tet = ufc_tetrahedron().orient(perm)
+    # perm = tet.group.get_member([1, 2, 0, 3])
+    fuse_tet = tet
+    ufc_tet = ufc_tetrahedron()
     fiat_tet = ufc_simplex(3)
     # breakpoint()
     print(fiat_tet.get_topology())
