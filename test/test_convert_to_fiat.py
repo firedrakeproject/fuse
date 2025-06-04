@@ -162,6 +162,77 @@ def create_cg2_tri(cell):
     return cg
 
 
+def create_cg1_tet(cell):
+
+    vert = cell.vertices()[0]
+    # edge = cell.edges()[0]
+    # face = cell.d_entities(2)[0]
+
+
+    # [test_tet_cg3 0]
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+                        DOFGenerator(xs, S1, S1))
+
+    # xs = [DOF(DeltaPairing(), PointKernel((-1/3,)))]
+    # dg1_int = ElementTriple(edge, (P0, CellL2, "C0"),
+    #                         DOFGenerator(xs, S2, S1))
+
+    # xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
+    # dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+    #                          DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(cell, dg0, TrH1)]
+    cgverts = DOFGenerator(v_xs, Z4, S1)
+
+    # e_xs = [immerse(cell, dg1_int, TrH1)]
+    # cgedges = DOFGenerator(e_xs, tet_edges, S1)
+
+    # f_xs = [immerse(tetra, dg0_face, TrH1)]
+    # cgfaces = DOFGenerator(f_xs, tet_faces, S1)
+
+    cg1 = ElementTriple(cell, (P1, CellH1, "C0"),
+                        [cgverts])
+    # [test_tet_cg3 1]
+
+    return cg1
+
+
+def create_cg2_tet(cell):
+
+    vert = cell.vertices()[0]
+    edge = cell.edges()[0]
+    face = cell.d_entities(2)[0]
+
+
+    # [test_tet_cg3 0]
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+                        DOFGenerator(xs, S1, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((0,)))]
+    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+                            DOFGenerator(xs, S1, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
+    dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+                             DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(cell, dg0, TrH1)]
+    cgverts = DOFGenerator(v_xs, Z4, S1)
+
+    e_xs = [immerse(cell, dg1_int, TrH1)]
+    cgedges = DOFGenerator(e_xs, tet_edges, S1)
+
+    f_xs = [immerse(cell, dg0_face, TrH1)]
+    cgfaces = DOFGenerator(f_xs, tet_faces, S1)
+
+    cg2 = ElementTriple(cell, (P2, CellH1, "C0"),
+                        [cgverts, cgedges, cgfaces])
+
+    return cg2
+
+
 def test_create_fiat_nd():
     cell = polygon(3)
     nd = construct_nd(cell)
@@ -261,7 +332,9 @@ def test_create_fiat_lagrange(elem_gen, elem_code, deg):
                                             (create_cf, polygon(3)),
                                             pytest.param(create_fortin_soulie, polygon(3), marks=pytest.mark.xfail(reason='Entity perms for non symmetric elements')),
                                             (create_dg1_tet, make_tetrahedron()),
-                                            (construct_tet_rt, make_tetrahedron())
+                                            (construct_tet_rt, make_tetrahedron()),
+                                            (create_cg1_tet, make_tetrahedron()),
+                                            (create_cg2_tet, make_tetrahedron())
                                             ])
 def test_entity_perms(elem_gen, cell):
     elem = elem_gen(cell)
@@ -290,7 +363,7 @@ def test_immersed_entity_perms(elem_gen, cell, expected):
                                                     (create_dg2, "DG", 2),
                                                     (create_cg2, "CG", 2)
                                                     ])
-def test_2d(elem_gen, elem_code, deg):
+def test_1d(elem_gen, elem_code, deg):
     cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     elem = elem_gen(cell)
 
@@ -322,7 +395,7 @@ def test_2d(elem_gen, elem_code, deg):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1, "CG", 1, 1.8), (create_cg2_tri, "CG", 2, 2.8), (construct_cg3, "CG", 3, 3.8)])
-def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
+def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
     scale_range = range(3, 6)
@@ -333,11 +406,11 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
         mesh = UnitSquareMesh(2 ** i, 2 ** i)
 
         V = FunctionSpace(mesh, elem_code, deg)
-        res1 = helmholtz_solve(mesh, V)
+        res1 = helmholtz_solve(V, mesh)
         diff2[i-3] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
-        res2 = helmholtz_solve(mesh, V2)
+        res2 = helmholtz_solve(V2,mesh)
         diff[i-3] = res2
         # assert np.allclose(res1, res2)
 
@@ -355,15 +428,58 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv2) > conv_rate).all()
 
 
-def helmholtz_solve(mesh, V):
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.8), (create_cg2_tet, "CG", 2, 1.8)])
+def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
+    cell = make_tetrahedron()
+    elem = elem_gen(cell)
+    scale_range = range(2, 4)  
+    diff = [0 for i in scale_range]
+    diff2 = [0 for i in scale_range]
+    for i in scale_range:
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+
+        V = FunctionSpace(mesh, elem_code, deg)
+        res1 = helmholtz_solve(V, mesh)
+        diff2[i - 1] = res1
+
+        V2 = FunctionSpace(mesh, elem.to_ufl())
+        res2 = helmholtz_solve(V2, mesh)
+        diff[i - 1] = res2
+        assert np.allclose(res1, res2)
+
+    print("firedrake l2 error norms:", diff2)
+    diff2 = np.array(diff2)
+    conv1 = np.log2(diff2[:-1] / diff2[1:])
+    print("firedrake convergence order:", conv1)
+
+    print("fuse l2 error norms:", diff)
+    diff = np.array(diff)
+    conv2 = np.log2(diff[:-1] / diff[1:])
+    print("fuse convergence order:", conv2)
+
+    assert (np.array(conv1) > conv_rate).all()
+    assert (np.array(conv2) > conv_rate).all()
+
+
+def helmholtz_solve(V, mesh):
+    # Define variational problem
+    dim = mesh.ufl_cell().topological_dimension()
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
-    x, y = SpatialCoordinate(mesh)
-    f.interpolate((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
+    x = SpatialCoordinate(mesh)
+    expect = Function(V)
+    if dim == 2:
+        f.interpolate((1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2))
+        expect.interpolate(cos(x[0]*pi*2)*cos(x[1]*pi*2))
+    elif dim == 3:
+        r = 2.0
+        f.interpolate((1+12*pi*pi/r/r)*cos(x[0]*pi*2/r)*cos(x[1]*pi*2/r)*cos(x[2]*pi*2/r))
+        expect.interpolate(cos(x[0]*pi*2/r)*cos(x[1]*pi*2/r)*cos(x[2]*pi*2/r))
+    else:
+        raise NotImplementedError(f"Not for dim = {dim}")
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
     L = inner(f, v) * dx
-    u = Function(V)
 
     # l_a = assemble(L)
     # elem = V.finat_element.fiat_equivalent
@@ -372,9 +488,24 @@ def helmholtz_solve(mesh, V):
     # print(X.dat.data)
     # print(assemble(a).M.values)
 
-    solve(a == L, u)
-    f.interpolate(cos(x*pi*2)*cos(y*pi*2))
-    return sqrt(assemble(dot(u - f, u - f) * dx))
+    # Compute solution
+    sol = Function(V)
+    solve(a == L, sol, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+
+    return sqrt(assemble(inner(sol - expect, sol - expect) * dx))
+
+# def helmholtz_solve(mesh, V):
+#     u = TrialFunction(V)
+#     v = TestFunction(V)
+#     f = Function(V)
+#     x, y = SpatialCoordinate(mesh)
+#     f.interpolate((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
+#     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+#     L = inner(f, v) * dx
+#     u = Function(V)
+
+#     solve(a == L, u)
+
 
 
 def run_test(r, elem, parameters={}, quadrilateral=False):
@@ -513,3 +644,4 @@ def test_investigate_dpc():
 
     U = FunctionSpace(mesh, "DPC", 1)
     print(U)
+

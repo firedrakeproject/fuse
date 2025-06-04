@@ -1103,8 +1103,8 @@ def constructCellComplex(name):
     elif name == "tetrahedron":
         # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
-        import ufl
-        return ufl.Cell(name)
+        # import ufl
+        # return ufl.Cell(name)
     elif name == "hexahedron":
         import warnings
         warnings.warn("Hexahedron unimplemented in Fuse")
