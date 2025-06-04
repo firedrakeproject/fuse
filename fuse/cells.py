@@ -10,7 +10,7 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
-from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from ufl.cell import Cell, TensorProductCell
 
@@ -546,9 +546,8 @@ class Point():
     def basis_vectors(self, return_coords=True, entity=None):
         if not entity:
             entity = self
-        entity_levels = [sorted(generation) for generation in nx.topological_generations(entity.G)]
         self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
-        vertices = entity_levels[entity.graph_dim()]
+        vertices = entity.ordered_vertices()
         if self.dimension == 0:
             # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
@@ -592,7 +591,6 @@ class Point():
         xs = np.linspace(-1, 1, 20)
         if ax is None:
             ax = plt.gca()
-        print("plotting")
         if self.dimension == 1:
             # line plot in 1D case
             nodes = self.d_entities(0, get_class=False)
@@ -600,7 +598,6 @@ class Point():
             for node in nodes:
                 attach = self.attachment(top_level_node, node)
                 points.extend(attach())
-            print(np.array(points))
             plt.plot(np.array(points), np.zeros_like(points), color="black")
 
         for i in range(self.dimension - 1, -1, -1):
@@ -613,7 +610,6 @@ class Point():
                     if len(plotted) < 2:
                         plotted = (plotted[0], 0)
                     vert_coords += [plotted]
-                    print(np.array(plotted))
                     if not plain:
                         plt.plot(plotted[0], plotted[1], 'bo')
                         plt.annotate(node, (plotted[0], plotted[1]))
@@ -856,13 +852,18 @@ class CellComplexToFiatSimplex(Simplex):
     def cellname(self):
         return self.name
 
-    def construct_subelement(self, dimension):
+    def construct_subelement(self, dimension, e_id=0, o=None):
         """Constructs the reference element of a cell
         specified by subelement dimension.
 
         :arg dimension: subentity dimension (integer)
+        :arg e_id: subentity id, default 0, (integer)
+        :arg o: orientation of subentity, default None (GroupMemberRep)
         """
-        return self.fe_cell.d_entities(dimension)[0].to_fiat()
+        if o:
+            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat()
+        else:
+            return self.fe_cell.d_entities(dimension)[e_id].to_fiat()
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()
@@ -1027,3 +1028,33 @@ def constructCellComplex(name):
         return TensorProductPoint(*components).to_ufl(name)
     else:
         raise TypeError("Cell complex construction undefined for {}".format(str(name)))
+
+
+def compare_topologies(base, new):
+    """Compute orientations of sub entities against a base topology
+
+       base topology is assumed to follow the FIAT numbering convention,
+       ie edges are ordered from lower to higher
+       """
+    if list(base.keys()) != list(new.keys()):
+        raise ValueError("Topologies of different sizes cannot be compared")
+    orientations = []
+    for dim in sorted(base.keys()):
+        for entity in sorted(base[dim].keys()):
+            assert entity in new[dim].keys()
+            base_array = list(base[dim][entity])
+            new_array = list(new[dim][entity])
+            if sorted(base_array) == sorted(new_array):
+                orientations += [orientation_value(base_array, new_array)]
+            else:
+                # numbering does not match - renumber
+                # base is treated as ordered list
+                # new is renumbered by sorting the values
+                base_numbering = {base_array[i]: i for i in range(len(base_array))}
+                sorted_new = sorted(new_array)
+                new_numbering = {sorted_new[i]: i for i in range(len(new_array))}
+                base_renumbered = [base_numbering[b] for b in base_array]
+                new_renumbered = [new_numbering[n] for n in new_array]
+                orientations += [orientation_value(base_renumbered, new_renumbered)]
+
+    return orientations

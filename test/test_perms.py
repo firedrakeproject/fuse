@@ -53,7 +53,7 @@ def test_nd_perms(cell):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
+    xs = [DOF(L2Pairing(), PolynomialKernel(edge.basis_vectors()[0]))]
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
 
@@ -67,6 +67,9 @@ def test_nd_perms(cell):
 
     ned = ElementTriple(cell, (nd, CellHCurl, C0), [tri_dofs])
     ned.to_fiat()
+    for i, mat in ned.matrices[2][0].items():
+        print(i)
+        print(mat)
 
 
 @pytest.mark.xfail(reason='Conversion of non simplex ref els to fiat needed')

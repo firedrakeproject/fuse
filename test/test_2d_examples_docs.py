@@ -176,7 +176,7 @@ def construct_nd(tri=None):
     int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
 
     xs = [immerse(tri, int_ned, TrHCurl)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
+    tri_dofs = DOFGenerator(xs, C3, S1)
 
     M = sp.Matrix([[y, -x]])
     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
@@ -223,10 +223,10 @@ def construct_rt(tri=None):
     xs = [DOF(L2Pairing(), PolynomialKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
 
-    int_rt = ElementTriple(edge, (rt_space, CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (vec_Pd, CellHDiv, C0), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
+    tri_dofs = DOFGenerator(xs, C3, S1)
 
     rt = ElementTriple(tri, (rt_space, CellHDiv, C0), [tri_dofs])
     return rt
