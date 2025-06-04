@@ -248,6 +248,7 @@ class ElementTriple():
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
+        nodes = [d.convert_to_fiat(ref_el, degree) for d in self.generate()]
         sub_ents = []
         res_dict = {}
         for d in range(0, self.cell.dim() + 1):
@@ -258,7 +259,9 @@ class ElementTriple():
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
             dof_ids = [d.id for d in self.generate() if d.trace_entity == e]
+            res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
+
             for g in self.cell.group.members():
                 permuted_e, permuted_g = self.cell.permute_entities(g, dim)[e_id]
                 val = permuted_g.numeric_rep()

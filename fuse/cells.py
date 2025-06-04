@@ -527,6 +527,8 @@ class Point():
         :param: get_class: (Optional) Returns Point classes
 
         Default return value is list of id numbers of the entities in the cell complex graph."""
+        if d == 0:
+            return self.ordered_vertices(get_class)
         levels = [sorted(generation)
                   for generation in nx.topological_generations(self.G)]
         if get_class:
@@ -582,10 +584,11 @@ class Point():
 
     def permute_entities(self, g, d):
         # TODO something is wrong here for squares it can return [()]
-        verts = self.ordered_vertices()
+        # verts = self.ordered_vertices()
+        verts = self.vertices(get_class=False)
         entities = self.d_entities_ids(d)
-        # reordered = g.permute(verts)
-        reordered = g.permute(self.ordered_vertices())
+        reordered = g.permute(verts)
+        # reordered = g.permute(self.ordered_vertices())
         if d == 0:
             entity_group = self.d_entities(d)[0].group
             return list(zip(reordered, [entity_group.identity for r in reordered]))
