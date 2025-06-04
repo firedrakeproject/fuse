@@ -465,7 +465,7 @@ def test_project(elem_gen, elem_code, deg):
     assert np.allclose(out.dat.data, f.dat.data, rtol=1e-5)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [pytest.param(create_dg1_tet, "DG", 1, marks=pytest.mark.xfail(reason='Issue with fiat vs plexcone - 3D'))])
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_dg1_tet, "DG", 1)])
 def test_project_3d(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
