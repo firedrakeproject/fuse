@@ -168,7 +168,6 @@ def create_cg1_tet(cell):
     # edge = cell.edges()[0]
     # face = cell.d_entities(2)[0]
 
-
     # [test_tet_cg3 0]
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
@@ -203,7 +202,6 @@ def create_cg2_tet(cell):
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-
 
     # [test_tet_cg3 0]
     xs = [DOF(DeltaPairing(), PointKernel(()))]
@@ -410,9 +408,9 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
         diff2[i-3] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
-        res2 = helmholtz_solve(V2,mesh)
+        res2 = helmholtz_solve(V2, mesh)
         diff[i-3] = res2
-        # assert np.allclose(res1, res2)
+        # assert np.allclose(res1 , res2)
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
@@ -428,12 +426,12 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [ pytest.param(create_cg1_tet, "CG", 1, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements')),
-                                                               pytest.param(create_cg2_tet, "CG", 2, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements'))])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [pytest.param(create_cg1_tet, "CG", 1, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements')),
+                                                              pytest.param(create_cg2_tet, "CG", 2, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements'))])
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    scale_range = range(2, 4)  
+    scale_range = range(2, 4)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
@@ -506,7 +504,6 @@ def helmholtz_solve(V, mesh):
 #     u = Function(V)
 
 #     solve(a == L, u)
-
 
 
 def run_test(r, elem, parameters={}, quadrilateral=False):
@@ -645,4 +642,3 @@ def test_investigate_dpc():
 
     U = FunctionSpace(mesh, "DPC", 1)
     print(U)
-
