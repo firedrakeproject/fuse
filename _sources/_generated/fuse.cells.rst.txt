@@ -17,6 +17,8 @@ cells
       :toctree:                                     
    
       
+        compare_topologies
+      
         compute_scaled_verts
       
         constructCellComplex

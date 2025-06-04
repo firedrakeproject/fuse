@@ -18,7 +18,7 @@
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="fuse.cells.compute_scaled_verts" href="fuse.cells.compute_scaled_verts.html" />
+    <link rel="next" title="fuse.cells.compare_topologies" href="fuse.cells.compare_topologies.html" />
     <link rel="prev" title="fuse" href="fuse.html" />
 <meta charset='utf-8'>
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
@@ -97,6 +97,10 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">cells</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.compare_topologies.html#fuse.cells.compare_topologies"><code class="docutils literal notranslate"><span class="pre">compare_topologies()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html#fuse.cells.compute_scaled_verts"><code class="docutils literal notranslate"><span class="pre">compute_scaled_verts()</span></code></a></li>
 </ul>
@@ -504,6 +508,10 @@
 <li class="toctree-l5"><a class="reference internal" href="fuse.utils.numpy_to_str_tuple.html#fuse.utils.numpy_to_str_tuple"><code class="docutils literal notranslate"><span class="pre">numpy_to_str_tuple()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.orientation_value.html">fuse.utils.orientation_value</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.orientation_value.html#fuse.utils.orientation_value"><code class="docutils literal notranslate"><span class="pre">orientation_value()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html">fuse.utils.sympy_to_numpy</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html#fuse.utils.sympy_to_numpy"><code class="docutils literal notranslate"><span class="pre">sympy_to_numpy()</span></code></a></li>
 </ul>
@@ -551,6 +559,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">cells</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.constructCellComplex.html">fuse.cells.constructCellComplex</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_2d.html">fuse.cells.construct_attach_2d</a></li>
@@ -593,34 +602,37 @@
 <p class="rubric">Functions</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.compute_scaled_verts.html#fuse.cells.compute_scaled_verts" title="fuse.cells.compute_scaled_verts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_scaled_verts</span></code></a>(d, n)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.compare_topologies.html#fuse.cells.compare_topologies" title="fuse.cells.compare_topologies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compare_topologies</span></code></a>(base, new)</p></td>
+<td><p>Compute orientations of sub entities against a base topology</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.compute_scaled_verts.html#fuse.cells.compute_scaled_verts" title="fuse.cells.compute_scaled_verts"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_scaled_verts</span></code></a>(d, n)</p></td>
 <td><p>Construct default cell vertices</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.constructCellComplex.html#fuse.cells.constructCellComplex" title="fuse.cells.constructCellComplex"><code class="xref py py-obj docutils literal notranslate"><span class="pre">constructCellComplex</span></code></a>(name)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.constructCellComplex.html#fuse.cells.constructCellComplex" title="fuse.cells.constructCellComplex"><code class="xref py py-obj docutils literal notranslate"><span class="pre">constructCellComplex</span></code></a>(name)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.construct_attach_2d.html#fuse.cells.construct_attach_2d" title="fuse.cells.construct_attach_2d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_attach_2d</span></code></a>(a, b, c, d)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.construct_attach_2d.html#fuse.cells.construct_attach_2d" title="fuse.cells.construct_attach_2d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_attach_2d</span></code></a>(a, b, c, d)</p></td>
 <td><p>Compute polynomial attachment in x based on two points (a,b) and (c,d)</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.construct_attach_3d.html#fuse.cells.construct_attach_3d" title="fuse.cells.construct_attach_3d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_attach_3d</span></code></a>(res)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.construct_attach_3d.html#fuse.cells.construct_attach_3d" title="fuse.cells.construct_attach_3d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_attach_3d</span></code></a>(res)</p></td>
 <td><p>Convert matrix of coefficients into a vector of polynomials in x and y</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.firedrake_quad.html#fuse.cells.firedrake_quad" title="fuse.cells.firedrake_quad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">firedrake_quad</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.firedrake_quad.html#fuse.cells.firedrake_quad" title="fuse.cells.firedrake_quad"><code class="xref py py-obj docutils literal notranslate"><span class="pre">firedrake_quad</span></code></a>()</p></td>
 <td><p>Constructs the a quad cell that matches the firedrake default.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.firedrake_triangle.html#fuse.cells.firedrake_triangle" title="fuse.cells.firedrake_triangle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">firedrake_triangle</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.firedrake_triangle.html#fuse.cells.firedrake_triangle" title="fuse.cells.firedrake_triangle"><code class="xref py py-obj docutils literal notranslate"><span class="pre">firedrake_triangle</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.make_tetrahedron.html#fuse.cells.make_tetrahedron" title="fuse.cells.make_tetrahedron"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_tetrahedron</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.make_tetrahedron.html#fuse.cells.make_tetrahedron" title="fuse.cells.make_tetrahedron"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_tetrahedron</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.normalise.html#fuse.cells.normalise" title="fuse.cells.normalise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalise</span></code></a>(v)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.normalise.html#fuse.cells.normalise" title="fuse.cells.normalise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalise</span></code></a>(v)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.polygon.html#fuse.cells.polygon" title="fuse.cells.polygon"><code class="xref py py-obj docutils literal notranslate"><span class="pre">polygon</span></code></a>(n)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.polygon.html#fuse.cells.polygon" title="fuse.cells.polygon"><code class="xref py py-obj docutils literal notranslate"><span class="pre">polygon</span></code></a>(n)</p></td>
 <td><p>Constructs the 2D default cell with n sides/vertices</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fuse.cells.topo_pos.html#fuse.cells.topo_pos" title="fuse.cells.topo_pos"><code class="xref py py-obj docutils literal notranslate"><span class="pre">topo_pos</span></code></a>(G)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="fuse.cells.topo_pos.html#fuse.cells.topo_pos" title="fuse.cells.topo_pos"><code class="xref py py-obj docutils literal notranslate"><span class="pre">topo_pos</span></code></a>(G)</p></td>
 <td><p>Helper function for hasse diagram visualisation Offsets the nodes and displays in topological order</p></td>
 </tr>
 </tbody>

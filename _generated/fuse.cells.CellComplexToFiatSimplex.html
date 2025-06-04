@@ -97,6 +97,10 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.cells.compare_topologies.html#fuse.cells.compare_topologies"><code class="docutils literal notranslate"><span class="pre">compare_topologies()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html#fuse.cells.compute_scaled_verts"><code class="docutils literal notranslate"><span class="pre">compute_scaled_verts()</span></code></a></li>
 </ul>
@@ -504,6 +508,10 @@
 <li class="toctree-l5"><a class="reference internal" href="fuse.utils.numpy_to_str_tuple.html#fuse.utils.numpy_to_str_tuple"><code class="docutils literal notranslate"><span class="pre">numpy_to_str_tuple()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.utils.orientation_value.html">fuse.utils.orientation_value</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.utils.orientation_value.html#fuse.utils.orientation_value"><code class="docutils literal notranslate"><span class="pre">orientation_value()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html">fuse.utils.sympy_to_numpy</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.utils.sympy_to_numpy.html#fuse.utils.sympy_to_numpy"><code class="docutils literal notranslate"><span class="pre">sympy_to_numpy()</span></code></a></li>
 </ul>
@@ -551,6 +559,7 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
 <li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.constructCellComplex.html">fuse.cells.constructCellComplex</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_2d.html">fuse.cells.construct_attach_2d</a></li>
@@ -667,7 +676,7 @@ comprising the facet.</p>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_subcomplex</span></code>(dimension)</p></td>
 <td><p>Constructs the reference subcomplex of the parent cell subentity specified by subcomplex dimension.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.CellComplexToFiatSimplex.construct_subelement" title="fuse.cells.CellComplexToFiatSimplex.construct_subelement"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_subelement</span></code></a>(dimension)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.CellComplexToFiatSimplex.construct_subelement" title="fuse.cells.CellComplexToFiatSimplex.construct_subelement"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_subelement</span></code></a>(dimension[, e_id, o])</p></td>
 <td><p>Constructs the reference element of a cell specified by subelement dimension.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">contains_point</span></code>(point[, epsilon, entity])</p></td>
@@ -751,12 +760,16 @@ comprising the facet.</p>
 </table>
 <dl class="py method">
 <dt class="sig sig-object py" id="fuse.cells.CellComplexToFiatSimplex.construct_subelement">
-<span class="sig-name descname"><span class="pre">construct_subelement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dimension</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.CellComplexToFiatSimplex.construct_subelement" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">construct_subelement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dimension</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">e_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">o</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.CellComplexToFiatSimplex.construct_subelement" title="Link to this definition">¶</a></dt>
 <dd><p>Constructs the reference element of a cell
 specified by subelement dimension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>dimension</strong> – subentity dimension (integer)</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dimension</strong> – subentity dimension (integer)</p></li>
+<li><p><strong>e_id</strong> – subentity id, default 0, (integer)</p></li>
+<li><p><strong>o</strong> – orientation of subentity, default None (GroupMemberRep)</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

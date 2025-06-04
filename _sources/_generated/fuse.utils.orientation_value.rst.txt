@@ -1,0 +1,6 @@
+fuse.utils.orientation\_value
+=============================
+
+.. currentmodule:: fuse.utils
+
+.. autofunction:: orientation_value

@@ -1,0 +1,6 @@
+fuse.cells.compare\_topologies
+==============================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: compare_topologies

@@ -21,6 +21,7 @@ L2Pairing
       ~L2Pairing.add_entity
       ~L2Pairing.convert_to_fiat
       ~L2Pairing.dict_id
+      ~L2Pairing.permute
       ~L2Pairing.tabulate
    
    

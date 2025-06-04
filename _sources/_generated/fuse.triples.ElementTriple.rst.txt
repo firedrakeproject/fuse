@@ -25,6 +25,7 @@ ElementTriple
       ~ElementTriple.get_dof_info
       ~ElementTriple.get_value_shape
       ~ElementTriple.make_dof_perms
+      ~ElementTriple.make_entity_dense_matrices
       ~ElementTriple.make_overall_dense_matrices
       ~ElementTriple.num_dofs
       ~ElementTriple.plot

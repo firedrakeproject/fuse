@@ -26,6 +26,7 @@ TensorProductTriple
       ~TensorProductTriple.get_dof_info
       ~TensorProductTriple.get_value_shape
       ~TensorProductTriple.make_dof_perms
+      ~TensorProductTriple.make_entity_dense_matrices
       ~TensorProductTriple.make_overall_dense_matrices
       ~TensorProductTriple.num_dofs
       ~TensorProductTriple.plot

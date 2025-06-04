@@ -21,6 +21,7 @@ DeltaPairing
       ~DeltaPairing.add_entity
       ~DeltaPairing.convert_to_fiat
       ~DeltaPairing.dict_id
+      ~DeltaPairing.permute
    
    
 

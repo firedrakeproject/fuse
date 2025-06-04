@@ -23,6 +23,8 @@ utils
       
         numpy_to_str_tuple
       
+        orientation_value
+      
         sympy_to_numpy
       
         tabulate_sympy
