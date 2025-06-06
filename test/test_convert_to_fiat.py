@@ -201,7 +201,7 @@ def create_cg2_tet(cell):
 
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
-    face = cell.d_entities(2)[0]
+    # face = cell.d_entities(2)[0]
 
     # [test_tet_cg3 0]
     xs = [DOF(DeltaPairing(), PointKernel(()))]
@@ -212,9 +212,9 @@ def create_cg2_tet(cell):
     dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
                             DOFGenerator(xs, S1, S1))
 
-    xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
-    dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
-                             DOFGenerator(xs, S1, S1))
+    # xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
+    # dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+    #                          DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
     cgverts = DOFGenerator(v_xs, Z4, S1)
@@ -222,11 +222,11 @@ def create_cg2_tet(cell):
     e_xs = [immerse(cell, dg1_int, TrH1)]
     cgedges = DOFGenerator(e_xs, tet_edges, S1)
 
-    f_xs = [immerse(cell, dg0_face, TrH1)]
-    cgfaces = DOFGenerator(f_xs, tet_faces, S1)
+    # f_xs = [immerse(cell, dg0_face, TrH1)]
+    # cgfaces = DOFGenerator(f_xs, tet_faces, S1)
 
     cg2 = ElementTriple(cell, (P2, CellH1, "C0"),
-                        [cgverts, cgedges, cgfaces])
+                        [cgverts, cgedges])
 
     return cg2
 

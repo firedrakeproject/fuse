@@ -394,10 +394,10 @@ class ElementTriple():
                             dimensions = list(dof_gen_class.keys())
                             dimensions.remove(dim)
                             immersed_dim = dimensions[0]
-                            identity = self.cell.d_entities(immersed_dim)
+                            identity = [d_ent.id for d_ent in self.cell.d_entities(immersed_dim)]
                             permuted_ents = self.cell.permute_entities(g, immersed_dim)
-                            g_sub_mat = g.matrix_form()
-                            # g_sub_mat = perm_array_to_matrix(identity, [sub_e.id for sub_e, _ in permuted_ents])
+                            # g_sub_mat = g.matrix_form()
+                            g_sub_mat = perm_list_to_matrix(identity, [sub_e for sub_e, _ in permuted_ents])
                             for sub_e, sub_g in permuted_ents:
                                 sub_e = self.cell.get_node(sub_e)
                                 sub_e_id = sub_e.id - min_ids[sub_e.dim()]
@@ -405,8 +405,6 @@ class ElementTriple():
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
                                     sub_ent_ids += [e.id for e in v]
                                 sub_mat = oriented_mats_by_entity[immersed_dim][sub_e_id][sub_g.numeric_rep()][np.ix_(sub_ent_ids, sub_ent_ids)]
-
-                                
 
                                 expanded = np.kron(g_sub_mat, sub_mat)
                                 # potentially permute the dof ids instead

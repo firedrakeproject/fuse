@@ -24,7 +24,7 @@ def perm_list_to_matrix(identity, perm):
     res = np.zeros((n,  n))
     for i, member in enumerate(identity):
         loc = perm.index(member)
-        a[i, loc] = 1
+        res[i, loc] = 1
     return res
 
 class GroupMemberRep(object):
