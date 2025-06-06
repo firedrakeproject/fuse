@@ -18,6 +18,14 @@ def perm_matrix_to_perm_array(p_mat):
         res += [indices]
     return res
 
+def perm_list_to_matrix(identity, perm):
+    assert set(identity) == set(perm)
+    n = len(identity)
+    res = np.zeros((n,  n))
+    for i, member in enumerate(identity):
+        loc = perm.index(member)
+        a[i, loc] = 1
+    return res
 
 class GroupMemberRep(object):
 

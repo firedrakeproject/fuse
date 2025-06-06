@@ -231,6 +231,7 @@ def create_cg2_tet(cell):
     return cg2
 
 
+
 def test_create_fiat_nd():
     cell = polygon(3)
     nd = construct_nd(cell)
@@ -330,9 +331,9 @@ def test_create_fiat_lagrange(elem_gen, elem_code, deg):
                                             (create_cf, polygon(3)),
                                             pytest.param(create_fortin_soulie, polygon(3), marks=pytest.mark.xfail(reason='Entity perms for non symmetric elements')),
                                             (create_dg1_tet, make_tetrahedron()),
-                                            pytest.param(construct_tet_rt, make_tetrahedron(), marks=pytest.mark.xfail(reason='Entity perms for certain tet elements')),
-                                            (create_cg1_tet, make_tetrahedron()),
-                                            pytest.param(create_cg2_tet, make_tetrahedron(), marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements'))
+                                            (construct_tet_rt, make_tetrahedron()),
+                                            # (create_cg1_tet, make_tetrahedron()),
+                                            (create_cg2_tet, make_tetrahedron()),
                                             ])
 def test_entity_perms(elem_gen, cell):
     elem = elem_gen(cell)
@@ -426,12 +427,11 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [pytest.param(create_cg1_tet, "CG", 1, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements')),
-                                                              pytest.param(create_cg2_tet, "CG", 2, 1.8, marks=pytest.mark.xfail(reason='Entity perms for  certain tet elements'))])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.8), (create_cg2_tet, "CG", 2, 1.8)])
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    scale_range = range(2, 4)
+    scale_range = range(2, 4)  
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
@@ -489,11 +489,12 @@ def helmholtz_solve(V, mesh):
 
     # Compute solution
     sol = Function(V)
+    # expect.interpolate(cos(x*pi*2)*cos(y*pi*2))
     solve(a == L, sol, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
 
     return sqrt(assemble(inner(sol - expect, sol - expect) * dx))
 
-# def helmholtz_solve(mesh, V):
+# def helmholtz_solve(V, mesh):
 #     u = TrialFunction(V)
 #     v = TestFunction(V)
 #     f = Function(V)
@@ -501,9 +502,13 @@ def helmholtz_solve(V, mesh):
 #     f.interpolate((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
 #     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
 #     L = inner(f, v) * dx
-#     u = Function(V)
+#     sol = Function(V)
 
-#     solve(a == L, u)
+#     expect = Function(V)
+#     expect.interpolate(cos(x*pi*2)*cos(y*pi*2))
+#     solve(a == L, sol, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+
+#     return sqrt(assemble(inner(sol - expect, sol - expect) * dx))
 
 
 def run_test(r, elem, parameters={}, quadrilateral=False):
