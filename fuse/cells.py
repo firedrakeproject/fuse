@@ -165,7 +165,7 @@ def polygon(n):
     return Point(2, edges, vertex_num=n)
 
 
-def firedrake_triangle():
+def ufc_triangle():
     vertices = []
     for i in range(3):
         vertices.append(Point(0))
@@ -174,13 +174,11 @@ def firedrake_triangle():
     edges.append(Point(1, [vertices[0], vertices[2]], vertex_num=2))
     edges.append(Point(1, [vertices[0], vertices[1]], vertex_num=2))
     tri = Point(2, edges, vertex_num=3, edge_orientations={1: [1, 0]})
-    # tri = polygon(3)
-    s3 = tri.group
-    perm = s3.get_member([2, 0, 1])
-    return tri.orient(perm)
+
+    return tri
 
 
-def firedrake_quad():
+def ufc_quad():
     """
     Constructs the a quad cell that matches the firedrake default.
     """
@@ -224,7 +222,42 @@ def make_tetrahedron():
     face3 = Point(2, vertex_num=3, edges=[edges[2], edges[0], edges[1]])
     face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
 
-    return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    tetra = Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    return tetra
+
+
+def ufc_tetrahedron():
+    vertices = []
+    for i in range(4):
+        vertices.append(Point(0))
+    edges = []
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[2], vertices[3]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[1], vertices[3]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[1], vertices[2]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[3]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[2]]))
+    edges.append(
+        Point(1, vertex_num=2, edges=[vertices[0], vertices[1]]))
+
+    # face1 = Point(2, vertex_num=3, edges=[edges[0], edges[1], edges[2]])
+    # face2 = Point(2, vertex_num=3, edges=[edges[0], edges[3], edges[4]])
+    # face3 = Point(2, vertex_num=3, edges=[edges[2], edges[3], edges[5]])
+    # face4 = Point(2, vertex_num=3, edges=[edges[2], edges[4], edges[5]])
+    face1 = Point(2, vertex_num=3, edges=[edges[0], edges[3], edges[4]], edge_orientations={1: [1, 0]})
+    face2 = Point(2, vertex_num=3, edges=[edges[4], edges[5], edges[2]], edge_orientations={0: [1, 0]})
+    face3 = Point(2, vertex_num=3, edges=[edges[2], edges[1], edges[0]], edge_orientations={0: [1, 0], 2: [1, 0]})
+    face4 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
+
+    tet = Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
+    # breakpoint()
+    return tet
+    # return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
 
 
 class Point():
@@ -316,7 +349,6 @@ class Point():
                 res = np.linalg.solve(coords_2d, faces[i])
 
                 res_fn = construct_attach_3d(res)
-                # breakpoint()
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[0][1], "y": coords_2d[0][2]})).astype(np.float64), faces[i][0])
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[1][1], "y": coords_2d[1][2]})).astype(np.float64), faces[i][1])
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[2][1], "y": coords_2d[2][2]})).astype(np.float64), faces[i][2])
@@ -381,8 +413,8 @@ class Point():
         else:
             raise TypeError("Shape undefined for {}".format(str(self)))
 
-    def get_topology(self):
-        structure = [sorted(generation) for generation in nx.topological_generations(self.graph())]
+    def get_topology(self, renumber=False):
+        structure = [generation for generation in nx.topological_generations(self.graph())]
         structure.reverse()
 
         min_ids = [min(dimension) for dimension in structure]
@@ -398,7 +430,44 @@ class Point():
             for node in dimension:
                 self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
                 self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
+            self.topology_unrelabelled[i] = dict(sorted(self.topology_unrelabelled[i].items()))
+        if renumber:
+            return self.topology
         return self.topology_unrelabelled
+
+    def get_sub_entities(self):
+        min_ids = self.get_starter_ids()
+        sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
+        self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
+        return self.sub_entities
+
+    def _subentity_traversal(self, sub_ents, min_ids):
+        dim = self.get_spatial_dimension()
+        self_id = self.id - min_ids[dim]
+
+        if dim > 0:
+            for p in self.ordered_vertices():
+                p_id = p - min_ids[0]
+                if (0, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] += [(0, p_id)]
+                    sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
+        if dim > 1:
+            connections = [(c.point.id, c.point.group.identity) for c in self.connections]
+            if self.oriented:
+                connections = self.permute_entities(self.oriented, dim - 1)
+            for e, o in connections:
+                # p = e.point
+                p = self.get_node(e).orient(o)
+                p_dim = p.get_spatial_dimension()
+                p_id = p.id - min_ids[p_dim]
+                if (p_dim, p_id) not in sub_ents[dim][self_id]:
+                    sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
+                    sub_ents = p._subentity_traversal(sub_ents, min_ids)
+
+        if (dim, self_id) not in sub_ents[dim][self_id]:
+            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
+
+        return sub_ents
 
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
@@ -459,6 +528,8 @@ class Point():
         :param: get_class: (Optional) Returns Point classes
 
         Default return value is list of id numbers of the entities in the cell complex graph."""
+        # if d == 0:
+        #     return self.ordered_vertices(get_class)
         levels = [sorted(generation)
                   for generation in nx.topological_generations(self.G)]
         if get_class:
@@ -514,10 +585,10 @@ class Point():
 
     def permute_entities(self, g, d):
         # TODO something is wrong here for squares it can return [()]
+        # verts = self.ordered_vertices()
         verts = self.vertices(get_class=False)
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
-
         if d == 0:
             entity_group = self.d_entities(d)[0].group
             return list(zip(reordered, [entity_group.identity for r in reordered]))
@@ -530,16 +601,15 @@ class Point():
             reordered_entity_dict[e.id] = tuple([reordered[verts.index(i)] for i in e.ordered_vertices()])
 
         reordered_entities = [tuple() for e in range(len(entities))]
-        min_id = min(entities)
         entity_group = self.d_entities(d)[0].group
         for ent in entities:
             for ent1 in entities:
                 if set(entity_dict[ent]) == set(reordered_entity_dict[ent1]):
                     if entity_dict[ent] != reordered_entity_dict[ent1]:
                         o = entity_group.transform_between_perms(entity_dict[ent], reordered_entity_dict[ent1])
-                        reordered_entities[ent1 - min_id] = (ent, o)
+                        reordered_entities[entities.index(ent1)] = (ent, o)
                     else:
-                        reordered_entities[ent1 - min_id] = (ent, entity_group.identity)
+                        reordered_entities[entities.index(ent1)] = (ent, entity_group.identity)
 
         return reordered_entities
 
@@ -586,11 +656,15 @@ class Point():
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
+        if self.dimension == 3:
+            self.plot3d(show, plain, ax, filename)
+            return
 
         top_level_node = self.d_entities(self.graph_dim(), get_class=False)[0]
         xs = np.linspace(-1, 1, 20)
         if ax is None:
             ax = plt.gca()
+
         if self.dimension == 1:
             # line plot in 1D case
             nodes = self.d_entities(0, get_class=False)
@@ -623,17 +697,14 @@ class Point():
                         make_arrow(ax, 0, attach)
                 else:
                     raise ValueError("General plotting not implemented")
-            # if i == 2:
-            #     if len(vert_coords) > 2:
-            #         hull = ConvexHull(vert_coords)
-            #         plt.fill(vert_coords[hull.vertices, 0], vert_coords[hull.vertices, 1], alpha=0.5)
+
         if show:
             plt.show()
         if filename:
             ax.figure.savefig(filename)
             plt.cla()
 
-    def plot3d(self, show=True, ax=None):
+    def plot3d(self, show=True, plain=False, ax=None, filename=None):
         assert self.dimension == 3
         if ax is None:
             fig = plt.figure()
@@ -642,10 +713,13 @@ class Point():
 
         top_level_node = self.d_entities_ids(self.graph_dim())[0]
         nodes = self.d_entities_ids(0)
+        min_ids = self.get_starter_ids()
         for node in nodes:
             attach = self.attachment(top_level_node, node)
             plotted = attach()
             ax.scatter(plotted[0], plotted[1], plotted[2], color="black")
+            if not plain:
+                ax.text(plotted[0], plotted[1], plotted[2], node - min_ids[0], None)
 
         nodes = self.d_entities_ids(1)
         for node in nodes:
@@ -653,8 +727,15 @@ class Point():
             edgevals = np.array([attach(x) for x in xs])
             ax.plot3D(edgevals[:, 0], edgevals[:, 1], edgevals[:, 2], color="black")
             make_arrow_3d(ax, 0, attach)
+            if not plain:
+                plotted = attach(0)
+                ax.text(plotted[0], plotted[1], plotted[2], node - min_ids[1], None)
+
         if show:
             plt.show()
+        if filename:
+            ax.figure.savefig(filename)
+            plt.cla()
 
     def attachment(self, source, dst):
         if source == dst:
@@ -708,9 +789,9 @@ class Point():
     def copy(self):
         return copy.deepcopy(self)
 
-    def to_fiat(self, name=None):
+    def to_fiat(self, name=None, renumber=False):
         if len(self.vertices()) == self.dimension + 1:
-            return CellComplexToFiatSimplex(self, name)
+            return CellComplexToFiatSimplex(self, name, renumber)
         if len(self.vertices()) == 2 ** self.dimension:
             return CellComplexToFiatHypercube(self, name)
         raise NotImplementedError("Custom shape elements/ First class quads are not yet supported")
@@ -799,6 +880,11 @@ class TensorProductPoint():
     def get_spatial_dimension(self):
         return self.dimension
 
+    def get_sub_entities(self):
+        self.A.get_sub_entities()
+        self.B.get_sub_entities()
+        breakpoint()
+
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
 
@@ -837,7 +923,7 @@ class CellComplexToFiatSimplex(Simplex):
     Currently assumes simplex.
     """
 
-    def __init__(self, cell, name=None):
+    def __init__(self, cell, name=None, renumber=False):
         self.fe_cell = cell
         if name is None:
             name = "FuseCell"
@@ -845,9 +931,10 @@ class CellComplexToFiatSimplex(Simplex):
 
         # verts = [cell.get_node(v, return_coords=True) for v in cell.ordered_vertices()]
         verts = cell.vertices(return_coords=True)
-        topology = cell.get_topology()
+        topology = cell.get_topology(renumber)
         shape = cell.get_shape()
-        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology)
+        sub_ents = cell.get_sub_entities()
+        super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
 
     def cellname(self):
         return self.name
@@ -861,9 +948,9 @@ class CellComplexToFiatSimplex(Simplex):
         :arg o: orientation of subentity, default None (GroupMemberRep)
         """
         if o:
-            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat()
+            return self.fe_cell.d_entities(dimension)[e_id].orient(o).to_fiat(renumber=True)
         else:
-            return self.fe_cell.d_entities(dimension)[e_id].to_fiat()
+            return self.fe_cell.d_entities(dimension)[e_id].to_fiat(renumber=True)
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()
@@ -887,7 +974,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         if name is None:
             name = " * ".join([s.name for s in self.sub_cells])
         self.name = name
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
 
     def cellname(self):
@@ -919,7 +1006,7 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-
+# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
@@ -1010,13 +1097,14 @@ def constructCellComplex(name):
         return Point(1, [Point(0), Point(0)], vertex_num=2).to_ufl(name)
     elif name == "triangle":
         return polygon(3).to_ufl(name)
-        # return firedrake_triangle().to_ufl(name)
+        # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
         interval = Point(1, [Point(0), Point(0)], vertex_num=2)
         return TensorProductPoint(interval, interval).flatten().to_ufl(name)
-        # return firedrake_quad().to_ufl(name)
+        # return ufc_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
+        # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
     elif name == "hexahedron":
         import warnings

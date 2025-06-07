@@ -2,7 +2,7 @@ from fuse.cells import Point, TensorProductPoint
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
-from fuse.groups import perm_matrix_to_perm_array
+from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
@@ -248,6 +248,7 @@ class ElementTriple():
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
+        nodes = [d.convert_to_fiat(ref_el, degree) for d in self.generate()]
         sub_ents = []
         res_dict = {}
         for d in range(0, self.cell.dim() + 1):
@@ -258,7 +259,9 @@ class ElementTriple():
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
             dof_ids = [d.id for d in self.generate() if d.trace_entity == e]
+            res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
+
             for g in self.cell.group.members():
                 permuted_e, permuted_g = self.cell.permute_entities(g, dim)[e_id]
                 val = permuted_g.numeric_rep()
@@ -391,15 +394,17 @@ class ElementTriple():
                             dimensions = list(dof_gen_class.keys())
                             dimensions.remove(dim)
                             immersed_dim = dimensions[0]
-                            for sub_e, sub_g in self.cell.permute_entities(g, immersed_dim):
+                            identity = [d_ent.id for d_ent in self.cell.d_entities(immersed_dim)]
+                            permuted_ents = self.cell.permute_entities(g, immersed_dim)
+                            # g_sub_mat = g.matrix_form()
+                            g_sub_mat = perm_list_to_matrix(identity, [sub_e for sub_e, _ in permuted_ents])
+                            for sub_e, sub_g in permuted_ents:
                                 sub_e = self.cell.get_node(sub_e)
                                 sub_e_id = sub_e.id - min_ids[sub_e.dim()]
                                 sub_ent_ids = []
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
                                     sub_ent_ids += [e.id for e in v]
                                 sub_mat = oriented_mats_by_entity[immersed_dim][sub_e_id][sub_g.numeric_rep()][np.ix_(sub_ent_ids, sub_ent_ids)]
-
-                                g_sub_mat = g.matrix_form()
 
                                 expanded = np.kron(g_sub_mat, sub_mat)
                                 # potentially permute the dof ids instead

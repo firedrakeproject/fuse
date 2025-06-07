@@ -55,6 +55,7 @@ def construct_tet_cg3():
     cg3 = ElementTriple(tetra, (P1, CellH1, "C0"),
                         [cgverts, cgedges, cgfaces])
     # [test_tet_cg3 1]
+
     return cg3
 
 
