@@ -231,6 +231,39 @@ def create_cg2_tet(cell):
     return cg2
 
 
+def create_cg3_tet(cell):
+
+    vert = cell.vertices()[0]
+    edge = cell.edges()[0]
+    face = cell.d_entities(2)[0]
+
+    # [test_tet_cg3 0]
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+                        DOFGenerator(xs, S1, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
+    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+                            DOFGenerator(xs, S2, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
+    dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+                             DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(cell, dg0, TrH1)]
+    cgverts = DOFGenerator(v_xs, Z4, S1)
+
+    e_xs = [immerse(cell, dg1_int, TrH1)]
+    cgedges = DOFGenerator(e_xs, tet_edges, S1)
+
+    f_xs = [immerse(cell, dg0_face, TrH1)]
+    cgfaces = DOFGenerator(f_xs, tet_faces, S1)
+
+    cg3 = ElementTriple(cell, (P3, CellH1, "C0"),
+                        [cgverts, cgedges, cgfaces])
+
+    return cg3
+
 
 def test_create_fiat_nd():
     cell = polygon(3)
@@ -427,11 +460,11 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.5), (create_cg2_tet, "CG", 2, 1.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.5), (create_cg2_tet, "CG", 2, 2.8), (create_cg3_tet, "CG", 3, 3.8)])
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    scale_range = range(2, 4)  
+    scale_range = range(2, 4)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:

@@ -222,10 +222,8 @@ def make_tetrahedron():
     face3 = Point(2, vertex_num=3, edges=[edges[2], edges[0], edges[1]])
     face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
 
-    
     tetra = Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
-    print(tetra.id)
-    return tetra 
+    return tetra
 
 
 def ufc_tetrahedron():
