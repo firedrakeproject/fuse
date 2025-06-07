@@ -530,8 +530,8 @@ class Point():
         :param: get_class: (Optional) Returns Point classes
 
         Default return value is list of id numbers of the entities in the cell complex graph."""
-        if d == 0:
-            return self.ordered_vertices(get_class)
+        # if d == 0:
+        #     return self.ordered_vertices(get_class)
         levels = [sorted(generation)
                   for generation in nx.topological_generations(self.G)]
         if get_class:

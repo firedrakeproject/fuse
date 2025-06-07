@@ -125,7 +125,7 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
         # entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology()
-        # self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
+        self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = mat_perms
         form_degree = 1 if self.spaces[0].set_shape else 0

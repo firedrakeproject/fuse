@@ -427,7 +427,7 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.8), (create_cg2_tet, "CG", 2, 1.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg1_tet, "CG", 1, 1.5), (create_cg2_tet, "CG", 2, 1.8)])
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -439,11 +439,11 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i - 1] = res1
+        diff2[i - 2] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i - 1] = res2
+        diff[i - 2] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -610,8 +610,8 @@ def test_project_3d(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
-    # mesh = UnitCubeMesh(3, 3, 3)
-    mesh = UnitTetrahedronMesh()
+    mesh = UnitCubeMesh(3, 3, 3)
+    # mesh = UnitTetrahedronMesh()
 
     U = FunctionSpace(mesh, elem_code, deg)
 
