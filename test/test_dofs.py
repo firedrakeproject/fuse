@@ -128,3 +128,13 @@ def test_permute_nd_old():
     #     print(g)
     #     print(nd.cell.permute_entities(g, 0))
     #     print(nd.cell.permute_entities(g, 1))
+
+
+def test_permute_nodes():
+    cell = polygon(3)
+    cg1 = create_cg1(cell)
+    degree = cg1.spaces[0].degree()
+    nodes = [d.convert_to_fiat(cell.to_fiat(), degree) for d in cg1.generate()]
+    print([n.pt_dict for n in nodes])
+    for g in cg1.cell.group.members():
+        print(g, [d(g).convert_to_fiat(cell.to_fiat(), degree).pt_dict for d in cg1.generate()])
