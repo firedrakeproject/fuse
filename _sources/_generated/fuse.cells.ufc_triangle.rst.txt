@@ -1,0 +1,6 @@
+fuse.cells.ufc\_triangle
+========================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: ufc_triangle

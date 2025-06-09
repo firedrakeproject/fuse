@@ -21,6 +21,8 @@ groups
       
         get_sym_group
       
+        perm_list_to_matrix
+      
         perm_matrix_to_perm_array
    
    

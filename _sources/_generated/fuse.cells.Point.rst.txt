@@ -34,6 +34,7 @@ Point
       ~Point.get_shape
       ~Point.get_spatial_dimension
       ~Point.get_starter_ids
+      ~Point.get_sub_entities
       ~Point.get_topology
       ~Point.graph
       ~Point.graph_dim

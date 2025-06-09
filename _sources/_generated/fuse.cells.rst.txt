@@ -27,10 +27,6 @@ cells
       
         construct_attach_3d
       
-        firedrake_quad
-      
-        firedrake_triangle
-      
       
       
         make_tetrahedron
@@ -40,6 +36,12 @@ cells
         polygon
       
         topo_pos
+      
+        ufc_quad
+      
+        ufc_tetrahedron
+      
+        ufc_triangle
    
    
 

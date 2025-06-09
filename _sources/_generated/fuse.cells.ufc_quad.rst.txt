@@ -1,0 +1,6 @@
+fuse.cells.ufc\_quad
+====================
+
+.. currentmodule:: fuse.cells
+
+.. autofunction:: ufc_quad

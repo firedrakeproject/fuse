@@ -22,6 +22,7 @@ TensorProductPoint
       ~TensorProductPoint.dimension
       ~TensorProductPoint.flatten
       ~TensorProductPoint.get_spatial_dimension
+      ~TensorProductPoint.get_sub_entities
       ~TensorProductPoint.to_fiat
       ~TensorProductPoint.to_ufl
       ~TensorProductPoint.vertices

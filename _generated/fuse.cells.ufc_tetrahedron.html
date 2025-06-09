@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>GroupRepresentation &#8212; FUSE 2025.0 documentation</title>
+    <title>fuse.cells.ufc_tetrahedron &#8212; FUSE 2025.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/bootstrap-sphinx.css?v=9f61996d" />
     <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
@@ -18,8 +18,8 @@
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="PermutationSetRepresentation" href="fuse.groups.PermutationSetRepresentation.html" />
-    <link rel="prev" title="GroupMemberRep" href="fuse.groups.GroupMemberRep.html" />
+    <link rel="next" title="fuse.cells.ufc_triangle" href="fuse.cells.ufc_triangle.html" />
+    <link rel="prev" title="fuse.cells.ufc_quad" href="fuse.cells.ufc_quad.html" />
 <meta charset='utf-8'>
 <meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
 <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
@@ -96,7 +96,7 @@
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="fuse.cells.html">cells</a><ul>
+<li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.cells.compare_topologies.html#fuse.cells.compare_topologies"><code class="docutils literal notranslate"><span class="pre">compare_topologies()</span></code></a></li>
 </ul>
@@ -137,8 +137,8 @@
 <li class="toctree-l5"><a class="reference internal" href="fuse.cells.ufc_quad.html#fuse.cells.ufc_quad"><code class="docutils literal notranslate"><span class="pre">ufc_quad()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.cells.ufc_tetrahedron.html">fuse.cells.ufc_tetrahedron</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="fuse.cells.ufc_tetrahedron.html#fuse.cells.ufc_tetrahedron"><code class="docutils literal notranslate"><span class="pre">ufc_tetrahedron()</span></code></a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">fuse.cells.ufc_tetrahedron</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#fuse.cells.ufc_tetrahedron"><code class="docutils literal notranslate"><span class="pre">ufc_tetrahedron()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.cells.ufc_triangle.html">fuse.cells.ufc_triangle</a><ul>
@@ -274,7 +274,7 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l3 current"><a class="reference internal" href="fuse.groups.html">groups</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="fuse.groups.html">groups</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="fuse.groups.get_cyc_group.html">fuse.groups.get_cyc_group</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.groups.get_cyc_group.html#fuse.groups.get_cyc_group"><code class="docutils literal notranslate"><span class="pre">get_cyc_group()</span></code></a></li>
 </ul>
@@ -298,9 +298,9 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l4 current"><a class="current reference internal" href="#">GroupRepresentation</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="#fuse.groups.GroupRepresentation"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation</span></code></a><ul>
-<li class="toctree-l6"><a class="reference internal" href="#fuse.groups.GroupRepresentation.__init__"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.groups.GroupRepresentation.html">GroupRepresentation</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.groups.GroupRepresentation.html#fuse.groups.GroupRepresentation"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.groups.GroupRepresentation.html#fuse.groups.GroupRepresentation.__init__"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation.__init__()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -566,24 +566,33 @@
 <li class="toctree-l1"><a class="reference internal" href="../manual.html">Manual</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API documentation</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="fuse.cells.html">cells</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="fuse.cells.html">cells</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compare_topologies.html">fuse.cells.compare_topologies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.compute_scaled_verts.html">fuse.cells.compute_scaled_verts</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.constructCellComplex.html">fuse.cells.constructCellComplex</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_2d.html">fuse.cells.construct_attach_2d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.construct_attach_3d.html">fuse.cells.construct_attach_3d</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.make_tetrahedron.html">fuse.cells.make_tetrahedron</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.normalise.html">fuse.cells.normalise</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.polygon.html">fuse.cells.polygon</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.topo_pos.html">fuse.cells.topo_pos</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.ufc_quad.html">fuse.cells.ufc_quad</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">fuse.cells.ufc_tetrahedron</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#fuse.cells.ufc_tetrahedron"><code class="docutils literal notranslate"><span class="pre">ufc_tetrahedron()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.ufc_triangle.html">fuse.cells.ufc_triangle</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatHypercube.html">CellComplexToFiatHypercube</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatSimplex.html">CellComplexToFiatSimplex</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToFiatTensorProduct.html">CellComplexToFiatTensorProduct</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.CellComplexToUFL.html">CellComplexToUFL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.Edge.html">Edge</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.Point.html">Point</a></li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.cells.TensorProductPoint.html">TensorProductPoint</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="fuse.dof.html">dof</a></li>
-<li class="toctree-l3 current"><a class="reference internal" href="fuse.groups.html">groups</a><ul class="current">
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.get_cyc_group.html">fuse.groups.get_cyc_group</a></li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.get_sym_group.html">fuse.groups.get_sym_group</a></li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.perm_list_to_matrix.html">fuse.groups.perm_list_to_matrix</a></li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.perm_matrix_to_perm_array.html">fuse.groups.perm_matrix_to_perm_array</a></li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.GroupMemberRep.html">GroupMemberRep</a></li>
-<li class="toctree-l4 current"><a class="current reference internal" href="#">GroupRepresentation</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="#fuse.groups.GroupRepresentation"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation</span></code></a><ul>
-<li class="toctree-l6"><a class="reference internal" href="#fuse.groups.GroupRepresentation.__init__"><code class="docutils literal notranslate"><span class="pre">GroupRepresentation.__init__()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l4"><a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html">PermutationSetRepresentation</a></li>
-</ul>
-</li>
+<li class="toctree-l3"><a class="reference internal" href="fuse.groups.html">groups</a></li>
 <li class="toctree-l3"><a class="reference internal" href="fuse.serialisation.html">serialisation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="fuse.spaces.html">spaces</a></li>
 <li class="toctree-l3"><a class="reference internal" href="fuse.tensor_products.html">tensor_products</a></li>
@@ -600,56 +609,12 @@
       </div>
     <div class="body col-md-9 content" role="main">
       
-  <section id="grouprepresentation">
-<h1>GroupRepresentation<a class="headerlink" href="#grouprepresentation" title="Link to this heading">¶</a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="fuse.groups.GroupRepresentation">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.groups.</span></span><span class="sig-name descname"><span class="pre">GroupRepresentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.groups.GroupRepresentation" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation" title="fuse.groups.PermutationSetRepresentation"><code class="xref py py-class docutils literal notranslate"><span class="pre">PermutationSetRepresentation</span></code></a></p>
-<p>A representation of a group by its matrix operations.</p>
-<dl class="simple">
-<dt>Args:</dt><dd><p>base_group: the sympy group that is being represented
-cell (optional): the cell the group is representing the operations on</p>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="fuse.groups.GroupRepresentation.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_group</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.groups.GroupRepresentation.__init__" title="Link to this definition">¶</a></dt>
+  <section id="fuse-cells-ufc-tetrahedron">
+<h1>fuse.cells.ufc_tetrahedron<a class="headerlink" href="#fuse-cells-ufc-tetrahedron" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="fuse.cells.ufc_tetrahedron">
+<span class="sig-prename descclassname"><span class="pre">fuse.cells.</span></span><span class="sig-name descname"><span class="pre">ufc_tetrahedron</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.ufc_tetrahedron" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<p class="rubric">Methods</p>
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.groups.GroupRepresentation.__init__" title="fuse.groups.GroupRepresentation.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(base_group[, cell])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_cell</span></code>(cell)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_num_reps</span></code>([base_val])</p></td>
-<td><p>Compute the numerical represention of each member as compared to the identity.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">conjugacy_class</span></code>(g)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict_id</span></code>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_member</span></code>(perm)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">members</span></code>([perm])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">size</span></code>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform_between_perms</span></code>(perm1, perm2)</p></td>
-<td><p></p></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
 
 </section>
 
