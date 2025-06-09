@@ -222,7 +222,8 @@ def make_tetrahedron():
     face3 = Point(2, vertex_num=3, edges=[edges[2], edges[0], edges[1]])
     face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
 
-    return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    tetra = Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+    return tetra
 
 
 def ufc_tetrahedron():
@@ -527,8 +528,8 @@ class Point():
         :param: get_class: (Optional) Returns Point classes
 
         Default return value is list of id numbers of the entities in the cell complex graph."""
-        if d == 0:
-            return self.ordered_vertices(get_class)
+        # if d == 0:
+        #     return self.ordered_vertices(get_class)
         levels = [sorted(generation)
                   for generation in nx.topological_generations(self.G)]
         if get_class:
@@ -588,7 +589,6 @@ class Point():
         verts = self.vertices(get_class=False)
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
-        # reordered = g.permute(self.ordered_vertices())
         if d == 0:
             entity_group = self.d_entities(d)[0].group
             return list(zip(reordered, [entity_group.identity for r in reordered]))
@@ -1106,8 +1106,6 @@ def constructCellComplex(name):
     elif name == "tetrahedron":
         # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
-        # import ufl
-        # return ufl.Cell(name)
     elif name == "hexahedron":
         import warnings
         warnings.warn("Hexahedron unimplemented in Fuse")
