@@ -638,6 +638,21 @@ class Point():
                 basis_vecs.append((v, v_0))
         return basis_vecs
 
+    def compute_normal(self, facet_id):
+        # computes normal to a facet of codimension 1
+        facet = self.d_entities(self.dimension - 1)[facet_id]
+        entityBasis = np.array(facet.basis_vectors())
+        cellEntityBasis = np.array(self.basis_vectors(entity=facet))
+        basis = np.matmul(entityBasis, cellEntityBasis)
+
+        if facet.dimension == 1:
+            result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
+        elif facet.dimension == 2:
+            result = np.cross(basis[0], basis[1])
+        else:
+            raise NotImplementedError("Normals in higher dimensions")
+        return result.squeeze()
+
     def to_tikz(self, show=True, scale=3):
         tikz_commands = []
         if show:
@@ -956,6 +971,9 @@ class CellComplexToFiatSimplex(Simplex):
         dimension = self.get_spatial_dimension()
         return self.construct_subelement(dimension - 1)
 
+    def compute_normal(self, facet_id):
+        return self.fe_cell.compute_normal(facet_id)
+
 
 class CellComplexToFiatTensorProduct(FiatTensorProductCell):
     """
@@ -1033,6 +1051,9 @@ class CellComplexToFiatHypercube(Hypercube):
     def get_dimension(self):
         return self.get_spatial_dimension()
 
+    def compute_normal(self, facet_id):
+        return self.fe_cell.compute_normal(facet_id)
+
 
 class CellComplexToUFL(Cell):
     """
@@ -1091,24 +1112,33 @@ class CellComplexToUFL(Cell):
 
 
 def constructCellComplex(name):
+    # import ufl
+    # return ufl.Cell(name)
+
+    import os
+    fuse = os.environ.get("FIREDRAKE_USE_FUSE", "False")
+    # breakpoint()
     if name == "vertex":
         return Point(0).to_ufl(name)
     elif name == "interval":
         return Point(1, [Point(0), Point(0)], vertex_num=2).to_ufl(name)
     elif name == "triangle":
+        if fuse == "False":
+            return ufc_triangle().to_ufl(name)
         return polygon(3).to_ufl(name)
-        # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
         interval = Point(1, [Point(0), Point(0)], vertex_num=2)
         return TensorProductPoint(interval, interval).flatten().to_ufl(name)
         # return ufc_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
-        # return ufc_tetrahedron().to_ufl(name)
+        if fuse == "False":
+            return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
     elif name == "hexahedron":
-        import warnings
-        warnings.warn("Hexahedron unimplemented in Fuse")
+        if fuse == "True":
+            import warnings
+            warnings.warn("Hexahedron unimplemented in Fuse")
         import ufl
         return ufl.Cell(name)
     elif "*" in name:
