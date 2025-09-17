@@ -92,3 +92,13 @@ def test_square():
     for dof in sq.generate():
         print(dof)
     sq.to_fiat()
+
+def test_combining_perms():
+    cell = polygon(3)
+
+    elem = construct_cg3(cell)
+
+    
+    elem.to_fiat()
+
+    print(elem.matrices)
