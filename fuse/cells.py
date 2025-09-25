@@ -1117,7 +1117,6 @@ def constructCellComplex(name):
 
     import os
     fuse = os.environ.get("FIREDRAKE_USE_FUSE", "False")
-    # breakpoint()
     if name == "vertex":
         return Point(0).to_ufl(name)
     elif name == "interval":
