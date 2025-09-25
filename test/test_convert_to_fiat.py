@@ -600,8 +600,8 @@ def test_project_3d(elem_gen, elem_code, deg):
     U = FunctionSpace(mesh, elem.to_ufl())
     assert np.allclose(project_func(U, mesh, Constant(1)), 0, rtol=1e-5)
 
-#  marks=pytest.mark.xfail(reason="DG on tets - check test written correctly")
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_dg1_tet, "CG", 3, 0.8)])
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [pytest.param(create_dg1_tet, "CG", 3, 0.8, marks=pytest.mark.xfail(reason="DG on tets - check test written correctly"))])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
