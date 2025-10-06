@@ -13,6 +13,7 @@ from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from ufl.cell import Cell, TensorProductCell
+from functools import cache
 
 
 class Arrow3D(FancyArrowPatch):
@@ -469,6 +470,7 @@ class Point():
 
         return sub_ents
 
+    @cache
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
         structure.reverse()

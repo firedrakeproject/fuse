@@ -15,6 +15,7 @@ from finat.ufl import FuseElement
 import warnings
 import numpy as np
 import scipy
+from functools import cache
 
 
 class ElementTriple():
@@ -51,6 +52,7 @@ class ElementTriple():
         return "FuseTriple(%s, %s, (%s, %s, %s), %s)" % (
                repr(self.DOFGenerator), repr(self.cell), repr(self.spaces[0]), repr(self.spaces[1]), repr(self.spaces[2]), "X")
 
+    @cache
     def generate(self):
         res = []
         id_counter = 0
@@ -128,6 +130,7 @@ class ElementTriple():
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         self.matrices = mat_perms
+        self.reverse_dof_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
@@ -421,6 +424,18 @@ class ElementTriple():
         if pure_perm and sub_pure_perm:
             return oriented_mats_by_entity, flat_by_entity, True
         return oriented_mats_by_entity, None, False
+
+    def reverse_dof_perms(self):
+        min_ids = self.cell.get_starter_ids()
+        reversed_mats = self.matrices.copy()
+        for dim in self.matrices.keys():
+            ents = self.cell.d_entities(dim)
+            for e in ents:
+                e_id = e.id - min_ids[dim]
+                members = e.group.members()
+                for m in members:
+                    reversed_mats[dim][e_id][m.numeric_rep()] = self.matrices[dim][e_id][(~m).numeric_rep()]
+        self.reversed_matrices = reversed_mats
 
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
