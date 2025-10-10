@@ -204,8 +204,11 @@ class ConstructedPolynomialSpace(PolynomialSpace):
     __rmul__ = __mul__
 
     def __add__(self, x):
-        return ConstructedPolynomialSpace(self.weights.extend([1]),
-                                          self.spaces.extend(x))
+        w = self.weights.copy()
+        w.extend([1])
+        s = self.spaces.copy()
+        s.extend([x])
+        return ConstructedPolynomialSpace(w, s)
 
     def _to_dict(self):
         super_dict = super(ConstructedPolynomialSpace, self)._to_dict()

@@ -573,8 +573,7 @@ def project(U, mesh, func):
                                                     (lambda cell: CR_n(cell, 3), "CR", 1),
                                                     (create_cf, "CR", 1),  # Don't think Crouzeix Falk in in Firedrake
                                                     (construct_cg3, "CG", 3),
-                                                    pytest.param(construct_nd, "N1curl", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed')),
-                                                    pytest.param(construct_rt, "RT", 1, marks=pytest.mark.xfail(reason='Dense Matrices needed'))])
+                                                    ])
 def test_project(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -585,6 +584,21 @@ def test_project(elem_gen, elem_code, deg):
 
     U = FunctionSpace(mesh, elem.to_ufl())
     assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
+
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [
+                                                    pytest.param(construct_nd, "N1curl", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 ND'),
+                                                    pytest.param(construct_rt, "RT", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 RT')])
+def test_project_vec(elem_gen, elem_code, deg):
+    cell = polygon(3)
+    elem = elem_gen(cell)
+    mesh = UnitTriangleMesh()
+
+    U = FunctionSpace(mesh, elem_code, deg)
+    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
+
+    U = FunctionSpace(mesh, elem.to_ufl())
+    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_dg1_tet, "DG", 1)])

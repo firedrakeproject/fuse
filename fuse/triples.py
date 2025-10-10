@@ -1,4 +1,4 @@
-from fuse.cells import Point, TensorProductPoint
+from fuse.cells import Point, TensorProductPoint, compare_topologies
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
@@ -6,7 +6,7 @@ from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
-# from FIAT.reference_element import ufc_cell
+from FIAT.reference_element import ufc_cell
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -126,9 +126,9 @@ class ElementTriple():
                     entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
-        # entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology()
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
+        mat_perms = self.orient_mat_perms(mat_perms)
         self.matrices = mat_perms
         self.reverse_dof_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
@@ -424,6 +424,21 @@ class ElementTriple():
         if pure_perm and sub_pure_perm:
             return oriented_mats_by_entity, flat_by_entity, True
         return oriented_mats_by_entity, None, False
+
+    def orient_mat_perms(self, mat_perms):
+        min_ids = self.cell.get_starter_ids()
+        entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
+        num_ents = 0
+        for dim in mat_perms.keys():
+            ents = self.cell.d_entities(dim)
+            for e in ents:
+                e_id = e.id - min_ids[dim]
+                if entity_orientations[num_ents + e_id] != 0:
+                    modifier = mat_perms[dim][e_id][entity_orientations[num_ents+e_id]]
+                    for val, mat in mat_perms[dim][e_id].items():
+                        mat_perms[dim][e_id][val] = np.matmul(modifier, mat)
+            num_ents += len(ents)
+        return mat_perms
 
     def reverse_dof_perms(self):
         min_ids = self.cell.get_starter_ids()

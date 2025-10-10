@@ -1,6 +1,6 @@
 from FIAT.quadrature_schemes import create_quadrature
 from FIAT.quadrature import FacetQuadratureRule
-from FIAT.functional import PointEvaluation, FrobeniusIntegralMoment
+from FIAT.functional import PointEvaluation, IntegralMoment, FrobeniusIntegralMoment
 from fuse.utils import sympy_to_numpy
 import numpy as np
 import sympy as sp
@@ -114,7 +114,7 @@ class L2Pairing(Pairing):
         return res
 
     def convert_to_fiat(self, ref_el, dof, interpolant_degree):
-        total_deg = interpolant_degree + dof.kernel.degree()
+        total_deg = dof.kernel.degree(interpolant_degree)
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
         # entity_ref = ref_el.construct_subelement(self.entity.dim())
         entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
@@ -126,9 +126,15 @@ class L2Pairing(Pairing):
         Jdet = Q.jacobian_determinant()
         # Jdet = pseudo_determinant(J)
         qpts, _ = Q.get_points(), Q.get_weights()
-
-        f_at_qpts = dof.tabulate(qpts).T / Jdet
-        functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
+        # (np.sqrt(2)) * 
+        f_at_qpts =  dof.tabulate(qpts).T / Jdet
+        comp = None
+        if hasattr(dof.kernel, "comp"):
+            # TODO Value shape should be a variable.
+            comp = dof.kernel.comp
+            functional = IntegralMoment(ref_el, Q, f_at_qpts, comp=comp, shp=(2,))
+        else:
+            functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
     def __repr__(self):
@@ -170,8 +176,8 @@ class PointKernel(BaseKernel):
         x = list(map(str, list(self.pt)))
         return ','.join(x)
 
-    def degree(self):
-        return 1
+    def degree(self, interpolant_degree):
+        return interpolant_degree
 
     def permute(self, g):
         return PointKernel(g(self.pt))
@@ -180,8 +186,8 @@ class PointKernel(BaseKernel):
         return self.pt
 
     def tabulate(self, Qpts, attachment=None):
-        if attachment:
-            return np.array([attachment(*self.pt) for _ in Qpts]).astype(np.float64)
+        #if attachment:
+        #    return np.array([attachment(*self.pt) for _ in Qpts]).astype(np.float64)
         return np.array([self.pt for _ in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -207,10 +213,10 @@ class PolynomialKernel(BaseKernel):
     def __repr__(self):
         return str(self.fn)
 
-    def degree(self):
+    def degree(self, interpolant_degree):
         if len(self.fn.free_symbols) == 0:
-            return 1
-        return self.fn.as_poly().total_degree()
+            return interpolant_degree 
+        return self.fn.as_poly().total_degree() * interpolant_degree
 
     def permute(self, g):
         return self
@@ -238,6 +244,39 @@ class PolynomialKernel(BaseKernel):
 
     def _from_dict(obj_dict):
         return PolynomialKernel(obj_dict["fn"])
+
+class ComponentKernel(BaseKernel):
+
+    def __init__(self, comp):
+        self.comp = comp
+        super(ComponentKernel, self).__init__()
+
+    def __repr__(self):
+        return f"[{self.comp}]" 
+
+    def degree(self, interpolant_degree):
+        return interpolant_degree
+
+    def permute(self, g):
+        return self
+
+    def __call__(self, *args):
+        return args[self.comp]
+
+    def tabulate(self, Qpts, attachment=None):
+        return np.array([1 for _ in Qpts]).astype(np.float64)
+        #return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+
+    def _to_dict(self):
+        o_dict = {"comp": self.comp}
+        return o_dict
+
+    def dict_id(self):
+        return "ComponentKernel"
+
+    def _from_dict(obj_dict):
+        return ComponentKernel(obj_dict["comp"])
+
 
 
 class DOF():
