@@ -2,7 +2,8 @@ import unittest.mock as mock
 from firedrake import *
 from fuse import *
 import sympy as sp
-from test_convert_to_fiat import create_cg1, helmholtz_solve, construct_nd
+from test_convert_to_fiat import create_cg1, helmholtz_solve, construct_nd, construct_rt
+import os
 
 def dummy_dof_perms(cls, *args, **kwargs):
     # return -1s of right shape here
@@ -10,139 +11,107 @@ def dummy_dof_perms(cls, *args, **kwargs):
     for key1, val1 in oriented_mats_by_entity.items():
         for key2, val2 in oriented_mats_by_entity[key1].items():
             for key3, val3 in oriented_mats_by_entity[key1][key2].items():
-                oriented_mats_by_entity[key1][key2][key3] = 1 * np.identity(val3.shape[0])
-                oriented_mats_by_entity[key1][key2][key3][0] = key1*100 + key2*10 + key3 
+                if key1 == 2:
+                    oriented_mats_by_entity[key1][key2][key3] = 1 * np.identity(val3.shape[0])
+                    #oriented_mats_by_entity[key1][key2][key3][0] = key1*100 + key2*10 + key3 
+                    if key3 == 5:
+                        
+                        oriented_mats_by_entity[key1][key2][key3] = 100 * np.identity(val3.shape[0])
     return oriented_mats_by_entity, False, None
 
-def test_orientation_application_mocked():
-    deg = 1
-    with mock.patch.object(ElementTriple, 'make_dof_perms', new=dummy_dof_perms):
-        cell = polygon(3)
-        elem = create_cg1(cell)
-        mesh = UnitSquareMesh(1, 1)
 
-        V = FunctionSpace(mesh, elem.to_ufl())
-        u = TestFunction(V)
-        
-        f1 = Function(V)
-        x, y = SpatialCoordinate(mesh) 
-        f1.interpolate(x)
-        #res1 = assemble(u * dx)
-        #print(res1.dat.data)
-
-        V = FunctionSpace(mesh, "CG", 1)
-        u = TestFunction(V)
-        f = Function(V) 
-        x, y = SpatialCoordinate(mesh) 
-        f.interpolate(x)
-        print(f"f1, {f1.dat.data}")
-        print(f"f, {f.dat.data}")
-        #res2 = assemble(u * dx)
-        #print(res2.dat.data)
-        breakpoint()
-        assert np.allclose(res1.dat.data, res2.dat.data)
-
-def test_orientation_application():
-    deg = 1
-    cell = polygon(3)
-    elem = construct_nd(cell)
-    mesh = UnitSquareMesh(4, 4)
-    ones = as_vector((1,1))
-
-    V = FunctionSpace(mesh, elem.to_ufl())
-    u = TestFunction(V)
-    res1 = assemble(dot(u, ones) * dx)
-    print(res1.dat.data)
-
-    V = FunctionSpace(mesh, "N1curl", 2)
-    u = TestFunction(V)
-    res2 = assemble(dot(u, ones) * dx)
-    print(res2.dat.data)
-    assert np.allclose(res1.dat.data, res2.dat.data)
-
-
-
-def test_interpolation_const_fire():
-    print()
-    mesh = UnitSquareMesh(1, 1)
-    ones = as_vector((1,0))
-    V = FunctionSpace(mesh, "N1curl", 1)
-    u = TestFunction(V)
-    res2= assemble(interpolate(ones, V))
-    print(res2.dat.data)
-    print([n.pt_dict for n in V.finat_element.fiat_equivalent.dual_basis()])
-
-def test_interpolation_const_fuse():
+def test_interpolation_values():
     cell = polygon(3)
     elem = construct_nd(cell)
     print()
     #with mock.patch.object(ElementTriple, 'make_dof_perms', new=dummy_dof_perms):
-    mesh = UnitSquareMesh(1, 1)
-    ones = as_vector((1,0))
-    V = FunctionSpace(mesh, elem.to_ufl())
+    mesh = UnitSquareMesh(3, 3)
+    ones = as_vector((0,1))
+    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+        V = FunctionSpace(mesh, elem.to_ufl())
+    else:
+        V = FunctionSpace(mesh, "N1curl", 1)
+
+    print(V.cell_node_list)
     u = TestFunction(V)
     res1= assemble(interpolate(ones, V))
-    print(res1.dat.data)
-    print([n.pt_dict for n in V.finat_element.fiat_equivalent.dual_basis()])
-    breakpoint()
+    for i in range(len(res1.dat.data)):
+        print(f"{i}: {res1.dat.data[i]}")
 
 
-def test_surface_const_fuse():
+def test_surface_const_nd():
     cell = polygon(3)
     elem = construct_nd(cell)
+    ones = as_vector((0,1))
+
+    for n in range(1, 6):
+        mesh = UnitSquareMesh(n, n)
+        
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, elem.to_ufl())
+        else:
+            V = FunctionSpace(mesh, "N1curl", 1)
+        normal = FacetNormal(mesh)
+        ones1 = interpolate(ones, V)
+        res1= assemble(dot(ones1, normal) * ds)
+        
+        print(f"{n}: {res1}")
+        assert np.allclose(res1, 0)
+
+
+def test_surface_const_rt():
+    cell = polygon(3)
+    elem = construct_rt(cell)
     ones = as_vector((1,0))
 
     for n in range(1, 6):
         mesh = UnitSquareMesh(n, n)
         V = FunctionSpace(mesh, elem.to_ufl())
-        n = FacetNormal(mesh)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, elem.to_ufl())
+        else:
+            V = FunctionSpace(mesh, "RT", 1)
+        normal = FacetNormal(mesh)
         ones1 = interpolate(ones, V)
-        res1= assemble(dot(ones1, n) * ds)
+        res1= assemble(dot(ones1, normal) * ds)
         
         print(f"{n}: {res1}")
         assert np.allclose(res1, 0)
 
-def test_surface_const_fire():
+
+def test_surface_vec():
     cell = polygon(3)
-    elem = construct_nd(cell)
-    ones = as_vector((1,0))
+    rt_elem = construct_rt(cell)
+    nd_elem = construct_nd(cell)
 
     for n in range(1, 6):
-        mesh = UnitSquareMesh(n, n)
-        
-        V = FunctionSpace(mesh, "N1curl", 1)
-        n = FacetNormal(mesh)
-        ones2 = interpolate(ones, V)
-        res1= assemble(dot(ones2, n) * ds)
-        
-        print(f"{n}: {res1}")
-        assert np.allclose(res1, 0)
-
-
-def test_surface_y():
-    import os
-    import subprocess
-    cell = polygon(3)
-    elem = construct_nd(cell)
-    ones = as_vector((1,0))
-
-    for n in range(2, 6):
 
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
-        V = FunctionSpace(mesh, elem.to_ufl())
         normal = FacetNormal(mesh)
-        vec1 = interpolate(as_vector((y, 0)), V)
-        res1= assemble(dot(vec1, normal) * ds)
-
-        #V = FunctionSpace(mesh, "N1curl", 1)
-        #normal = FacetNormal(mesh)
-        #vec2 = interpolate(as_vector((y, 0)), V)
-        #res1 = assemble(dot(vec2, normal) * ds)
-        print(f"{n}: {res1}")
+        test_vec = as_vector((-y,x))
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, rt_elem.to_ufl())
+            vec1 = interpolate(test_vec, V)
+            res1 = assemble(dot(vec1, normal) * ds)
+        else:
+            V = FunctionSpace(mesh, "RT", 1)
+            vec2 = interpolate(test_vec, V)
+            res1 = assemble(dot(vec2, normal) * ds)
+        print(f"div {n}: {res1}")
         
-        #print(f"{n}: 1: {res1} 2: {res2}")
-        assert np.allclose(1/n, res2)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, nd_elem.to_ufl())
+            vec1 = interpolate(test_vec, V)
+            res2 = assemble(dot(vec1, normal) * ds)
+        else:
+            V = FunctionSpace(mesh, "N1curl", 1)
+            vec1 = interpolate(test_vec, V)
+            res2 = assemble(dot(vec1, normal) * ds)
+        print(f"curl {n}: {res2}")
+
+        assert np.allclose(0, res1)
+        assert np.allclose(0, res2)
 
 
 def test_interpolate_vs_project(V):
@@ -207,7 +176,7 @@ def construct_nd2(tri=None):
     return ned
 
 
-def test_n1():
+def test_degree2_interpolation():
     cell = polygon(3)
     #elem = construct_nd2(cell)
     mesh = UnitSquareMesh(1,1)

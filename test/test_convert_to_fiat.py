@@ -586,9 +586,8 @@ def test_project(elem_gen, elem_code, deg):
     assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    pytest.param(construct_nd, "N1curl", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 ND'),
-                                                    pytest.param(construct_rt, "RT", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 RT')])
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [pytest.param(construct_nd, "N1curl", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 ND')),
+                                                    pytest.param(construct_rt, "RT", 2, marks=pytest.mark.xfail(reason='Need to implement order 2 RT'))])
 def test_project_vec(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
