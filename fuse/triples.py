@@ -108,16 +108,14 @@ class ElementTriple():
         top = ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
         poly_set = self.spaces[0].to_ON_polynomial_set(ref_el)
+        #from FIAT.nedelec import Nedelec
+        #poly_set = Nedelec(ref_el, 2).poly_set
 
         for dim in sorted(top):
             entity_ids[dim] = {i: [] for i in top[dim]}
             entity_perms[dim] = {}
 
         entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
-        # if sort_entities:
-        #     # sort the entities by support vertex ids
-        # support = [sorted(top[dim][entity]) for dim, entity in entities]
-        # entities = [entity for verts, entity in sorted(zip(support, entities))]
         counter = 0
         for entity in entities:
             dim = entity[0]
@@ -128,9 +126,10 @@ class ElementTriple():
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        mat_perms = self.orient_mat_perms(mat_perms)
-        self.matrices = mat_perms
-        self.reverse_dof_perms()
+        if not pure_perm:
+            self.matrices = mat_perms
+            self.reverse_dof_perms()
+            self.orient_mat_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
@@ -390,6 +389,11 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1
+                            #warnings.warn("FUSE: should probably be using equivalent members of g in g1 for this") 
+                            #sub_mat = g.matrix_form()
+                            #oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            
+                            #raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
                             pass
 
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
@@ -420,36 +424,46 @@ class ElementTriple():
         for val, mat in oriented_mats_overall.items():
             cell_dofs = entity_ids[dim][0]
             flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])
-
         if pure_perm and sub_pure_perm:
             return oriented_mats_by_entity, flat_by_entity, True
         return oriented_mats_by_entity, None, False
 
-    def orient_mat_perms(self, mat_perms):
+    def orient_mat_perms(self):
         min_ids = self.cell.get_starter_ids()
         entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
         num_ents = 0
-        for dim in mat_perms.keys():
-            ents = self.cell.d_entities(dim)
-            for e in ents:
-                e_id = e.id - min_ids[dim]
-                if entity_orientations[num_ents + e_id] != 0:
-                    modifier = mat_perms[dim][e_id][entity_orientations[num_ents+e_id]]
-                    for val, mat in mat_perms[dim][e_id].items():
-                        mat_perms[dim][e_id][val] = np.matmul(modifier, mat)
-            num_ents += len(ents)
-        return mat_perms
-
-    def reverse_dof_perms(self):
-        min_ids = self.cell.get_starter_ids()
-        reversed_mats = self.matrices.copy()
         for dim in self.matrices.keys():
             ents = self.cell.d_entities(dim)
             for e in ents:
                 e_id = e.id - min_ids[dim]
                 members = e.group.members()
+                if entity_orientations[num_ents + e_id] != 0 and dim < self.cell.dim():
+                    modifier = self.matrices[dim][e_id][entity_orientations[num_ents+e_id]]
+                    reverse_modifier_val = (~e.group.get_member_by_val(entity_orientations[num_ents+e_id])).numeric_rep()
+                    reverse_modifier = self.matrices[dim][e_id][reverse_modifier_val]
+                    perms_copy = self.matrices[dim][e_id].copy()
+                    for val, mat in self.matrices[dim][e_id].items():
+                        perms_copy[val] = np.matmul(modifier, mat)
+                    self.matrices[dim][e_id] = perms_copy
+                    perms_copy = self.reversed_matrices[dim][e_id].copy()
+                    for val, mat in self.reversed_matrices[dim][e_id].items():
+                        perms_copy[val] = np.matmul(reverse_modifier, mat)
+                    self.reversed_matrices[dim][e_id] = perms_copy
+            num_ents += len(ents)
+
+    def reverse_dof_perms(self):
+        min_ids = self.cell.get_starter_ids()
+        reversed_mats = {}
+        for dim in self.matrices.keys():
+            reversed_mats[dim] = {}
+            ents = self.cell.d_entities(dim)
+            for e in ents:
+                e_id = e.id - min_ids[dim]
+                perms_copy = self.matrices[dim][e_id].copy()
+                members = e.group.members()
                 for m in members:
-                    reversed_mats[dim][e_id][m.numeric_rep()] = self.matrices[dim][e_id][(~m).numeric_rep()]
+                    perms_copy[m.numeric_rep()] = self.matrices[dim][e_id][(~m).numeric_rep()]
+                reversed_mats[dim][e_id] = perms_copy
         self.reversed_matrices = reversed_mats
 
     def _to_dict(self):

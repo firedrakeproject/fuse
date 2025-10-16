@@ -165,6 +165,14 @@ class PermutationSetRepresentation():
                 return m
         raise ValueError("Permutation not a member of group")
 
+
+    def get_member_by_val(self, val):
+        for m in self.members():
+            if m.numeric_rep() == val:
+                return m
+        
+        raise ValueError("Value does not represent a group member")
+
     def compute_num_reps(self, base_val=0):
         """ Compute the numerical represention of each member as compared to the identity.
         Where the numerical rep is:
@@ -277,6 +285,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             if m.perm == perm:
                 return m
         raise ValueError("Permutation not a member of group")
+    
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members
