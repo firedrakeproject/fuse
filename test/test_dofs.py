@@ -138,3 +138,38 @@ def test_permute_nodes():
     print([n.pt_dict for n in nodes])
     for g in cg1.cell.group.members():
         print(g, [d(g).convert_to_fiat(cell.to_fiat(), degree).pt_dict for d in cg1.generate()])
+
+def test_edge_parametrisation():
+    tri = polygon(3)
+    for i in tri.d_entities(1):
+        print(tri.generate_facet_parameterisation(i.id)) 
+    from fuse.dof import ParameterisationKernel
+
+    
+    deg = 2
+    edge = tri.edges()[0]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    xs = [DOF(L2Pairing(), ParameterisationKernel())]
+
+
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+
+
+    xs = [DOF(L2Pairing(), ComponentKernel((0,))),
+          DOF(L2Pairing(), ComponentKernel((1,)))]
+    center_dofs = DOFGenerator(xs, S1, S3)
+    xs  = [immerse(tri, int_ned1, TrHCurl)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    Pk = PolynomialSpace(deg - 1)
+    M = sp.Matrix([[y, -x]])
+    nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M 
+
+
+    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
+    for n in ned.generate():
+        print(n)

@@ -656,6 +656,29 @@ class Point():
             return "\n".join(tikz_commands)
         return tikz_commands
 
+
+    def generate_facet_parameterisation(self, facet_num):
+        #facet = self.d_entities(self.dimension - 1)[facet_num]
+        facet = self.get_node(facet_num)
+        facet_dim = facet.dimension
+        if facet_dim != self.dimension - 1:
+            raise ValueError(f"Supplied node {facet_num} is not a facet")
+        if facet_dim > 1:
+            raise NotImplementedError("Facet parameterisation is not implemented for dimensions greater than 1")
+        verts = facet.vertices()
+        v_coords = np.array([self.get_node(v.id, return_coords=True) for v in verts])
+        midpoint = np.average(v_coords, axis=0)
+        stacked = np.c_[np.ones((self.dimension,)), v_coords[:, 0].reshape(self.dimension,1)]
+        b = np.array([0, 1])
+        coeffs = np.linalg.solve(stacked, b)
+        
+        symbol_names = ["x", "y", "z"]
+        symbols = [1] + [sp.Symbol(symbol_names[d]) for d in range(facet_dim)]
+        res = 0
+        for d in range(facet_dim + 1):
+            res += coeffs[d] * symbols[d]
+        return res
+
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
         if self.dimension == 3:
@@ -766,6 +789,10 @@ class Point():
                     assert all(np.isclose(val, vals[0]).all() for val in vals)
 
         return lambda *x: fold_reduce(attachments[0], *x)
+    
+    
+    
+    
 
     def cell_attachment(self, dst):
         if not isinstance(dst, int):

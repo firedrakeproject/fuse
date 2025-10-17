@@ -9,12 +9,12 @@ import sympy as sp
 
 def perm_matrix_to_perm_array(p_mat):
     summed = np.sum(p_mat, axis=0)
-    if np.all(summed == np.zeros_like(summed)):
+    if np.allclose(summed, np.zeros_like(summed)):
         return list(np.zeros_like(summed))
-    assert np.all(summed == np.ones_like(summed))
+    assert np.allclose(summed, np.ones_like(summed))
     res = []
     for row in p_mat:
-        indices = list(row).index(1)
+        indices = list(np.isclose(row, 1)).index(True)
         res += [indices]
     return res
 

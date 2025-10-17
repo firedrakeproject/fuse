@@ -353,9 +353,10 @@ class ElementTriple():
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
-        if pure_perm is False:
+        #if pure_perm is False:
             # TODO think about where this call goes
-            return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+            #return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+        #    return self.matrices_by_entity, None, pure_perm
 
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
         # for each entity, look up generation on that entity and permute the
@@ -436,8 +437,8 @@ class ElementTriple():
             ents = self.cell.d_entities(dim)
             for e in ents:
                 e_id = e.id - min_ids[dim]
-                members = e.group.members()
-                if entity_orientations[num_ents + e_id] != 0 and dim < self.cell.dim():
+                members = e.group.members()#and dim < self.cell.dim()
+                if entity_orientations[num_ents + e_id] != 0 :
                     modifier = self.matrices[dim][e_id][entity_orientations[num_ents+e_id]]
                     reverse_modifier_val = (~e.group.get_member_by_val(entity_orientations[num_ents+e_id])).numeric_rep()
                     reverse_modifier = self.matrices[dim][e_id][reverse_modifier_val]

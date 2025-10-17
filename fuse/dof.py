@@ -152,7 +152,12 @@ class L2Pairing(Pairing):
 class BaseKernel():
 
     def __init__(self):
+        self.cell = None
+        self.entity = None
         self.attachment = False
+
+    def add_context(self, cell, entity):
+        return self
 
     def permute(self, g):
         raise NotImplementedError("This method should be implemented by the subclass")
@@ -219,9 +224,9 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() * interpolant_degree
 
     def permute(self, g):
-        return self
-        # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
-        # return PolynomialKernel(new_fn, symbols=self.syms)
+        return self 
+        #new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        #return PolynomialKernel(new_fn, symbols=self.syms)
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
@@ -230,9 +235,6 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def tabulate(self, Qpts, attachment=None):
-        # TODO do we need to attach qpts
-        # if attachment:
-        #     return np.array([self(*attachment(*pt)) for pt in Qpts]).astype(np.float64)
         return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -277,7 +279,58 @@ class ComponentKernel(BaseKernel):
     def _from_dict(obj_dict):
         return ComponentKernel(obj_dict["comp"])
 
+class ParameterisationKernel(BaseKernel):
 
+    def __init__(self, g=None):
+        self.g = g
+        self.fn = None
+        super(ParameterisationKernel, self).__init__()
+
+    def add_context(self, cell, entity, fn=None):
+        new_cls = ParameterisationKernel()
+        new_cls.cell = cell
+        new_cls.entity = entity
+        new_cls.fn = cell.generate_facet_parameterisation(entity.id)
+        return new_cls
+
+    def __repr__(self):
+        return f"[{self.comp}]" 
+
+    def degree(self, interpolant_degree):
+        return interpolant_degree
+
+    def permute(self, g):
+        new_cls = ParameterisationKernel(g)
+        if self.cell is not None:
+            new_cls.add_context(self.cell, self.entity)
+        return new_cls 
+
+    def __call__(self, *args):
+        if self.fn is None:
+            raise ArgumentError("Function not defined")
+
+        if self.g is not None:
+            self.fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+
+        res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
+        if not hasattr(res, '__iter__'):
+            return [res]
+        return res
+
+    def tabulate(self, Qpts, attachment=None):
+        
+        return np.array([1 for _ in Qpts]).astype(np.float64)
+        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+
+    def _to_dict(self):
+        o_dict = {"comp": self.comp}
+        return o_dict
+
+    def dict_id(self):
+        return "ParameterisationKernel"
+
+    def _from_dict(obj_dict):
+        return ParameterisationKernel(obj_dict["comp"])
 
 class DOF():
 
@@ -299,6 +352,8 @@ class DOF():
             self.generation = generation
         if entity is not None:
             self.pairing = self.pairing.add_entity(entity)
+        if self.trace_entity is not None and self.cell is not None:
+            self.kernel = kernel.add_context(cell, entity)
 
     def __call__(self, g):
         new_generation = self.generation.copy()
@@ -430,3 +485,5 @@ class FuseFunction():
 
     def dict_id(self):
         return "Function"
+
+
