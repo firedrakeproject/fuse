@@ -14,7 +14,8 @@ jobs:
     # Run on the Github hosted runner
     runs-on: ubuntu-latest
     container:
-      image: firedrakeproject/firedrake-vanilla-default:latest
+      #image: firedrakeproject/firedrake-vanilla-default:latest
+      image: firedrakeproject/firedrake-vanilla-default:dev-main
     # Steps represent a sequence of tasks that will be executed as
     # part of the jobs
     steps:
