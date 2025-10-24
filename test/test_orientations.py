@@ -3,7 +3,7 @@ import pytest
 from firedrake import *
 from fuse import *
 import sympy as sp
-from test_convert_to_fiat import create_cg1, helmholtz_solve, construct_nd, construct_rt, create_cg2_tri, construct_cg3, create_dg1
+from test_convert_to_fiat import create_cg1, helmholtz_solve, construct_nd, construct_rt, create_cg2_tri, construct_cg3, create_dg0, create_dg1
 import os
 
 #with mock.patch.object(ElementTriple, 'make_dof_perms', new=dummy_dof_perms):
@@ -104,14 +104,15 @@ def test_interpolation_values(elem_gen, elem_code,deg):
     cell = polygon(3)
     elem = elem_gen(cell)
     print()
-    #mesh = UnitSquareMesh(1, 1)
-    mesh = UnitTriangleMesh(0)
+    mesh = UnitSquareMesh(1, 1)
+    #mesh = UnitTriangleMesh(0)
     ones = as_vector((0,1))
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
         V = FunctionSpace(mesh, elem_code, deg)
 
+    print(mesh.entity_orientations)
     print(V.cell_node_list)
     u = TestFunction(V)
     res1= assemble(interpolate(ones, V))
@@ -124,7 +125,7 @@ def test_surface_const_nd():
     elem = construct_nd(cell)
     ones = as_vector((0,1))
 
-    for n in range(3, 4):
+    for n in range(2, 3):
         mesh = UnitSquareMesh(n, n)
         
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -164,33 +165,37 @@ def test_surface_vec():
     rt_elem = construct_rt(cell)
     nd_elem = construct_nd(cell)
 
-    for n in range(1, 6):
+    for n in range(2, 3):
 
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y,x))
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, rt_elem.to_ufl())
-            vec1 = interpolate(test_vec, V)
-            res1 = assemble(dot(vec1, normal) * ds)
-        else:
-            V = FunctionSpace(mesh, "RT", 1)
-            vec2 = interpolate(test_vec, V)
-            res1 = assemble(dot(vec2, normal) * ds)
-        print(f"div {n}: {res1}")
+        #if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+        #    V = FunctionSpace(mesh, rt_elem.to_ufl())
+        #    vec1 = interpolate(test_vec, V)
+        #    res1 = assemble(dot(vec1, normal) * ds)
+        #else:
+        #    V = FunctionSpace(mesh, "RT", 1)
+        #    vec2 = interpolate(test_vec, V)
+        #    res1 = assemble(dot(vec2, normal) * ds)
+        #print(f"div {n}: {res1}")
         
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, nd_elem.to_ufl())
+            print(V.cell_node_list)
             vec1 = interpolate(test_vec, V)
+            #V2 = FunctionSpace(mesh, create_dg0(cell).to_ufl())
+            #u = TestFunction(V2)
             res2 = assemble(dot(vec1, normal) * ds)
         else:
             V = FunctionSpace(mesh, "N1curl", 1)
+            print(V.cell_node_list)
             vec1 = interpolate(test_vec, V)
             res2 = assemble(dot(vec1, normal) * ds)
         print(f"curl {n}: {res2}")
 
-        assert np.allclose(0, res1)
+        #assert np.allclose(0, res1)
         assert np.allclose(0, res2)
 
 

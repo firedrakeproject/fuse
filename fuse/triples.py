@@ -108,8 +108,6 @@ class ElementTriple():
         top = ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
         poly_set = self.spaces[0].to_ON_polynomial_set(ref_el)
-        #from FIAT.nedelec import Nedelec
-        #poly_set = Nedelec(ref_el, 2).poly_set
 
         for dim in sorted(top):
             entity_ids[dim] = {i: [] for i in top[dim]}
@@ -129,7 +127,7 @@ class ElementTriple():
         if not pure_perm:
             self.matrices = mat_perms
             self.reverse_dof_perms()
-            self.orient_mat_perms()
+            #self.orient_mat_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
