@@ -116,3 +116,22 @@ def test_quad_mesh_helmholtz():
     conv = np.log2(res[:-1] / res[1:])
     print("convergence order:", conv)
     assert (np.array(conv) > 1.8).all()
+
+
+def test_tensor_prod_paper_example():
+    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    vert = edge.vertices()[0]
+    P1 = PolynomialSpace(2)
+    P2 = PolynomialSpace(2)
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+
+    verts = [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)]
+    center = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)]
+    
+    cg1 = ElementTriple(edge, (P1, CellH1, C0), verts)
+    cg2 = ElementTriple(edge, (P2, CellH1, C0), verts + center)
+
+    elem = tensor_product(cg1, cg2)
+    elem.generate()

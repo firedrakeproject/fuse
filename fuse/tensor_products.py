@@ -18,7 +18,7 @@ class TensorProductTriple(ElementTriple):
         for (a, b) in zip(self.A.spaces, self.B.spaces):
             self.spaces.append(a if a >= b else b)
 
-        self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
+        self.DOFGenerator = A.DOFGenerator  + B.DOFGenerator
         self.cell = TensorProductPoint(A.cell, B.cell)
         self.flat = flat
 
