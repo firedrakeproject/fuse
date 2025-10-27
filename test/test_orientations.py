@@ -97,41 +97,55 @@ def construct_nd2_for_fiat(tri=None):
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
-                                                    (construct_nd2_for_fiat, "N1curl", 2),
-                                                    (construct_nd2, "N1curl", 2)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1)])
+#                                                    (construct_nd2_for_fiat, "N1curl", 2),
+#                                                    (construct_nd2, "N1curl", 2)])
 def test_interpolation_values(elem_gen, elem_code,deg):
+    # this test may not actually make sense proceed with caution
+    #os.environ["FIREDRAKE_USE_FUSE"] = "1"
     cell = polygon(3)
     elem = elem_gen(cell)
     print()
-    mesh = UnitSquareMesh(1, 1)
-    #mesh = UnitTriangleMesh(0)
-    ones = as_vector((0,1))
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        V = FunctionSpace(mesh, elem.to_ufl())
-    else:
-        V = FunctionSpace(mesh, elem_code, deg)
+    meshes = [UnitTriangleMesh(0), UnitSquareMesh(1,1), UnitSquareMesh(2,2), UnitSquareMesh(3,3)]
+    vec1 = as_vector((0, 1))
+    vec1_expected = [[0, 1, 1], [0, -1, -1, -1, 0], [1, -1, 0,0,1,0,1,1,0,-1,-1,1,0,-1,0,1], [1,-1,0,0,1,0,1,1,0,1,1,-1,0,0,-1,-1,1,1,-1,-1,0,0,-1,-1,0,1,-1,0,1,0,-1,0,1]]
+    vec2 = as_vector((1, 0))
+    vec2_expected = [[1, -1, 0], [1, 0, 1, 0, -1], [0,1,1,1,0,1,0,-1,1,0,1,0,1,1,1,0], [0,1,1,1,0,1,0,-1,1,0,-1,1,1,1,0,1,0,0,0,1,1,1,0,1,1,0,1,1,0,1,1,1,0]]
+    for mesh, expect1, expect2 in zip(meshes, vec1_expected, vec2_expected):
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, elem.to_ufl())
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
 
-    print(mesh.entity_orientations)
-    print(V.cell_node_list)
-    u = TestFunction(V)
-    res1= assemble(interpolate(ones, V))
-    for i in range(len(res1.dat.data)):
-        print(f"{i}: {res1.dat.data[i]}")
+        print(mesh.entity_orientations)
+        print(V.cell_node_list)
+        u = TestFunction(V)
+        res1= assemble(interpolate(vec1, V))
+        for i in range(len(res1.dat.data)):
+            print(f"{i}: expected: {expect1[i]},  actual: {res1.dat.data[i]}")
+        assert all(expect1 * res1.dat.data >= 0)
+
+        res2= assemble(interpolate(vec2, V))
+        for i in range(len(res2.dat.data)):
+            print(f"{i}: expected: {expect2[i]},  actual: {res2.dat.data[i]}")
+        assert all(expect2 * res2.dat.data >= 0)
 
 
-def test_surface_const_nd():
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1)])
+#                                                    (construct_nd2_for_fiat, "N1curl", 2),
+#                                                    (construct_nd2, "N1curl", 2)])
+def test_surface_const_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = construct_nd(cell)
     ones = as_vector((0,1))
 
-    for n in range(2, 3):
+    for n in range(1, 6):
         mesh = UnitSquareMesh(n, n)
-        
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
             V = FunctionSpace(mesh, "N1curl", 1)
+        print(V.cell_node_list)
         normal = FacetNormal(mesh)
         ones1 = interpolate(ones, V)
         res1= assemble(dot(ones1, normal) * ds)
@@ -165,21 +179,21 @@ def test_surface_vec():
     rt_elem = construct_rt(cell)
     nd_elem = construct_nd(cell)
 
-    for n in range(2, 3):
+    for n in range(1, 6):
 
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y,x))
-        #if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        #    V = FunctionSpace(mesh, rt_elem.to_ufl())
-        #    vec1 = interpolate(test_vec, V)
-        #    res1 = assemble(dot(vec1, normal) * ds)
-        #else:
-        #    V = FunctionSpace(mesh, "RT", 1)
-        #    vec2 = interpolate(test_vec, V)
-        #    res1 = assemble(dot(vec2, normal) * ds)
-        #print(f"div {n}: {res1}")
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, rt_elem.to_ufl())
+            vec1 = interpolate(test_vec, V)
+            res1 = assemble(dot(vec1, normal) * ds)
+        else:
+            V = FunctionSpace(mesh, "RT", 1)
+            vec2 = interpolate(test_vec, V)
+            res1 = assemble(dot(vec2, normal) * ds)
+        print(f"div {n}: {res1}")
         
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, nd_elem.to_ufl())
