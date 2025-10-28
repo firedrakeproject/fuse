@@ -17,7 +17,8 @@ def fold_reduce(func_list, *prev):
 
 def sympy_to_numpy(array, symbols, values):
     """
-    Convert a sympy array to a numpy array.
+    TODO: rename this function
+    Evaluate symbols at values, then convert to numpy if all have been replaced
 
     :param: array: sympy array
     :param: symbols: array of symbols contained in the sympy exprs
@@ -27,13 +28,17 @@ def sympy_to_numpy(array, symbols, values):
     is greater than 1 dimension to remove extra dimensions
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
-    nparray = np.array(substituted).astype(np.float64)
 
-    if len(nparray.shape) > 1:
-        return nparray.squeeze()
+    if len(array.atoms(sp.Symbol)) == len(values) and all(not isinstance(v, sp.Expr) for v in values):
+        nparray = np.array(substituted).astype(np.float64)
 
-    if len(nparray.shape) == 0:
-        return nparray.item()
+        if len(nparray.shape) > 1:
+            return nparray.squeeze()
+    
+        if len(nparray.shape) == 0:
+            return nparray.item()
+    else:
+        nparray = substituted
 
     return nparray
 

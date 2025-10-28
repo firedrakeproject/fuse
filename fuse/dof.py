@@ -106,6 +106,8 @@ class L2Pairing(Pairing):
     def permute(self, g):
         if g.perm.is_Identity:
             return self
+        if self.orientation is not None:
+            g = self.orientation * g
 
         res = L2Pairing()
         if self.entity:
@@ -284,53 +286,62 @@ class ParameterisationKernel(BaseKernel):
     def __init__(self, g=None):
         self.g = g
         self.fn = None
+        self.syms = None
         super(ParameterisationKernel, self).__init__()
 
-    def add_context(self, cell, entity, fn=None):
-        new_cls = ParameterisationKernel()
-        new_cls.cell = cell
-        new_cls.entity = entity
-        new_cls.fn = cell.generate_facet_parameterisation(entity.id)
+    def add_context(self, fn=None, syms=None):
+        new_cls = ParameterisationKernel(self.g)
+        new_cls.fn = fn 
+        new_cls.syms = syms
         return new_cls
 
     def __repr__(self):
-        return f"[{self.comp}]" 
+        if self.g is None or self.g.perm.array_form == [0, 1]:
+            fn = self.fn
+        elif self.g.perm.array_form == [1, 0]:
+            fn = 1 - self.fn
+        else:
+            raise NotImplementedError("Cannot parameterise over non-edge subentities.")
+        return str(fn)
 
     def degree(self, interpolant_degree):
         return interpolant_degree
 
     def permute(self, g):
+        if self.g:
+            g = self.g * g
         new_cls = ParameterisationKernel(g)
-        if self.cell is not None:
-            new_cls.add_context(self.cell, self.entity)
-        return new_cls 
+        return new_cls.add_context(self.fn, self.syms)
 
     def __call__(self, *args):
         if self.fn is None:
-            raise ArgumentError("Function not defined")
+            raise ValueError("Function not defined")
 
-        if self.g is not None:
-            self.fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        if self.g.perm.array_form == [1, 0]:
+            fn = 1 - self.fn
+        elif self.g.perm.array_form == [0, 1]:
+            fn = self.fn
+        else:
+            raise NotImplementedError("Cannot parameterise over non-edge subentities.")
 
-        res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
+        res = sympy_to_numpy(fn, self.syms, args[:len(self.syms)])
         if not hasattr(res, '__iter__'):
-            return [res]
+            res = [res]
+        #res = np.ones_like(res)
         return res
 
     def tabulate(self, Qpts, attachment=None):
-        
-        return np.array([1 for _ in Qpts]).astype(np.float64)
         return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
-        o_dict = {"comp": self.comp}
+        o_dict = {"fn": self.fn}
         return o_dict
 
     def dict_id(self):
         return "ParameterisationKernel"
 
     def _from_dict(obj_dict):
-        return ParameterisationKernel(obj_dict["comp"])
+        return ParameterisationKernel(obj_dict["fn"])
 
 class DOF():
 
@@ -352,8 +363,6 @@ class DOF():
             self.generation = generation
         if entity is not None:
             self.pairing = self.pairing.add_entity(entity)
-        if self.trace_entity is not None and self.cell is not None:
-            self.kernel = kernel.add_context(cell, entity)
 
     def __call__(self, g):
         new_generation = self.generation.copy()
@@ -378,6 +387,11 @@ class DOF():
             self.id = overall_id
         if self.sub_id is None and generator_id is not None:
             self.sub_id = generator_id
+
+        if self.immersed and isinstance(self.kernel, ParameterisationKernel):
+            fn, syms =  self.cell.generate_facet_parameterisation(self.trace_entity.id)
+            self.kernel = self.kernel.add_context(fn, syms)
+
 
     def convert_to_fiat(self, ref_el, interpolant_degree):
         return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
@@ -417,7 +431,7 @@ class ImmersedDOF(DOF):
         return self.pairing(self.kernel, attached_fn, self.cell)
 
     def tabulate(self, Qpts):
-        immersion = self.target_space.tabulate(Qpts, self.trace_entity, self.g)
+        immersion = self.target_space.tabulate(Qpts, self.pairing.entity, self.g)
         res = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
 
@@ -425,6 +439,9 @@ class ImmersedDOF(DOF):
         index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
         permuted_e, permuted_g = self.cell.permute_entities(g, self.trace_entity.dim())[index_trace]
         new_trace_entity = self.cell.get_node(permuted_e).orient(permuted_g)
+        if self.immersed and isinstance(self.kernel, ParameterisationKernel):
+            fn, syms =  self.cell.generate_facet_parameterisation(new_trace_entity.id)
+            self.kernel = self.kernel.add_context(fn, syms)
         new_attach = lambda *x: g(self.attachment(*x))
         return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_trace_entity,
                            new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)

@@ -29,13 +29,10 @@ def construct_nd2(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    #xs = [DOF(L2Pairing(), PolynomialKernel((x + 1)/2, symbols=[x])),
-    #      DOF(L2Pairing(), PolynomialKernel(1))]
-    xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
-          DOF(L2Pairing(), PolynomialKernel((-np.sqrt(2)/np.sqrt(3))*(6*x + 3), symbols=[x]))]
+    xs = [DOF(L2Pairing(), ParameterisationKernel())]
 
 
-    dofs = DOFGenerator(xs, S1, S2)
+    dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
 
 
@@ -49,7 +46,6 @@ def construct_nd2(tri=None):
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M 
-    print(nd.degree())
 
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
@@ -97,54 +93,20 @@ def construct_nd2_for_fiat(tri=None):
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1)])
-#                                                    (construct_nd2_for_fiat, "N1curl", 2),
-#                                                    (construct_nd2, "N1curl", 2)])
-def test_interpolation_values(elem_gen, elem_code,deg):
-    # this test may not actually make sense proceed with caution
-    #os.environ["FIREDRAKE_USE_FUSE"] = "1"
-    cell = polygon(3)
-    elem = elem_gen(cell)
-    print()
-    meshes = [UnitTriangleMesh(0), UnitSquareMesh(1,1), UnitSquareMesh(2,2), UnitSquareMesh(3,3)]
-    vec1 = as_vector((0, 1))
-    vec1_expected = [[0, 1, 1], [0, -1, -1, -1, 0], [1, -1, 0,0,1,0,1,1,0,-1,-1,1,0,-1,0,1], [1,-1,0,0,1,0,1,1,0,1,1,-1,0,0,-1,-1,1,1,-1,-1,0,0,-1,-1,0,1,-1,0,1,0,-1,0,1]]
-    vec2 = as_vector((1, 0))
-    vec2_expected = [[1, -1, 0], [1, 0, 1, 0, -1], [0,1,1,1,0,1,0,-1,1,0,1,0,1,1,1,0], [0,1,1,1,0,1,0,-1,1,0,-1,1,1,1,0,1,0,0,0,1,1,1,0,1,1,0,1,1,0,1,1,1,0]]
-    for mesh, expect1, expect2 in zip(meshes, vec1_expected, vec2_expected):
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-
-        print(mesh.entity_orientations)
-        print(V.cell_node_list)
-        u = TestFunction(V)
-        res1= assemble(interpolate(vec1, V))
-        for i in range(len(res1.dat.data)):
-            print(f"{i}: expected: {expect1[i]},  actual: {res1.dat.data[i]}")
-        assert all(expect1 * res1.dat.data >= 0)
-
-        res2= assemble(interpolate(vec2, V))
-        for i in range(len(res2.dat.data)):
-            print(f"{i}: expected: {expect2[i]},  actual: {res2.dat.data[i]}")
-        assert all(expect2 * res2.dat.data >= 0)
-
-
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1)])
-#                                                    (construct_nd2_for_fiat, "N1curl", 2),
-#                                                    (construct_nd2, "N1curl", 2)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
+                                                    (construct_nd2_for_fiat, "N1curl", 2),
+                                                    (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
-    elem = construct_nd(cell)
+    elem = elem_gen(cell)
     ones = as_vector((0,1))
 
-    for n in range(1, 6):
+    for n in range(1, 2):
         mesh = UnitSquareMesh(n, n)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
-            V = FunctionSpace(mesh, "N1curl", 1)
+            V = FunctionSpace(mesh, elem_code, deg)
         print(V.cell_node_list)
         normal = FacetNormal(mesh)
         ones1 = interpolate(ones, V)
@@ -274,7 +236,6 @@ def test_interpolation(elem_gen, elem_code, deg):
 def test_create_fiat_nd():
     cell = polygon(3)
     nd = construct_nd2(cell)
-    breakpoint()
     nd_fv = construct_nd2_for_fiat(cell)
     ref_el = cell.to_fiat()
     sd = ref_el.get_spatial_dimension()
@@ -291,12 +252,22 @@ def test_create_fiat_nd():
         print(d.convert_to_fiat(ref_el, deg).pt_dict)
 
     print("fuse")
-    for d in nd.generate():
-        print(d.convert_to_fiat(ref_el, deg).pt_dict)
-        #print(d)
+    dofs = nd.generate()
+    e = cell.edges()[0]
+    g = S3.add_cell(cell).members()[2]
+    print(g)
+    nodes = [d.convert_to_fiat(ref_el, deg) for d in dofs]
+    new_nodes = [d(g).convert_to_fiat(ref_el, deg) if d.trace_entity == e else d.convert_to_fiat(ref_el, deg) for d in dofs]
+    for i in range(len(new_nodes)):
+        print(f"{dofs[i]}: {nodes[i].pt_dict}")
+        print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+        #for g in S2.add_cell(cell).members():
+        #    print(d(g))
+        #    print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
+        print()
     my_elem = nd.to_fiat()
-    my_elem = nd_fv.to_fiat()
-    breakpoint()
+    #my_elem = nd_fv.to_fiat()
+    #breakpoint()
 
 
 

@@ -677,7 +677,8 @@ class Point():
         res = 0
         for d in range(facet_dim + 1):
             res += coeffs[d] * symbols[d]
-        return res
+        return res, symbols[1:]
+
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
@@ -865,10 +866,7 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    if len(attach_comp.atoms(sp.Symbol)) == len(x):
-                        res.append(sympy_to_numpy(attach_comp, syms, x))
-                    else:
-                        res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
+                    res.append(sympy_to_numpy(attach_comp, syms, x))
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x

@@ -127,7 +127,6 @@ class ElementTriple():
         if not pure_perm:
             self.matrices = mat_perms
             self.reverse_dof_perms()
-            #self.orient_mat_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
