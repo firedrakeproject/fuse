@@ -173,3 +173,11 @@ def test_edge_parametrisation():
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     for n in ned.generate():
         print(n)
+    
+    from test_orientations import construct_nd2_for_fiat
+
+    ned_fiat = construct_nd2_for_fiat(tri)
+
+    print("fiat")
+    for n in ned_fiat.generate():
+        print(n)

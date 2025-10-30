@@ -9,17 +9,14 @@ import os
 #with mock.patch.object(ElementTriple, 'make_dof_perms', new=dummy_dof_perms):
 def dummy_dof_perms(cls, *args, **kwargs):
     # return -1s of right shape here
-    oriented_mats_by_entity, flat_by_entity = cls._initialise_entity_dicts(cls.generate())
-    for key1, val1 in oriented_mats_by_entity.items():
-        for key2, val2 in oriented_mats_by_entity[key1].items():
-            for key3, val3 in oriented_mats_by_entity[key1][key2].items():
-                if key1 == 2:
-                    oriented_mats_by_entity[key1][key2][key3] = 1 * np.identity(val3.shape[0])
-                    #oriented_mats_by_entity[key1][key2][key3][0] = key1*100 + key2*10 + key3 
-                    if key3 == 5:
-                        
-                        oriented_mats_by_entity[key1][key2][key3] = 100 * np.identity(val3.shape[0])
-    return oriented_mats_by_entity, False, None
+    #oriented_mats_by_entity, flat_by_entity = cls._initialise_entity_dicts(cls.generate())
+    oriented_mats_by_entity = cls.make_entity_dense_matrices(*args)
+    #for key1, val1 in oriented_mats_by_entity.items():
+    #    for key2, val2 in oriented_mats_by_entity[key1].items():
+    #        for key3, val3 in oriented_mats_by_entity[key1][key2].items():
+    #            if key1 == 1 and key3 == 1:
+    #                oriented_mats_by_entity[key1][key2][key3] = np.array([[0, 1],[1,0]]) 
+    return oriented_mats_by_entity
 
 def construct_nd2(tri=None):
     if tri is None:
@@ -97,23 +94,25 @@ def construct_nd2_for_fiat(tri=None):
                                                     (construct_nd2_for_fiat, "N1curl", 2),
                                                     (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
-    cell = polygon(3)
-    elem = elem_gen(cell)
-    ones = as_vector((0,1))
+    
+    with mock.patch.object(ElementTriple, 'dummy_function', new=dummy_dof_perms):
+        cell = polygon(3)
+        elem = elem_gen(cell)
+        ones = as_vector((0,1))
 
-    for n in range(1, 2):
-        mesh = UnitSquareMesh(n, n)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-        print(V.cell_node_list)
-        normal = FacetNormal(mesh)
-        ones1 = interpolate(ones, V)
-        res1= assemble(dot(ones1, normal) * ds)
-        
-        print(f"{n}: {res1}")
-        assert np.allclose(res1, 0)
+        for n in range(2, 3):
+            mesh = UnitSquareMesh(n, n)
+            if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+                V = FunctionSpace(mesh, elem.to_ufl())
+            else:
+                V = FunctionSpace(mesh, elem_code, deg)
+            print(V.cell_node_list)
+            normal = FacetNormal(mesh)
+            ones1 = interpolate(ones, V)
+            res1= assemble(dot(ones1, normal) * ds)
+            
+            print(f"{n}: {res1}")
+            assert np.allclose(res1, 0)
 
 
 def test_surface_const_rt():

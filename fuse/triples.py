@@ -123,6 +123,7 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
+        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set) # TODO remove
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         if not pure_perm:
             self.matrices = mat_perms
@@ -135,6 +136,9 @@ class ElementTriple():
         else:
             dual = DualSet(nodes, ref_el, entity_ids)
         return CiarletElement(poly_set, dual, degree, form_degree)
+
+    def dummy_function(self, ref_el, entity_ids, nodes, poly_set):
+        return self.matrices_by_entity
 
     def to_tikz(self, show=True, scale=3):
         """Generates tikz code for the element diagram
@@ -273,6 +277,8 @@ class ElementTriple():
                         new_nodes = [d(g).convert_to_fiat(ref_el, degree) if d.trace_entity == e else d.convert_to_fiat(ref_el, degree) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
+                #if dim == 1 and permuted_g.perm.array_form == [1,0]:
+                #    breakpoint()
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):

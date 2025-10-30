@@ -106,12 +106,12 @@ class L2Pairing(Pairing):
     def permute(self, g):
         if g.perm.is_Identity:
             return self
-        if self.orientation is not None:
-            g = self.orientation * g
 
         res = L2Pairing()
         if self.entity:
             res.entity = self.entity.orient(g)
+        #if self.orientation is not None:
+        #    g = self.orientation * g
         res.orientation = g
         return res
 
@@ -140,6 +140,8 @@ class L2Pairing(Pairing):
         return functional
 
     def __repr__(self):
+        if self.orientation is not None:
+            return "integral_{}({})({{kernel}} * {{fn}}) dx) ".format(str(self.orientation), str(self.entity))
         return "integral_{}({{kernel}} * {{fn}}) dx) ".format(str(self.entity))
 
     def dict_id(self):
@@ -431,6 +433,7 @@ class ImmersedDOF(DOF):
         return self.pairing(self.kernel, attached_fn, self.cell)
 
     def tabulate(self, Qpts):
+        # modify this to take reference space q pts
         immersion = self.target_space.tabulate(Qpts, self.pairing.entity, self.g)
         res = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
