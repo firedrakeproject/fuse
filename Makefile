@@ -19,12 +19,12 @@ lint:
 
 test_examples:
 	@echo "    Running examples"
-	@python3 -m pytest test/test_2d_examples_docs.py
-	@python3 -m pytest test/test_3d_examples_docs.py
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_2d_examples_docs.py
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_3d_examples_docs.py
 
 tests:
 	@echo "    Running all tests"
-	@python3 -m coverage run -p -m pytest -rx test
+	@FIREDRAKE_USE_FUSE=1 python3 -m coverage run -p -m pytest -rx test
 
 coverage:
 	@python3 -m coverage combine
@@ -34,9 +34,9 @@ coverage:
 test_cells:
 	@echo "    Running all cell comparison tests"
 	@firedrake-clean
-	@python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect0]
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect0]
 	@firedrake-clean
-	@python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect1]
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect1]
 
 clean:
 	@(cd docs/ && make clean)
