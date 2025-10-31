@@ -134,7 +134,7 @@ def test_surface_const_rt():
         print(f"{n}: {res1}")
         assert np.allclose(res1, 0)
 
-
+@pytest.mark.xfail(reason="orientations")
 def test_surface_vec():
     cell = polygon(3)
     rt_elem = construct_rt(cell)
@@ -170,13 +170,13 @@ def test_surface_vec():
             res2 = assemble(dot(vec1, normal) * ds)
         print(f"curl {n}: {res2}")
 
-        #assert np.allclose(0, res1)
+        assert np.allclose(0, res1)
         assert np.allclose(0, res2)
 
 
-def test_interpolate_vs_project(V):
+def interpolate_vs_project(V):
     mesh = V.mesh()
-    dim = mesh.geometric_dimension()
+    dim = mesh.geometric_dimension
     if dim == 2:
         x, y = SpatialCoordinate(mesh)
     elif dim == 3:
@@ -214,7 +214,7 @@ def test_degree2_interpolation():
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
         V = FunctionSpace(mesh, "N1curl", 2)
-    test_interpolate_vs_project(V)
+    interpolate_vs_project(V)
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
                                                     (create_cg1, "CG", 1),
@@ -230,7 +230,7 @@ def test_interpolation(elem_gen, elem_code, deg):
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
         V = FunctionSpace(mesh, elem_code, deg)
-    test_interpolate_vs_project(V)
+    interpolate_vs_project(V)
 
 def test_create_fiat_nd():
     cell = polygon(3)

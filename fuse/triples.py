@@ -128,6 +128,8 @@ class ElementTriple():
         if not pure_perm:
             self.matrices = mat_perms
             self.reverse_dof_perms()
+        else:
+            self.matrices = entity_perms
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
@@ -378,8 +380,9 @@ class ElementTriple():
                         # (dof_gen, ent_dofs)
                         total_ent_dof_ids += [ed.id for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         dof_gen_class = ent_dofs[0].generation
-                        if not len(dof_gen_class[dim].g2.members()) == 1:
+                        if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
+                            # only get this if they are defined on the current dimension
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = self.matrices_by_entity[dim][e_id][val]
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
@@ -393,7 +396,7 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1
-                            #warnings.warn("FUSE: should probably be using equivalent members of g in g1 for this") 
+                            warnings.warn("FUSE: orientation case not covered") 
                             #sub_mat = g.matrix_form()
                             #oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                             
