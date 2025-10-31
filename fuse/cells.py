@@ -1074,7 +1074,7 @@ class CellComplexToUFL(Cell):
         super(CellComplexToUFL, self).__init__(name)
 
     def to_fiat(self):
-        return self.cell_complex.to_fiat(name=self.cellname())
+        return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
         return super(CellComplexToUFL, self).__repr__()

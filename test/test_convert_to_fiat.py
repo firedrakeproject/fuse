@@ -470,7 +470,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
 def helmholtz_solve(V, mesh):
     # Define variational problem
-    dim = mesh.ufl_cell().topological_dimension()
+    dim = mesh.ufl_cell().topological_dimension
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
