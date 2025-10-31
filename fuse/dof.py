@@ -40,6 +40,9 @@ class DeltaPairing(Pairing):
         # pt1 = dof.tabulate([[1]])
         return PointEvaluation(ref_el, pt)
         # return PointEvaluation(ref_el, tuple(pt1[0]))
+    
+    def to_quadrature(pts, wts):
+        return pts, np.ones_like(wts)
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -139,6 +142,12 @@ class L2Pairing(Pairing):
             functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
+    def to_quadrature(self, pts, wts):
+        target_cell = self.cell.to_fiat()
+        source_cell = self.entity.to_fiat()
+
+        #need to compute jacobian from attachmenet. 
+        # should that be here>
     def __repr__(self):
         if self.orientation is not None:
             return "integral_{}({})({{kernel}} * {{fn}}) dx) ".format(str(self.orientation), str(self.entity))
@@ -194,10 +203,8 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def tabulate(self, Qpts, attachment=None):
-        #if attachment:
-        #    return np.array([attachment(*self.pt) for _ in Qpts]).astype(np.float64)
-        return np.array([self.pt for _ in Qpts]).astype(np.float64)
+    def evaluate(self, Qpts, Qwts):
+        return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts)
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -238,8 +245,8 @@ class PolynomialKernel(BaseKernel):
             return [res]
         return res
 
-    def tabulate(self, Qpts, attachment=None):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+    def evaluate(self, Qpts, Qwts):
+        return np.array([self(*pt) for pt in Qpts]).astype(np.float64), Qwts
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -269,8 +276,8 @@ class ComponentKernel(BaseKernel):
     def __call__(self, *args):
         return args[self.comp]
 
-    def tabulate(self, Qpts, attachment=None):
-        return np.array([1 for _ in Qpts]).astype(np.float64)
+    def evaluate(self, Qpts, Qwts):
+        return np.array([1 for _ in Qpts]).astype(np.float64), np.ones_like(Qwts)
         #return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
@@ -332,8 +339,8 @@ class ParameterisationKernel(BaseKernel):
         #res = np.ones_like(res)
         return res
 
-    def tabulate(self, Qpts, attachment=None):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+    def evaluate(self, Qpts, Qwts):
+        return np.array([self(*pt) for pt in Qpts]).astype(np.float64), Qwts
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -351,7 +358,8 @@ class DOF():
         self.pairing = pairing
         self.kernel = kernel
         self.immersed = immersed
-        self.trace_entity = entity
+        #self.trace_entity = entity
+        self.cell_defined_on = entity
         self.attachment = attachment
         self.target_space = target_space
         self.g = g
@@ -368,7 +376,7 @@ class DOF():
 
     def __call__(self, g):
         new_generation = self.generation.copy()
-        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.trace_entity, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
+        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
 
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
@@ -380,8 +388,9 @@ class DOF():
         # For some of these, we only want to store the first instance of each
         self.generation[cell.dim()] = dof_gen
         self.cell = cell
-        if self.trace_entity is None:
+        if self.cell_defined_on is None:
             self.trace_entity = cell
+            self.cell_defined_on = cell
             self.pairing = self.pairing.add_entity(cell)
         if self.target_space is None:
             self.target_space = space
@@ -391,12 +400,23 @@ class DOF():
             self.sub_id = generator_id
 
         if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-            fn, syms =  self.cell.generate_facet_parameterisation(self.trace_entity.id)
+            fn, syms =  self.cell.generate_facet_parameterisation(self.cell_defined_on.id)
             self.kernel = self.kernel.add_context(fn, syms)
 
 
     def convert_to_fiat(self, ref_el, interpolant_degree):
         return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
+    
+    def to_quadrature(self, arg_degree):
+        pts, wts = self.cell_defined_on.quadrature(arg_degree)
+        res, wts = self.kernel.evaluate(pts, wts)
+        if self.immersed:
+            res = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in res]
+            immersion = self.target_space.tabulate(pts, self.pairing.entity, self.g)
+            res = immersion * res
+        # pt dict is { pt: (weight, component)}
+        pt_dict = { tuple(pt): [(wt, tuple())] for pt, wt in zip(res, wts)}
+        return pt_dict
 
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)
@@ -428,7 +448,7 @@ class ImmersedDOF(DOF):
         attached_fn = fn.attach(self.attachment)
 
         if pullback:
-            attached_fn = self.target_space(attached_fn, self.trace_entity, self.g)
+            attached_fn = self.target_space(attached_fn, self.cell_defined_on, self.g)
 
         return self.pairing(self.kernel, attached_fn, self.cell)
 
@@ -439,18 +459,18 @@ class ImmersedDOF(DOF):
         return immersion*res
 
     def __call__(self, g):
-        index_trace = self.cell.d_entities_ids(self.trace_entity.dim()).index(self.trace_entity.id)
-        permuted_e, permuted_g = self.cell.permute_entities(g, self.trace_entity.dim())[index_trace]
-        new_trace_entity = self.cell.get_node(permuted_e).orient(permuted_g)
+        index_trace = self.cell.d_entities_ids(self.cell_defined_on.dim()).index(self.cell_defined_on.id)
+        permuted_e, permuted_g = self.cell.permute_entities(g, self.cell_defined_on.dim())[index_trace]
+        new_cell_defined_on = self.cell.get_node(permuted_e).orient(permuted_g)
         if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-            fn, syms =  self.cell.generate_facet_parameterisation(new_trace_entity.id)
+            fn, syms =  self.cell.generate_facet_parameterisation(new_cell_defined_on.id)
             self.kernel = self.kernel.add_context(fn, syms)
         new_attach = lambda *x: g(self.attachment(*x))
-        return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_trace_entity,
+        return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_cell_defined_on,
                            new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
 
     def __repr__(self):
-        fn = "tr_{1}_{0}(v)".format(str(self.trace_entity), str(self.target_space))
+        fn = "tr_{1}_{0}(v)".format(str(self.cell_defined_on), str(self.target_space))
         return super(ImmersedDOF, self).__repr__(fn)
 
     def immerse(self, entity, attachment, trace, g):

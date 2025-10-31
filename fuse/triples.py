@@ -77,16 +77,16 @@ class ElementTriple():
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
                    True: {0: "blue", 1: "red", 2: "green", 3: "black"}}
-        if dof.trace_entity.dimension == 0:
-            center = self.cell.cell_attachment(dof.trace_entity.id)()
-        elif dof.trace_entity.dimension == 1:
-            center = self.cell.cell_attachment(dof.trace_entity.id)(0)
-        elif dof.trace_entity.dimension == 2:
-            center = self.cell.cell_attachment(dof.trace_entity.id)(0, 0)
+        if dof.cell_defined_on.dimension == 0:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)()
+        elif dof.cell_defined_on.dimension == 1:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)(0)
+        elif dof.cell_defined_on.dimension == 2:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)(0, 0)
         else:
             center = list(sum(np.array(self.cell.vertices(return_coords=True))))
 
-        return center, colours[tikz][dof.trace_entity.dimension]
+        return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
         # TODO Shape should be specificed somewhere else probably
@@ -118,8 +118,8 @@ class ElementTriple():
         for entity in entities:
             dim = entity[0]
             for i in range(len(dofs)):
-                if entity[1] == dofs[i].trace_entity.id - min_ids[dim]:
-                    entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
+                if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
+                    entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
@@ -159,12 +159,12 @@ class ElementTriple():
             if isinstance(dof.pairing, DeltaPairing):
                 coord = dof.eval(identity, pullback=False)
                 if isinstance(dof.target_space, Trace):
-                    tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
                 else:
                     tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
             elif isinstance(dof.pairing, L2Pairing):
                 coord = center
-                tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
@@ -192,7 +192,7 @@ class ElementTriple():
                 if len(coord) == 1:
                     coord = (coord[0], 0)
                 if isinstance(dof.target_space, Trace):
-                    dof.target_space.plot(ax, coord, dof.trace_entity, dof.g, color=color)
+                    dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
                 else:
                     ax.scatter(*coord, color=color)
                 ax.text(*coord, dof.id)
@@ -214,12 +214,12 @@ class ElementTriple():
                 if isinstance(dof.pairing, DeltaPairing):
                     coord = dof.eval(identity, pullback=False)
                     if isinstance(dof.target_space, Trace):
-                        dof.target_space.plot(ax, coord, dof.trace_entity, dof.g, color=color)
+                        dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
                     else:
                         ax.scatter(*coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
-                    dof.target_space.plot(ax, center, dof.trace_entity, dof.g, color=color, length=0.2)
+                    dof.target_space.plot(ax, center, dof.cell_defined_on, dof.g, color=color, length=0.2)
                 ax.text(*coord, dof.id)
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
@@ -263,7 +263,7 @@ class ElementTriple():
             dim = e.dim()
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
-            dof_ids = [d.id for d in self.generate() if d.trace_entity == e]
+            dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
             res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
 
@@ -276,7 +276,7 @@ class ElementTriple():
                     elif g.perm.is_Identity:
                         res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
-                        new_nodes = [d(g).convert_to_fiat(ref_el, degree) if d.trace_entity == e else d.convert_to_fiat(ref_el, degree) for d in self.generate()]
+                        new_nodes = [d(g).convert_to_fiat(ref_el, degree) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
                 #if dim == 1 and permuted_g.perm.array_form == [1,0]:
@@ -312,8 +312,8 @@ class ElementTriple():
 
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
-            sub_dim = d.trace_entity.dim()
-            sub_dict = entity_associations[sub_dim][d.trace_entity.id - min_ids[sub_dim]]
+            sub_dim = d.cell_defined_on.dim()
+            sub_dict = entity_associations[sub_dim][d.cell_defined_on.id - min_ids[sub_dim]]
             for dim in set([sub_dim, cell_dim]):
                 dof_gen = str(d.generation[dim])
 
@@ -538,7 +538,7 @@ class DOFGenerator():
             entity_ids[dim] = {i: [] for i in top[dim]}
 
         for i in range(len(dofs)):
-            entity = dofs[i].trace_entity
+            entity = dofs[i].cell_defined_on
             dim = entity.dim()
             entity_ids[dim][entity.id - min_ids[dim]].append(i)
         return entity_ids

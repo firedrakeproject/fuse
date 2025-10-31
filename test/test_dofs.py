@@ -181,3 +181,11 @@ def test_edge_parametrisation():
     print("fiat")
     for n in ned_fiat.generate():
         print(n)
+
+def test_generate_quadrature():
+    cell = polygon(3)
+    dg1 = create_dg1(cell)
+    degree = dg1.spaces[0].degree()
+    for d in dg1.generate():
+        print("fiat", d.convert_to_fiat(cell.to_fiat(), degree).pt_dict)
+        print("fuse", d.to_quadrature(degree))

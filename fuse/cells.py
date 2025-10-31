@@ -12,6 +12,7 @@ from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
+from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
 
@@ -791,9 +792,11 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
     
-    
-    
-    
+    def quadrature(self, degree):
+        fiat_el = self.to_fiat()
+        Q = create_quadrature(fiat_el, degree)
+        pts, wts = Q.get_points(), Q.get_weights()
+        return pts, wts
 
     def cell_attachment(self, dst):
         if not isinstance(dst, int):
