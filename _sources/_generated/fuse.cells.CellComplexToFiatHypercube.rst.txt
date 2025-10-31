@@ -42,6 +42,7 @@ CellComplexToFiatHypercube
       ~CellComplexToFiatHypercube.is_macrocell
       ~CellComplexToFiatHypercube.is_parent
       ~CellComplexToFiatHypercube.is_simplex
+      ~CellComplexToFiatHypercube.point_entity_ids
       ~CellComplexToFiatHypercube.symmetry_group_size
       ~CellComplexToFiatHypercube.volume
    

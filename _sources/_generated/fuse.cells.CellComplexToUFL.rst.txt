@@ -18,6 +18,20 @@ CellComplexToUFL
    .. autosummary::
    
       ~CellComplexToUFL.__init__
+      ~CellComplexToUFL.num_sub_entities
+      ~CellComplexToUFL.reconstruct
+      ~CellComplexToUFL.sub_entities
+      ~CellComplexToUFL.sub_entity_types
+      ~CellComplexToUFL.to_fiat
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
       ~CellComplexToUFL.cellname
       ~CellComplexToUFL.edge_types
       ~CellComplexToUFL.edges
@@ -32,22 +46,13 @@ CellComplexToUFL
       ~CellComplexToUFL.num_facets
       ~CellComplexToUFL.num_peaks
       ~CellComplexToUFL.num_ridges
-      ~CellComplexToUFL.num_sub_entities
       ~CellComplexToUFL.num_vertices
       ~CellComplexToUFL.peak_types
       ~CellComplexToUFL.peaks
-      ~CellComplexToUFL.reconstruct
       ~CellComplexToUFL.ridge_types
       ~CellComplexToUFL.ridges
-      ~CellComplexToUFL.sub_entities
-      ~CellComplexToUFL.sub_entity_types
-      ~CellComplexToUFL.to_fiat
       ~CellComplexToUFL.topological_dimension
       ~CellComplexToUFL.vertex_types
       ~CellComplexToUFL.vertices
-   
-   
-
-   
    
    

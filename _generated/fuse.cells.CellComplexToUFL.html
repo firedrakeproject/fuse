@@ -618,7 +618,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="fuse.cells.CellComplexToUFL">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.cells.</span></span><span class="sig-name descname"><span class="pre">CellComplexToUFL</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cell</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.CellComplexToUFL" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.fenicsproject.org/ufl/main/api-doc/ufl.html#ufl.cell.Cell" title="(in Unified Form Language (UFL) v2025.2.0.dev0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.fenicsproject.org/ufl/main/api/api-ufl.html#ufl.Cell" title="(in UFL v2025.3.0.dev0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a></p>
 <p>Convert cell complex to UFL</p>
 <dl class="field-list simple">
 <dt class="field-odd">Param<span class="colon">:</span></dt>
@@ -643,85 +643,90 @@ TODO work out generic way around the naming issue</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.CellComplexToUFL.__init__" title="fuse.cells.CellComplexToUFL.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(cell[, name])</p></td>
 <td><p>Initialise.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cellname</span></code>()</p></td>
-<td><p>Return the cellname of the cell.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edge_types</span></code>()</p></td>
-<td><p>Get the unique edge types.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code>()</p></td>
-<td><p>Get the edges.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">face_types</span></code>()</p></td>
-<td><p>Get the unique face types.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">faces</span></code>()</p></td>
-<td><p>Get the faces.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">facet_types</span></code>()</p></td>
-<td><p>Get the unique facet types.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">facets</span></code>()</p></td>
-<td><p>Get the facets.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_simplex_facets</span></code>()</p></td>
-<td><p>Return True if all the facets of this cell are simplex cells.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_simplex</span></code>()</p></td>
-<td><p>Return True if this is a simplex cell.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_edges</span></code>()</p></td>
-<td><p>Get the number of edges.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_faces</span></code>()</p></td>
-<td><p>Get the number of faces.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_facets</span></code>()</p></td>
-<td><p>Get the number of facets.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_peaks</span></code>()</p></td>
-<td><p>Get the number of peaks.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_ridges</span></code>()</p></td>
-<td><p>Get the number of ridges.</p></td>
-</tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_sub_entities</span></code>(dim)</p></td>
 <td><p>Get the number of sub-entities of the given dimension.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_vertices</span></code>()</p></td>
-<td><p>Get the number of vertices.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">peak_types</span></code>()</p></td>
-<td><p>Get the unique peak types.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">peaks</span></code>()</p></td>
-<td><p>Get the peaks.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.CellComplexToUFL.reconstruct" title="fuse.cells.CellComplexToUFL.reconstruct"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reconstruct</span></code></a>(**kwargs)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.CellComplexToUFL.reconstruct" title="fuse.cells.CellComplexToUFL.reconstruct"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reconstruct</span></code></a>(**kwargs)</p></td>
 <td><p>Reconstruct this cell, overwriting properties by those in kwargs.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ridge_types</span></code>()</p></td>
-<td><p>Get the unique ridge types.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ridges</span></code>()</p></td>
-<td><p>Get the ridges.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub_entities</span></code>(dim)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub_entities</span></code>(dim)</p></td>
 <td><p>Get the sub-entities of the given dimension.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub_entity_types</span></code>(dim)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sub_entity_types</span></code>(dim)</p></td>
 <td><p>Get the unique sub-entity types of the given dimension.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">topological_dimension</span></code>()</p></td>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cellname</span></code></p></td>
+<td><p>Return the cellname of the cell.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edge_types</span></code></p></td>
+<td><p>Get the unique edge types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code></p></td>
+<td><p>Get the edges.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">face_types</span></code></p></td>
+<td><p>Get the unique face types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">faces</span></code></p></td>
+<td><p>Get the faces.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">facet_types</span></code></p></td>
+<td><p>Get the unique facet types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">facets</span></code></p></td>
+<td><p>Get the facets.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_simplex_facets</span></code></p></td>
+<td><p>Return True if all the facets of this cell are simplex cells.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_simplex</span></code></p></td>
+<td><p>Return True if this is a simplex cell.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_edges</span></code></p></td>
+<td><p>Get the number of edges.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_faces</span></code></p></td>
+<td><p>Get the number of faces.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_facets</span></code></p></td>
+<td><p>Get the number of facets.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_peaks</span></code></p></td>
+<td><p>Get the number of peaks.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_ridges</span></code></p></td>
+<td><p>Get the number of ridges.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">num_vertices</span></code></p></td>
+<td><p>Get the number of vertices.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">peak_types</span></code></p></td>
+<td><p>Get the unique peak types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">peaks</span></code></p></td>
+<td><p>Get the peaks.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ridge_types</span></code></p></td>
+<td><p>Get the unique ridge types.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ridges</span></code></p></td>
+<td><p>Get the ridges.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">topological_dimension</span></code></p></td>
 <td><p>Return the dimension of the topology of this cell.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertex_types</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertex_types</span></code></p></td>
 <td><p>Get the unique vertices types.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code></p></td>
 <td><p>Get the vertices.</p></td>
 </tr>
 </tbody>

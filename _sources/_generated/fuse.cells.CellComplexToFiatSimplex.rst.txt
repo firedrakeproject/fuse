@@ -53,6 +53,7 @@ CellComplexToFiatSimplex
       ~CellComplexToFiatSimplex.is_parent
       ~CellComplexToFiatSimplex.is_simplex
       ~CellComplexToFiatSimplex.make_points
+      ~CellComplexToFiatSimplex.point_entity_ids
       ~CellComplexToFiatSimplex.symmetry_group_size
       ~CellComplexToFiatSimplex.volume
       ~CellComplexToFiatSimplex.volume_of_subcomplex

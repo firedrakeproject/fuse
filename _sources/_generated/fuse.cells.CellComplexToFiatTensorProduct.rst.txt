@@ -44,6 +44,7 @@ CellComplexToFiatTensorProduct
       ~CellComplexToFiatTensorProduct.is_macrocell
       ~CellComplexToFiatTensorProduct.is_parent
       ~CellComplexToFiatTensorProduct.is_simplex
+      ~CellComplexToFiatTensorProduct.point_entity_ids
       ~CellComplexToFiatTensorProduct.symmetry_group_size
       ~CellComplexToFiatTensorProduct.volume
    
