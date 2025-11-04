@@ -15,7 +15,7 @@ class Trace():
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         raise NotImplementedError("Trace uninstanitated")
 
-    def tabulate(self, Qpts, trace_entity, g):
+    def tabulate(self, Qwts, trace_entity, g):
         raise NotImplementedError("Tabulation uninstantiated")
 
     def _to_dict(self):
@@ -54,8 +54,8 @@ class TrH1(Trace):
     def to_tikz(self, coord, trace_entity, g, scale, color="black"):
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
-    def tabulate(self, Qpts, trace_entity, g):
-        return np.ones_like(Qpts)
+    def tabulate(self, Qwts, trace_entity, g):
+        return Qwts
 
     def __repr__(self):
         return "H1"
@@ -80,7 +80,7 @@ class TrHDiv(Trace):
         vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
-    def tabulate(self, Qpts, trace_entity, g):
+    def tabulate(self, Qwts, trace_entity, g):
         entityBasis = np.array(trace_entity.basis_vectors())
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
         basis = np.matmul(entityBasis, cellEntityBasis)
@@ -117,7 +117,7 @@ class TrHCurl(Trace):
             return tuple(result)
         return apply
 
-    def tabulate(self, Qpts, trace_entity, g):
+    def tabulate(self, Qwts, trace_entity, g):
         tangent = np.array(trace_entity.basis_vectors())
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
         result = np.matmul(tangent, subEntityBasis)

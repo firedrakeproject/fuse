@@ -1,6 +1,6 @@
 from FIAT.quadrature_schemes import create_quadrature
 from FIAT.quadrature import FacetQuadratureRule
-from FIAT.functional import PointEvaluation, IntegralMoment, FrobeniusIntegralMoment
+from FIAT.functional import PointEvaluation, IntegralMoment, FrobeniusIntegralMoment, Functional
 from fuse.utils import sympy_to_numpy
 import numpy as np
 import sympy as sp
@@ -204,7 +204,7 @@ class PointKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts):
-        return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts)
+        return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts),[[tuple()] for pt in Qpts] 
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -245,8 +245,11 @@ class PolynomialKernel(BaseKernel):
             return [res]
         return res
 
+    def tabulate(self, Qpts):
+        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+
     def evaluate(self, Qpts, Qwts):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64), Qwts
+        return Qpts, np.array([wt*self(*pt) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -277,8 +280,8 @@ class ComponentKernel(BaseKernel):
         return args[self.comp]
 
     def evaluate(self, Qpts, Qwts):
-        return np.array([1 for _ in Qpts]).astype(np.float64), np.ones_like(Qwts)
-        #return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+        return Qpts, Qwts, [[self.comp] for pt in Qpts]
+        #return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
         o_dict = {"comp": self.comp}
@@ -404,18 +407,21 @@ class DOF():
             self.kernel = self.kernel.add_context(fn, syms)
 
 
-    def convert_to_fiat(self, ref_el, interpolant_degree):
-        return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
+    def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
+        #TODO deriv dict needs implementing (currently {})
+        return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self)) 
+        #return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
     
     def to_quadrature(self, arg_degree):
-        pts, wts = self.cell_defined_on.quadrature(arg_degree)
-        res, wts = self.kernel.evaluate(pts, wts)
+        Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
+        Qwts = Qwts.reshape(Qwts.shape + (1,))
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts)
         if self.immersed:
-            res = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in res]
-            immersion = self.target_space.tabulate(pts, self.pairing.entity, self.g)
-            res = immersion * res
+            pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts] 
+            immersion = self.target_space.tabulate(wts, self.pairing.entity, self.g)
+            wts = np.outer(wts, immersion)
         # pt dict is { pt: (weight, component)}
-        pt_dict = { tuple(pt): [(wt, tuple())] for pt, wt in zip(res, wts)}
+        pt_dict = { tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
         return pt_dict
 
     def __repr__(self, fn="v"):
@@ -455,7 +461,7 @@ class ImmersedDOF(DOF):
     def tabulate(self, Qpts):
         # modify this to take reference space q pts
         immersion = self.target_space.tabulate(Qpts, self.pairing.entity, self.g)
-        res = self.kernel.tabulate(Qpts, self.attachment)
+        res, _ = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
 
     def __call__(self, g):
