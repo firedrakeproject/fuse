@@ -1,6 +1,6 @@
 from fuse import *
 from test_convert_to_fiat import create_cg1, create_dg1, construct_cg3, construct_rt, construct_nd
-from test_orientations import construct_nd2, construct_nd2_for_fiat, construct_nd2_new
+from test_orientations import construct_nd2, construct_nd2_for_fiat
 
 import sympy as sp
 import numpy as np
@@ -186,17 +186,16 @@ def test_edge_parametrisation():
 
 def test_generate_quadrature():
     cell = polygon(3)
-    degree = 1
+    degree = 2
     #elem = create_dg1(cell)
-    elem = create_cg1(cell)
+    #elem = create_cg1(cell)
     #elem = construct_nd(cell)
-    #elem = construct_nd2(cell)
-    #elem = construct_nd2_new(cell)
+    elem = construct_nd2(cell)
     #elem = construct_nd2_for_fiat(cell)
-    #from FIAT.nedelec import Nedelec
-    #fiat_elem = Nedelec(cell.to_fiat(), degree)
-    from FIAT.lagrange import Lagrange
-    fiat_elem = Lagrange(cell.to_fiat(), degree)
+    from FIAT.nedelec import Nedelec
+    fiat_elem = Nedelec(cell.to_fiat(), degree)
+    #from FIAT.lagrange import Lagrange
+    #fiat_elem = Lagrange(cell.to_fiat(), degree)
     degree = elem.spaces[0].degree()
     print(degree)
     for d in fiat_elem.dual_basis():
@@ -204,3 +203,5 @@ def test_generate_quadrature():
     print()
     for d in elem.generate():
         print("fuse", d.to_quadrature(degree))
+    
+    elem.to_fiat()

@@ -36,14 +36,12 @@ class DeltaPairing(Pairing):
         return v(*kernel.pt)
 
     def convert_to_fiat(self, ref_el, dof, interpolant_deg):
+        raise NotImplementedError("this should be outdated")
         pt = dof.eval(FuseFunction(lambda *x: x))
         # pt1 = dof.tabulate([[1]])
         return PointEvaluation(ref_el, pt)
         # return PointEvaluation(ref_el, tuple(pt1[0]))
     
-    def to_quadrature(pts, wts):
-        return pts, np.ones_like(wts)
-
     def add_entity(self, entity):
         res = DeltaPairing()
         res.entity = entity
@@ -76,27 +74,11 @@ class L2Pairing(Pairing):
         super(L2Pairing, self).__init__()
 
     def __call__(self, kernel, v, cell):
-        # TODO get degree of v
-        # if cell == self.entity:
-        #     ref_el = self.entity.to_fiat()
-        #     # print("evaluating", kernel, v, "on", self.entity)
-        #     Q = create_quadrature(self.entity.to_fiat(), 5)
-        #     # need quadrature here too - therefore need the information from the triple.
-        # else:
-        #     ref_el = cell.to_fiat()
-        #     ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
-        #     entity_ref = ref_el.construct_subelement(self.entity.dim())
-        #     entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
-        #     Q_ref = create_quadrature(entity, 5)
-        #     Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref, self.orientation)
-        Q = create_quadrature(self.entity.to_fiat(), 5)
-
-        def kernel_dot(x):
-            return np.dot(kernel(*x), v(*x))
-
-        return Q.integrate(kernel_dot)
+        Qpts, Qwts = self.entity.quadrature(5)
+        return sum([wt*np.dot(kernel(*pt), v(*pt)) for pt, wt in zip(Qpts, Qwts)]) 
 
     def tabulate(self):
+        raise NotImplementedError("this should be outdated")
         pass
 
     def add_entity(self, entity):
@@ -119,6 +101,7 @@ class L2Pairing(Pairing):
         return res
 
     def convert_to_fiat(self, ref_el, dof, interpolant_degree):
+        raise NotImplementedError("this should be outdated")
         total_deg = dof.kernel.degree(interpolant_degree)
         ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
         # entity_ref = ref_el.construct_subelement(self.entity.dim())
@@ -142,12 +125,6 @@ class L2Pairing(Pairing):
             functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
         return functional
 
-    def to_quadrature(self, pts, wts):
-        target_cell = self.cell.to_fiat()
-        source_cell = self.entity.to_fiat()
-
-        #need to compute jacobian from attachmenet. 
-        # should that be here>
     def __repr__(self):
         if self.orientation is not None:
             return "integral_{}({})({{kernel}} * {{fn}}) dx) ".format(str(self.orientation), str(self.entity))
@@ -235,18 +212,15 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() * interpolant_degree
 
     def permute(self, g):
-        return self 
-        #new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
-        #return PolynomialKernel(new_fn, symbols=self.syms)
+        #return self 
+        new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        return PolynomialKernel(new_fn, symbols=self.syms)
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         if not hasattr(res, '__iter__'):
             return [res]
         return res
-
-    def tabulate(self, Qpts):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def evaluate(self, Qpts, Qwts):
         return Qpts, np.array([wt*self(*pt) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
@@ -343,7 +317,7 @@ class ParameterisationKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts):
-        return np.array([self(*pt) for pt in Qpts]).astype(np.float64), Qwts
+        return Qpts, np.array([wt*self(*pt) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -410,13 +384,13 @@ class DOF():
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         #TODO deriv dict needs implementing (currently {})
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self)) 
-        #return self.pairing.convert_to_fiat(ref_el, self, interpolant_degree)
     
     def to_quadrature(self, arg_degree):
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts)
         if self.immersed:
+            #need to compute jacobian from attachmenet. 
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts] 
             immersion = self.target_space.tabulate(wts, self.pairing.entity, self.g)
             wts = np.outer(wts, immersion)

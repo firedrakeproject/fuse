@@ -26,7 +26,7 @@ def construct_nd2(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), ParameterisationKernel())]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
 
 
     dofs = DOFGenerator(xs, S2, S2)
@@ -47,6 +47,7 @@ def construct_nd2(tri=None):
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
+
 
 def construct_nd2_for_fiat(tri=None):
     if tri is None:
@@ -91,7 +92,6 @@ def construct_nd2_for_fiat(tri=None):
     return ned
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
-                                                    (construct_nd2_for_fiat, "N1curl", 2),
                                                     (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
     
@@ -100,7 +100,7 @@ def test_surface_const_nd(elem_gen, elem_code, deg):
         elem = elem_gen(cell)
         ones = as_vector((0,1))
 
-        for n in range(2, 3):
+        for n in range(2, 6):
             mesh = UnitSquareMesh(n, n)
             if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
                 V = FunctionSpace(mesh, elem.to_ufl())
@@ -207,7 +207,7 @@ def interpolate_vs_project(V):
 
 def test_degree2_interpolation():
     cell = polygon(3)
-    elem = construct_nd2_for_fiat(cell)
+    elem = construct_nd2(cell)
     mesh = UnitSquareMesh(1,1)
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -255,18 +255,19 @@ def test_create_fiat_nd():
     e = cell.edges()[0]
     g = S3.add_cell(cell).members()[2]
     print(g)
-    nodes = [d.convert_to_fiat(ref_el, deg) for d in dofs]
-    new_nodes = [d(g).convert_to_fiat(ref_el, deg) if d.trace_entity == e else d.convert_to_fiat(ref_el, deg) for d in dofs]
+    nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+    new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
     for i in range(len(new_nodes)):
-        print(f"{dofs[i]}: {nodes[i].pt_dict}")
-        print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+        print(f"{nodes[i].pt_dict}")
+        #print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+        #print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
         #for g in S2.add_cell(cell).members():
         #    print(d(g))
         #    print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
         print()
+
     my_elem = nd.to_fiat()
-    #my_elem = nd_fv.to_fiat()
-    #breakpoint()
+    my_elem = nd_fv.to_fiat()
 
 
 
