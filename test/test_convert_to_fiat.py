@@ -551,7 +551,7 @@ def test_non_tensor_quad():
     create_cg1_quad()
 
 
-def project(U, mesh, func):
+def project_func(U, mesh, func):
     f = assemble(interpolate(func, U))
 
     out = Function(U)
@@ -581,10 +581,10 @@ def test_project(elem_gen, elem_code, deg):
     mesh = UnitTriangleMesh()
 
     U = FunctionSpace(mesh, elem_code, deg)
-    assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
+    assert np.allclose(project_func(U, mesh, Constant(1)), 0, rtol=1e-5)
 
     U = FunctionSpace(mesh, elem.to_ufl())
-    assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
+    assert np.allclose(project_func(U, mesh, Constant(1)), 0, rtol=1e-5)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_dg1_tet, "DG", 1)])
@@ -595,13 +595,13 @@ def test_project_3d(elem_gen, elem_code, deg):
     mesh = UnitCubeMesh(3, 3, 3)
 
     U = FunctionSpace(mesh, elem_code, deg)
-    assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
+    assert np.allclose(project_func(U, mesh, Constant(1)), 0, rtol=1e-5)
 
     U = FunctionSpace(mesh, elem.to_ufl())
-    assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
+    assert np.allclose(project_func(U, mesh, Constant(1)), 0, rtol=1e-5)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [pytest.param(create_dg1_tet, "DG", 1, 0.8, marks=pytest.mark.xfail(reason="DG on tets - check test written correctly"))])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [pytest.param(create_dg1_tet, "CG", 3, 0.8, marks=pytest.mark.xfail(reason="DG on tets - check test written correctly"))])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -615,11 +615,11 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         x = SpatialCoordinate(mesh)
 
         V = FunctionSpace(mesh, elem_code, deg)
-        res1 = project(V, mesh, function(x))
+        res1 = project_func(V, mesh, function(x))
         diff2[i - 1] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
-        res2 = project(V2, mesh, function(x))
+        res2 = project_func(V2, mesh, function(x))
         diff[i - 1] = res2
         assert np.allclose(res1, res2)
 
@@ -635,3 +635,29 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 
     assert (np.array(conv1) > conv_rate).all()
     assert (np.array(conv2) > conv_rate).all()
+
+
+# @pytest.mark.parametrize(('testcase', 'convrate'),
+#                          [(("CG", 1), 1.5), (("CG", 2), 2.6),
+#                           (("DG", 0), 0.9), (("DG", 1), 1.7)])
+def test_scalar_convergence():
+    convrate = 1.7
+    elem = create_dg1_tet(make_tetrahedron())
+    l2err = np.zeros(2)
+    for ii in range(len(l2err)):
+        mesh = UnitCubeMesh(2 ** ii, 2 ** ii, 2 ** ii)
+
+        fspace = FunctionSpace(mesh, elem.to_ufl())
+        exactfspace = FunctionSpace(mesh, "Lagrange", 3)
+
+        u = TrialFunction(fspace)
+        v = TestFunction(fspace)
+
+        x, y, z = SpatialCoordinate(mesh)
+        expr = x*x*y*z
+        exact = project(expr, exactfspace)
+
+        out = Function(fspace)
+        solve(inner(u, v)*dx == inner(exact, v)*dx, out)
+        l2err[ii] = sqrt(assemble(inner((out-exact), (out-exact))*dx))
+    assert (np.array([np.log2(l2err[i]/l2err[i+1]) for i in range(len(l2err)-1)]) > convrate).all()

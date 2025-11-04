@@ -38,6 +38,7 @@ docs = [
 ]
 dev = [
   "pytest",
+  "pytest-env",
   "pytest-mock",
   "coverage",
   "flake8",
@@ -47,6 +48,9 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
+]
+env = [
+    "FIREDRAKE_USE_FUSE=True"
 ]
 
 [tool.coverage.run]
