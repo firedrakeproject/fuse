@@ -124,7 +124,7 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree, value_shape))
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
-        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set) # TODO remove
+        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         if not pure_perm:
             self.matrices = mat_perms
@@ -280,8 +280,8 @@ class ElementTriple():
                         new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
-                #if dim == 1 and permuted_g.perm.array_form == [1,0]:
-                #    breakpoint()
+                # if dim == 1 and permuted_g.perm.array_form == [1,0]:
+                #     breakpoint()
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
@@ -359,9 +359,9 @@ class ElementTriple():
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
-        #if pure_perm is False:
-            # TODO think about where this call goes
-            #return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+        # if pure_perm is False:
+        #    TODO think about where this call goes
+        #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
         #    return self.matrices_by_entity, None, pure_perm
 
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
@@ -397,11 +397,10 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1
-                            warnings.warn("FUSE: orientation case not covered") 
-                            #sub_mat = g.matrix_form()
-                            #oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            
-                            #raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
+                            warnings.warn("FUSE: orientation case not covered")
+                            # sub_mat = g.matrix_form()
+                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
                             pass
 
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
@@ -437,6 +436,7 @@ class ElementTriple():
         return oriented_mats_by_entity, None, False
 
     def orient_mat_perms(self):
+        raise NotImplementedError("This should not be necessary")
         min_ids = self.cell.get_starter_ids()
         entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
         num_ents = 0
@@ -444,8 +444,7 @@ class ElementTriple():
             ents = self.cell.d_entities(dim)
             for e in ents:
                 e_id = e.id - min_ids[dim]
-                members = e.group.members()#and dim < self.cell.dim()
-                if entity_orientations[num_ents + e_id] != 0 :
+                if entity_orientations[num_ents + e_id] != 0:
                     modifier = self.matrices[dim][e_id][entity_orientations[num_ents+e_id]]
                     reverse_modifier_val = (~e.group.get_member_by_val(entity_orientations[num_ents+e_id])).numeric_rep()
                     reverse_modifier = self.matrices[dim][e_id][reverse_modifier_val]

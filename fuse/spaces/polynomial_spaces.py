@@ -147,8 +147,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
 
         self.weights = weights
         self.spaces = spaces
-        
-        weight_degrees = [ 0 if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)) else max_deg_sp_mat(w) for w in self.weights]
+
+        weight_degrees = [0 if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)) else max_deg_sp_mat(w) for w in self.weights]
 
         maxdegree = max([space.maxdegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
         mindegree = min([space.mindegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
