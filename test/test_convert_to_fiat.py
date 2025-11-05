@@ -470,7 +470,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
 def helmholtz_solve(V, mesh):
     # Define variational problem
-    dim = mesh.ufl_cell().topological_dimension()
+    dim = mesh.ufl_cell().topological_dimension
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
@@ -594,10 +594,10 @@ def test_project_vec(elem_gen, elem_code, deg):
     mesh = UnitTriangleMesh()
 
     U = FunctionSpace(mesh, elem_code, deg)
-    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
     U = FunctionSpace(mesh, elem.to_ufl())
-    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_dg1_tet, "DG", 1)])

@@ -77,16 +77,16 @@ class ElementTriple():
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
                    True: {0: "blue", 1: "red", 2: "green", 3: "black"}}
-        if dof.trace_entity.dimension == 0:
-            center = self.cell.cell_attachment(dof.trace_entity.id)()
-        elif dof.trace_entity.dimension == 1:
-            center = self.cell.cell_attachment(dof.trace_entity.id)(0)
-        elif dof.trace_entity.dimension == 2:
-            center = self.cell.cell_attachment(dof.trace_entity.id)(0, 0)
+        if dof.cell_defined_on.dimension == 0:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)()
+        elif dof.cell_defined_on.dimension == 1:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)(0)
+        elif dof.cell_defined_on.dimension == 2:
+            center = self.cell.cell_attachment(dof.cell_defined_on.id)(0, 0)
         else:
             center = list(sum(np.array(self.cell.vertices(return_coords=True))))
 
-        return center, colours[tikz][dof.trace_entity.dimension]
+        return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
         # TODO Shape should be specificed somewhere else probably
@@ -102,6 +102,7 @@ class ElementTriple():
         ref_el = self.cell.to_fiat()
         dofs = self.generate()
         degree = self.spaces[0].degree()
+        value_shape = self.get_value_shape()
         entity_ids = {}
         entity_perms = {}
         nodes = []
@@ -118,16 +119,18 @@ class ElementTriple():
         for entity in entities:
             dim = entity[0]
             for i in range(len(dofs)):
-                if entity[1] == dofs[i].trace_entity.id - min_ids[dim]:
-                    entity_ids[dim][dofs[i].trace_entity.id - min_ids[dim]].append(counter)
-                    nodes.append(dofs[i].convert_to_fiat(ref_el, degree))
+                if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
+                    entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
+                    nodes.append(dofs[i].convert_to_fiat(ref_el, degree, value_shape))
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
-        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set) # TODO remove
+        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
         if not pure_perm:
             self.matrices = mat_perms
             self.reverse_dof_perms()
+        else:
+            self.matrices = entity_perms
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
@@ -157,12 +160,12 @@ class ElementTriple():
             if isinstance(dof.pairing, DeltaPairing):
                 coord = dof.eval(identity, pullback=False)
                 if isinstance(dof.target_space, Trace):
-                    tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
                 else:
                     tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
             elif isinstance(dof.pairing, L2Pairing):
                 coord = center
-                tikz_commands += [dof.target_space.to_tikz(coord, dof.trace_entity, dof.g, scale, color)]
+                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
@@ -190,7 +193,7 @@ class ElementTriple():
                 if len(coord) == 1:
                     coord = (coord[0], 0)
                 if isinstance(dof.target_space, Trace):
-                    dof.target_space.plot(ax, coord, dof.trace_entity, dof.g, color=color)
+                    dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
                 else:
                     ax.scatter(*coord, color=color)
                 ax.text(*coord, dof.id)
@@ -212,12 +215,12 @@ class ElementTriple():
                 if isinstance(dof.pairing, DeltaPairing):
                     coord = dof.eval(identity, pullback=False)
                     if isinstance(dof.target_space, Trace):
-                        dof.target_space.plot(ax, coord, dof.trace_entity, dof.g, color=color)
+                        dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
                     else:
                         ax.scatter(*coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
-                    dof.target_space.plot(ax, center, dof.trace_entity, dof.g, color=color, length=0.2)
+                    dof.target_space.plot(ax, center, dof.cell_defined_on, dof.g, color=color, length=0.2)
                 ax.text(*coord, dof.id)
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
@@ -251,7 +254,7 @@ class ElementTriple():
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
-        nodes = [d.convert_to_fiat(ref_el, degree) for d in self.generate()]
+        nodes = [d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
         sub_ents = []
         res_dict = {}
         for d in range(0, self.cell.dim() + 1):
@@ -261,7 +264,7 @@ class ElementTriple():
             dim = e.dim()
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
-            dof_ids = [d.id for d in self.generate() if d.trace_entity == e]
+            dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
             res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
 
@@ -274,11 +277,11 @@ class ElementTriple():
                     elif g.perm.is_Identity:
                         res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
-                        new_nodes = [d(g).convert_to_fiat(ref_el, degree) if d.trace_entity == e else d.convert_to_fiat(ref_el, degree) for d in self.generate()]
+                        new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
-                #if dim == 1 and permuted_g.perm.array_form == [1,0]:
-                #    breakpoint()
+                # if dim == 1 and permuted_g.perm.array_form == [1,0]:
+                #     breakpoint()
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
@@ -294,7 +297,7 @@ class ElementTriple():
             if g.perm.is_Identity:
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
-                new_nodes = [d(g).convert_to_fiat(ref_el, degree) for d in self.generate()]
+                new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
@@ -310,8 +313,8 @@ class ElementTriple():
 
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
-            sub_dim = d.trace_entity.dim()
-            sub_dict = entity_associations[sub_dim][d.trace_entity.id - min_ids[sub_dim]]
+            sub_dim = d.cell_defined_on.dim()
+            sub_dict = entity_associations[sub_dim][d.cell_defined_on.id - min_ids[sub_dim]]
             for dim in set([sub_dim, cell_dim]):
                 dof_gen = str(d.generation[dim])
 
@@ -356,9 +359,9 @@ class ElementTriple():
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
-        #if pure_perm is False:
-            # TODO think about where this call goes
-            #return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+        # if pure_perm is False:
+        #    TODO think about where this call goes
+        #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
         #    return self.matrices_by_entity, None, pure_perm
 
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
@@ -378,8 +381,9 @@ class ElementTriple():
                         # (dof_gen, ent_dofs)
                         total_ent_dof_ids += [ed.id for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         dof_gen_class = ent_dofs[0].generation
-                        if not len(dof_gen_class[dim].g2.members()) == 1:
+                        if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
+                            # only get this if they are defined on the current dimension
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = self.matrices_by_entity[dim][e_id][val]
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
@@ -393,11 +397,10 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1
-                            #warnings.warn("FUSE: should probably be using equivalent members of g in g1 for this") 
-                            #sub_mat = g.matrix_form()
-                            #oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            
-                            #raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
+                            warnings.warn("FUSE: orientation case not covered")
+                            # sub_mat = g.matrix_form()
+                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
                             pass
 
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
@@ -433,6 +436,7 @@ class ElementTriple():
         return oriented_mats_by_entity, None, False
 
     def orient_mat_perms(self):
+        raise NotImplementedError("This should not be necessary")
         min_ids = self.cell.get_starter_ids()
         entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
         num_ents = 0
@@ -440,8 +444,7 @@ class ElementTriple():
             ents = self.cell.d_entities(dim)
             for e in ents:
                 e_id = e.id - min_ids[dim]
-                members = e.group.members()#and dim < self.cell.dim()
-                if entity_orientations[num_ents + e_id] != 0 :
+                if entity_orientations[num_ents + e_id] != 0:
                     modifier = self.matrices[dim][e_id][entity_orientations[num_ents+e_id]]
                     reverse_modifier_val = (~e.group.get_member_by_val(entity_orientations[num_ents+e_id])).numeric_rep()
                     reverse_modifier = self.matrices[dim][e_id][reverse_modifier_val]
@@ -535,7 +538,7 @@ class DOFGenerator():
             entity_ids[dim] = {i: [] for i in top[dim]}
 
         for i in range(len(dofs)):
-            entity = dofs[i].trace_entity
+            entity = dofs[i].cell_defined_on
             dim = entity.dim()
             entity_ids[dim][entity.id - min_ids[dim]].append(i)
         return entity_ids

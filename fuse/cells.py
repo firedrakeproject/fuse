@@ -12,6 +12,7 @@ from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
+from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
 
@@ -656,9 +657,9 @@ class Point():
             return "\n".join(tikz_commands)
         return tikz_commands
 
-
     def generate_facet_parameterisation(self, facet_num):
-        #facet = self.d_entities(self.dimension - 1)[facet_num]
+        raise NotImplementedError("Facet Parameterisation can be expressed using polynomials")
+        # facet = self.d_entities(self.dimension - 1)[facet_num]
         facet = self.get_node(facet_num)
         facet_dim = facet.dimension
         if facet_dim != self.dimension - 1:
@@ -667,18 +668,15 @@ class Point():
             raise NotImplementedError("Facet parameterisation is not implemented for dimensions greater than 1")
         verts = facet.vertices()
         v_coords = np.array([self.get_node(v.id, return_coords=True) for v in verts])
-        midpoint = np.average(v_coords, axis=0)
-        stacked = np.c_[np.ones((self.dimension,)), v_coords[:, 0].reshape(self.dimension,1)]
+        stacked = np.c_[np.ones((self.dimension,)), v_coords[:, 0].reshape(self.dimension, 1)]
         b = np.array([0, 1])
         coeffs = np.linalg.solve(stacked, b)
-        
         symbol_names = ["x", "y", "z"]
         symbols = [1] + [sp.Symbol(symbol_names[d]) for d in range(facet_dim)]
         res = 0
         for d in range(facet_dim + 1):
             res += coeffs[d] * symbols[d]
         return res, symbols[1:]
-
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
@@ -790,10 +788,12 @@ class Point():
                     assert all(np.isclose(val, vals[0]).all() for val in vals)
 
         return lambda *x: fold_reduce(attachments[0], *x)
-    
-    
-    
-    
+
+    def quadrature(self, degree):
+        fiat_el = self.to_fiat()
+        Q = create_quadrature(fiat_el, degree)
+        pts, wts = Q.get_points(), Q.get_weights()
+        return pts, wts
 
     def cell_attachment(self, dst):
         if not isinstance(dst, int):
@@ -803,7 +803,7 @@ class Point():
 
     def orient(self, o):
         """ Orientation node is always labelled with -1 """
-        #if self.oriented:
+        # if self.oriented:
         #    o = self.oriented * o
         oriented_point = copy.deepcopy(self)
         top_level_node = oriented_point.d_entities_ids(
@@ -1103,7 +1103,7 @@ class CellComplexToUFL(Cell):
         super(CellComplexToUFL, self).__init__(name)
 
     def to_fiat(self):
-        return self.cell_complex.to_fiat(name=self.cellname())
+        return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
         return super(CellComplexToUFL, self).__repr__()

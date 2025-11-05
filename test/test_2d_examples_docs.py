@@ -165,7 +165,7 @@ def construct_nd(tri=None):
     y = sp.Symbol("y")
 
     # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    #xs = [DOF(L2Pairing(), PointKernel((np.sqrt(2),)))]
+    # xs = [DOF(L2Pairing(), PointKernel((np.sqrt(2),)))]
     xs = [DOF(L2Pairing(), PolynomialKernel((1,)))]
 
     dofs = DOFGenerator(xs, S1, S2)
