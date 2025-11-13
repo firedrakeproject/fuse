@@ -33,8 +33,8 @@ def construct_nd2(tri=None):
     dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
 
-    xs = [DOF(L2Pairing(), ComponentKernel((0,))),
-          DOF(L2Pairing(), ComponentKernel((1,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel(tri.basis_vectors()[0])),
+          DOF(L2Pairing(),  PolynomialKernel(tri.basis_vectors()[1]))]
     center_dofs = DOFGenerator(xs, S1, S3)
     xs = [immerse(tri, int_ned1, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -92,24 +92,23 @@ def construct_nd2_for_fiat(tri=None):
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
                                                     (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
-    with mock.patch.object(ElementTriple, 'dummy_function', new=dummy_dof_perms):
-        cell = polygon(3)
-        elem = elem_gen(cell)
-        ones = as_vector((0, 1))
+    cell = polygon(3)
+    elem = elem_gen(cell)
+    ones = as_vector((0, 1))
 
-        for n in range(2, 6):
-            mesh = UnitSquareMesh(n, n)
-            if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-                V = FunctionSpace(mesh, elem.to_ufl())
-            else:
-                V = FunctionSpace(mesh, elem_code, deg)
-            print(V.cell_node_list)
-            normal = FacetNormal(mesh)
-            ones1 = interpolate(ones, V)
-            res1 = assemble(dot(ones1, normal) * ds)
+    for n in range(2, 6):
+        mesh = UnitSquareMesh(n, n)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V = FunctionSpace(mesh, elem.to_ufl())
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+        print(V.cell_node_list)
+        normal = FacetNormal(mesh)
+        ones1 = interpolate(ones, V)
+        res1 = assemble(dot(ones1, normal) * ds)
 
-            print(f"{n}: {res1}")
-            assert np.allclose(res1, 0)
+        print(f"{n}: {res1}")
+        assert np.allclose(res1, 0)
 
 
 def test_surface_const_rt():
@@ -132,7 +131,7 @@ def test_surface_const_rt():
         assert np.allclose(res1, 0)
 
 
-@pytest.mark.xfail(reason="orientations")
+#@pytest.mark.xfail(reason="orientations")
 def test_surface_vec():
     cell = polygon(3)
     rt_elem = construct_rt(cell)
@@ -245,25 +244,54 @@ def test_create_fiat_nd():
     for f in fiat_elem.dual_basis():
         print(f.pt_dict)
 
-    print("fiat: fuse's version")
-    for d in nd_fv.generate():
-        print(d.convert_to_fiat(ref_el, deg).pt_dict)
+    #print("fiat: fuse's version")
+    #for d in nd_fv.generate():
+    #    print(d.convert_to_fiat(ref_el, deg).pt_dict)
 
     print("fuse")
     dofs = nd.generate()
     e = cell.edges()[0]
-    g = S3.add_cell(cell).members()[2]
+    s3 = S3.add_cell(cell)
+    g = s3.get_member([0,2,1])
+    for d in nd.generate():
+        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
     print(g)
-    nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-    new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-    for i in range(len(new_nodes)):
-        print(f"{nodes[i].pt_dict}")
+    for d in nd.generate():
+        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
+    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+    #for i in range(len(new_nodes)):
+    #    print(f"{nodes[i].pt_dict}")
         # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
         # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
         # for g in S2.add_cell(cell).members():
         #     print(d(g))
         #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
-        print()
 
+    nd1= construct_nd(cell)
+    print("nd1")
+    for d in nd1.generate():
+        print(d.convert_to_fiat(ref_el, deg).pt_dict)
+    print(g)
+    for d in nd1.generate():
+        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
+    nd1.to_fiat()
+    
     nd.to_fiat()
-    nd_fv.to_fiat()
+    breakpoint()
+    #nd_fv.to_fiat()
+
+
+def test_int_nd():
+    tri = polygon(3)
+    deg = 2
+    edge = tri.edges()[0]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+    dofs = int_ned1.generate()
+    breakpoint()

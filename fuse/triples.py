@@ -126,11 +126,12 @@ class ElementTriple():
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        if not pure_perm:
-            self.matrices = mat_perms
-            self.reverse_dof_perms()
-        else:
-            self.matrices = entity_perms
+        self.matrices = mat_perms
+       # if not pure_perm:
+       #     self.matrices = mat_perms
+       # else:
+       #     self.matrices = entity_perms
+        self.reverse_dof_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake
@@ -160,12 +161,12 @@ class ElementTriple():
             if isinstance(dof.pairing, DeltaPairing):
                 coord = dof.eval(identity, pullback=False)
                 if isinstance(dof.target_space, Trace):
-                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
+                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
                 else:
                     tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
             elif isinstance(dof.pairing, L2Pairing):
                 coord = center
-                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, dof.g, scale, color)]
+                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
@@ -193,7 +194,7 @@ class ElementTriple():
                 if len(coord) == 1:
                     coord = (coord[0], 0)
                 if isinstance(dof.target_space, Trace):
-                    dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
+                    dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
                 else:
                     ax.scatter(*coord, color=color)
                 ax.text(*coord, dof.id)
@@ -215,12 +216,12 @@ class ElementTriple():
                 if isinstance(dof.pairing, DeltaPairing):
                     coord = dof.eval(identity, pullback=False)
                     if isinstance(dof.target_space, Trace):
-                        dof.target_space.plot(ax, coord, dof.cell_defined_on, dof.g, color=color)
+                        dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
                     else:
                         ax.scatter(*coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
-                    dof.target_space.plot(ax, center, dof.cell_defined_on, dof.g, color=color, length=0.2)
+                    dof.target_space.plot(ax, center, dof.cell_defined_on, color=color, length=0.2)
                 ax.text(*coord, dof.id)
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
@@ -280,8 +281,8 @@ class ElementTriple():
                         new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
-                # if dim == 1 and permuted_g.perm.array_form == [1,0]:
-                #     breakpoint()
+                #if dim == 1 and permuted_g.perm.array_form == [1,0]:
+                #    breakpoint()
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):

@@ -279,11 +279,13 @@ class GroupRepresentation(PermutationSetRepresentation):
         assert perm2 in member_perms
         return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
 
-    def get_member(self, perm):
-        for m in self.members():
-            if m.perm == perm:
-                return m
-        raise ValueError("Permutation not a member of group")
+    #def get_member(self, perm):
+    #    if not isinstance(perm, Permutation):
+    #        perm = Permutation.from_sequence(perm)
+    #    for m in self.members():
+    #        if m.perm == perm:
+    #            return m
+    #    raise ValueError("Permutation not a member of group")
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members

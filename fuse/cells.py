@@ -624,7 +624,11 @@ class Point():
         if self.dimension == 0:
             # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
-        top_level_node = self_levels[0][0]
+        if self.oriented:
+            # ordered_vertices() handles the orientation so we want to drop the orientation node
+            top_level_node = self_levels[1][0]
+        else:
+            top_level_node = self_levels[0][0]
         v_0 = vertices[0]
         if return_coords:
             v_0_coords = self.attachment(top_level_node, v_0)()
@@ -803,8 +807,8 @@ class Point():
 
     def orient(self, o):
         """ Orientation node is always labelled with -1 """
-        # if self.oriented:
-        #    o = self.oriented * o
+        if self.oriented:
+            o = self.oriented * o
         oriented_point = copy.deepcopy(self)
         top_level_node = oriented_point.d_entities_ids(
             oriented_point.dimension)[0]
@@ -912,7 +916,6 @@ class TensorProductPoint():
     def get_sub_entities(self):
         self.A.get_sub_entities()
         self.B.get_sub_entities()
-        breakpoint()
 
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)

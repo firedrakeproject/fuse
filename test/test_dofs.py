@@ -77,10 +77,31 @@ def test_permute_nd():
     #     print(dof)
 
     for g in nd.cell.group.members():
-        print("g:", g.numeric_rep())
+        print("g:",g,  g.numeric_rep())
         for dof in nd.generate():
             print(dof(g).convert_to_fiat(cell.to_fiat(), 0).pt_dict)
             print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
+
+def test_permute_nd2():
+    cell = polygon(3)
+
+    nd = construct_nd2(cell)
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    func = FuseFunction(sp.Matrix([x, -1/3 + 2*y]), symbols=(x, y))
+
+    # for dof in nd.generate():
+    #     print(dof)
+
+    for g in nd.cell.group.members():
+        print("g:", g.numeric_rep())
+        if g.numeric_rep() == 2:
+             for i,dof in enumerate(nd.generate()):
+                if 0 < i < 2:
+                    print(dof(g).convert_to_fiat(cell.to_fiat(), 2, (2,)).pt_dict)
+                    print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
+    breakpoint()
+
 
 
 def test_permute_nd_old():

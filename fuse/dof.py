@@ -35,12 +35,8 @@ class DeltaPairing(Pairing):
         assert isinstance(kernel, PointKernel)
         return v(*kernel.pt)
 
-    def convert_to_fiat(self, ref_el, dof, interpolant_deg):
-        raise NotImplementedError("this should be outdated")
-        pt = dof.eval(FuseFunction(lambda *x: x))
-        # pt1 = dof.tabulate([[1]])
-        return PointEvaluation(ref_el, pt)
-        # return PointEvaluation(ref_el, tuple(pt1[0]))
+    def tabulate(self):
+        return 1
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -52,7 +48,8 @@ class DeltaPairing(Pairing):
     def permute(self, g):
         res = DeltaPairing()
         if self.entity:
-            res.entity = self.entity.orient(g)
+            res.entity = self.entity
+        #    res.entity = self.entity.orient(g)
         res.orientation = g
         return res
 
@@ -72,14 +69,18 @@ class L2Pairing(Pairing):
 
     def __init__(self):
         super(L2Pairing, self).__init__()
-
     def __call__(self, kernel, v, cell):
         Qpts, Qwts = self.entity.quadrature(5)
         return sum([wt*np.dot(kernel(*pt), v(*pt)) for pt, wt in zip(Qpts, Qwts)])
 
     def tabulate(self):
-        raise NotImplementedError("this should be outdated")
-        pass
+        
+        bvs = np.array(self.entity.basis_vectors())
+        if self.orientation:
+            new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
+            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+            return  basis_change 
+        return np.eye(bvs.shape[0])
 
     def add_entity(self, entity):
         res = L2Pairing()
@@ -94,36 +95,14 @@ class L2Pairing(Pairing):
 
         res = L2Pairing()
         if self.entity:
-            res.entity = self.entity.orient(g)
-        # if self.orientation is not None:
-        #    g = self.orientation * g
+            res.entity = self.entity    
+            #res.entity = self.entity.orient(g)
+            #if self.entity.oriented:
+            #    breakpoint()
+        if self.orientation is not None:
+            g = self.orientation * g
         res.orientation = g
         return res
-
-    def convert_to_fiat(self, ref_el, dof, interpolant_degree):
-        raise NotImplementedError("this should be outdated")
-        total_deg = dof.kernel.degree(interpolant_degree)
-        ent_id = self.entity.id - ref_el.fe_cell.get_starter_ids()[self.entity.dim()]
-        # entity_ref = ref_el.construct_subelement(self.entity.dim())
-        entity = ref_el.construct_subelement(self.entity.dim(), ent_id, self.orientation)
-        Q_ref = create_quadrature(entity, total_deg)
-        # pts_ref, wts_ref = Q_ref.get_points(), Q_ref.get_weights()
-
-        # pts, wts, J = map_quadrature(pts_ref, wts_ref, Q_ref.ref_el, entity_ref, jacobian=True)
-        Q = FacetQuadratureRule(ref_el, self.entity.dim(), ent_id, Q_ref, self.orientation)
-        Jdet = Q.jacobian_determinant()
-        # Jdet = pseudo_determinant(J)
-        qpts, _ = Q.get_points(), Q.get_weights()
-        # (np.sqrt(2)) *
-        f_at_qpts = dof.tabulate(qpts).T / Jdet
-        comp = None
-        if hasattr(dof.kernel, "comp"):
-            # TODO Value shape should be a variable.
-            comp = dof.kernel.comp
-            functional = IntegralMoment(ref_el, Q, f_at_qpts, comp=comp, shp=(2,))
-        else:
-            functional = FrobeniusIntegralMoment(ref_el, Q, f_at_qpts)
-        return functional
 
     def __repr__(self):
         if self.orientation is not None:
@@ -180,7 +159,7 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts):
+    def evaluate(self, Qpts, Qwts, basis_change):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -196,10 +175,11 @@ class PointKernel(BaseKernel):
 
 class PolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, symbols=[]):
+    def __init__(self, fn, g=None, symbols=[]):
         if len(symbols) != 0 and not sp.sympify(fn).as_poly():
             raise ValueError("Function argument must be able to be interpreted as a sympy polynomial")
         self.fn = sp.sympify(fn)
+        self.g = g 
         self.syms = symbols
         super(PolynomialKernel, self).__init__()
 
@@ -213,16 +193,19 @@ class PolynomialKernel(BaseKernel):
 
     def permute(self, g):
         new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
-        return PolynomialKernel(new_fn, symbols=self.syms)
+        return PolynomialKernel(new_fn, g=g, symbols=self.syms)
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         if not hasattr(res, '__iter__'):
             return [res]
+        #if self.g:
+        #    print(self.g, self.g(res))
+        #    return self.g(res)
         return res
 
-    def evaluate(self, Qpts, Qwts):
-        return Qpts, np.array([wt*self(*pt) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+    def evaluate(self, Qpts, Qwts, basis_change):
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -238,6 +221,7 @@ class PolynomialKernel(BaseKernel):
 class ComponentKernel(BaseKernel):
 
     def __init__(self, comp):
+        
         self.comp = comp
         super(ComponentKernel, self).__init__()
 
@@ -251,9 +235,10 @@ class ComponentKernel(BaseKernel):
         return self
 
     def __call__(self, *args):
-        return args[self.comp]
+        return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
+#        return tuple(args[c] for c in self.comp)
 
-    def evaluate(self, Qpts, Qwts):
+    def evaluate(self, Qpts, Qwts, basis_change):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
         # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
@@ -267,68 +252,6 @@ class ComponentKernel(BaseKernel):
     def _from_dict(obj_dict):
         return ComponentKernel(obj_dict["comp"])
 
-
-class ParameterisationKernel(BaseKernel):
-
-    def __init__(self, g=None):
-        raise NotImplementedError("Parameterisation kernel not needed, use polynomial")
-        self.g = g
-        self.fn = None
-        self.syms = None
-        super(ParameterisationKernel, self).__init__()
-
-    def add_context(self, fn=None, syms=None):
-        new_cls = ParameterisationKernel(self.g)
-        new_cls.fn = fn
-        new_cls.syms = syms
-        return new_cls
-
-    def __repr__(self):
-        if self.g is None or self.g.perm.array_form == [0, 1]:
-            fn = self.fn
-        elif self.g.perm.array_form == [1, 0]:
-            fn = 1 - self.fn
-        else:
-            raise NotImplementedError("Cannot parameterise over non-edge subentities.")
-        return str(fn)
-
-    def degree(self, interpolant_degree):
-        return interpolant_degree
-
-    def permute(self, g):
-        if self.g:
-            g = self.g * g
-        new_cls = ParameterisationKernel(g)
-        return new_cls.add_context(self.fn, self.syms)
-
-    def __call__(self, *args):
-        if self.fn is None:
-            raise ValueError("Function not defined")
-
-        if self.g.perm.array_form == [1, 0]:
-            fn = 1 - self.fn
-        elif self.g.perm.array_form == [0, 1]:
-            fn = self.fn
-        else:
-            raise NotImplementedError("Cannot parameterise over non-edge subentities.")
-
-        res = sympy_to_numpy(fn, self.syms, args[:len(self.syms)])
-        if not hasattr(res, '__iter__'):
-            res = [res]
-        return res
-
-    def evaluate(self, Qpts, Qwts):
-        return Qpts, np.array([wt*self(*pt) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
-
-    def _to_dict(self):
-        o_dict = {"fn": self.fn}
-        return o_dict
-
-    def dict_id(self):
-        return "ParameterisationKernel"
-
-    def _from_dict(obj_dict):
-        return ParameterisationKernel(obj_dict["fn"])
 
 
 class DOF():
@@ -377,9 +300,9 @@ class DOF():
         if self.sub_id is None and generator_id is not None:
             self.sub_id = generator_id
 
-        if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-            fn, syms = self.cell.generate_facet_parameterisation(self.cell_defined_on.id)
-            self.kernel = self.kernel.add_context(fn, syms)
+        #if self.immersed and isinstance(self.kernel, ParameterisationKernel):
+        #    fn, syms = self.cell.generate_facet_parameterisation(self.cell_defined_on.id)
+        #    self.kernel = self.kernel.add_context(fn, syms)
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         # TODO deriv dict needs implementing (currently {})
@@ -388,14 +311,25 @@ class DOF():
     def to_quadrature(self, arg_degree):
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts)
+        bvs = np.array(self.cell_defined_on.basis_vectors())
+        
+        if self.pairing.orientation:
+            new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
+            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+        else:
+            basis_change =  np.eye(bvs.shape[0])
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, np.eye(bvs.shape[0]))
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
-            immersion = self.target_space.tabulate(wts, self.pairing.entity, self.g)
+            immersion = self.target_space.tabulate(wts, self.pairing.entity)
+            immersion = np.matmul(basis_change, immersion)
             wts = np.outer(wts, immersion)
+
         # pt dict is { pt: (weight, component)}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
+        #if isinstance(self.kernel, ComponentKernel):
+        #    breakpoint()
         return pt_dict
 
     def __repr__(self, fn="v"):
@@ -428,23 +362,24 @@ class ImmersedDOF(DOF):
         attached_fn = fn.attach(self.attachment)
 
         if pullback:
-            attached_fn = self.target_space(attached_fn, self.cell_defined_on, self.g)
+            attached_fn = self.target_space(attached_fn, self.cell_defined_on)
 
         return self.pairing(self.kernel, attached_fn, self.cell)
 
     def tabulate(self, Qpts):
         # modify this to take reference space q pts
-        immersion = self.target_space.tabulate(Qpts, self.pairing.entity, self.g)
+        immersion = self.target_space.tabulate(Qpts, self.pairing.entity)
         res, _ = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
 
     def __call__(self, g):
         index_trace = self.cell.d_entities_ids(self.cell_defined_on.dim()).index(self.cell_defined_on.id)
         permuted_e, permuted_g = self.cell.permute_entities(g, self.cell_defined_on.dim())[index_trace]
-        new_cell_defined_on = self.cell.get_node(permuted_e).orient(permuted_g)
-        if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-            fn, syms = self.cell.generate_facet_parameterisation(new_cell_defined_on.id)
-            self.kernel = self.kernel.add_context(fn, syms)
+        new_cell_defined_on = self.cell.get_node(permuted_e)
+        #.orient(permuted_g)
+        #if self.immersed and isinstance(self.kernel, ParameterisationKernel):
+        #    fn, syms = self.cell.generate_facet_parameterisation(new_cell_defined_on.id)
+        #    self.kernel = self.kernel.add_context(fn, syms)
         new_attach = lambda *x: g(self.attachment(*x))
         return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_cell_defined_on,
                            new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
