@@ -78,7 +78,11 @@ class GroupMemberRep(object):
 
     def __mul__(self, x):
         assert isinstance(x, GroupMemberRep)
-        return self.group.get_member(self.perm * x.perm)
+        max_size = max(self.perm.size, x.perm.size)
+        larger_group = self.group if len(self.group.members()) >= len(x.group.members()) else x.group
+        x_perm = Permutation(x.perm, size=max_size)
+        self_perm = Permutation(self.perm, size=max_size)
+        return larger_group.get_member(self_perm * x_perm)
 
     def __invert__(self):
         return self.group.get_member(~self.perm)
@@ -217,6 +221,8 @@ class GroupRepresentation(PermutationSetRepresentation):
         if cell is not None:
             self.cell = cell
             vertices = cell.vertices(return_coords=True)
+            verts = cell.ordered_vertices()
+            vertices = [cell.get_node(v, return_coords=True) for v in verts]
 
             self._members = []
             counter = 0

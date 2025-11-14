@@ -122,6 +122,7 @@ class ElementTriple():
                 if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
                     entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(ref_el, degree, value_shape))
+                    print(nodes[-1].pt_dict)
                     counter += 1
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
@@ -429,10 +430,10 @@ class ElementTriple():
 
         # remove immersed DOFs from flat form
         oriented_mats_overall = oriented_mats_by_entity[dim][0]
-        for val, mat in oriented_mats_overall.items():
-            cell_dofs = entity_ids[dim][0]
-            flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])
         if pure_perm and sub_pure_perm:
+            for val, mat in oriented_mats_overall.items():
+                cell_dofs = entity_ids[dim][0]
+                flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])
             return oriented_mats_by_entity, flat_by_entity, True
         return oriented_mats_by_entity, None, False
 

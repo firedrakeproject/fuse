@@ -95,7 +95,7 @@ def compute_scaled_verts(d, n):
     :param: n: number of vertices
     """
     if d == 2:
-        source = np.array([0, 1])
+        source = np.array([-np.sqrt(3)/2, -1/2])
         rot_coords = [source for i in range(0, n)]
 
         rot_mat = np.array([[np.cos((2*np.pi)/n), -np.sin((2*np.pi)/n)], [np.sin((2*np.pi)/n), np.cos((2*np.pi)/n)]])

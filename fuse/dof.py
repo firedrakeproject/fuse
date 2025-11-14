@@ -205,7 +205,9 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        # convert basis change to right format
+        return Qpts, np.array([wt*np.matmul(self(*pt), basis_change) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        #return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -311,19 +313,21 @@ class DOF():
     def to_quadrature(self, arg_degree):
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        bvs = np.array(self.cell_defined_on.basis_vectors())
         
-        if self.pairing.orientation:
+        if self.cell_defined_on.get_spatial_dimension() > 0 and self.pairing.orientation:
+            bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+            print(basis_change)
         else:
-            basis_change =  np.eye(bvs.shape[0])
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, np.eye(bvs.shape[0]))
+            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
-            immersion = np.matmul(basis_change, immersion)
+            #if basis_change:
+            #    immersion = np.matmul(immersion, basis_change)
             wts = np.outer(wts, immersion)
 
         # pt dict is { pt: (weight, component)}
