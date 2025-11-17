@@ -50,6 +50,8 @@ class DeltaPairing(Pairing):
         if self.entity:
             res.entity = self.entity
         #    res.entity = self.entity.orient(g)
+        if self.orientation is not None:
+            g = g * self.orientation
         res.orientation = g
         return res
 
@@ -96,11 +98,8 @@ class L2Pairing(Pairing):
         res = L2Pairing()
         if self.entity:
             res.entity = self.entity    
-            #res.entity = self.entity.orient(g)
-            #if self.entity.oriented:
-            #    breakpoint()
         if self.orientation is not None:
-            g = self.orientation * g
+            g = g * self.orientation
         res.orientation = g
         return res
 
@@ -318,7 +317,6 @@ class DOF():
             bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-            print(basis_change)
         else:
             basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
@@ -326,8 +324,6 @@ class DOF():
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
-            #if basis_change:
-            #    immersion = np.matmul(immersion, basis_change)
             wts = np.outer(wts, immersion)
 
         # pt dict is { pt: (weight, component)}

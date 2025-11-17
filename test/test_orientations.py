@@ -21,7 +21,7 @@ def construct_nd2(tri=None):
     int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
-    xs = [DOF(L2Pairing(), PolynomialKernel(v_2 - v_1))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((v_2 - v_1)/2))]
     #xs = [DOF(L2Pairing(), PolynomialKernel(tri.basis_vectors()[0]))]
 #          DOF(L2Pairing(),  PolynomialKernel(tri.basis_vectors()[1]))]
     center_dofs = DOFGenerator(xs, S2, S3)
@@ -188,7 +188,6 @@ def interpolate_vs_project(V):
             exact = Function(FunctionSpace(mesh, 'CG', 5))
             expression = as_vector([x, y, z])
     f = assemble(interpolate(expression, V))
-    breakpoint()
     expect = project(expression, V)
     exact.interpolate(expression)
     return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx)), 
@@ -210,7 +209,7 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-        diff_proj[n-1], diff_inte[n-1] = interpolate_vs_project(V)
+        diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V)
     
     breakpoint()
     print("projection l2 error norms:", diff_proj)
@@ -305,7 +304,9 @@ def test_create_fiat_nd():
     dofs = nd.generate()
     e = cell.edges()[0]
     s3 = S3.add_cell(cell)
-    g = s3.get_member([0,2,1])
+    g = s3.get_member([1,2,0])
+    print(dofs[-1].to_quadrature(2))
+    print(dofs[-1](g).to_quadrature(2))
     for d in nd.generate():
         print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
     print(g)
@@ -331,7 +332,6 @@ def test_create_fiat_nd():
     nd1.to_fiat()
     
     nd.to_fiat()
-    breakpoint()
     #nd_fv.to_fiat()
 
 
