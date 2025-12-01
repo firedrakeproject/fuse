@@ -127,12 +127,14 @@ class ElementTriple():
         self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
         self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
         mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        self.matrices = mat_perms
+        if entity_perms is None:
+            self.matrices = mat_perms
+            self.reverse_dof_perms()
+        print(entity_perms)
        # if not pure_perm:
        #     self.matrices = mat_perms
        # else:
        #     self.matrices = entity_perms
-        self.reverse_dof_perms()
         form_degree = 1 if self.spaces[0].set_shape else 0
 
         # TODO: Change this when Dense case in Firedrake

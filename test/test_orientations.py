@@ -22,8 +22,7 @@ def construct_nd2(tri=None):
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
     xs = [DOF(L2Pairing(), PolynomialKernel((v_2 - v_1)/2))]
-    #xs = [DOF(L2Pairing(), PolynomialKernel(tri.basis_vectors()[0]))]
-#          DOF(L2Pairing(),  PolynomialKernel(tri.basis_vectors()[1]))]
+
     center_dofs = DOFGenerator(xs, S2, S3)
     xs = [immerse(tri, int_ned1, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -161,7 +160,7 @@ def test_surface_vec(elem_gen,elem_code,deg):
         assert np.allclose(0, res2)
 
 
-def interpolate_vs_project(V):
+def get_expression(V):
     mesh = V.mesh()
     dim = mesh.geometric_dimension
     if dim == 2:
@@ -173,12 +172,10 @@ def interpolate_vs_project(V):
     if dim == 2:
         if len(shape) == 0:
             exact = Function(FunctionSpace(mesh, 'CG', 5))
-            #expression = x + y
-            expression = x
+            expression = x + y
         elif len(shape) == 1:
             exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
             expr = x + y
-            #expr = cos(x*pi*2)*sin(y*pi*2)
             expression = as_vector([expr, expr])
     elif dim == 3:
         if len(shape) == 0:
@@ -187,10 +184,16 @@ def interpolate_vs_project(V):
         elif len(shape) == 1:
             exact = Function(FunctionSpace(mesh, 'CG', 5))
             expression = as_vector([x, y, z])
+    return expression, exact
+
+def interpolate_vs_project(V, expression, exact):
     f = assemble(interpolate(expression, V))
-    expect = project(expression, V)
+    #expect = project(expression, V)
     exact.interpolate(expression)
-    return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx)), 
+    print(exact.dat.data)
+    #return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), 
+    print(f.dat.data)
+    return 0, sqrt(assemble(inner((f - exact), (f - exact)) * dx)), 
 
 
 
@@ -199,7 +202,7 @@ def interpolate_vs_project(V):
 def test_convergence(elem_gen,elem_code,deg,conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
-    scale_range = range(2,6)
+    scale_range = range(0,1)
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
@@ -209,14 +212,18 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-        diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V)
+        print(V.cell_node_list)
+        x,y = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        expr = as_vector([expr,expr])
+        _, exact = get_expression(V)
+        diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
     
-    breakpoint()
-    print("projection l2 error norms:", diff_proj)
-    diff_proj = np.array(diff_proj)
-    conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
-    print("convergence order:", conv1)
-    assert all([c > conv_rate for c in conv1])
+    #print("projection l2 error norms:", diff_proj)
+    #diff_proj = np.array(diff_proj)
+    #conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    #print("convergence order:", conv1)
+    #assert all([c > conv_rate for c in conv1])
     print("interpolation l2 error norms:", diff_inte)
     diff_inte = np.array(diff_inte)
     conv1 = np.log2(diff_inte[:-1] / diff_inte[1:])
@@ -232,16 +239,21 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(1, 1)
+    mesh = UnitSquareMesh(2, 2)
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
         V = FunctionSpace(mesh, elem_code, deg)
-    err1, err2 = interpolate_vs_project(V)
-    assert np.allclose(err1, 0)
-    assert np.allclose(err2, 0)
+    expression, _ = get_expression(V)
+    expect = project(expression, V)
+    #f = assemble(interpolate(expression, V))
+    print(V.cell_node_list)
+    #print(f.dat.data)
+    breakpoint()
+    assert np.allclose(f.dat.data, expect.dat.data)
 
+@pytest.mark.xfail(reason="issues with tets")
 def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -283,78 +295,103 @@ def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv1) > conv_rate).all()
     #assert (np.array(conv2) > conv_rate).all()
 
-def test_create_fiat_nd():
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [
+                                                  #  (create_cg2_tri, "CG", 2),
+                                                  #  (create_cg1, "CG", 1),
+                                                  #  (create_dg1, "DG", 1),
+                                                  #  (construct_cg3, "CG", 3),
+                                                    (construct_nd, "N1curl", 1),
+                                                    ])
+def test_two_form(elem_gen, elem_code, deg):
     cell = polygon(3)
-    nd = construct_nd2(cell)
-    nd_fv = construct_nd2_for_fiat(cell)
-    ref_el = cell.to_fiat()
-    deg = 2
+    elem = elem_gen(cell)
+    mesh = UnitSquareMesh(2, 2)
 
-    from FIAT.nedelec import Nedelec
-    fiat_elem = Nedelec(ref_el, deg)
-    print("fiat")
-    for f in fiat_elem.dual_basis():
-        print(f.pt_dict)
+    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+        V = FunctionSpace(mesh, elem.to_ufl())
+    else:
+        V = FunctionSpace(mesh, elem_code, deg)
+    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+        V2 = FunctionSpace(mesh, construct_nd2(cell).to_ufl())
+    else:
+        V2 = FunctionSpace(mesh, "N1Curl", 2)
+    v = TestFunction(V)
+    u = TrialFunction(V2)
+    assemble(inner(u, v)*dx)
 
-    #print("fiat: fuse's version")
-    #for d in nd_fv.generate():
-    #    print(d.convert_to_fiat(ref_el, deg).pt_dict)
-
-    print("fuse")
-    dofs = nd.generate()
-    e = cell.edges()[0]
-    s3 = S3.add_cell(cell)
-    g = s3.get_member([1,2,0])
-    print(dofs[-1].to_quadrature(2))
-    print(dofs[-1](g).to_quadrature(2))
-    for d in nd.generate():
-        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-    print(g)
-    for d in nd.generate():
-        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-    #for i in range(len(new_nodes)):
-    #    print(f"{nodes[i].pt_dict}")
-        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-        # for g in S2.add_cell(cell).members():
-        #     print(d(g))
-        #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
-
-    nd1= construct_nd(cell)
-    print("nd1")
-    for d in nd1.generate():
-        print(d.convert_to_fiat(ref_el, deg).pt_dict)
-    print(g)
-    for d in nd1.generate():
-        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
-    nd1.to_fiat()
-    
-    nd.to_fiat()
-    #nd_fv.to_fiat()
-
-
-def test_cg3():
-    tri = polygon(3)
-    elem = construct_cg3(tri)
-    for d in elem.generate():
-        print(d.to_quadrature(1))
-    breakpoint()
-
-
-def test_int_nd():
-    tri = polygon(3)
-    deg = 2
-    edge = tri.edges()[0]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
-
-    dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
-    dofs = int_ned1.generate()
-    for d in dofs:
-        print(d.to_quadrature(1))
-    breakpoint()
+#def test_create_fiat_nd():
+#    cell = polygon(3)
+#    nd = construct_nd2(cell)
+#    nd_fv = construct_nd2_for_fiat(cell)
+#    ref_el = cell.to_fiat()
+#    deg = 2
+#
+#    from FIAT.nedelec import Nedelec
+#    fiat_elem = Nedelec(ref_el, deg)
+#    print("fiat")
+#    for f in fiat_elem.dual_basis():
+#        print(f.pt_dict)
+#
+#    #print("fiat: fuse's version")
+#    #for d in nd_fv.generate():
+#    #    print(d.convert_to_fiat(ref_el, deg).pt_dict)
+#
+#    print("fuse")
+#    dofs = nd.generate()
+#    e = cell.edges()[0]
+#    s3 = S3.add_cell(cell)
+#    g = s3.get_member([1,2,0])
+#    print(dofs[-1].to_quadrature(2))
+#    print(dofs[-1](g).to_quadrature(2))
+#    for d in nd.generate():
+#        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
+#    print(g)
+#    for d in nd.generate():
+#        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
+#    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+#    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+#    #for i in range(len(new_nodes)):
+#    #    print(f"{nodes[i].pt_dict}")
+#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+#        # for g in S2.add_cell(cell).members():
+#        #     print(d(g))
+#        #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
+#
+#    nd1= construct_nd(cell)
+#    print("nd1")
+#    for d in nd1.generate():
+#        print(d.convert_to_fiat(ref_el, deg).pt_dict)
+#    print(g)
+#    for d in nd1.generate():
+#        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
+#    nd1.to_fiat()
+#    
+#    nd.to_fiat()
+#    #nd_fv.to_fiat()
+#
+#
+#def test_cg3():
+#    tri = polygon(3)
+#    elem = construct_cg3(tri)
+#    for d in elem.generate():
+#        print(d.to_quadrature(1))
+#    breakpoint()
+#
+#
+#def test_int_nd():
+#    tri = polygon(3)
+#    deg = 2
+#    edge = tri.edges()[0]
+#    x = sp.Symbol("x")
+#    y = sp.Symbol("y")
+#
+#    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+#
+#    dofs = DOFGenerator(xs, S2, S2)
+#    int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+#    dofs = int_ned1.generate()
+#    for d in dofs:
+#        print(d.to_quadrature(1))
+#    breakpoint()

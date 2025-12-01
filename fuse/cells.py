@@ -545,7 +545,7 @@ class Point():
         if return_coords:
             top_level_node = self.d_entities_ids(self.graph_dim())[0]
             if self.dimension == 0:
-                return [()]
+                return ()
             return self.attachment(top_level_node, node)()
         return self.G.nodes.data("point_class")[node]
 
