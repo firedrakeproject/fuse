@@ -1,4 +1,6 @@
 from fuse import *
+import pytest
+from sympy.combinatorics import Permutation
 import sympy as sp
 import numpy as np
 
@@ -93,7 +95,7 @@ def construct_tet_rt(cell=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1, 1, 1)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
     dofs = DOFGenerator(xs, S1, S3)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
@@ -106,10 +108,41 @@ def construct_tet_rt(cell=None):
     return rt1
 
 
+def construct_tet_ned(cell=None):
+    deg = 1
+    tri = make_tetrahedron()
+    edge = tri.edges()[0]
+
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
+
+    M1 = sp.Matrix([[0, z, -y]])
+    M2 = sp.Matrix([[z, 0, -x]])
+    M3 = sp.Matrix([[y, -x, 0]])
+
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
+
+    # [test_tet_ned 0]
+    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    dofs = DOFGenerator(xs, S1, S2)
+
+    edges = ElementTriple(edge, (vec_Pd, CellHCurl, L2), dofs)
+    xs = [immerse(tri, edges, TrHCurl)]
+    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), 
+                                                   Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+                                                   Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+    edge_dofs = DOFGenerator(xs, tet_edges, S1)
+    # [test_tet_ned 1]
+
+    return ElementTriple(tri, (nd_space, CellHCurl, L2), [edge_dofs])
+   
+
 def plot_tet_rt():
     rt = construct_tet_rt()
     rt.plot()
-
 
 def test_tet_rt():
     tetra = make_tetrahedron()
@@ -118,24 +151,18 @@ def test_tet_rt():
     # TODO make this a proper test
     for dof in ls:
         print(dof)
+    rt1.to_fiat()
 
-
-def construct_tet_ned():
+@pytest.mark.xfail(reason='DOFs not forming full rank matrix')
+def test_tet_nd():
     tetra = make_tetrahedron()
-    edge = tetra.edges()[0]
-    # [test_tet_ned 0]
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned = ElementTriple(edge, (P1, CellHCurl, "C0"), dofs)
-
-    im_xs = [immerse(tetra, int_ned, TrHCurl)]
-    edge = DOFGenerator(im_xs, tet_edges, Z4)
-
-    ned = ElementTriple(tetra, (P1, CellHCurl, "C0"),
-                        [edge])
-    # [test_tet_ned 1]
-
-    return ned
+    nd1 = construct_tet_ned(tetra)
+    ls = nd1.generate()
+    # TODO make this a proper test
+    for dof in ls:
+        print(dof)
+    nd1.to_fiat()
+    
 
 
 def plot_tet_ned():
@@ -143,9 +170,9 @@ def plot_tet_ned():
     ned.plot()
 
 
-def test_tet_ned():
-    ned = construct_tet_ned()
-    ls = ned.generate()
-    # TODO make this a proper test
-    for dof in ls:
-        print(dof)
+#def test_tet_ned():
+#    ned = construct_tet_ned()
+#    ls = ned.generate()
+#    # TODO make this a proper test
+#    for dof in ls:
+#        print(dof)

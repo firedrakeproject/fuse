@@ -196,8 +196,8 @@ class PolynomialKernel(BaseKernel):
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
-        if not hasattr(res, '__iter__'):
-            return [res]
+        #if not hasattr(res, '__iter__'):
+        #    return [res]
         #if self.g:
         #    print(self.g, self.g(res))
         #    return self.g(res)
@@ -205,7 +205,9 @@ class PolynomialKernel(BaseKernel):
 
     def evaluate(self, Qpts, Qwts, basis_change):
         # convert basis change to right format
-        return Qpts, np.array([wt*np.matmul(self(*pt), basis_change) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        #breakpoint()
+        # TODO i don't think this makes sense
+        return Qpts, np.array([wt*self(*pt)*basis_change for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
         #return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
@@ -318,7 +320,7 @@ class DOF():
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
-            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension() + 1) 
+            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
         if self.immersed:
             # need to compute jacobian from attachment.

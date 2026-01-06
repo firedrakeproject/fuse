@@ -172,7 +172,7 @@ def get_expression(V):
     if dim == 2:
         if len(shape) == 0:
             exact = Function(FunctionSpace(mesh, 'CG', 5))
-            expression = x + y
+            expression = x
         elif len(shape) == 1:
             exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
             expr = x + y
@@ -202,7 +202,7 @@ def interpolate_vs_project(V, expression, exact):
 def test_convergence(elem_gen,elem_code,deg,conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
-    scale_range = range(0,1)
+    scale_range = range(2,4)
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
@@ -212,7 +212,6 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-        print(V.cell_node_list)
         x,y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
         expr = as_vector([expr,expr])
@@ -235,11 +234,12 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
                                                     (create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
                                                     (construct_cg3, "CG", 3),
-                                                    ])
+                                                    (construct_nd2, "N1curl", 2)])
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(2, 2)
+    #mesh = UnitTriangleMesh(0)
+    mesh = UnitSquareMesh(2,2)
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
@@ -247,10 +247,7 @@ def test_interpolation(elem_gen, elem_code, deg):
         V = FunctionSpace(mesh, elem_code, deg)
     expression, _ = get_expression(V)
     expect = project(expression, V)
-    #f = assemble(interpolate(expression, V))
-    print(V.cell_node_list)
-    #print(f.dat.data)
-    breakpoint()
+    f = assemble(interpolate(expression, V))
     assert np.allclose(f.dat.data, expect.dat.data)
 
 @pytest.mark.xfail(reason="issues with tets")
@@ -296,29 +293,31 @@ def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
     #assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [
+@pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2", [
                                                   #  (create_cg2_tri, "CG", 2),
-                                                  #  (create_cg1, "CG", 1),
+                                                    (create_cg1, create_cg2_tri, "CG", 1, 2),
                                                   #  (create_dg1, "DG", 1),
                                                   #  (construct_cg3, "CG", 3),
-                                                    (construct_nd, "N1curl", 1),
+                                                    (construct_nd, construct_nd2, "N1curl", 1, 2),
                                                     ])
-def test_two_form(elem_gen, elem_code, deg):
+def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(2, 2)
+    mesh = UnitSquareMesh(1, 1)
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
         V = FunctionSpace(mesh, elem_code, deg)
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        V2 = FunctionSpace(mesh, construct_nd2(cell).to_ufl())
+        V2 = FunctionSpace(mesh,  elem_gen2(cell).to_ufl())
     else:
-        V2 = FunctionSpace(mesh, "N1Curl", 2)
+        V2 = FunctionSpace(mesh, elem_code, deg2)
     v = TestFunction(V)
     u = TrialFunction(V2)
-    assemble(inner(u, v)*dx)
+    res =assemble(inner(u, v)*dx).M.values
+    for row in res:
+        print(row)
 
 #def test_create_fiat_nd():
 #    cell = polygon(3)

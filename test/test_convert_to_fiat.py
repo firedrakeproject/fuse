@@ -493,10 +493,11 @@ def helmholtz_solve(V, mesh):
 
     # l_a = assemble(L)
     # elem = V.finat_element.fiat_equivalent
-    # W = VectorFunctionSpace(mesh, V.ufl_element())
-    # X = assemble(interpolate(mesh.coordinates, W))
-    # print(X.dat.data)
-    # print(assemble(a).M.values)
+    #W = VectorFunctionSpace(mesh, V.ufl_element())
+    #X = assemble(interpolate(mesh.coordinates, W))
+    #print(X.dat.data)
+    #print(assemble(a).M.values)
+    #breakpoint()
 
     # Compute solution
     sol = Function(V)

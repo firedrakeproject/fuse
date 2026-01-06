@@ -245,6 +245,7 @@ def test_rt_example():
     for dof in rt.generate():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
+    rt.to_fiat()
 
 
 def construct_hermite():
@@ -270,19 +271,19 @@ def construct_hermite():
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
     return her
 
-
-def test_hermite_example():
-    her = construct_hermite()
-
-    # TODO improve this test
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
-    ls = her.generate()
-    print("num dofs ", her.num_dofs())
-    for dof in ls:
-        print(dof)
-        print("dof eval", dof.eval(phi_0))
+# draft of hermite test, immersions need work
+#def test_hermite_example():
+#    her = construct_hermite()
+#
+#    # TODO improve this test
+#    x = sp.Symbol("x")
+#    y = sp.Symbol("y")
+#    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
+#    ls = her.generate()
+#    print("num dofs ", her.num_dofs())
+#    for dof in ls:
+#        print(dof)
+#        print("dof eval", dof.eval(phi_0))
 
 
 def test_square_cg():

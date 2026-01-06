@@ -144,6 +144,7 @@ class TrGrad(Trace):
 
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
+        raise NotImplementedError("Gradient immersions are under development")
         tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
 
         def apply(*x):
