@@ -318,7 +318,7 @@ class DOF():
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
-            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
+            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension() + 1) 
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
         if self.immersed:
             # need to compute jacobian from attachment.

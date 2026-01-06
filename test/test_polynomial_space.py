@@ -152,6 +152,41 @@ def flatten(coeffs):
     nc = np.reshape(coeffs, newshape)
     return nc
 
+@pytest.mark.parametrize("deg", [1, 2, 3, 4])
+def test_3d_nd_construction(deg):
+    cell = make_tetrahedron()
+    ref_el = cell.to_fiat()
+    sd = ref_el.get_spatial_dimension()
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
+    M1 = sp.Matrix([[0, z, -y]])
+    M2 = sp.Matrix([[z, 0, -x]])
+    M3 = sp.Matrix([[y, -x, 0]])
+
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    composite = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
+
+    assert composite.set_shape
+    assert isinstance(composite, ConstructedPolynomialSpace)
+    on_set = composite.to_ON_polynomial_set(ref_el)
+
+    from FIAT.nedelec import NedelecSpace3D
+    fiat_nd_space = NedelecSpace3D(ref_el, deg)
+
+    Q = create_quadrature(ref_el, 2*(deg + 1))
+    Qpts, _ = Q.get_points(), Q.get_weights()
+    fiat_vals = fiat_nd_space.tabulate(Qpts)[(0,) * sd]
+    my_vals = on_set.tabulate(Qpts)[(0,) * sd]
+    fiat_vals = flatten(fiat_vals)
+    my_vals = flatten(my_vals)
+
+    (x, res, _, _) = np.linalg.lstsq(fiat_vals.T, my_vals.T)
+    x1 = np.linalg.inv(x)
+    assert np.allclose(np.linalg.norm(my_vals.T - fiat_vals.T @ x), 0)
+    assert np.allclose(np.linalg.norm(fiat_vals.T - my_vals.T @ x1), 0)
+    assert np.allclose(res, 0)
 
 @pytest.mark.parametrize("deg", [1, 2, 3, 4])
 def test_3d_rt_construction(deg):
