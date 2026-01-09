@@ -1,9 +1,10 @@
 import numpy as np
 import sympy as sp
+from collections.abc import Callable
 import math
 
 
-def fold_reduce(func_list, *prev):
+def fold_reduce(func_list: list[Callable[[...], int]], *prev: int) -> int:
     """
     Right to left function comprehension
 
@@ -15,7 +16,7 @@ def fold_reduce(func_list, *prev):
     return prev
 
 
-def sympy_to_numpy(array, symbols, values):
+def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> np.ndarray:
     """
     Convert a sympy array to a numpy array.
 
@@ -38,7 +39,7 @@ def sympy_to_numpy(array, symbols, values):
     return nparray
 
 
-def tabulate_sympy(expr, pts):
+def tabulate_sympy(expr: sp.Matrix, pts: list[list[float]]) -> list[list[float]]:
     # expr: sp matrix expression in x,y,z for components of R^d
     # pts: n values in R^d
     # returns: evaluation of expr at pts
@@ -56,7 +57,7 @@ def tabulate_sympy(expr, pts):
     return final
 
 
-def max_deg_sp_mat(sp_mat):
+def max_deg_sp_mat(sp_mat: sp.Matrix) -> int:
     degs = []
     for comp in sp_mat:
         # only compute degree if component is a polynomial
@@ -65,7 +66,7 @@ def max_deg_sp_mat(sp_mat):
     return max(degs)
 
 
-def numpy_to_str_tuple(arr, scale=1):
+def numpy_to_str_tuple(arr: np.ndarray, scale: int = 1) -> str:
     str_as = []
     for a in arr:
         str_a = str(scale*a)
@@ -73,7 +74,7 @@ def numpy_to_str_tuple(arr, scale=1):
     return f'({",".join(str_as)})'
 
 
-def orientation_value(identity_arg, perm_arg):
+def orientation_value(identity_arg: list[int], perm_arg: list[int]) -> int:
     # copy arrays as they are modified in place
     identity = identity_arg.copy()
     perm = perm_arg.copy()

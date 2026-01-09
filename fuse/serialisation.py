@@ -5,6 +5,7 @@ from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.spaces.interpolation_spaces import InterpolationSpace
 from fuse.traces import Trace
 from fuse.triples import ImmersedDOFs
+from typing import Self
 import sympy as sp
 
 
@@ -23,7 +24,7 @@ class ElementSerialiser():
     """
 
     def __init__(self):
-        self.obj_id_counter = {}
+        self.obj_id_counter: dict[ = {}
         self.seen_objs = {}
         self.obj_storage = {}
 
@@ -45,17 +46,17 @@ class ElementSerialiser():
                           "Trace": Trace
                           }
 
-    def encode(self, obj):
+    def encode(self, obj: FuseType) -> str:
         base_obj = self.encode_traverse(obj)
         self.obj_storage["encoded_obj"] = base_obj
         return json.dumps(self.obj_storage, indent=2)
 
-    def decode(self, obj_str):
+    def decode(self, obj_str: str) -> FuseType:
         obj_dict = json.loads(obj_str)
         obj = self.decode_traverse(obj_dict["encoded_obj"], obj_dict)
         return obj
 
-    def encode_traverse(self, obj, path=[]):
+    def encode_traverse(self, obj: FuseType, path: list[str] = []) -> FuseType:
         obj_dict = {}
 
         if isinstance(obj, list) or isinstance(obj, tuple):

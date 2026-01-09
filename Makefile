@@ -17,6 +17,12 @@ lint:
 	@echo "    Linting FUSE test suite"
 	@python3 -m flake8 $(FLAKE8_FORMAT) test
 
+type:
+	@echo "    Type checking FUSE codebase"
+	@python3 -m mypy --ignore-missing-imports fuse
+	@echo "    Linting FUSE test suite"
+	@python3 -m mypy --ignore-missing-imports test
+
 test_examples:
 	@echo "    Running examples"
 	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_2d_examples_docs.py
