@@ -377,7 +377,7 @@ def test_immersed_entity_perms(elem_gen, cell, expected):
 def test_1d(elem_gen, elem_code, deg):
     cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     elem = elem_gen(cell)
-    scale_range = range(3, 6)
+    scale_range = range(1, 6)
 
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
@@ -491,13 +491,16 @@ def helmholtz_solve(V, mesh):
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
     L = inner(f, v) * dx
 
-    # l_a = assemble(L)
+    
     # elem = V.finat_element.fiat_equivalent
     #W = VectorFunctionSpace(mesh, V.ufl_element())
     #X = assemble(interpolate(mesh.coordinates, W))
     #print(X.dat.data)
     #print(assemble(a).M.values)
-    #breakpoint()
+    l_a = assemble(L)
+    print(l_a.dat.data)
+
+    breakpoint()
 
     # Compute solution
     sol = Function(V)
