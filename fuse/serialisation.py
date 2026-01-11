@@ -5,8 +5,12 @@ from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.spaces.interpolation_spaces import InterpolationSpace
 from fuse.traces import Trace
 from fuse.triples import ImmersedDOFs
-from typing import Self
+from typing import Any
 import sympy as sp
+
+type Terminal = Union[int, str, bool, None]
+type RecursionType = Union[FuseType, list[Any], sp.Expr, sp.core.containers.Tuple]
+type ObjDictType = dict[str, FuseType | Terminal | list[Any]]
 
 
 class ElementSerialiser():
@@ -24,7 +28,7 @@ class ElementSerialiser():
     """
 
     def __init__(self):
-        self.obj_id_counter: dict[ = {}
+        self.obj_id_counter: dict[str,int] = {}
         self.seen_objs = {}
         self.obj_storage = {}
 
@@ -56,13 +60,14 @@ class ElementSerialiser():
         obj = self.decode_traverse(obj_dict["encoded_obj"], obj_dict)
         return obj
 
-    def encode_traverse(self, obj: FuseType, path: list[str] = []) -> FuseType:
+    def encode_traverse(self, obj: RecursionType, path: list[str | int] = []) -> FuseType | Terminal | list[Any]:
         obj_dict = {}
 
         if isinstance(obj, list) or isinstance(obj, tuple):
-            res_array = [{} for i in range(len(obj))]
+            res_array: list[RecursionType] = [None for i in range(len(obj))]
             for i in range(len(obj)):
                 dfs_res = self.encode_traverse(obj[i], path + [i])
+                breakpoint()
                 res_array[i] = dfs_res
             return res_array
 
@@ -81,7 +86,7 @@ class ElementSerialiser():
 
         return obj
 
-    def get_id(self, obj):
+    def get_id(self, obj: FuseType) -> int:
         obj_name = obj.dict_id()
         if obj_name in self.obj_id_counter.keys():
             obj_id = self.obj_id_counter[obj_name]
@@ -91,14 +96,14 @@ class ElementSerialiser():
             self.obj_id_counter[obj_name] = 1
         return obj_id
 
-    def store_obj(self, obj, name, obj_id, obj_dict, path):
+    def store_obj(self, obj: FuseType, name: str, obj_id: int, obj_dict: ObjDictType, path: list[str | int]):
         self.seen_objs[obj] = {"id": name + "/" + str(obj_id), "path": path, "dict": obj_dict}
         if name in self.obj_storage.keys():
             self.obj_storage[name][obj_id] = obj_dict
         else:
             self.obj_storage[name] = {obj_id: obj_dict}
 
-    def decode_traverse(self, obj, obj_dict):
+    def decode_traverse(self, obj: FuseType | str | list[Any] | tuple[Any], obj_dict: ObjDictType):
 
         if isinstance(obj, str):
             split_str = obj.split("/")

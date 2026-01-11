@@ -1,10 +1,11 @@
 import numpy as np
 import sympy as sp
+from typing import Any
 from collections.abc import Callable
 import math
 
 
-def fold_reduce(func_list: list[Callable[[...], int]], *prev: int) -> int:
+def fold_reduce(func_list: list[Callable[..., tuple[Any]]], *prev: Any) -> tuple[Any]:
     """
     Right to left function comprehension
 
@@ -16,7 +17,7 @@ def fold_reduce(func_list: list[Callable[[...], int]], *prev: int) -> int:
     return prev
 
 
-def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> np.ndarray:
+def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> np.ndarray | float:
     """
     Convert a sympy array to a numpy array.
 
@@ -39,7 +40,7 @@ def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> n
     return nparray
 
 
-def tabulate_sympy(expr: sp.Matrix, pts: list[list[float]]) -> list[list[float]]:
+def tabulate_sympy(expr: sp.Matrix, pts: list[list[float]]) -> np.ndarray:
     # expr: sp matrix expression in x,y,z for components of R^d
     # pts: n values in R^d
     # returns: evaluation of expr at pts
@@ -48,7 +49,8 @@ def tabulate_sympy(expr: sp.Matrix, pts: list[list[float]]) -> list[list[float]]
     syms = ["x", "y", "z"]
     for pt in pts:
         if not hasattr(pt, "__iter__"):
-            pt = (pt,)
+            raise ValueError("Coordinates should be stored in a tuple or list")
+        #    pt = (pt,)
         subbed = expr.evalf(subs={syms[i]: pt[i] for i in range(len(pt))})
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]

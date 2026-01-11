@@ -192,6 +192,16 @@ class PermutationSetRepresentation():
     def __repr__(self):
         return "GS" + str(self.size())
 
+    def _to_dict(self):
+        return {"members": [m.perm.array_form for m in self._members]}
+
+    def dict_id(self):
+        return "PermSet"
+
+    def _from_dict(o_dict):
+        perm_set = [Permutation(m) for m in o_dict["members"]]
+        return PermutationSetRepresentation(perm_set)
+
 
 class GroupRepresentation(PermutationSetRepresentation):
     """
