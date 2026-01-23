@@ -171,6 +171,39 @@ class PointKernel(BaseKernel):
     def _from_dict(obj_dict):
         return PointKernel(tuple(obj_dict["pt"]))
 
+class VectorKernel(BaseKernel):
+
+    def __init__(self, x, g=None):
+        self.pt = x
+        self.g = g
+        super(VectorKernel, self).__init__()
+
+    def __repr__(self):
+        x = list(map(str, list(self.pt)))
+        return ','.join(x)
+
+    def degree(self, interpolant_degree):
+        return interpolant_degree
+
+    def permute(self, g):
+        return VectorKernel(self.pt, g)
+
+    def __call__(self, *args):
+        return self.pt
+
+    def evaluate(self, Qpts, Qwts, basis_change):
+        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+
+
+    def _to_dict(self):
+        o_dict = {"pt": self.pt}
+        return o_dict
+
+    def dict_id(self):
+        return "VectorKernel"
+
+    def _from_dict(obj_dict):
+        return VectorKernel(tuple(obj_dict["pt"]))
 
 class PolynomialKernel(BaseKernel):
 
@@ -191,7 +224,8 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() * interpolant_degree
 
     def permute(self, g):
-        new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        #new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        new_fn = self.fn
         return PolynomialKernel(new_fn, g=g, symbols=self.syms)
 
     def __call__(self, *args):
@@ -205,10 +239,12 @@ class PolynomialKernel(BaseKernel):
 
     def evaluate(self, Qpts, Qwts, basis_change):
         # convert basis change to right format
-        #breakpoint()
+        #if len((Qwts[0]*self(*Qpts[0])*basis_change).flatten()) > 1:
+        #    breakpoint()
         # TODO i don't think this makes sense
-        return Qpts, np.array([wt*self(*pt)*basis_change for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
-        #return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        #return Qpts, np.array([wt*self(*pt)*basis_change for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        #return Qpts, np.array([wt*np.matmul(self(*pt),basis_change) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -314,14 +350,18 @@ class DOF():
     def to_quadrature(self, arg_degree):
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        
-        if self.cell_defined_on.get_spatial_dimension() > 0 and self.pairing.orientation:
+        dim =  self.cell_defined_on.get_spatial_dimension()
+        if dim > 0 and self.pairing.orientation:
             bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
-            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
+            basis_change = np.eye(dim) 
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
+        #print(basis_change)
+        #print(pts, wts)
+        #print("ker", self.kernel)
+        #breakpoint()
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
@@ -330,6 +370,8 @@ class DOF():
 
         # pt dict is { pt: (weight, component)}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
+        #if len(wts[0]) > 1:
+        #    breakpoint()
         #if isinstance(self.kernel, ComponentKernel):
         #    breakpoint()
         return pt_dict

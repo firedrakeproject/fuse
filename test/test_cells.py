@@ -293,3 +293,8 @@ def make_entity_cone_lists(fiat_cell):
         _n = _n1
     _offset_list.append(_offset)
     return _list, _offset_list
+
+
+def test_mesh():
+    mesh = UnitSquareMesh(2,2)
+    print(mesh.entity_orientations)

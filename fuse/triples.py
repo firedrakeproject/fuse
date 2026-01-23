@@ -130,13 +130,13 @@ class ElementTriple():
         #if entity_perms is None:
         self.matrices = mat_perms
         self.reverse_dof_perms()
-       # if not pure_perm:
-       #     self.apply_matrices = True
-       #     entity_perms = None
-       # else:
-       #     self.apply_matrices = False
-        self.apply_matrices = True
-        #entity_perms = None
+        #if not pure_perm:
+        #    self.apply_matrices = True
+        #    entity_perms = None
+        #else:
+        #    self.apply_matrices = False
+        self.apply_matrices = True 
+        entity_perms = None
         
         form_degree = 1 if self.spaces[0].set_shape else 0
 

@@ -405,7 +405,7 @@ def test_1d(elem_gen, elem_code, deg):
 def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
-    scale_range = range(3, 6)
+    scale_range = range(3,6)
 
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
@@ -439,7 +439,7 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    scale_range = range(2, 4)
+    scale_range = range(3,6)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
@@ -480,6 +480,7 @@ def helmholtz_solve(V, mesh):
         f.interpolate((1+8*pi*pi)*cos(x[0]*pi*2))
         expect.interpolate(cos(x[0]*pi*2))
     elif dim == 2:
+        #f.interpolate(x[0]*10 + x[1])
         f.interpolate((1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2))
         expect.interpolate(cos(x[0]*pi*2)*cos(x[1]*pi*2))
     elif dim == 3:
@@ -492,15 +493,19 @@ def helmholtz_solve(V, mesh):
     L = inner(f, v) * dx
 
     
-    # elem = V.finat_element.fiat_equivalent
+    #elem = V.finat_element.fiat_equivalent
     #W = VectorFunctionSpace(mesh, V.ufl_element())
     #X = assemble(interpolate(mesh.coordinates, W))
     #print(X.dat.data)
+    np.set_printoptions(precision=4, suppress=True)
+    print()
     #print(assemble(a).M.values)
     l_a = assemble(L)
-    print(l_a.dat.data)
+    print(l_a.dat.data[0:2])
+    print(V.cell_node_list[0:2])
+    #print(mesh.entity_orientations)
 
-    breakpoint()
+    #breakpoint()
 
     # Compute solution
     sol = Function(V)

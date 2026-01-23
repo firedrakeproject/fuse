@@ -2,6 +2,7 @@ import unittest.mock as mock
 import pytest
 from firedrake import *
 from fuse import *
+import numpy as np
 import sympy as sp
 from test_convert_to_fiat import create_cg1, construct_nd, construct_rt, create_cg2_tri, construct_cg3, create_dg1
 import os
@@ -21,7 +22,7 @@ def construct_nd2(tri=None):
     int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
-    xs = [DOF(L2Pairing(), PolynomialKernel((v_2 - v_1)/2))]
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
 
     center_dofs = DOFGenerator(xs, S2, S3)
     xs = [immerse(tri, int_ned1, TrHCurl)]
@@ -319,56 +320,58 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     for row in res:
         print(row)
 
-#def test_create_fiat_nd():
-#    cell = polygon(3)
-#    nd = construct_nd2(cell)
-#    nd_fv = construct_nd2_for_fiat(cell)
-#    ref_el = cell.to_fiat()
-#    deg = 2
-#
-#    from FIAT.nedelec import Nedelec
-#    fiat_elem = Nedelec(ref_el, deg)
-#    print("fiat")
-#    for f in fiat_elem.dual_basis():
-#        print(f.pt_dict)
-#
-#    #print("fiat: fuse's version")
-#    #for d in nd_fv.generate():
-#    #    print(d.convert_to_fiat(ref_el, deg).pt_dict)
-#
-#    print("fuse")
-#    dofs = nd.generate()
-#    e = cell.edges()[0]
-#    s3 = S3.add_cell(cell)
-#    g = s3.get_member([1,2,0])
-#    print(dofs[-1].to_quadrature(2))
-#    print(dofs[-1](g).to_quadrature(2))
-#    for d in nd.generate():
-#        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-#    print(g)
-#    for d in nd.generate():
-#        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-#    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-#    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-#    #for i in range(len(new_nodes)):
-#    #    print(f"{nodes[i].pt_dict}")
-#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-#        # for g in S2.add_cell(cell).members():
-#        #     print(d(g))
-#        #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
-#
-#    nd1= construct_nd(cell)
-#    print("nd1")
-#    for d in nd1.generate():
-#        print(d.convert_to_fiat(ref_el, deg).pt_dict)
-#    print(g)
-#    for d in nd1.generate():
-#        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
-#    nd1.to_fiat()
-#    
-#    nd.to_fiat()
-#    #nd_fv.to_fiat()
+def test_create_fiat_nd():
+    cell = polygon(3)
+    nd = construct_nd2(cell)
+    nd_fv = construct_nd2_for_fiat(cell)
+    ref_el = cell.to_fiat()
+    deg = 2
+
+    from FIAT.nedelec import Nedelec
+    fiat_elem = Nedelec(ref_el, deg)
+    print("fiat")
+    for f in fiat_elem.dual_basis():
+        print(f.pt_dict)
+
+    #print("fiat: fuse's version")
+    #for d in nd_fv.generate():
+    #    print(d.convert_to_fiat(ref_el, deg).pt_dict)
+
+    print("fuse")
+    dofs = nd.generate()
+    e = cell.edges()[0]
+    s3 = S3.add_cell(cell)
+    g = s3.get_member([1,2,0])
+    #print(dofs[-1].to_quadrature(2))
+    #print(dofs[-1](g).to_quadrature(2))
+    for d in nd.generate():
+        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
+    nd.to_fiat()
+    return
+    print(g)
+    for d in nd.generate():
+        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
+    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
+    #for i in range(len(new_nodes)):
+    #    print(f"{nodes[i].pt_dict}")
+        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
+        # for g in S2.add_cell(cell).members():
+        #     print(d(g))
+        #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
+
+    nd1= construct_nd(cell)
+    print("nd1")
+    for d in nd1.generate():
+        print(d.convert_to_fiat(ref_el, deg).pt_dict)
+    print(g)
+    for d in nd1.generate():
+        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
+    nd1.to_fiat()
+    
+    nd.to_fiat()
+    #nd_fv.to_fiat()
 #
 #
 #def test_cg3():
