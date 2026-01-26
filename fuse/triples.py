@@ -48,6 +48,41 @@ class ElementTriple():
         self.DOFGenerator = dof_gen
         self.flat = False
 
+        # deprecate, remove 
+        self.entity_perms = None
+
+    
+    def setup_ids_and_nodes(self):
+        dofs = self.generate()
+        degree = self.spaces[0].degree()
+        value_shape = self.get_value_shape()
+        top = self.ref_el.get_topology()
+        min_ids = self.cell.get_starter_ids()
+        entity_ids = {}
+        nodes = []
+
+        for dim in sorted(top):
+            entity_ids[dim] = {i: [] for i in top[dim]}
+
+        entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
+        counter = 0
+        for entity in entities:
+            dim = entity[0]
+            for i in range(len(dofs)):
+                if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
+                    entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
+                    nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
+                    counter += 1
+        return entity_ids, nodes
+
+    def setup_matrices(self):
+        self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        reversed_matrices = self.reverse_dof_perms(matrices)
+        self.apply_matrices = True 
+        self.entity_perms = False
+        return matrices, reversed_matrices 
+
     def __repr__(self):
         return "FuseTriple(%s, %s, (%s, %s, %s), %s)" % (
                repr(self.DOFGenerator), repr(self.cell), repr(self.spaces[0]), repr(self.spaces[1]), repr(self.spaces[2]), "X")
@@ -96,59 +131,25 @@ class ElementTriple():
             return ()
 
     def to_ufl(self):
+        # set up for eventual conversion to FIAT 
+        self.ref_el = self.cell.to_fiat()
+        self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
+        self.entity_ids, self.nodes = self.setup_ids_and_nodes()
+        self.matrices, self.reversed_matrices = self.setup_matrices()
         return FuseElement(self)
 
+    
     def to_fiat(self):
-        ref_el = self.cell.to_fiat()
-        dofs = self.generate()
-        degree = self.spaces[0].degree()
-        value_shape = self.get_value_shape()
-        entity_ids = {}
-        entity_perms = {}
-        nodes = []
-        top = ref_el.get_topology()
-        min_ids = self.cell.get_starter_ids()
-        poly_set = self.spaces[0].to_ON_polynomial_set(ref_el)
-
-        for dim in sorted(top):
-            entity_ids[dim] = {i: [] for i in top[dim]}
-            entity_perms[dim] = {}
-
-        entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
-        counter = 0
-        for entity in entities:
-            dim = entity[0]
-            for i in range(len(dofs)):
-                if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
-                    entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
-                    nodes.append(dofs[i].convert_to_fiat(ref_el, degree, value_shape))
-                    print(nodes[-1].pt_dict)
-                    counter += 1
-        self.matrices_by_entity = self.make_entity_dense_matrices(ref_el, entity_ids, nodes, poly_set)
-        self.matrices_by_entity = self.dummy_function(ref_el, entity_ids, nodes, poly_set)  # TODO remove
-        mat_perms, entity_perms, pure_perm = self.make_dof_perms(ref_el, entity_ids, nodes, poly_set)
-        #if entity_perms is None:
-        self.matrices = mat_perms
-        self.reverse_dof_perms()
-        #if not pure_perm:
-        #    self.apply_matrices = True
-        #    entity_perms = None
-        #else:
-        #    self.apply_matrices = False
-        self.apply_matrices = True 
-        entity_perms = None
-        
         form_degree = 1 if self.spaces[0].set_shape else 0
+        degree = self.spaces[0].degree()
 
         # TODO: Change this when Dense case in Firedrake
-        if entity_perms is not None:
-            dual = DualSet(nodes, ref_el, entity_ids, entity_perms)
+        if self.entity_perms is not None:
+            dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
         else:
-            dual = DualSet(nodes, ref_el, entity_ids)
-        return CiarletElement(poly_set, dual, degree, form_degree)
-
-    def dummy_function(self, ref_el, entity_ids, nodes, poly_set):
-        return self.matrices_by_entity
+            dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
+        return CiarletElement(self.poly_set, dual, degree, form_degree)
+    
 
     def to_tikz(self, show=True, scale=3):
         """Generates tikz code for the element diagram
@@ -465,20 +466,20 @@ class ElementTriple():
                     self.reversed_matrices[dim][e_id] = perms_copy
             num_ents += len(ents)
 
-    def reverse_dof_perms(self):
+    def reverse_dof_perms(self, matrices):
         min_ids = self.cell.get_starter_ids()
         reversed_mats = {}
-        for dim in self.matrices.keys():
+        for dim in matrices.keys():
             reversed_mats[dim] = {}
             ents = self.cell.d_entities(dim)
             for e in ents:
                 e_id = e.id - min_ids[dim]
-                perms_copy = self.matrices[dim][e_id].copy()
+                perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:
-                    perms_copy[m.numeric_rep()] = self.matrices[dim][e_id][(~m).numeric_rep()]
+                    perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()]
                 reversed_mats[dim][e_id] = perms_copy
-        self.reversed_matrices = reversed_mats
+        return reversed_mats
 
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}

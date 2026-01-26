@@ -238,12 +238,6 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change):
-        # convert basis change to right format
-        #if len((Qwts[0]*self(*Qpts[0])*basis_change).flatten()) > 1:
-        #    breakpoint()
-        # TODO i don't think this makes sense
-        #return Qpts, np.array([wt*self(*pt)*basis_change for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
-        #return Qpts, np.array([wt*np.matmul(self(*pt),basis_change) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
         return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
