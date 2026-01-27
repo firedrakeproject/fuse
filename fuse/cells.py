@@ -808,6 +808,8 @@ class Point():
 
     def orient(self, o):
         """ Orientation node is always labelled with -1 """
+        if o is None:
+            return self
         if self.oriented:
             o = self.oriented * o
         oriented_point = copy.deepcopy(self)

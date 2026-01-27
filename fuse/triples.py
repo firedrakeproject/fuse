@@ -78,6 +78,10 @@ class ElementTriple():
     def setup_matrices(self):
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        #if self.get_value_shape() == (2,) and len(self.generate())> 4:
+        #    # Do not leave this here, proof of concept
+        #    matrices[1][1][1][2][3] = -1
+        #    matrices[1][1][1][3][2] = -1
         reversed_matrices = self.reverse_dof_perms(matrices)
         self.apply_matrices = True 
         self.entity_perms = False
@@ -140,6 +144,8 @@ class ElementTriple():
 
     
     def to_fiat(self):
+        # call this to ensure set up is complete
+        ufl_elem = self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
 
@@ -285,7 +291,8 @@ class ElementTriple():
                     elif g.perm.is_Identity:
                         res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
-                        new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
+                        oriented_ref_el = self.cell.orient(g).to_fiat()
+                        new_nodes = [d(g, entity_o=permuted_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
                 #if dim == 1 and permuted_g.perm.array_form == [1,0]:
@@ -367,10 +374,10 @@ class ElementTriple():
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
-        # if pure_perm is False:
-        #    TODO think about where this call goes
-        #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+        #if pure_perm is False:
+        #    #TODO think about where this call goes
         #    return self.matrices_by_entity, None, pure_perm
+        #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
 
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
         # for each entity, look up generation on that entity and permute the

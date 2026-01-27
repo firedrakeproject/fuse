@@ -158,7 +158,7 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -191,7 +191,9 @@ class VectorKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+        if immersed:
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
         return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
 
@@ -237,7 +239,7 @@ class PolynomialKernel(BaseKernel):
         #    return self.g(res)
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
         return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
@@ -271,7 +273,7 @@ class ComponentKernel(BaseKernel):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 #        return tuple(args[c] for c in self.comp)
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
         # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
@@ -289,7 +291,7 @@ class ComponentKernel(BaseKernel):
 
 class DOF():
 
-    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, immersed=False, generation=None, sub_id=None, cell=None):
+    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, immersed=False, generation=None, sub_id=None, cell=None, entity_o=False):
         self.pairing = pairing
         self.kernel = kernel
         self.immersed = immersed
@@ -300,6 +302,7 @@ class DOF():
         self.id = None
         self.sub_id = sub_id
         self.cell = cell
+        self.entity_o = entity_o
 
         if generation is None:
             self.generation = {}
@@ -308,9 +311,9 @@ class DOF():
         if entity is not None:
             self.pairing = self.pairing.add_entity(entity)
 
-    def __call__(self, g):
+    def __call__(self, g, entity_o=False):
         new_generation = self.generation.copy()
-        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
+        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
 
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
@@ -351,15 +354,16 @@ class DOF():
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim) 
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
-        #print(basis_change)
-        #print(pts, wts)
-        #print("ker", self.kernel)
-        #breakpoint()
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
+
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
+            
+            # Special case - force evaluation on different orientation of entity
+            if self.entity_o:
+                immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
             wts = np.outer(wts, immersion)
 
         # pt dict is { pt: (weight, component)}
@@ -391,10 +395,10 @@ class DOF():
 
 class ImmersedDOF(DOF):
     # probably need to add a convert to fiat method here to capture derivatives from immersion
-    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, triple=None, generation=None, sub_id=None, cell=None):
+    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, triple=None, generation=None, sub_id=None, cell=None, entity_o=False):
         self.immersed = True
         self.triple = triple
-        super(ImmersedDOF, self).__init__(pairing, kernel, entity=entity, attachment=attachment, target_space=target_space, g=g, immersed=True, generation=generation, sub_id=sub_id, cell=cell)
+        super(ImmersedDOF, self).__init__(pairing, kernel, entity=entity, attachment=attachment, target_space=target_space, g=g, immersed=True, generation=generation, sub_id=sub_id, cell=cell,entity_o=entity_o)
 
     def eval(self, fn, pullback=True):
         attached_fn = fn.attach(self.attachment)
@@ -410,7 +414,7 @@ class ImmersedDOF(DOF):
         res, _ = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
 
-    def __call__(self, g):
+    def __call__(self, g, entity_o=False):
         index_trace = self.cell.d_entities_ids(self.cell_defined_on.dim()).index(self.cell_defined_on.id)
         permuted_e, permuted_g = self.cell.permute_entities(g, self.cell_defined_on.dim())[index_trace]
         new_cell_defined_on = self.cell.get_node(permuted_e)
@@ -420,7 +424,7 @@ class ImmersedDOF(DOF):
         #    self.kernel = self.kernel.add_context(fn, syms)
         new_attach = lambda *x: g(self.attachment(*x))
         return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_cell_defined_on,
-                           new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
+                           new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell, entity_o)
 
     def __repr__(self):
         fn = "tr_{1}_{0}(v)".format(str(self.cell_defined_on), str(self.target_space))

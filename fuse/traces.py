@@ -118,10 +118,10 @@ class TrHCurl(Trace):
         return apply
 
     def tabulate(self, Qwts, trace_entity):
-        tangent = np.array(trace_entity.basis_vectors())
+        tangent = trace_entity.basis_vectors()
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
         result = np.matmul(tangent, subEntityBasis)
-        return result
+        return subEntityBasis 
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         vec = self.tabulate([], trace_entity).squeeze()

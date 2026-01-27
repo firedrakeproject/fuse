@@ -161,7 +161,7 @@ def create_cg2_tri(cell):
     vert_dg0 = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg0, TrH1)]
 
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
@@ -352,7 +352,6 @@ def test_entity_perms(elem_gen, cell):
 
     elem.to_fiat()
     dim = cell.get_spatial_dimension()
-
     for i in elem.matrices[dim][0].keys():
         print(elem.matrices[dim][0][i])
 
@@ -386,11 +385,11 @@ def test_1d(elem_gen, elem_code, deg):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i-4] = res1
+        diff2[i-min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i-4] = res2
+        diff[i-min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -414,11 +413,11 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i-3] = res1
+        diff2[i-min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i-3] = res2
+        diff[i-min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -447,11 +446,11 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i - 2] = res1
+        diff2[i - min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i - 2] = res2
+        diff[i - min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
