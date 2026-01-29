@@ -165,8 +165,8 @@ def construct_nd(tri=None):
     y = sp.Symbol("y")
 
     # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    # xs = [DOF(L2Pairing(), PointKernel((np.sqrt(2),)))]
-    xs = [DOF(L2Pairing(), PolynomialKernel((1,)))]
+    # xs = [DOF(L2Pairing(), PointKernel((1,)))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
 
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
@@ -216,7 +216,7 @@ def construct_rt(tri=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
     dofs = DOFGenerator(xs, S1, S2)
 
     int_rt = ElementTriple(edge, (vec_Pd, CellHDiv, C0), dofs)
@@ -272,7 +272,7 @@ def construct_hermite():
     return her
 
 # draft of hermite test, immersions need work
-#def test_hermite_example():
+# def test_hermite_example():
 #    her = construct_hermite()
 #
 #    # TODO improve this test

@@ -1,6 +1,4 @@
-from FIAT.quadrature_schemes import create_quadrature
-from FIAT.quadrature import FacetQuadratureRule
-from FIAT.functional import PointEvaluation, IntegralMoment, FrobeniusIntegralMoment, Functional
+from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
 import numpy as np
 import sympy as sp
@@ -71,17 +69,17 @@ class L2Pairing(Pairing):
 
     def __init__(self):
         super(L2Pairing, self).__init__()
+
     def __call__(self, kernel, v, cell):
         Qpts, Qwts = self.entity.quadrature(5)
         return sum([wt*np.dot(kernel(*pt), v(*pt)) for pt, wt in zip(Qpts, Qwts)])
 
     def tabulate(self):
-        
         bvs = np.array(self.entity.basis_vectors())
         if self.orientation:
             new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-            return  basis_change 
+            return basis_change
         return np.eye(bvs.shape[0])
 
     def add_entity(self, entity):
@@ -97,7 +95,7 @@ class L2Pairing(Pairing):
 
         res = L2Pairing()
         if self.entity:
-            res.entity = self.entity    
+            res.entity = self.entity
         if self.orientation is not None:
             g = g * self.orientation
         res.orientation = g
@@ -158,7 +156,7 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -172,13 +170,49 @@ class PointKernel(BaseKernel):
         return PointKernel(tuple(obj_dict["pt"]))
 
 
+class VectorKernel(BaseKernel):
+
+    def __init__(self, x, g=None):
+        self.pt = x
+        self.g = g
+        super(VectorKernel, self).__init__()
+
+    def __repr__(self):
+        x = list(map(str, list(self.pt)))
+        return ','.join(x)
+
+    def degree(self, interpolant_degree):
+        return interpolant_degree
+
+    def permute(self, g):
+        return VectorKernel(self.pt, g)
+
+    def __call__(self, *args):
+        return self.pt
+
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+        if immersed:
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+
+    def _to_dict(self):
+        o_dict = {"pt": self.pt}
+        return o_dict
+
+    def dict_id(self):
+        return "VectorKernel"
+
+    def _from_dict(obj_dict):
+        return VectorKernel(tuple(obj_dict["pt"]))
+
+
 class PolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[]):
         if len(symbols) != 0 and not sp.sympify(fn).as_poly():
             raise ValueError("Function argument must be able to be interpreted as a sympy polynomial")
         self.fn = sp.sympify(fn)
-        self.g = g 
+        self.g = g
         self.syms = symbols
         super(PolynomialKernel, self).__init__()
 
@@ -191,24 +225,21 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() * interpolant_degree
 
     def permute(self, g):
-        new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        new_fn = self.fn
         return PolynomialKernel(new_fn, g=g, symbols=self.syms)
 
     def __call__(self, *args):
         res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
-        #if not hasattr(res, '__iter__'):
+        # if not hasattr(res, '__iter__'):
         #    return [res]
-        #if self.g:
+        # if self.g:
         #    print(self.g, self.g(res))
         #    return self.g(res)
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change):
-        # convert basis change to right format
-        #breakpoint()
-        # TODO i don't think this makes sense
-        return Qpts, np.array([wt*self(*pt)*basis_change for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
-        #return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -224,7 +255,6 @@ class PolynomialKernel(BaseKernel):
 class ComponentKernel(BaseKernel):
 
     def __init__(self, comp):
-        
         self.comp = comp
         super(ComponentKernel, self).__init__()
 
@@ -241,7 +271,7 @@ class ComponentKernel(BaseKernel):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 #        return tuple(args[c] for c in self.comp)
 
-    def evaluate(self, Qpts, Qwts, basis_change):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
         # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
@@ -256,10 +286,9 @@ class ComponentKernel(BaseKernel):
         return ComponentKernel(obj_dict["comp"])
 
 
-
 class DOF():
 
-    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, immersed=False, generation=None, sub_id=None, cell=None):
+    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, immersed=False, generation=None, sub_id=None, cell=None, entity_o=False):
         self.pairing = pairing
         self.kernel = kernel
         self.immersed = immersed
@@ -270,6 +299,7 @@ class DOF():
         self.id = None
         self.sub_id = sub_id
         self.cell = cell
+        self.entity_o = entity_o
 
         if generation is None:
             self.generation = {}
@@ -278,9 +308,9 @@ class DOF():
         if entity is not None:
             self.pairing = self.pairing.add_entity(entity)
 
-    def __call__(self, g):
+    def __call__(self, g, entity_o=False):
         new_generation = self.generation.copy()
-        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell)
+        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
 
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
@@ -303,10 +333,6 @@ class DOF():
         if self.sub_id is None and generator_id is not None:
             self.sub_id = generator_id
 
-        #if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-        #    fn, syms = self.cell.generate_facet_parameterisation(self.cell_defined_on.id)
-        #    self.kernel = self.kernel.add_context(fn, syms)
-
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         # TODO deriv dict needs implementing (currently {})
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self))
@@ -314,24 +340,26 @@ class DOF():
     def to_quadrature(self, arg_degree):
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        
-        if self.cell_defined_on.get_spatial_dimension() > 0 and self.pairing.orientation:
+        dim = self.cell_defined_on.get_spatial_dimension()
+        if dim > 0 and self.pairing.orientation:
             bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
-            basis_change = np.eye(self.cell_defined_on.get_spatial_dimension()) 
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change)
+            basis_change = np.eye(dim)
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
+
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
+            # Special case - force evaluation on different orientation of entity for construction of matrix transforms
+            if self.entity_o:
+                immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
             wts = np.outer(wts, immersion)
 
         # pt dict is { pt: (weight, component)}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
-        #if isinstance(self.kernel, ComponentKernel):
-        #    breakpoint()
         return pt_dict
 
     def __repr__(self, fn="v"):
@@ -355,10 +383,10 @@ class DOF():
 
 class ImmersedDOF(DOF):
     # probably need to add a convert to fiat method here to capture derivatives from immersion
-    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, triple=None, generation=None, sub_id=None, cell=None):
+    def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, triple=None, generation=None, sub_id=None, cell=None, entity_o=False):
         self.immersed = True
         self.triple = triple
-        super(ImmersedDOF, self).__init__(pairing, kernel, entity=entity, attachment=attachment, target_space=target_space, g=g, immersed=True, generation=generation, sub_id=sub_id, cell=cell)
+        super(ImmersedDOF, self).__init__(pairing, kernel, entity=entity, attachment=attachment, target_space=target_space, g=g, immersed=True, generation=generation, sub_id=sub_id, cell=cell, entity_o=entity_o)
 
     def eval(self, fn, pullback=True):
         attached_fn = fn.attach(self.attachment)
@@ -374,17 +402,14 @@ class ImmersedDOF(DOF):
         res, _ = self.kernel.tabulate(Qpts, self.attachment)
         return immersion*res
 
-    def __call__(self, g):
+    def __call__(self, g, entity_o=False):
         index_trace = self.cell.d_entities_ids(self.cell_defined_on.dim()).index(self.cell_defined_on.id)
         permuted_e, permuted_g = self.cell.permute_entities(g, self.cell_defined_on.dim())[index_trace]
         new_cell_defined_on = self.cell.get_node(permuted_e)
-        #.orient(permuted_g)
-        #if self.immersed and isinstance(self.kernel, ParameterisationKernel):
-        #    fn, syms = self.cell.generate_facet_parameterisation(new_cell_defined_on.id)
-        #    self.kernel = self.kernel.add_context(fn, syms)
+
         new_attach = lambda *x: g(self.attachment(*x))
         return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_cell_defined_on,
-                           new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell)
+                           new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell, entity_o)
 
     def __repr__(self):
         fn = "tr_{1}_{0}(v)".format(str(self.cell_defined_on), str(self.target_space))

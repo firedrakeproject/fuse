@@ -81,9 +81,10 @@ class TrHDiv(Trace):
         ax.quiver(*coord, *vec, **kwargs)
 
     def tabulate(self, Qwts, trace_entity):
-        entityBasis = np.array(trace_entity.basis_vectors())
+        # entityBasis = np.array(trace_entity.basis_vectors())
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        basis = np.matmul(entityBasis, cellEntityBasis)
+        # basis = np.matmul(entityBasis, cellEntityBasis)
+        basis = cellEntityBasis
 
         if trace_entity.dimension == 1:
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
@@ -118,10 +119,10 @@ class TrHCurl(Trace):
         return apply
 
     def tabulate(self, Qwts, trace_entity):
-        tangent = np.array(trace_entity.basis_vectors())
+        # tangent = trace_entity.basis_vectors()
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        result = np.matmul(tangent, subEntityBasis)
-        return result
+        # result = np.matmul(tangent, subEntityBasis)
+        return subEntityBasis
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         vec = self.tabulate([], trace_entity).squeeze()
@@ -145,6 +146,7 @@ class TrGrad(Trace):
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
         raise NotImplementedError("Gradient immersions are under development")
+        g = None
         tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
 
         def apply(*x):
@@ -178,6 +180,7 @@ class TrHess(Trace):
 
     def __call__(self, v, trace_entity):
         raise NotImplementedError("Hessian trace needs reviewing")
+        g = None
         b0, b1 = self.domain.basis_vectors()
         tangent0 = np.array(g(b0))
         tangent1 = np.array(g(b1))

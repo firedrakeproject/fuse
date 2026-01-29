@@ -152,6 +152,7 @@ def flatten(coeffs):
     nc = np.reshape(coeffs, newshape)
     return nc
 
+
 @pytest.mark.parametrize("deg", [1, 2, 3, 4])
 def test_3d_nd_construction(deg):
     cell = make_tetrahedron()
@@ -187,6 +188,7 @@ def test_3d_nd_construction(deg):
     assert np.allclose(np.linalg.norm(my_vals.T - fiat_vals.T @ x), 0)
     assert np.allclose(np.linalg.norm(fiat_vals.T - my_vals.T @ x1), 0)
     assert np.allclose(res, 0)
+
 
 @pytest.mark.parametrize("deg", [1, 2, 3, 4])
 def test_3d_rt_construction(deg):
