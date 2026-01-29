@@ -360,10 +360,11 @@ class DOF():
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
-            
+            print(immersion) 
             # Special case - force evaluation on different orientation of entity
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
+                print("forced",immersion)
             wts = np.outer(wts, immersion)
 
         # pt dict is { pt: (weight, component)}

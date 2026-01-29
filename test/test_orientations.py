@@ -23,7 +23,7 @@ def construct_nd2(tri=None):
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
     
 
-    dofs = DOFGenerator(xs, S2, S1)
+    dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
@@ -55,7 +55,7 @@ def construct_rt2(tri=None):
     int_rt2 = ElementTriple(edge, (vecP1, CellHDiv, C0), dofs)
 
     xs = [immerse(tri, int_rt2, TrHDiv)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
+    tri_dofs = DOFGenerator(xs, C3, S1)
 
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
@@ -172,7 +172,7 @@ def test_surface_vec_rt(elem_gen,elem_code,deg):
     cell = polygon(3)
     rt_elem = elem_gen(cell)
 
-    for n in range(2,5):
+    for n in range(2,6):
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
@@ -181,50 +181,32 @@ def test_surface_vec_rt(elem_gen,elem_code,deg):
             V = FunctionSpace(mesh, rt_elem.to_ufl())
         else:
             V = FunctionSpace(mesh, "RT", 1)
-        vec1 = interpolate(test_vec, V)
-        res1 = assemble(dot(vec1, normal) * ds)
+        vec = interpolate(test_vec, V)
+        res = assemble(dot(vec, normal) * ds)
         print(f"div {n}: {res1}")
-        assert np.allclose(0, res1)
+        assert np.allclose(0, res)
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
                                                     (construct_nd2, "N1curl", 2)])
-def test_surface_vec(elem_gen,elem_code,deg):
+def test_surface_vec_nd(elem_gen,elem_code,deg):
     cell = polygon(3)
-    rt_elem = construct_rt(cell)
     nd_elem = elem_gen(cell)
 
-    for n in range(2,5):
+    for n in range(2,6):
 
-        mesh = UnitSquareMesh(n, n-1)
+        mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y, x))
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, rt_elem.to_ufl())
-            vec1 = interpolate(test_vec, V)
-            res1 = assemble(dot(vec1, normal) * ds)
-        else:
-            V = FunctionSpace(mesh, "RT", 1)
-            vec2 = interpolate(test_vec, V)
-            res1 = assemble(dot(vec2, normal) * ds)
-        print(f"div {n}: {res1}")
-
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, nd_elem.to_ufl())
-            #V = FunctionSpace(mesh, elem_code, deg)
-            print(V.cell_node_list)
-            vec1 = interpolate(test_vec, V)
-            # V2 = FunctionSpace(mesh, create_dg0(cell).to_ufl())
-            # u = TestFunction(V2)
-            res2 = assemble(dot(vec1, normal) * ds)
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-            print(V.cell_node_list)
-            vec1 = interpolate(test_vec, V)
-            res2 = assemble(dot(vec1, normal) * ds)
+        print(V.cell_node_list)
+        vec = interpolate(test_vec, V)
+        res = assemble(dot(vec, normal) * ds)
         print(f"curl {n}: {res2}")
-        assert np.allclose(0, res1)
-        assert np.allclose(0, res2)
+        assert np.allclose(0, res)
 
 
 def get_expression(V):
@@ -302,7 +284,9 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
         assert all([c > conv_rate for c in conv2])
     assert all([c > conv_rate for c in conv1])
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_nd, "N1curl", 1, 0.8), (construct_nd2, "N1curl", 2, 1.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_nd, "N1curl", 1, 0.8),
+                                                              (construct_rt2, "RT", 2, 1.8),
+                                                              (construct_nd2, "N1curl", 2, 1.8)])
 def test_convergence_vector(elem_gen,elem_code,deg,conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -342,6 +326,7 @@ def test_convergence_vector(elem_gen,elem_code,deg,conv_rate):
                                                     (create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
                                                     (construct_cg3, "CG", 3),
+                                                    (construct_rt2, "RT", 2),
                                                     (construct_nd2, "N1curl", 2)])
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
@@ -432,6 +417,7 @@ def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
                                                   #  (create_cg1, construct_cg3, "CG", 1, 3),
                                                     (construct_cg3, construct_cg3, "CG", 3, 3),
                                                     (construct_nd2, construct_nd2, "N1curl", 2, 2),
+                                                    (construct_rt2, construct_rt2, "RT", 2, 2),
                                                     ])
 def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     cell = polygon(3)

@@ -83,7 +83,8 @@ class TrHDiv(Trace):
     def tabulate(self, Qwts, trace_entity):
         entityBasis = np.array(trace_entity.basis_vectors())
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        basis = np.matmul(entityBasis, cellEntityBasis)
+        #basis = np.matmul(entityBasis, cellEntityBasis)
+        basis = cellEntityBasis
 
         if trace_entity.dimension == 1:
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
