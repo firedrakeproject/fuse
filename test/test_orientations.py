@@ -1,16 +1,14 @@
-import unittest.mock as mock
 import pytest
 from firedrake import *
 from fuse import *
 import numpy as np
 import sympy as sp
-from test_convert_to_fiat import create_cg1, construct_nd, construct_rt, create_cg2_tri, construct_cg3, create_dg1
-from test_polynomial_space import flatten
-from FIAT.quadrature_schemes import create_quadrature
-from element_examples_temp import CG_n
+from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt
+from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
 import os
 
 np.set_printoptions(precision=4, suppress=True)
+
 
 def construct_nd2(tri=None):
     if tri is None:
@@ -21,12 +19,11 @@ def construct_nd2(tri=None):
     y = sp.Symbol("y")
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
-    
 
     dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
+    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
+    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
 
     center_dofs = DOFGenerator(xs, S2, S3)
@@ -40,6 +37,7 @@ def construct_nd2(tri=None):
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
+
 
 def construct_rt2(tri=None):
     if tri is None:
@@ -57,8 +55,8 @@ def construct_rt2(tri=None):
     xs = [immerse(tri, int_rt2, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords = True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords = True))
+    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
+    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
     i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
     i_dofs = DOFGenerator(i_xs, S2, S3)
 
@@ -153,13 +151,14 @@ def test_surface_const_rt(elem_gen, elem_code, deg):
         print(f"{n}: {res1}")
         assert np.allclose(res1, 0)
 
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_rt, "RT", 1),
                                                     (construct_rt2, "RT", 2)])
-def test_surface_vec_rt(elem_gen,elem_code,deg):
+def test_surface_vec_rt(elem_gen, elem_code, deg):
     cell = polygon(3)
     rt_elem = elem_gen(cell)
 
-    for n in range(2,6):
+    for n in range(2, 6):
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
@@ -173,13 +172,14 @@ def test_surface_vec_rt(elem_gen,elem_code,deg):
         print(f"div {n}: {res}")
         assert np.allclose(0, res)
 
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
                                                     (construct_nd2, "N1curl", 2)])
-def test_surface_vec_nd(elem_gen,elem_code,deg):
+def test_surface_vec_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
     nd_elem = elem_gen(cell)
 
-    for n in range(2,6):
+    for n in range(2, 6):
 
         mesh = UnitSquareMesh(n, n)
         x, y = SpatialCoordinate(mesh)
@@ -220,43 +220,43 @@ def get_expression(V):
             expression = as_vector([x, y, z])
     return expression, exact
 
+
 def interpolate_vs_project(V, expression, exact):
     f = assemble(interpolate(expression, V))
     expect = project(expression, V)
     exact.interpolate(expression)
-    return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx)), 
-
+    return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx))
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8)])
-def test_convergence(elem_gen,elem_code,deg,conv_rate):
+def test_convergence(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
-    scale_range = range(3,6)
+    scale_range = range(3, 6)
     diff_proj = [0 for i in scale_range]
     diff_proj1 = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     diff_inte1 = [0 for i in scale_range]
     for n in scale_range:
         mesh = UnitSquareMesh(2**n, 2**n)
-    
+
         V = FunctionSpace(mesh, elem_code, deg)
-        x,y = SpatialCoordinate(mesh)
+        x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
-            x,y = SpatialCoordinate(mesh)
+            x, y = SpatialCoordinate(mesh)
             expr = cos(x*pi*2)*sin(y*pi*2)
             _, exact = get_expression(V)
             diff_proj1[n-min(scale_range)], diff_inte1[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
-    
+
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
-    #assert all([c > conv_rate for c in conv1])
+    # assert all([c > conv_rate for c in conv1])
     print("interpolation l2 error norms:", diff_inte)
     diff_inte = np.array(diff_inte)
     conv1 = np.log2(diff_inte[:-1] / diff_inte[1:])
@@ -270,30 +270,28 @@ def test_convergence(elem_gen,elem_code,deg,conv_rate):
         assert all([c > conv_rate for c in conv2])
     assert all([c > conv_rate for c in conv1])
 
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_nd, "N1curl", 1, 0.8),
                                                               (construct_rt2, "RT", 2, 1.8),
                                                               (construct_nd2, "N1curl", 2, 1.8)])
-def test_convergence_vector(elem_gen,elem_code,deg,conv_rate):
+def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
-    scale_range = range(3,6)
+    scale_range = range(3, 6)
     diff_proj = [0 for i in scale_range]
-    diff_proj1 = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
-    diff_inte1 = [0 for i in scale_range]
     for n in scale_range:
         mesh = UnitSquareMesh(2**n, 2**n)
-    
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-        x,y = SpatialCoordinate(mesh)
+        x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
-        expr = as_vector([expr,expr])
+        expr = as_vector([expr, expr])
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
-    
+
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
@@ -305,7 +303,6 @@ def test_convergence_vector(elem_gen,elem_code,deg,conv_rate):
 
     assert all([c > conv_rate for c in conv1])
     assert all([c > conv_rate for c in conv2])
-    
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),
@@ -317,7 +314,7 @@ def test_convergence_vector(elem_gen,elem_code,deg,conv_rate):
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(1,1)
+    mesh = UnitSquareMesh(1, 1)
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
@@ -328,13 +325,13 @@ def test_interpolation(elem_gen, elem_code, deg):
     expect = project(expression, V)
     f = assemble(interpolate(expression, V))
     assert np.allclose(f.dat.data, expect.dat.data)
-    
+
     expect = project(expression, V)
     v = TestFunction(V)
     u = TrialFunction(V)
-    
-    a = inner(u,v) * dx
-    L = inner(expect,v) * dx
+
+    a = inner(u, v) * dx
+    L = inner(expect, v) * dx
 
     solution = Function(V)
     solve(a == L, solution)
@@ -355,7 +352,6 @@ def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
         expr = as_vector([expr, expr])
-        expression = as_vector([x, y])
         exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
         exact.interpolate(expr)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -364,40 +360,37 @@ def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
             diff[i - 1] = res2
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-            #res = project(function(x), V)
+            # res = project(function(x), V)
             res = project(expr, V, solver_parameters={'ksp_type': 'preonly', 'pc_type': 'lu'})
             diff[i - 1] = sqrt(assemble(inner((res - exact), (res - exact)) * dx))
 
-
-        #assert np.allclose(res1, res2)
+        # assert np.allclose(res1, res2)
 
     print("l2 error norms:", diff)
     diff = np.array(diff)
     conv1 = np.log2(diff[:-1] / diff[1:])
     print("convergence order:", conv1)
 
-    #print("fuse l2 error norms:", diff)
-    #diff = np.array(diff)
-    #conv2 = np.log2(diff[:-1] / diff[1:])
-    #print("fuse convergence order:", conv2)
+    # print("fuse l2 error norms:", diff)
+    # diff = np.array(diff)
+    # conv2 = np.log2(diff[:-1] / diff[1:])
+    # print("fuse convergence order:", conv2)
 
     assert (np.array(conv1) > conv_rate).all()
-    #assert (np.array(conv2) > conv_rate).all()
+    # assert (np.array(conv2) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2", [
-                                                    (create_cg1, create_cg1, "CG", 1, 1),
-                                                    (create_cg2_tri, create_cg2_tri, "CG",2, 2),
-                                                    (construct_cg3, construct_cg3, "CG", 3, 3),
-                                                    (construct_nd2, construct_nd2, "N1curl", 2, 2),
-                                                    (construct_rt2, construct_rt2, "RT", 2, 2),
-                                                    ])
+@pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2",
+                         [(create_cg1, create_cg1, "CG", 1, 1),
+                          (create_cg2_tri, create_cg2_tri, "CG", 2, 2),
+                          (construct_cg3, construct_cg3, "CG", 3, 3),
+                          (construct_nd2, construct_nd2, "N1curl", 2, 2),
+                          (construct_rt2, construct_rt2, "RT", 2, 2),
+                          ])
 def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     cell = polygon(3)
 
-    mesh = UnitSquareMesh(3,3)
-    x, y = SpatialCoordinate(mesh)
- 
+    mesh = UnitSquareMesh(3, 3)
 
     spaces = []
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -423,63 +416,3 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
         solve(a == L, solution)
 
         assert norm(assemble(f - solution)) < 1e-15
-   
-
-#def test_create_fiat_nd():
-#    cell = polygon(3)
-#    nd = construct_nd2(cell)
-#    nd_fv = construct_nd(cell)
-#    ref_el = cell.to_fiat()
-#    deg = 2
-#
-#    s3 = S3.add_cell(cell)
-#    g = s3.get_member([1,0, 2])
-#    #from FIAT.nedelec import Nedelec
-#    #fiat_elem = Nedelec(ref_el, deg)
-#    #print("fiat")
-#    #for f in fiat_elem.dual_basis():
-#    #    print(f.pt_dict)
-#
-#    print("fiat: fuse's version")
-#    for d in [nd_fv.generate()[2]]:
-#        print(d.convert_to_fiat(ref_el, deg).pt_dict)
-#        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
-#    nd_fv.to_fiat()
-#    breakpoint()
-#    return
-#    print("fuse")
-#    dofs = nd.generate()
-#    e = cell.edges()[0]
-#    #print(dofs[-1].to_quadrature(2))
-#    #print(dofs[-1](g).to_quadrature(2))
-#    for d in nd.generate()[4:6]:
-#        print(d)
-#        print(d.convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-#        #print(d(g, fixed_o = True).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-#        print(d(g).convert_to_fiat(ref_el, deg, (2,)).pt_dict)
-#    nd.to_fiat()
-#    breakpoint()
-#    print(g)
-#    return
-#    #nodes = [d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-#    #new_nodes = [d(g).convert_to_fiat(ref_el, deg, (2,)) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, deg, (2,)) for d in dofs]
-#    #for i in range(len(new_nodes)):
-#    #    print(f"{nodes[i].pt_dict}")
-#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-#        # print(f"{dofs[i]}: {new_nodes[i].pt_dict}")
-#        # for g in S2.add_cell(cell).members():
-#        #     print(d(g))
-#        #     print(f"{g} {d(g).convert_to_fiat(ref_el, deg).pt_dict}")
-#
-#    nd1= construct_nd(cell)
-#    print("nd1")
-#    for d in nd1.generate():
-#        print(d.convert_to_fiat(ref_el, deg).pt_dict)
-#    print(g)
-#    for d in nd1.generate():
-#        print(d(g).convert_to_fiat(ref_el, deg).pt_dict)
-#    nd1.to_fiat()
-#    
-#    nd.to_fiat()
-#    #nd_fv.to_fiat()
-

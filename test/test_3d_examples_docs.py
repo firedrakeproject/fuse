@@ -131,18 +131,19 @@ def construct_tet_ned(cell=None):
 
     edges = ElementTriple(edge, (vec_Pd, CellHCurl, L2), dofs)
     xs = [immerse(tri, edges, TrHCurl)]
-    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), 
-                                                   Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
-                                                   Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
+                                              Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+                                              Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
     # [test_tet_ned 1]
 
     return ElementTriple(tri, (nd_space, CellHCurl, L2), [edge_dofs])
-   
+
 
 def plot_tet_rt():
     rt = construct_tet_rt()
     rt.plot()
+
 
 def test_tet_rt():
     tetra = make_tetrahedron()
@@ -153,6 +154,7 @@ def test_tet_rt():
         print(dof)
     rt1.to_fiat()
 
+
 @pytest.mark.xfail(reason='DOFs not forming full rank matrix')
 def test_tet_nd():
     tetra = make_tetrahedron()
@@ -162,17 +164,8 @@ def test_tet_nd():
     for dof in ls:
         print(dof)
     nd1.to_fiat()
-    
 
 
 def plot_tet_ned():
     ned = construct_tet_ned()
     ned.plot()
-
-
-#def test_tet_ned():
-#    ned = construct_tet_ned()
-#    ls = ned.generate()
-#    # TODO make this a proper test
-#    for dof in ls:
-#        print(dof)

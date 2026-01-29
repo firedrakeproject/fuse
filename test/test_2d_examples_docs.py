@@ -165,7 +165,7 @@ def construct_nd(tri=None):
     y = sp.Symbol("y")
 
     # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    #xs = [DOF(L2Pairing(), PointKernel((1,)))]
+    # xs = [DOF(L2Pairing(), PointKernel((1,)))]
     xs = [DOF(L2Pairing(), VectorKernel((1,)))]
 
     dofs = DOFGenerator(xs, S1, S2)
@@ -272,7 +272,7 @@ def construct_hermite():
     return her
 
 # draft of hermite test, immersions need work
-#def test_hermite_example():
+# def test_hermite_example():
 #    her = construct_hermite()
 #
 #    # TODO improve this test

@@ -48,10 +48,6 @@ class ElementTriple():
         self.DOFGenerator = dof_gen
         self.flat = False
 
-        # deprecate, remove 
-        self.entity_perms = None
-
-    
     def setup_ids_and_nodes(self):
         dofs = self.generate()
         degree = self.spaces[0].degree()
@@ -77,15 +73,11 @@ class ElementTriple():
 
     def setup_matrices(self):
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
-        matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
-        #if self.get_value_shape() == (2,) and len(self.generate())> 4:
-        #    # Do not leave this here, proof of concept
-        #    matrices[1][1][1][2][3] = -1
-        #    matrices[1][1][1][3][2] = -1
+        matrices, _, _ = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
-        self.apply_matrices = True 
+        self.apply_matrices = True
         self.entity_perms = False
-        return matrices, reversed_matrices 
+        return matrices, reversed_matrices
 
     def __repr__(self):
         return "FuseTriple(%s, %s, (%s, %s, %s), %s)" % (
@@ -135,27 +127,21 @@ class ElementTriple():
             return ()
 
     def to_ufl(self):
-        # set up for eventual conversion to FIAT 
+        # set up for eventual conversion to FIAT
         self.ref_el = self.cell.to_fiat()
         self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
         self.entity_ids, self.nodes = self.setup_ids_and_nodes()
         self.matrices, self.reversed_matrices = self.setup_matrices()
         return FuseElement(self)
 
-    
     def to_fiat(self):
         # call this to ensure set up is complete
-        ufl_elem = self.to_ufl()
+        self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
 
-        # TODO: Change this when Dense case in Firedrake
-        if self.entity_perms is not None:
-            dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
-        else:
-            dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
+        dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
         return CiarletElement(self.poly_set, dual, degree, form_degree)
-    
 
     def to_tikz(self, show=True, scale=3):
         """Generates tikz code for the element diagram
@@ -291,13 +277,10 @@ class ElementTriple():
                     elif g.perm.is_Identity:
                         res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
-                        oriented_ref_el = self.cell.orient(g).to_fiat()
                         new_nodes = [d(g, entity_o=permuted_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                         res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
-                        #breakpoint()
-                #if dim == 1 and permuted_g.perm.array_form == [1,0]:
-                #    breakpoint()
+
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
@@ -375,7 +358,7 @@ class ElementTriple():
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
-        #if pure_perm is False:
+        # if pure_perm is False:
         #    #TODO think about where this call goes
         #    return self.matrices_by_entity, None, pure_perm
         #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
