@@ -12,6 +12,7 @@ from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
+from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
 
@@ -94,6 +95,7 @@ def compute_scaled_verts(d, n):
     :param: n: number of vertices
     """
     if d == 2:
+        source = np.array([-np.sqrt(3)/2, -1/2])
         source = np.array([0, 1])
         rot_coords = [source for i in range(0, n)]
 
@@ -544,7 +546,7 @@ class Point():
         if return_coords:
             top_level_node = self.d_entities_ids(self.graph_dim())[0]
             if self.dimension == 0:
-                return [()]
+                return ()
             return self.attachment(top_level_node, node)()
         return self.G.nodes.data("point_class")[node]
 
@@ -623,7 +625,11 @@ class Point():
         if self.dimension == 0:
             # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
-        top_level_node = self_levels[0][0]
+        if self.oriented:
+            # ordered_vertices() handles the orientation so we want to drop the orientation node
+            top_level_node = self_levels[1][0]
+        else:
+            top_level_node = self_levels[0][0]
         v_0 = vertices[0]
         if return_coords:
             v_0_coords = self.attachment(top_level_node, v_0)()
@@ -655,6 +661,27 @@ class Point():
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
         return tikz_commands
+
+    def generate_facet_parameterisation(self, facet_num):
+        raise NotImplementedError("Facet Parameterisation can be expressed using polynomials")
+        # facet = self.d_entities(self.dimension - 1)[facet_num]
+        facet = self.get_node(facet_num)
+        facet_dim = facet.dimension
+        if facet_dim != self.dimension - 1:
+            raise ValueError(f"Supplied node {facet_num} is not a facet")
+        if facet_dim > 1:
+            raise NotImplementedError("Facet parameterisation is not implemented for dimensions greater than 1")
+        verts = facet.vertices()
+        v_coords = np.array([self.get_node(v.id, return_coords=True) for v in verts])
+        stacked = np.c_[np.ones((self.dimension,)), v_coords[:, 0].reshape(self.dimension, 1)]
+        b = np.array([0, 1])
+        coeffs = np.linalg.solve(stacked, b)
+        symbol_names = ["x", "y", "z"]
+        symbols = [1] + [sp.Symbol(symbol_names[d]) for d in range(facet_dim)]
+        res = 0
+        for d in range(facet_dim + 1):
+            res += coeffs[d] * symbols[d]
+        return res, symbols[1:]
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
@@ -767,6 +794,12 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
 
+    def quadrature(self, degree):
+        fiat_el = self.to_fiat()
+        Q = create_quadrature(fiat_el, degree)
+        pts, wts = Q.get_points(), Q.get_weights()
+        return pts, wts
+
     def cell_attachment(self, dst):
         if not isinstance(dst, int):
             raise ValueError
@@ -775,6 +808,10 @@ class Point():
 
     def orient(self, o):
         """ Orientation node is always labelled with -1 """
+        if o is None:
+            return self
+        if self.oriented:
+            o = self.oriented * o
         oriented_point = copy.deepcopy(self)
         top_level_node = oriented_point.d_entities_ids(
             oriented_point.dimension)[0]
@@ -838,10 +875,7 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    if len(attach_comp.atoms(sp.Symbol)) == len(x):
-                        res.append(sympy_to_numpy(attach_comp, syms, x))
-                    else:
-                        res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
+                    res.append(sympy_to_numpy(attach_comp, syms, x))
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -885,7 +919,6 @@ class TensorProductPoint():
     def get_sub_entities(self):
         self.A.get_sub_entities()
         self.B.get_sub_entities()
-        breakpoint()
 
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
@@ -1076,7 +1109,7 @@ class CellComplexToUFL(Cell):
         super(CellComplexToUFL, self).__init__(name)
 
     def to_fiat(self):
-        return self.cell_complex.to_fiat(name=self.cellname())
+        return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
         return super(CellComplexToUFL, self).__repr__()

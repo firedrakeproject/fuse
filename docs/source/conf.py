@@ -87,8 +87,11 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 # html_css_files = ["additional.css"]
+
+
 def setup(app):
-    app.add_css_file('additional.css')  
+    app.add_css_file('additional.css')
+
 
 html_theme_options = {
     'navbar_links': [
@@ -109,7 +112,7 @@ html_theme_options = {
     'globaltoc_depth': 2,
 }
 
-html_sidebars = {'api/*': ['localtoc.html'], 
+html_sidebars = {'api/*': ['localtoc.html'],
                  'api': ['localtoc.html'],
                  'about': [],
                  'install': [],

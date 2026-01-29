@@ -9,12 +9,12 @@ import sympy as sp
 
 def perm_matrix_to_perm_array(p_mat):
     summed = np.sum(p_mat, axis=0)
-    if np.all(summed == np.zeros_like(summed)):
+    if np.allclose(summed, np.zeros_like(summed)):
         return list(np.zeros_like(summed))
-    assert np.all(summed == np.ones_like(summed))
+    assert np.allclose(summed, np.ones_like(summed))
     res = []
     for row in p_mat:
-        indices = list(row).index(1)
+        indices = list(np.isclose(row, 1)).index(True)
         res += [indices]
     return res
 
@@ -78,7 +78,11 @@ class GroupMemberRep(object):
 
     def __mul__(self, x):
         assert isinstance(x, GroupMemberRep)
-        return self.group.get_member(self.perm * x.perm)
+        max_size = max(self.perm.size, x.perm.size)
+        larger_group = self.group if len(self.group.members()) >= len(x.group.members()) else x.group
+        x_perm = Permutation(x.perm, size=max_size)
+        self_perm = Permutation(self.perm, size=max_size)
+        return larger_group.get_member(self_perm * x_perm)
 
     def __invert__(self):
         return self.group.get_member(~self.perm)
@@ -165,12 +169,11 @@ class PermutationSetRepresentation():
                 return m
         raise ValueError("Permutation not a member of group")
 
-
     def get_member_by_val(self, val):
         for m in self.members():
             if m.numeric_rep() == val:
                 return m
-        
+
         raise ValueError("Value does not represent a group member")
 
     def compute_num_reps(self, base_val=0):
@@ -218,6 +221,8 @@ class GroupRepresentation(PermutationSetRepresentation):
         if cell is not None:
             self.cell = cell
             vertices = cell.vertices(return_coords=True)
+            verts = cell.ordered_vertices()
+            vertices = [cell.get_node(v, return_coords=True) for v in verts]
 
             self._members = []
             counter = 0
@@ -280,12 +285,13 @@ class GroupRepresentation(PermutationSetRepresentation):
         assert perm2 in member_perms
         return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
 
-    def get_member(self, perm):
-        for m in self.members():
-            if m.perm == perm:
-                return m
-        raise ValueError("Permutation not a member of group")
-    
+    # def get_member(self, perm):
+    #    if not isinstance(perm, Permutation):
+    #        perm = Permutation.from_sequence(perm)
+    #    for m in self.members():
+    #        if m.perm == perm:
+    #            return m
+    #    raise ValueError("Permutation not a member of group")
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members

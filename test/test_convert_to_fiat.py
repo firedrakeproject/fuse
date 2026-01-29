@@ -8,7 +8,6 @@ from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, con
 from test_3d_examples_docs import construct_tet_rt
 from test_polynomial_space import flatten
 from element_examples import CR_n
-from firedrake.__future__ import interpolate
 
 
 def create_dg0(cell):
@@ -161,7 +160,7 @@ def create_cg2_tri(cell):
     vert_dg0 = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg0, TrH1)]
 
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
@@ -352,7 +351,6 @@ def test_entity_perms(elem_gen, cell):
 
     elem.to_fiat()
     dim = cell.get_spatial_dimension()
-
     for i in elem.matrices[dim][0].keys():
         print(elem.matrices[dim][0][i])
 
@@ -377,7 +375,7 @@ def test_immersed_entity_perms(elem_gen, cell, expected):
 def test_1d(elem_gen, elem_code, deg):
     cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     elem = elem_gen(cell)
-    scale_range = range(3, 6)
+    scale_range = range(1, 6)
 
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
@@ -386,11 +384,11 @@ def test_1d(elem_gen, elem_code, deg):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i-4] = res1
+        diff2[i-min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i-4] = res2
+        diff[i-min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -414,11 +412,11 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i-3] = res1
+        diff2[i-min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i-3] = res2
+        diff[i-min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -439,7 +437,7 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
 def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    scale_range = range(2, 4)
+    scale_range = range(3, 6)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
@@ -447,11 +445,11 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
-        diff2[i - 2] = res1
+        diff2[i - min(scale_range)] = res1
 
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
-        diff[i - 2] = res2
+        diff[i - min(scale_range)] = res2
         assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
@@ -470,7 +468,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 
 def helmholtz_solve(V, mesh):
     # Define variational problem
-    dim = mesh.ufl_cell().topological_dimension()
+    dim = mesh.ufl_cell().topological_dimension
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
@@ -480,6 +478,7 @@ def helmholtz_solve(V, mesh):
         f.interpolate((1+8*pi*pi)*cos(x[0]*pi*2))
         expect.interpolate(cos(x[0]*pi*2))
     elif dim == 2:
+        # f.interpolate(x[0]*10 + x[1])
         f.interpolate((1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2))
         expect.interpolate(cos(x[0]*pi*2)*cos(x[1]*pi*2))
     elif dim == 3:
@@ -491,12 +490,19 @@ def helmholtz_solve(V, mesh):
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
     L = inner(f, v) * dx
 
-    # l_a = assemble(L)
     # elem = V.finat_element.fiat_equivalent
     # W = VectorFunctionSpace(mesh, V.ufl_element())
     # X = assemble(interpolate(mesh.coordinates, W))
     # print(X.dat.data)
+    np.set_printoptions(precision=4, suppress=True)
+    print()
     # print(assemble(a).M.values)
+    l_a = assemble(L)
+    print(l_a.dat.data[0:2])
+    print(V.cell_node_list[0:2])
+    # print(mesh.entity_orientations)
+
+    # breakpoint()
 
     # Compute solution
     sol = Function(V)
@@ -594,10 +600,10 @@ def test_project_vec(elem_gen, elem_code, deg):
     mesh = UnitTriangleMesh()
 
     U = FunctionSpace(mesh, elem_code, deg)
-    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
     U = FunctionSpace(mesh, elem.to_ufl())
-    assert np.allclose(project(U, mesh, as_vector((1,1))), 0, rtol=1e-5)
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_dg1_tet, "DG", 1)])

@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from fuse import *
 from firedrake import *
 from test_2d_examples_docs import construct_cg1, construct_dg1

@@ -165,8 +165,8 @@ def construct_nd(tri=None):
     y = sp.Symbol("y")
 
     # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    #xs = [DOF(L2Pairing(), PointKernel((np.sqrt(2),)))]
-    xs = [DOF(L2Pairing(), PolynomialKernel((1,)))]
+    # xs = [DOF(L2Pairing(), PointKernel((1,)))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
 
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
@@ -216,7 +216,7 @@ def construct_rt(tri=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
     dofs = DOFGenerator(xs, S1, S2)
 
     int_rt = ElementTriple(edge, (vec_Pd, CellHDiv, C0), dofs)
@@ -245,6 +245,7 @@ def test_rt_example():
     for dof in rt.generate():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
+    rt.to_fiat()
 
 
 def construct_hermite():
@@ -270,19 +271,19 @@ def construct_hermite():
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
     return her
 
-
-def test_hermite_example():
-    her = construct_hermite()
-
-    # TODO improve this test
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
-    ls = her.generate()
-    print("num dofs ", her.num_dofs())
-    for dof in ls:
-        print(dof)
-        print("dof eval", dof.eval(phi_0))
+# draft of hermite test, immersions need work
+# def test_hermite_example():
+#    her = construct_hermite()
+#
+#    # TODO improve this test
+#    x = sp.Symbol("x")
+#    y = sp.Symbol("y")
+#    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
+#    ls = her.generate()
+#    print("num dofs ", her.num_dofs())
+#    for dof in ls:
+#        print(dof)
+#        print("dof eval", dof.eval(phi_0))
 
 
 def test_square_cg():
