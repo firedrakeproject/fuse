@@ -7,7 +7,7 @@ from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt
 from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
 import os
 
-np.set_printoptions(precision=4, suppress=True)
+np.set_printoptions(linewidth=90, precision=4, suppress=True)
 
 
 def construct_nd2(tri=None):
@@ -339,45 +339,18 @@ def test_interpolation(elem_gen, elem_code, deg):
     assert norm(assemble(expect - solution)) < 1e-15
 
 
-@pytest.mark.xfail(reason="issues with tets")
-def test_projection_convergence(elem_gen, elem_code, deg, conv_rate):
-    cell = make_tetrahedron()
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [pytest.param(construct_nd2, "N1curl", 2),
+                                                    pytest.param(construct_rt2, "RT", 2)])
+def test_project_vec(elem_gen, elem_code, deg):
+    cell = polygon(3)
     elem = elem_gen(cell)
-    function = lambda x: cos((3/4)*pi*x[0])
+    mesh = UnitTriangleMesh()
 
-    scale_range = range(1, 6)
-    diff = [0 for i in scale_range]
-    for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i)
-        x, y = SpatialCoordinate(mesh)
-        expr = cos(x*pi*2)*sin(y*pi*2)
-        expr = as_vector([expr, expr])
-        exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
-        exact.interpolate(expr)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V2 = FunctionSpace(mesh, elem.to_ufl())
-            res2 = project(function(x), V2)
-            diff[i - 1] = res2
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-            # res = project(function(x), V)
-            res = project(expr, V, solver_parameters={'ksp_type': 'preonly', 'pc_type': 'lu'})
-            diff[i - 1] = sqrt(assemble(inner((res - exact), (res - exact)) * dx))
+    U = FunctionSpace(mesh, elem_code, deg)
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
-        # assert np.allclose(res1, res2)
-
-    print("l2 error norms:", diff)
-    diff = np.array(diff)
-    conv1 = np.log2(diff[:-1] / diff[1:])
-    print("convergence order:", conv1)
-
-    # print("fuse l2 error norms:", diff)
-    # diff = np.array(diff)
-    # conv2 = np.log2(diff[:-1] / diff[1:])
-    # print("fuse convergence order:", conv2)
-
-    assert (np.array(conv1) > conv_rate).all()
-    # assert (np.array(conv2) > conv_rate).all()
+    U = FunctionSpace(mesh, elem.to_ufl())
+    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
 
 
 @pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2",

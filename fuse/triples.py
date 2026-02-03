@@ -60,12 +60,14 @@ class ElementTriple():
         for dim in sorted(top):
             entity_ids[dim] = {i: [] for i in top[dim]}
 
+        self.dof_id_to_fiat_id = {}
         entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
         counter = 0
         for entity in entities:
             dim = entity[0]
             for i in range(len(dofs)):
                 if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
+                    self.dof_id_to_fiat_id[dofs[i].id] = counter
                     entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
                     counter += 1
@@ -73,10 +75,15 @@ class ElementTriple():
 
     def setup_matrices(self):
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
-        matrices, _, _ = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
-        self.apply_matrices = True
-        self.entity_perms = False
+        # self.pure_perm = pure_perm
+        self.pure_perm = False
+        if self.pure_perm:
+            self.apply_matrices = False
+        else:
+            self.apply_matrices = True
+        self.entity_perms = entity_perms
         return matrices, reversed_matrices
 
     def __repr__(self):
@@ -139,8 +146,10 @@ class ElementTriple():
         self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
-
-        dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
+        if self.pure_perm:
+            dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
+        else:
+            dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
         return CiarletElement(self.poly_set, dual, degree, form_degree)
 
     def to_tikz(self, show=True, scale=3):
@@ -264,7 +273,7 @@ class ElementTriple():
             dim = e.dim()
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
-            dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
+            dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
             res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
 
@@ -376,9 +385,9 @@ class ElementTriple():
                     total_ent_dof_ids = []
                     for dof_gen in entity_associations[dim][e_id].keys():
                         ent_dofs = entity_associations[dim][e_id][dof_gen]
-                        ent_dofs_ids = np.array([ed.id for ed in ent_dofs], dtype=int)
+                        ent_dofs_ids = np.array([self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs], dtype=int)
                         # (dof_gen, ent_dofs)
-                        total_ent_dof_ids += [ed.id for ed in ent_dofs if ed.id not in total_ent_dof_ids]
+                        total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         dof_gen_class = ent_dofs[0].generation
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
@@ -416,7 +425,7 @@ class ElementTriple():
                                 sub_e_id = sub_e.id - min_ids[sub_e.dim()]
                                 sub_ent_ids = []
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
-                                    sub_ent_ids += [e.id for e in v]
+                                    sub_ent_ids += [self.dof_id_to_fiat_id[e.id] for e in v]
                                 sub_mat = oriented_mats_by_entity[immersed_dim][sub_e_id][sub_g.numeric_rep()][np.ix_(sub_ent_ids, sub_ent_ids)]
 
                                 expanded = np.kron(g_sub_mat, sub_mat)

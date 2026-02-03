@@ -27,7 +27,7 @@ jobs:
           /usr/bin/git config --global --add safe.directory /opt/firedrake/
           cd /opt/firedrake/
           git fetch
-          git checkout indiamai/fuse-quads
+          git checkout indiamai/indiamai/fuse-closures-with-pyop3
           git pull
           pip install pybind11 Cython
           make
