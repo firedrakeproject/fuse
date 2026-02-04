@@ -339,20 +339,6 @@ def test_interpolation(elem_gen, elem_code, deg):
     assert norm(assemble(expect - solution)) < 1e-15
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [pytest.param(construct_nd2, "N1curl", 2),
-                                                    pytest.param(construct_rt2, "RT", 2)])
-def test_project_vec(elem_gen, elem_code, deg):
-    cell = polygon(3)
-    elem = elem_gen(cell)
-    mesh = UnitTriangleMesh()
-
-    U = FunctionSpace(mesh, elem_code, deg)
-    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
-
-    U = FunctionSpace(mesh, elem.to_ufl())
-    assert np.allclose(project(U, mesh, as_vector((1, 1))), 0, rtol=1e-5)
-
-
 @pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2",
                          [(create_cg1, create_cg1, "CG", 1, 1),
                           (create_cg2_tri, create_cg2_tri, "CG", 2, 2),

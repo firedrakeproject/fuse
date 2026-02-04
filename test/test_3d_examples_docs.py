@@ -3,6 +3,7 @@ import pytest
 from sympy.combinatorics import Permutation
 import sympy as sp
 import numpy as np
+np.set_printoptions(linewidth=90, precision=4, suppress=True)
 
 
 def test_dg1():
@@ -95,7 +96,7 @@ def construct_tet_rt(cell=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
     dofs = DOFGenerator(xs, S1, S3)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
@@ -126,7 +127,7 @@ def construct_tet_ned(cell=None):
     nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
 
     # [test_tet_ned 0]
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
     dofs = DOFGenerator(xs, S1, S2)
 
     edges = ElementTriple(edge, (vec_Pd, CellHCurl, L2), dofs)
@@ -140,14 +141,44 @@ def construct_tet_ned(cell=None):
     return ElementTriple(tri, (nd_space, CellHCurl, L2), [edge_dofs])
 
 
+# def construct_tet_nd2(tet=None):
+#     if tet is None:
+#         tet = polygon(3)
+#     deg = 2
+#     edge = tri.edges()[0]
+#     x = sp.Symbol("x")
+#     y = sp.Symbol("y")
+
+#     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+
+#     dofs = DOFGenerator(xs, S2, S2)
+#     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+#     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
+#     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
+#     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+
+#     center_dofs = DOFGenerator(xs, S2, S3)
+#     xs = [immerse(tri, int_ned1, TrHCurl)]
+#     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
+#                                               Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+#                                               Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+#     edge_dofs = DOFGenerator(xs, tet_edges, S1)
+
+#     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+#     Pk = PolynomialSpace(deg - 1)
+#     M = sp.Matrix([[y, -x]])
+#     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
+
+#     ned = ElementTriple(tri, (nd, CellHCurl, C0), [edge_dofs, center_dofs])
+#     return ned
+
 def plot_tet_rt():
     rt = construct_tet_rt()
     rt.plot()
 
 
 def test_tet_rt():
-    tetra = make_tetrahedron()
-    rt1 = construct_tet_rt(tetra)
+    rt1 = construct_tet_rt()
     ls = rt1.generate()
     # TODO make this a proper test
     for dof in ls:
@@ -155,17 +186,18 @@ def test_tet_rt():
     rt1.to_fiat()
 
 
-@pytest.mark.xfail(reason='DOFs not forming full rank matrix')
 def test_tet_nd():
-    tetra = make_tetrahedron()
-    nd1 = construct_tet_ned(tetra)
+    nd1 = construct_tet_ned()
     ls = nd1.generate()
     # TODO make this a proper test
     for dof in ls:
+        # dof_dict = dof.to_quadrature(1)
+        # print(np.array(list(dof_dict.keys())[0]), list(dof_dict.values()))
         print(dof)
+    # plot_tet_ned()
     nd1.to_fiat()
 
 
 def plot_tet_ned():
     ned = construct_tet_ned()
-    ned.plot()
+    ned.plot(filename="tet_nd2_fiat.png")

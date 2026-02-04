@@ -118,12 +118,7 @@ class L2Pairing(Pairing):
 class BaseKernel():
 
     def __init__(self):
-        self.cell = None
-        self.entity = None
         self.attachment = False
-
-    def add_context(self, cell, entity):
-        return self
 
     def permute(self, g):
         raise NotImplementedError("This method should be implemented by the subclass")
@@ -156,7 +151,7 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -190,10 +185,10 @@ class VectorKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
         if immersed:
-            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
-        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -238,8 +233,8 @@ class PolynomialKernel(BaseKernel):
         #    return self.g(res)
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(len(pt) + 1)] for pt in Qpts]
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -271,7 +266,7 @@ class ComponentKernel(BaseKernel):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 #        return tuple(args[c] for c in self.comp)
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
         # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
@@ -347,16 +342,20 @@ class DOF():
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed, self.cell.dimension)
 
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
             immersion = self.target_space.tabulate(wts, self.pairing.entity)
+
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
+
             wts = np.outer(wts, immersion)
+        # else:
+        #     pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
 
         # pt dict is { pt: (weight, component)}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}

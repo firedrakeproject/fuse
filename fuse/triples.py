@@ -274,6 +274,7 @@ class ElementTriple():
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
             dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
+            dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
             res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
 
@@ -288,8 +289,8 @@ class ElementTriple():
                     else:
                         new_nodes = [d(g, entity_o=permuted_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                         transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
-                        res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)[np.ix_(dof_ids, dof_ids)]
-
+                        temp = np.matmul(transformed_basis, original_V.T)
+                        res_dict[dim][e_id][val] = temp[np.ix_(dof_ids, dof_ids)]
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):

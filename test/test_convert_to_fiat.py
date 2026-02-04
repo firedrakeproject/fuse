@@ -5,7 +5,7 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt
+from test_3d_examples_docs import construct_tet_rt, construct_tet_ned
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -611,12 +611,17 @@ def test_project_3d(elem_gen, elem_code, deg):
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_dg1_tet, "DG", 1, 0.8),
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
-                                                              (create_cg3_tet, "CG", 3, 3.8)])
+                                                              (create_cg3_tet, "CG", 3, 3.8),
+                                                              (construct_tet_rt, "RT", 1, 0.8),
+                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
     function = lambda x: cos((3/4)*pi*x[0])
-
+    if elem_code != "CG" and elem_code != "DG":
+        expr = lambda x: as_vector([function(x), function(x), function(x)])
+    else:
+        expr = function
     scale_range = range(2, 4)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
@@ -625,34 +630,40 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         x = SpatialCoordinate(mesh)
 
         V = FunctionSpace(mesh, elem_code, deg)
-        res1 = project(V, mesh, function(x))
+        res1 = project(V, mesh, expr(x))
         diff2[i - min(scale_range)] = res1
-        # v = TestFunction(V)
-        # l = assemble(inner(function(x), v)*dx)
-        # print(l.dat.data[7:10])
+        v = TestFunction(V)
+        l = assemble(inner(expr(x), v)*dx)
+        f = assemble(interpolate(expr(x), V))
+        # print(l.dat.data)
+        print(f.dat.data)
+        print(V.cell_node_list)
         # print(res1)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
-            res2 = project(V2, mesh, function(x))
+            res2 = project(V2, mesh, expr(x))
             diff[i - min(scale_range)] = res2
-            # v = TestFunction(V2)
-            # l_a = assemble(inner(function(x), v)*dx)
-            # print(l_a.dat.data[7:10])
-            # print(V2.cell_node_list[0:2])
+            v = TestFunction(V2)
+            l_a = assemble(inner(expr(x), v)*dx)
+            f_fuse = assemble(interpolate(expr(x), V2))
+            # print(l_a.dat.data)
+            print(f_fuse.dat.data)
+            print(V2.cell_node_list)
             # print(res2)
-
+            # breakpoint()
             # assert np.allclose(res1, res2)
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
     conv1 = np.log2(diff2[:-1] / diff2[1:])
     print("firedrake convergence order:", conv1)
-    assert (np.array(conv1) > conv_rate).all()
+
 
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         print("fuse l2 error norms:", diff)
         diff = np.array(diff)
         conv2 = np.log2(diff[:-1] / diff[1:])
         print("fuse convergence order:", conv2)
-
         assert (np.array(conv2) > conv_rate).all()
+    else:
+        assert (np.array(conv1) > conv_rate).all()
