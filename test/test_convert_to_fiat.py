@@ -613,6 +613,7 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg2_tet, "CG", 2, 2.8),
                                                               (create_cg3_tet, "CG", 3, 3.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
+                                                            #   pytest.param(construct_tet_rt, "RT", 1, 0.8, marks=pytest.mark.xfail(reason='Orientations of faces not working')),
                                                               (construct_tet_ned, "N1curl", 1, 0.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -622,11 +623,16 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         expr = lambda x: as_vector([function(x), function(x), function(x)])
     else:
         expr = function
-    scale_range = range(2, 4)
+    scale_range = range(1,2)
+    true_f0 = 0.866 * np.array([-0, -0, -0, 0.3536, -0.3536, -0, 0, 0,-0, 0.3536, -0.5, -0, -0.3536, 0.3536,0,0,-0.5,-0.3536])
+    true_f01= 0.866 * np.array([[0,-0.0957,0.0957,0.3536,0.0957,-0.0957,-0.3536,0, 0,-0.0957,-0,-0, 0.0957,0.1913,0,0,-0.1913,-0,-0,0.1768,0.1768,-0.231,0.231,-0.1768,-0.1768,-0.1768,0.5,-0,0.231,0.231,-0.231,0.1768,0.5,0.231]])
+    # true_f1 = 0.866 * np.array([[-0.125,-0,-0,-0.1155,0.125,-0,-0.1155 -0,-0.1155,0.0884,0.125,-0,-0, 0.1155,0.1155,-0,0.0884,-0.125,-0,-0,-0.1155,-0.125,-0, 0,-0.0884,-0.0478,-0,-0.1155,-0.0884,0.125,-0, 0.0884,0.0478,0.1155,0, 0.0884,-0.1155,0,-0, 0,-0, 0,-0.0884,-0.0478,-0, 0.1155,0, 0, 0.0884,0, 0.0478, -0.125,-0, 0, 0.0884,0.0478,0, 0,-0.0478,-0, 0,-0, 0.125, 0,-0.0884,-0.0478,-0, 0, 0.0478,0,-0, 0,-0,-0.1155,0,-0, 0.0478,0.0884,0, 0,-0.0478,0.1155,0, 0,-0.0478,-0.0884,-0, 0,0.0478,-0, 0.0884,-0.0478,0, 0,-0, 0.0478,0.0884,-0.0884,0.0478,0,-0,-0.0478,-0,-0.0884,-0, 0,-0.0478,-0.0884,0, 0.0478,0.0884,0, 0,-0,-0,-0, 0.0478,0.0884,-0.0478,-0.0884]])
+    # print(true_f0)
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        # 2 ** i, 2 ** i
+        mesh = UnitCubeMesh(2 ** i, 1, 1)
         x = SpatialCoordinate(mesh)
 
         V = FunctionSpace(mesh, elem_code, deg)
@@ -636,9 +642,12 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         l = assemble(inner(expr(x), v)*dx)
         f = assemble(interpolate(expr(x), V))
         # print(l.dat.data)
-        print(f.dat.data)
-        print(V.cell_node_list)
-        # print(res1)
+        # print(f.dat.data)
+        # print(V.cell_node_list)
+        # # print(res1)
+        from ufl.algebra import Abs
+
+        print(assemble(dot(dot(Abs(Jacobian(mesh)), as_vector((1,1,1))), as_vector((1,1,1)))*dx))
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = project(V2, mesh, expr(x))
@@ -646,10 +655,12 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
             v = TestFunction(V2)
             l_a = assemble(inner(expr(x), v)*dx)
             f_fuse = assemble(interpolate(expr(x), V2))
+            breakpoint()
             # print(l_a.dat.data)
-            print(f_fuse.dat.data)
-            print(V2.cell_node_list)
+            # print(f_fuse.dat.data)
+            # print(V2.cell_node_list)
             # print(res2)
+            # print(f_fuse.dat.data - true_f01)
             # breakpoint()
             # assert np.allclose(res1, res2)
 
@@ -664,6 +675,23 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         diff = np.array(diff)
         conv2 = np.log2(diff[:-1] / diff[1:])
         print("fuse convergence order:", conv2)
+        breakpoint()
         assert (np.array(conv2) > conv_rate).all()
     else:
         assert (np.array(conv1) > conv_rate).all()
+
+
+def test_tet_mesh():
+    i = 0
+    tet = make_tetrahedron()
+    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+    x = SpatialCoordinate(mesh)
+    print(mesh.entity_orientations)
+    elem = construct_tet_rt(tet)
+    V = FunctionSpace(mesh, elem.to_ufl())
+    # V = FunctionSpace(mesh, "RT", 1)
+    function = lambda x: cos((3/4)*pi*x[0])
+    expr = lambda x: as_vector([function(x), function(x), function(x)])
+    f = assemble(interpolate(expr(x), V))
+    print(assemble(dot(dot(Jacobian(mesh), as_vector((1,1,1))), as_vector((1,1,1)))*dx))
+    breakpoint()

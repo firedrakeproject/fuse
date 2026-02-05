@@ -76,6 +76,16 @@ class ElementTriple():
     def setup_matrices(self):
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        # matrices[2][0][4][0] = -1 * matrices[2][0][4][0]
+        # matrices[2][1][5][1] = -1 * matrices[2][1][5][1]
+        # matrices[2][3][1][3] = -1 * matrices[2][3][5][3]
+        # for j in range(4):
+        #     for i in [1, 2, 5]:
+        #         matrices[2][j][i] = np.eye(matrices[2][j][i].shape[0])
+        # for j in range(4):
+        #     for i in [0, 3, 4]:
+        #         matrices[2][j][i][j][j] = -1
+        # breakpoint()
         reversed_matrices = self.reverse_dof_perms(matrices)
         # self.pure_perm = pure_perm
         self.pure_perm = False
