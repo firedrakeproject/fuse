@@ -32,6 +32,9 @@ tests:
 	@echo "    Running all tests"
 	@FIREDRAKE_USE_FUSE=1 python3 -m coverage run -p -m pytest -rx test
 
+type:
+	@mypy --ignore-missing-imports fuse/
+
 coverage:
 	@python3 -m coverage combine
 	@python3 -m coverage report -m 

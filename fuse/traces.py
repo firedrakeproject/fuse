@@ -2,29 +2,35 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
+from typing import Any
+from collections.abc import Callable
+from abc import ABCMeta
+from fuse.groups import GroupMemberRep
+from fuse.cells import Point
 
 
-class Trace():
+class Trace(metaclass=ABCMeta):
 
-    def __init__(self, cell):
+    def __init__(self, cell: Point):
         self.domain = cell
 
-    def __call__(self, trace_entity, g):
-        raise NotImplementedError("Trace uninstanitated")
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+        raise NotImplementedError("Trace uninstantiated")
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
-        raise NotImplementedError("Trace uninstanitated")
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
+        raise NotImplementedError("Trace uninstantiated")
 
     def tabulate(self, Qpts, trace_entity, g):
         raise NotImplementedError("Tabulation uninstantiated")
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict[str, str]:
         return {"trace": str(self)}
 
-    def dict_id(self):
+    def dict_id(self) -> str:
         return "Trace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict) -> type[Trace]:
         # might want to actually save these as functions or something for ambiguity?
         tr_id = obj_dict["trace"]
         if tr_id == "H1":
@@ -45,13 +51,13 @@ class TrH1(Trace):
     def __init__(self, cell):
         super(TrH1, self).__init__(cell)
 
-    def __call__(self, v, trace_entity, g):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
         return v
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
         ax.scatter(*coord, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, g, scale, color="black") -> str:
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
     def tabulate(self, Qpts, trace_entity, g):
@@ -66,7 +72,7 @@ class TrHDiv(Trace):
     def __init__(self, cell):
         super(TrHDiv, self).__init__(cell)
 
-    def __call__(self, v, trace_entity, g):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity, g), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
@@ -75,7 +81,7 @@ class TrHDiv(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
         # plot dofs of the type associated with this space
         vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
@@ -109,7 +115,7 @@ class TrHCurl(Trace):
     def __init__(self, cell):
         super(TrHCurl, self).__init__(cell)
 
-    def __call__(self, v, trace_entity, g):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity, g), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
@@ -123,7 +129,7 @@ class TrHCurl(Trace):
         result = np.matmul(tangent, subEntityBasis)
         return result
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
         vec = self.tabulate([], trace_entity, g).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
@@ -142,7 +148,7 @@ class TrGrad(Trace):
     def __init__(self, cell):
         super(TrGrad, self).__init__(cell)
 
-    def __call__(self, v, trace_entity, g):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
         # Compute grad v and then dot with tangent rotated according to the group member
         tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
 
@@ -175,7 +181,7 @@ class TrHess(Trace):
     def __init__(self, cell):
         super(TrHess, self).__init__(cell)
 
-    def __call__(self, v, trace_entity, g):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
         b0, b1 = self.domain.basis_vectors()
         tangent0 = np.array(g(b0))
         tangent1 = np.array(g(b1))
@@ -192,7 +198,7 @@ class TrHess(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
 

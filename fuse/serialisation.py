@@ -10,8 +10,9 @@ import sympy as sp
 
 type Terminal = Union[int, str, bool, None]
 type RecursionType = Union[FuseType, list[Any], sp.Expr, sp.core.containers.Tuple]
-type ObjDictType = dict[str, FuseType | Terminal | list[Any]]
-
+# type ObjDictType = dict[str, dict[str, FuseType | Terminal | list[Any]]]
+type ObjDictType = dict[str, Any]
+# TODO finish typing this file
 
 class ElementSerialiser():
     """
@@ -28,7 +29,7 @@ class ElementSerialiser():
     """
 
     def __init__(self):
-        self.obj_id_counter: dict[str,int] = {}
+        self.obj_id_counter: dict[str, int] = {}
         self.seen_objs = {}
         self.obj_storage = {}
 
@@ -67,7 +68,7 @@ class ElementSerialiser():
             res_array: list[RecursionType] = [None for i in range(len(obj))]
             for i in range(len(obj)):
                 dfs_res = self.encode_traverse(obj[i], path + [i])
-                breakpoint()
+                # breakpoint()
                 res_array[i] = dfs_res
             return res_array
 
@@ -110,6 +111,7 @@ class ElementSerialiser():
             if split_str[0] in self.obj_types.keys():
                 name, obj_id = split_str[0], split_str[1]
                 sub_dict = obj_dict[name][obj_id]
+                breakpoint()
                 for (key, value) in sub_dict.items():
                     sub_dict[key] = self.decode_traverse(value, obj_dict)
                 return self.obj_types[name]._from_dict(sub_dict)
