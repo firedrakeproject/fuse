@@ -226,7 +226,9 @@ def make_tetrahedron():
     face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
 
     tetra = Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+
     return tetra
+    # .orient(tetra.group.members()[3])
 
 
 def ufc_tetrahedron():
@@ -257,7 +259,7 @@ def ufc_tetrahedron():
     face4 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
 
     tet = Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
-    # breakpoint()
+
     return tet
     # return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
     # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
@@ -424,19 +426,35 @@ class Point():
         vertices = self.ordered_vertices()
         relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
 
-        self.topology = {}
-        self.topology_unrelabelled = {}
+        self._topology = {}
+        self._topology_unrelabelled = {}
         for i in range(len(structure)):
             dimension = structure[i]
-            self.topology[i] = {}
-            self.topology_unrelabelled[i] = {}
+            self._topology[i] = {}
+            self._topology_unrelabelled[i] = {}
             for node in dimension:
-                self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
-                self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
-            self.topology_unrelabelled[i] = dict(sorted(self.topology_unrelabelled[i].items()))
+                self._topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
+                self._topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
+            self._topology_unrelabelled[i] = dict(sorted(self._topology_unrelabelled[i].items()))
         if renumber:
-            return self.topology
-        return self.topology_unrelabelled
+            return self._topology
+        return self._topology_unrelabelled
+
+    def get_renumbered_topology(self):
+        structure = [generation for generation in nx.topological_generations(self.graph())]
+        structure.reverse()
+
+        min_ids = [min(dimension) for dimension in structure]
+        vertices = self.ordered_vertices()
+        relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
+
+        self._topology = {}
+        for i in range(len(structure)):
+            dimension = structure[i]
+            self._topology[i] = {}
+            for node in dimension:
+                self._topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
+        return self._topology
 
     def get_sub_entities(self):
         min_ids = self.get_starter_ids()
@@ -445,6 +463,7 @@ class Point():
         return self.sub_entities
 
     def _subentity_traversal(self, sub_ents, min_ids):
+        # print(self, sub_ents)
         dim = self.get_spatial_dimension()
         self_id = self.id - min_ids[dim]
 
@@ -456,10 +475,12 @@ class Point():
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
         if dim > 1:
             connections = [(c.point.id, c.point.group.identity) for c in self.connections]
-            if self.oriented:
-                connections = self.permute_entities(self.oriented, dim - 1)
+            # if self.oriented:
+            #     connections = self.permute_entities(self.oriented, dim - 1)
+            # if self.dimension == 2:
+            #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
+            #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:
-                # p = e.point
                 p = self.get_node(e).orient(o)
                 p_dim = p.get_spatial_dimension()
                 p_id = p.id - min_ids[p_dim]
@@ -970,6 +991,8 @@ class CellComplexToFiatSimplex(Simplex):
         shape = cell.get_shape()
         sub_ents = cell.get_sub_entities()
         super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
+        # if len(verts) == 4:
+        #     breakpoint()
 
     def cellname(self):
         return self.name

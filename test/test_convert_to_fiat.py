@@ -1,11 +1,12 @@
 import pytest
 import numpy as np
+import sympy as sp
 from fuse import *
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt, construct_tet_ned
+from test_3d_examples_docs import construct_tet_rt, construct_tet_ned, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -612,8 +613,9 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
                                                               (create_cg3_tet, "CG", 3, 3.8),
+                                                            #   (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
-                                                            #   pytest.param(construct_tet_rt, "RT", 1, 0.8, marks=pytest.mark.xfail(reason='Orientations of faces not working')),
+                                                            #  pytest.param(construct_tet_rt, "RT", 1, 0.8, marks=pytest.mark.xfail(reason='Orientations of faces not working')),
                                                               (construct_tet_ned, "N1curl", 1, 0.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -623,39 +625,28 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         expr = lambda x: as_vector([function(x), function(x), function(x)])
     else:
         expr = function
-    scale_range = range(1,2)
-    true_f0 = 0.866 * np.array([-0, -0, -0, 0.3536, -0.3536, -0, 0, 0,-0, 0.3536, -0.5, -0, -0.3536, 0.3536,0,0,-0.5,-0.3536])
-    true_f01= 0.866 * np.array([[0,-0.0957,0.0957,0.3536,0.0957,-0.0957,-0.3536,0, 0,-0.0957,-0,-0, 0.0957,0.1913,0,0,-0.1913,-0,-0,0.1768,0.1768,-0.231,0.231,-0.1768,-0.1768,-0.1768,0.5,-0,0.231,0.231,-0.231,0.1768,0.5,0.231]])
-    # true_f1 = 0.866 * np.array([[-0.125,-0,-0,-0.1155,0.125,-0,-0.1155 -0,-0.1155,0.0884,0.125,-0,-0, 0.1155,0.1155,-0,0.0884,-0.125,-0,-0,-0.1155,-0.125,-0, 0,-0.0884,-0.0478,-0,-0.1155,-0.0884,0.125,-0, 0.0884,0.0478,0.1155,0, 0.0884,-0.1155,0,-0, 0,-0, 0,-0.0884,-0.0478,-0, 0.1155,0, 0, 0.0884,0, 0.0478, -0.125,-0, 0, 0.0884,0.0478,0, 0,-0.0478,-0, 0,-0, 0.125, 0,-0.0884,-0.0478,-0, 0, 0.0478,0,-0, 0,-0,-0.1155,0,-0, 0.0478,0.0884,0, 0,-0.0478,0.1155,0, 0,-0.0478,-0.0884,-0, 0,0.0478,-0, 0.0884,-0.0478,0, 0,-0, 0.0478,0.0884,-0.0884,0.0478,0,-0,-0.0478,-0,-0.0884,-0, 0,-0.0478,-0.0884,0, 0.0478,0.0884,0, 0,-0,-0,-0, 0.0478,0.0884,-0.0478,-0.0884]])
-    # print(true_f0)
+    scale_range = range(0, 2)
+
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        # 2 ** i, 2 ** i
-        mesh = UnitCubeMesh(2 ** i, 1, 1)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        # mesh = UnitTetrahedronMesh()
         x = SpatialCoordinate(mesh)
-
-        V = FunctionSpace(mesh, elem_code, deg)
-        res1 = project(V, mesh, expr(x))
-        diff2[i - min(scale_range)] = res1
-        v = TestFunction(V)
-        l = assemble(inner(expr(x), v)*dx)
-        f = assemble(interpolate(expr(x), V))
-        # print(l.dat.data)
-        # print(f.dat.data)
-        # print(V.cell_node_list)
-        # # print(res1)
-        from ufl.algebra import Abs
-
-        print(assemble(dot(dot(Abs(Jacobian(mesh)), as_vector((1,1,1))), as_vector((1,1,1)))*dx))
+        # from firedrake.utility_meshes import TwoTetMesh
+        # mesh = TwoTetMesh()
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
+            V = FunctionSpace(mesh, elem_code, deg)
             res2 = project(V2, mesh, expr(x))
             diff[i - min(scale_range)] = res2
-            v = TestFunction(V2)
-            l_a = assemble(inner(expr(x), v)*dx)
-            f_fuse = assemble(interpolate(expr(x), V2))
-            breakpoint()
+            res1 = project(V, mesh, expr(x))
+            diff2[i - min(scale_range)] = res1
+            # v = TestFunction(V2)
+            # l_a = assemble(inner(expr(x), v)*dx)
+            # breakpoint()
+            # f_fuse = assemble(interpolate(expr(x), V2))
+            # breakpoint()
             # print(l_a.dat.data)
             # print(f_fuse.dat.data)
             # print(V2.cell_node_list)
@@ -663,6 +654,21 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
             # print(f_fuse.dat.data - true_f01)
             # breakpoint()
             # assert np.allclose(res1, res2)
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+            res1 = project(V, mesh, expr(x))
+            diff2[i - min(scale_range)] = res1
+            # v = TestFunction(V)
+            # l_a = assemble(inner(expr(x), v)*dx)
+            # breakpoint()
+            # v = TestFunction(V)
+            # l = assemble(inner(expr(x), v)*dx)
+            # f = assemble(interpolate(expr(x), V))
+            # print(l.dat.data)
+            # print(f.dat.data)
+            # print(V.cell_node_list)
+
+
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
@@ -675,10 +681,70 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         diff = np.array(diff)
         conv2 = np.log2(diff[:-1] / diff[1:])
         print("fuse convergence order:", conv2)
-        breakpoint()
         assert (np.array(conv2) > conv_rate).all()
     else:
         assert (np.array(conv1) > conv_rate).all()
+
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [
+                                                              #   (create_dg1_tet, "DG", 1, 0.8),
+                                                              #   (create_cg1_tet, "CG", 1, 1.8),
+                                                              #   (create_cg2_tet, "CG", 2, 2.8),
+                                                              #   (create_cg3_tet, "CG", 3, 3.8),
+                                                              (construct_tet_rt, "RT", 1, 0.8),
+                                                              #   pytest.param(construct_tet_rt, "RT", 1, 0.8, marks=pytest.mark.xfail(reason='Orientations of faces not working')),
+                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
+def test_const_vec(elem_gen, elem_code, deg, conv_rate):
+    cell = make_tetrahedron()
+    elem = elem_gen(cell)
+    vec = as_vector([1, 1, 1])
+
+    scale_range = range(0, 4)
+    for i in scale_range:
+        # 2 ** i, 2 ** i
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        # from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
+        # error_gs = []
+        # for g in sp.combinatorics.SymmetricGroup(4).elements:
+        #     mesh = TwoTetMesh(perm=g)
+        print()
+        print(mesh.entity_orientations)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V2 = FunctionSpace(mesh, elem.to_ufl())
+            res2 = assemble(interpolate(vec, V2))
+            # print(g)
+            print(res2.dat.data)
+            # CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res2, CG3))
+            # print(res2.dat.data)
+            # print(res3.dat.data)
+            # print(res3)
+            for i in range(res3.dat.data.shape[0]):
+                if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
+                    # print("FAIL")
+                    # error_gs += [g]
+                    # break
+                    assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            print(V2.cell_node_list)
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+            res1 = assemble(interpolate(vec, V))
+            # print(g)
+            print(res1.dat.data)
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res1, CG3))
+            for i in range(res3.dat.data.shape[0]):
+                if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
+                    # print("FAIL")
+                    # error_gs += [g]
+                    # break
+                    assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            print(V.cell_node_list)
+        # if len(error_gs) > 0:
+        #     breakpoint()
+                        
+
 
 
 def test_tet_mesh():

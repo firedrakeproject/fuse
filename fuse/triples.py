@@ -76,19 +76,21 @@ class ElementTriple():
     def setup_matrices(self):
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        # breakpoint()
         # matrices[2][0][4][0] = -1 * matrices[2][0][4][0]
         # matrices[2][1][5][1] = -1 * matrices[2][1][5][1]
         # matrices[2][3][1][3] = -1 * matrices[2][3][5][3]
         # for j in range(4):
         #     for i in [1, 2, 5]:
         #         matrices[2][j][i] = np.eye(matrices[2][j][i].shape[0])
-        # for j in range(4):
-        #     for i in [0, 3, 4]:
-        #         matrices[2][j][i][j][j] = -1
+        # for j in [0, 1]:
+        #     # for i in [0, 3, 4]:
+        #     for i in range(6):
+        #         matrices[2][j][i][j][j] = -1 * matrices[2][j][i][j][j]
         # breakpoint()
         reversed_matrices = self.reverse_dof_perms(matrices)
-        # self.pure_perm = pure_perm
-        self.pure_perm = False
+        self.pure_perm = pure_perm
+        # self.pure_perm = False
         if self.pure_perm:
             self.apply_matrices = False
         else:
@@ -285,7 +287,7 @@ class ElementTriple():
             res_dict[dim][e_id] = {}
             dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
             dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
-            res_dict[dim][e_id][0] = np.eye(len(dof_ids))
+            # res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
 
             for g in self.cell.group.members():
@@ -294,12 +296,21 @@ class ElementTriple():
                 if val not in res_dict[dim][e_id].keys() and permuted_e == e.id:
                     if len(dof_ids) == 0:
                         res_dict[dim][e_id][val] = []
-                    elif g.perm.is_Identity:
-                        res_dict[dim][e_id][val] = np.eye(len(dof_ids))
+                    # elif g.perm.is_Identity:
+                    #     res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
-                        new_nodes = [d(g, entity_o=permuted_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
-                        transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
-                        temp = np.matmul(transformed_basis, original_V.T)
+                        def make_mat(perm_g):
+                            new_nodes = [d(g, entity_o=perm_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
+                            transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
+                            return np.matmul(transformed_basis, original_V.T)
+                        temp = make_mat(permuted_g)
+                        # if dim == 2:
+                        # print(g.numeric_rep(), ~permuted_g)
+                        # print(e_id, val)
+                        # for d in self.generate():
+                        #     if d.cell_defined_on == e:
+                        #         print(d(g).cell_defined_on)
+                        #         print(d(g, entity_o=~permuted_g).cell_defined_on)
                         res_dict[dim][e_id][val] = temp[np.ix_(dof_ids, dof_ids)]
         return res_dict
 
@@ -457,7 +468,7 @@ class ElementTriple():
     def orient_mat_perms(self):
         raise NotImplementedError("This should not be necessary")
         min_ids = self.cell.get_starter_ids()
-        entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname()).get_topology(), self.cell.get_topology())
+        entity_orientations = compare_topologies(ufc_cell(self.cell.to_ufl().cellname).get_topology(), self.cell.get_topology())
         num_ents = 0
         for dim in self.matrices.keys():
             ents = self.cell.d_entities(dim)

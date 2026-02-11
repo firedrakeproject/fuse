@@ -61,6 +61,44 @@ def construct_tet_cg3():
 
     return cg3
 
+def construct_tet_cg4(cell=None):
+    tetra = make_tetrahedron()
+    vert = tetra.vertices()[0]
+    edge = tetra.edges()[0]
+    face = tetra.d_entities(2)[0]
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+                        DOFGenerator(xs, S1, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((-np.sqrt(3/7),)))]
+    center = [DOF(DeltaPairing(), PointKernel((0,)))]
+    dg2_int = ElementTriple(edge, (P2, CellL2, "C0"),
+                            [DOFGenerator(xs, S2, S1), DOFGenerator(center, S1, S1)])
+
+    # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
+    xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
+    dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
+                             DOFGenerator(xs, C3, S1))
+
+    xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
+    int_dof = DOFGenerator(xs, S1, S1)
+
+    v_xs = [immerse(tetra, dg0, TrH1)]
+    cgverts = DOFGenerator(v_xs, Z4, S1)
+
+    e_xs = [immerse(tetra, dg2_int, TrH1)]
+    cgedges = DOFGenerator(e_xs, tet_edges, S1)
+
+    f_xs = [immerse(tetra, dg1_face, TrH1)]
+    cgfaces = DOFGenerator(f_xs, tet_faces, S1)
+    P4 = PolynomialSpace(4)
+
+    cg4 = ElementTriple(tetra, (P4, CellH1, "C0"),
+                        [cgverts, cgedges, cgfaces, int_dof])
+
+    return cg4
+
 
 def plot_tet_cg3():
     cg3 = construct_tet_cg3()
@@ -79,6 +117,13 @@ def test_tet_cg3():
     for dof in cg3.generate():
         print(dof)
         dof.eval(test_func)
+
+
+def test_tet_cg4():
+    cg4 = construct_tet_cg4()
+
+    cg4.plot(filename="tet_cg4.png")
+    print(cg4.to_fiat())
 
 
 def construct_tet_rt(cell=None):
