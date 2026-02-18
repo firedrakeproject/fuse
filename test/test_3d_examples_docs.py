@@ -77,7 +77,8 @@ def construct_tet_cg4(cell=None):
                             [DOFGenerator(xs, S2, S1), DOFGenerator(center, S1, S1)])
 
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
-    xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
+    # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
+    xs = [DOF(DeltaPairing(), PointKernel((-1/3, -np.sqrt(3)/9)))]
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
                              DOFGenerator(xs, C3, S1))
 
@@ -121,8 +122,11 @@ def test_tet_cg3():
 
 def test_tet_cg4():
     cg4 = construct_tet_cg4()
-
+    dofs = cg4.generate()
     cg4.plot(filename="tet_cg4.png")
+    # breakpoint()/
+    cg4.to_ufl()
+    cg4.setup_ids_and_nodes()
     print(cg4.to_fiat())
 
 
@@ -156,8 +160,8 @@ def construct_tet_rt(cell=None):
 
 def construct_tet_ned(cell=None):
     deg = 1
-    tri = make_tetrahedron()
-    edge = tri.edges()[0]
+    tet = make_tetrahedron()
+    edge = tet.edges()[0]
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
@@ -176,46 +180,64 @@ def construct_tet_ned(cell=None):
     dofs = DOFGenerator(xs, S1, S2)
 
     edges = ElementTriple(edge, (vec_Pd, CellHCurl, L2), dofs)
-    xs = [immerse(tri, edges, TrHCurl)]
+    xs = [immerse(tet, edges, TrHCurl)]
     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
                                               Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
                                               Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
     # [test_tet_ned 1]
 
-    return ElementTriple(tri, (nd_space, CellHCurl, L2), [edge_dofs])
+    return ElementTriple(tet, (nd_space, CellHCurl, L2), [edge_dofs])
 
 
-# def construct_tet_nd2(tet=None):
-#     if tet is None:
-#         tet = polygon(3)
-#     deg = 2
-#     edge = tri.edges()[0]
-#     x = sp.Symbol("x")
-#     y = sp.Symbol("y")
+def construct_tet_nd2(tet=None):
+    if tet is None:
+        tet = make_tetrahedron()
+    deg = 2
+    edge = tet.edges()[0]
+    face = tet.d_entities(2, get_class=True)[0]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
 
-#     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+    v_2 = np.array(tet.get_node(tet.ordered_vertices()[2], return_coords=True))
+    v_1 = np.array(tet.get_node(tet.ordered_vertices()[1], return_coords=True))
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+    center_dofs = DOFGenerator(xs, S2, S3)
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
 
-#     dofs = DOFGenerator(xs, S2, S2)
-#     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
-#     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-#     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-#     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+    xs = [immerse(tet, int_ned1, TrHCurl)]
+    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
+                                              Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+                                              Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+    edge_dofs = DOFGenerator(xs, tet_edges, S1)
 
-#     center_dofs = DOFGenerator(xs, S2, S3)
-#     xs = [immerse(tri, int_ned1, TrHCurl)]
-#     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
-#                                               Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
-#                                               Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
-#     edge_dofs = DOFGenerator(xs, tet_edges, S1)
+    im_xs = [immerse(tet, face_vec, TrHCurl)]
+    face_dofs = DOFGenerator(im_xs, tet_faces, S1)
 
-#     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
-#     Pk = PolynomialSpace(deg - 1)
-#     M = sp.Matrix([[y, -x]])
-#     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 
-#     ned = ElementTriple(tri, (nd, CellHCurl, C0), [edge_dofs, center_dofs])
-#     return ned
+    M1 = sp.Matrix([[0, z, -y]])
+    M2 = sp.Matrix([[z, 0, -x]])
+    M3 = sp.Matrix([[y, -x, 0]])
+
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
+
+
+    ned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [edge_dofs, face_dofs])
+    return ned
+
+
+def test_plot_tet_nd2():
+    nd = construct_tet_nd2()
+    # nd.plot(filename="new.png")
+    nd.to_fiat()
+    breakpoint()
+
 
 def plot_tet_rt():
     rt = construct_tet_rt()
