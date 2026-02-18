@@ -115,7 +115,7 @@ def test_surface_const_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
     ones = as_vector((0, 1))
-
+    breakpoint()
     for n in range(2, 6):
         mesh = UnitSquareMesh(n, n)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):

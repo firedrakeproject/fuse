@@ -402,13 +402,19 @@ A3 = GroupRepresentation(AlternatingGroup(3))
 tri_C3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([2, 0, 1]), Permutation([1, 0, 2])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
-tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
+
+tet_edges  = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
                                           Permutation([1, 3, 0, 2]), Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 0, 3, 1]),
-#                                           Permutation([3, 2, 0, 1]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
+                                        #   Permutation([3, 2, 0, 1]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
+#for sorted
+# tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
+#                                           Permutation([3, 1, 2, 0]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
+#for sorted
 tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]),
                                           Permutation([3, 0, 2, 1])])
-# tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([0, 3, 1, 2]),
-#                                           Permutation([3, 2, 0, 1])])
+#for unsorted
+# tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([3, 1, 2, 0]),
+#                                           Permutation([0, 3, 1, 2])])
 
 sq_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([3, 0, 1, 2]), Permutation([2, 3, 0, 1])])

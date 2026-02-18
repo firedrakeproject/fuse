@@ -308,10 +308,11 @@ class Point():
         for edge in edges:
             assert edge.lower_dim() < self.dimension
             self.G.add_edge(self.id, edge.point.id, edge_class=edge)
+
         self.G = nx.compose_all([self.G]
                                 + [edge.point.graph() for edge in edges])
         self.connections = edges
-
+       
         self.group = group
         if not group:
             self.group = self.compute_cell_group()
@@ -467,16 +468,25 @@ class Point():
         dim = self.get_spatial_dimension()
         self_id = self.id - min_ids[dim]
 
-        if dim > 0:
+        if dim == 0:
             for p in self.ordered_vertices():
                 p_id = p - min_ids[0]
                 if (0, p_id) not in sub_ents[dim][self_id]:
                     sub_ents[dim][self_id] += [(0, p_id)]
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
-        if dim > 1:
+        if dim >= 1:
             connections = [(c.point.id, c.point.group.identity) for c in self.connections]
-            # if self.oriented:
-            #     connections = self.permute_entities(self.oriented, dim - 1)
+            if self.oriented:
+            # #     print(self)
+            # #     # if dim == 2:
+            # #     #     print(connections)
+            # #     #     print(self, self.oriented)
+                connections = self.permute_entities(self.oriented, dim - 1, ordered=True)
+            # #     # if dim == 2:
+            # #     #     print(connections)
+            # #         # breakpoint()
+            else:
+                connections = self.permute_entities(self.group.identity, dim - 1, ordered=True)
             # if self.dimension == 2:
             #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
             #     print([c.point.id - min_ids[1] for c in self.connections])
@@ -488,6 +498,7 @@ class Point():
                     sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
                     sub_ents = p._subentity_traversal(sub_ents, min_ids)
 
+
         if (dim, self_id) not in sub_ents[dim][self_id]:
             sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
 
@@ -495,7 +506,7 @@ class Point():
 
     @cache
     def get_starter_ids(self):
-        structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        structure = [generation for generation in nx.topological_generations(self.G)]
         structure.reverse()
 
         min_ids = [min(dimension) for dimension in structure]
@@ -555,8 +566,8 @@ class Point():
         Default return value is list of id numbers of the entities in the cell complex graph."""
         # if d == 0:
         #     return self.ordered_vertices(get_class)
-        levels = [sorted(generation)
-                  for generation in nx.topological_generations(self.G)]
+        levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        # levels = [generation for generation in nx.topological_generations(self.G)]
         if get_class:
             res = [self.G.nodes.data("point_class")[i] for i in levels[self.graph_dim() - d]]
         else:
@@ -572,8 +583,7 @@ class Point():
         return self.G.nodes.data("point_class")[node]
 
     def dim_of_node(self, node):
-        levels = [sorted(generation)
-                  for generation in nx.topological_generations(self.G)]
+        levels = [generation for generation in nx.topological_generations(self.G)]
         for i in range(len(levels)):
             if node in levels[i]:
                 return self.graph_dim() - i
@@ -608,10 +618,12 @@ class Point():
         """
         return self.d_entities(1, get_class)
 
-    def permute_entities(self, g, d):
+    def permute_entities(self, g, d, ordered=False):
         # TODO something is wrong here for squares it can return [()]
-        # verts = self.ordered_vertices()
-        verts = self.vertices(get_class=False)
+        if ordered:
+            verts = self.ordered_vertices()
+        else:
+            verts = self.vertices(get_class=False)
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
         if d == 0:
@@ -641,7 +653,7 @@ class Point():
     def basis_vectors(self, return_coords=True, entity=None):
         if not entity:
             entity = self
-        self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        self_levels = [generation for generation in nx.topological_generations(self.G)]
         vertices = entity.ordered_vertices()
         if self.dimension == 0:
             # return [[]
@@ -991,8 +1003,6 @@ class CellComplexToFiatSimplex(Simplex):
         shape = cell.get_shape()
         sub_ents = cell.get_sub_entities()
         super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
-        # if len(verts) == 4:
-        #     breakpoint()
 
     def cellname(self):
         return self.name

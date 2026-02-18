@@ -354,8 +354,8 @@ def test_entity_perms(elem_gen, cell):
 
     elem.to_fiat()
     dim = cell.get_spatial_dimension()
-    for i in elem.matrices[dim][0].keys():
-        print(elem.matrices[dim][0][i])
+    # for i in elem.matrices[dim][0].keys():
+    #     print(elem.matrices[dim][0][i])
 
 
 @pytest.mark.parametrize("elem_gen, cell, expected", [(create_cg1, Point(1, [Point(0), Point(0)], vertex_num=2), (0, 0, [[[1]]])),
@@ -613,9 +613,8 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
                                                               (create_cg3_tet, "CG", 3, 3.8),
-                                                            #   (construct_tet_cg4, "CG", 4, 4.8),
+                                                              (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
-                                                            #  pytest.param(construct_tet_rt, "RT", 1, 0.8, marks=pytest.mark.xfail(reason='Orientations of faces not working')),
                                                               (construct_tet_ned, "N1curl", 1, 0.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -631,7 +630,6 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     diff2 = [0 for i in scale_range]
     for i in scale_range:
         mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
-        # mesh = UnitTetrahedronMesh()
         x = SpatialCoordinate(mesh)
         # from firedrake.utility_meshes import TwoTetMesh
         # mesh = TwoTetMesh()
@@ -667,8 +665,6 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
             # print(l.dat.data)
             # print(f.dat.data)
             # print(V.cell_node_list)
-
-
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
@@ -736,28 +732,71 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
             res3 = assemble(interpolate(res1, CG3))
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
-                    # print("FAIL")
-                    # error_gs += [g]
-                    # break
                     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
             print(V.cell_node_list)
-        # if len(error_gs) > 0:
-        #     breakpoint()
-                        
 
 
 
-def test_tet_mesh():
-    i = 0
-    tet = make_tetrahedron()
-    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
-    x = SpatialCoordinate(mesh)
-    print(mesh.entity_orientations)
-    elem = construct_tet_rt(tet)
-    V = FunctionSpace(mesh, elem.to_ufl())
-    # V = FunctionSpace(mesh, "RT", 1)
-    function = lambda x: cos((3/4)*pi*x[0])
-    expr = lambda x: as_vector([function(x), function(x), function(x)])
-    f = assemble(interpolate(expr(x), V))
-    print(assemble(dot(dot(Jacobian(mesh), as_vector((1,1,1))), as_vector((1,1,1)))*dx))
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_cg3_tet, "CG", 3, 3.8),
+                                                              (construct_tet_cg4, "CG", 4, 4.8),
+                                                              ])
+def test_const_two_tet(elem_gen, elem_code, deg, conv_rate):
+    cell = make_tetrahedron()
+    elem = elem_gen(cell)
+
+    from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
+    results = []
+    group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
+              sp.combinatorics.Permutation([0,2,3,1]),
+              sp.combinatorics.Permutation([0,3,1,2]),
+              sp.combinatorics.Permutation([0,1,3,2]),
+              sp.combinatorics.Permutation([0,3,2,1]),
+              sp.combinatorics.Permutation([0,2,1,3])]
+    # [0:3]
+    # sp.combinatorics.SymmetricGroup(4).elements[0:2]
+    elem.to_fiat()
+    breakpoint()
+    for g in group:
+        mesh = TwoTetMesh(perm=g)
+        x = SpatialCoordinate(mesh)
+        print(g)
+        print(mesh.entity_orientations)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            # pass
+            V2 = FunctionSpace(mesh, elem.to_ufl())
+            # print(V2.finat_element.cell.sub_entities[3][0])
+            # print(V2.finat_element.cell.connectivity[(3,1)])
+            # breakpoint()
+            # res1 = assemble(interpolate(cos((3/4)*pi*x[0]), V2))
+            # breakpoint()
+            res2 = project(V2, mesh, cos((3/4)*pi*x[0]))
+            print(res2)
+            # print(res2)
+            # results += [res2]
+            # print(res1.dat.data)
+            # results += [res1.dat.data]
+            # for i in range(res1.dat.data.shape[0]):
+            #     assert np.allclose(res1.dat.data[i], 1)
+            # for i in range(res3.dat.data.shape[0]):
+            #     if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
+            #         # print("FAIL")
+            #         # error_gs += [g]
+            #         # break
+            #         assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            # print(V2.cell_node_list)
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+            # res1 = assemble(interpolate(cos((3/4)*pi*x[0]), V))
+            res2 = project(V, mesh, cos((3/4)*pi*x[0]))
+            print(g)
+            print(res2)
+            results += [res2]
+            # print(res1.dat.data)
+            # results += [res1.dat.data]
+            # for i in range(res1.dat.data.shape[0]):
+            #     assert np.allclose(res1.dat.data[i], 1)
+            # print(V.cell_node_list)
+    for i in range(1, len(results)):
+        assert np.allclose(results[0], results[i], atol=1e-3)
     breakpoint()

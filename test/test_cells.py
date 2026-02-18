@@ -258,23 +258,26 @@ def test_compare_tets():
     print(ufc_tet.get_topology())
     fiat_connectivity = fiat_tet.get_connectivity()
     fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
+    fuse_sub_entities = fuse_tet.get_sub_entities()
     ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
     _dim = fiat_tet.get_dimension()
-    print("fiat")
-    print(make_entity_cone_lists(fiat_tet))
-    for dim0 in range(_dim):
-        connectivity = fiat_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse")
+    # print("fiat")
+    # print(make_entity_cone_lists(fiat_tet))
+    # for dim0 in range(_dim):
+    #     connectivity = fiat_connectivity[(dim0+1, dim0)]
+    #     print(connectivity)
+    print("fuse with orient")
     print(make_entity_cone_lists(fuse_tet.to_fiat()))
+    for dim0 in range(_dim):
+        print(fuse_sub_entities[dim0])
     for dim0 in range(_dim):
         connectivity = fuse_connectivity[(dim0+1, dim0)]
         print(connectivity)
-    print("fuse ufc")
-    print(make_entity_cone_lists(ufc_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = ufc_connectivity[(dim0+1, dim0)]
-        print(connectivity)
+    # print("fuse ufc")
+    # print(make_entity_cone_lists(ufc_tet.to_fiat()))
+    # for dim0 in range(_dim):
+    #     connectivity = ufc_connectivity[(dim0+1, dim0)]
+    #     print(connectivity)
 
 
 def make_entity_cone_lists(fiat_cell):
