@@ -6,6 +6,10 @@ on:
     branches:
       - main
   # And all pull requests
+  #   cd /opt/firedrake/
+  #   git fetch
+  #   git checkout indiamai/fuse-closures-with-pyop3
+  #   git pull
   pull_request:
 
 jobs:
@@ -27,10 +31,7 @@ jobs:
           rm -rf /opt/firedrake
           cd /opt/
           git clone https://github.com/firedrakeproject/firedrake.git --branch indiamai/fuse-closures-with-pyop3
-        #   cd /opt/firedrake/
-        #   git fetch
-        #   git checkout indiamai/fuse-closures-with-pyop3
-        #   git pull
+
           python3 -m pip cache purge
           python3 -m pip install $PETSC_DIR/src/binding/petsc4py
           python3 -m pip install -r ./requirements-build.txt
