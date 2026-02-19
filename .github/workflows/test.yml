@@ -28,11 +28,12 @@ jobs:
           git fetch
           git checkout indiamai/fuse-closures-with-pyop3
           git pull
-          pip cache purge
-          pip install $PETSC_DIR/src/binding/petsc4py
-          pip install -r ./requirements-build.txt
-          pip install git+https://github.com/firedrakeproject/petsctools.git@connorjward/cpetsc
-          pip list
+          python3 -m pip cache purge
+          python3 -m pip install $PETSC_DIR/src/binding/petsc4py
+          python3 -m pip install -r ./requirements-build.txt
+          python3 -m pip uninstall petsctools
+          python3 -m pip install git+https://github.com/firedrakeproject/petsctools.git@connorjward/cpetsc
+          python3 -m pip list
           python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
           make
       - name: Install checked out fuse
