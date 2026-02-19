@@ -37,7 +37,7 @@ jobs:
           python3 -m pip install -r ./firedrake/requirements-build.txt
           python3 -m pip install git+https://github.com/firedrakeproject/petsctools.git@connorjward/cpetsc
           python3 -m pip list
-          python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
+          python3 -m pip install --no-build-isolation --no-binary h5py --editable './firedrake[check,docs]'
           make
       - name: Install checked out fuse
         run: |
