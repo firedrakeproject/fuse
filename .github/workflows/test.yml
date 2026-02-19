@@ -28,7 +28,9 @@ jobs:
           git fetch
           git checkout indiamai/fuse-closures-with-pyop3
           git pull
-          echo $PETSC_DIR
+          pip cache purge
+          pip install $PETSC_DIR/src/binding/petsc4py
+          pip install -r ./firedrake/requirements-build.txt
           pip list
           python3 -m pip install pybind11 Cython petsctools
           python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
