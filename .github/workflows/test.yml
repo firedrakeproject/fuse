@@ -32,7 +32,6 @@ jobs:
           pip install $PETSC_DIR/src/binding/petsc4py
           pip install -r ./requirements-build.txt
           pip list
-          python3 -m pip install pybind11 Cython petsctools
           python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
           make
       - name: Install checked out fuse
