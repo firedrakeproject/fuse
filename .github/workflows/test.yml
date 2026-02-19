@@ -29,7 +29,8 @@ jobs:
           git fetch
           git checkout indiamai/fuse-closures-with-pyop3
           git pull
-          pip install pybind11 Cython
+          python3 -m pip install pybind11 Cython
+          python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
           make
       - name: Install checkedout fuse
         run: |

@@ -612,7 +612,7 @@ def test_project_3d(elem_gen, elem_code, deg):
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_dg1_tet, "DG", 1, 0.8),
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
-                                                              #   (create_cg3_tet, "CG", 3, 3.8),
+                                                              (create_cg3_tet, "CG", 3, 3.8),
                                                               #   (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8)])
@@ -630,10 +630,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     diff2 = [0 for i in scale_range]
     for i in scale_range:
         mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
-        # mesh = UnitTetrahedronMesh()
         x = SpatialCoordinate(mesh)
-        # from firedrake.utility_meshes import TwoTetMesh
-        # mesh = TwoTetMesh()
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             V = FunctionSpace(mesh, elem_code, deg)
@@ -641,31 +638,10 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
             diff[i - min(scale_range)] = res2
             res1 = project(V, mesh, expr(x))
             diff2[i - min(scale_range)] = res1
-            # v = TestFunction(V2)
-            # l_a = assemble(inner(expr(x), v)*dx)
-            # breakpoint()
-            # f_fuse = assemble(interpolate(expr(x), V2))
-            # breakpoint()
-            # print(l_a.dat.data)
-            # print(f_fuse.dat.data)
-            # print(V2.cell_node_list)
-            # print(res2)
-            # print(f_fuse.dat.data - true_f01)
-            # breakpoint()
-            # assert np.allclose(res1, res2)
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = project(V, mesh, expr(x))
             diff2[i - min(scale_range)] = res1
-            # v = TestFunction(V)
-            # l_a = assemble(inner(expr(x), v)*dx)
-            # breakpoint()
-            # v = TestFunction(V)
-            # l = assemble(inner(expr(x), v)*dx)
-            # f = assemble(interpolate(expr(x), V))
-            # print(l.dat.data)
-            # print(f.dat.data)
-            # print(V.cell_node_list)
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
@@ -691,46 +667,20 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     scale_range = range(0, 2)
     for i in scale_range:
         mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
-        # from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
-        # error_gs = []
-
-        # for g in group:
-        #     mesh = TwoTetMesh(perm=g)
-        print()
-        print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = assemble(interpolate(vec, V2))
-            # print(g)
-            # print(res2.dat.data)
-            # CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
-            # print(res2.dat.data)
-            # print(res3.dat.data)
-            # print(res3)
             for i in range(res3.dat.data.shape[0]):
-                if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
-                    # print("FAIL")
-                    # error_gs += [g]
-                    # break
-                    assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
-            # print(g)
-            print(res1.dat.data)
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res1, CG3))
             for i in range(res3.dat.data.shape[0]):
-                if not np.allclose(res3.dat.data[i], np.array([1, 1, 1])):
-                    # print("FAIL")
-                    # error_gs += [g]
-                    # break
-                    assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
-            print(V.cell_node_list)
-        # if len(error_gs) > 0:
-        #     breakpoint()
+                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 0.05),
