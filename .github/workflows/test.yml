@@ -17,21 +17,27 @@ jobs:
     name: Run tests
     # Run on the Github hosted runner
     runs-on: ubuntu-latest
-    container:
-      image: firedrakeproject/firedrake-vanilla-default:dev-main
+    # container:
+    #     image: ubuntu-late
+    #   image: firedrakeproject/firedrake-vanilla-default:dev-main
     # Steps represent a sequence of tasks that will be executed as
     # part of the jobs
     steps:
       - name: fix home
         run: echo "HOME=/root" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
-      - name: Checkout correct firedrake branch
+      - name: Checkout correct firedrake branch/install firedrake
         run: | 
+          curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/release/scripts/firedrake-configure
+          sudo apt install $(python3 firedrake-configure --show-system-packages)
+          git clone https://gitlab.com/petsc/petsc.git
+          cd petsc
+          python3 ../firedrake-configure --show-petsc-configure-options | xargs -L1 ./configure
+          make PETSC_DIR=/path/to/petsc PETSC_ARCH=arch-firedrake-default all
+          make check
+          cd ..
           /usr/bin/git config --global --add safe.directory /opt/firedrake/
-          rm -rf /opt/firedrake
-          cd /opt/
           git clone https://github.com/firedrakeproject/firedrake.git --branch indiamai/fuse-closures-with-pyop3
-
           python3 -m pip cache purge
           python3 -m pip install $PETSC_DIR/src/binding/petsc4py
           python3 -m pip install -r ./firedrake/requirements-build.txt
