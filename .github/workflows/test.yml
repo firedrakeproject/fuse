@@ -14,8 +14,8 @@ jobs:
     # Run on the Github hosted runner
     runs-on: ubuntu-latest
     container:
-      #image: firedrakeproject/firedrake-vanilla-default:latest
-      image: firedrakeproject/firedrake-vanilla-default:dev-main
+      image: firedrakeproject/firedrake-vanilla-default:latest
+    #   image: firedrakeproject/firedrake-vanilla-default:dev-main
     # Steps represent a sequence of tasks that will be executed as
     # part of the jobs
     steps:
@@ -32,7 +32,7 @@ jobs:
           python3 -m pip install pybind11 Cython
           python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
           make
-      - name: Install checkedout fuse
+      - name: Install checked out fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[dev]'
       - name: Checkout correct FIAT branch
