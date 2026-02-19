@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: fix home
         run: echo "HOME=/root" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
+    #   - uses: actions/checkout@v4
       - name: Checkout correct firedrake branch/install firedrake
         run: | 
           /usr/bin/git config --global --add safe.directory /opt/
