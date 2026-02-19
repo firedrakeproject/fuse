@@ -637,11 +637,11 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         # mesh = TwoTetMesh()
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
-            # V = FunctionSpace(mesh, elem_code, deg)
+            V = FunctionSpace(mesh, elem_code, deg)
             res2 = project(V2, mesh, expr(x))
             diff[i - min(scale_range)] = res2
-            # res1 = project(V, mesh, expr(x))
-            # diff2[i - min(scale_range)] = res1
+            res1 = project(V, mesh, expr(x))
+            diff2[i - min(scale_range)] = res1
             # v = TestFunction(V2)
             # l_a = assemble(inner(expr(x), v)*dx)
             # breakpoint()
@@ -670,7 +670,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 
 
 
-    # print("firedrake l2 error norms:", diff2)
+    print("firedrake l2 error norms:", diff2)
     # diff2 = np.array(diff2)
     # conv1 = np.log2(diff2[:-1] / diff2[1:])
     # print("firedrake convergence order:", conv1)
@@ -679,6 +679,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         print("fuse l2 error norms:", diff)
         diff = np.array(diff)
+        breakpoint()
         # conv2 = np.log2(diff[:-1] / diff[1:])
         # print("fuse convergence order:", conv2)
         # assert (np.array(conv2) > conv_rate).all()
@@ -698,14 +699,13 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
     vec = as_vector([1, 1, 1])
-
-    scale_range = range(0, 4)
+    scale_range = range(0, 2)
     for i in scale_range:
-        # 2 ** i, 2 ** i
         mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
         # from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
         # error_gs = []
-        # for g in sp.combinatorics.SymmetricGroup(4).elements:
+
+        # for g in group:
         #     mesh = TwoTetMesh(perm=g)
         print()
         print(mesh.entity_orientations)
@@ -713,7 +713,7 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = assemble(interpolate(vec, V2))
             # print(g)
-            print(res2.dat.data)
+            # print(res2.dat.data)
             # CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
@@ -726,7 +726,6 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
                     # error_gs += [g]
                     # break
                     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
-            print(V2.cell_node_list)
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -781,8 +780,13 @@ def test_const_two_tet(elem_gen, elem_code, deg, conv_rate):
         # print(o, " ", elem.entity_perms[2][0][o])
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             # pass
-            V2 = FunctionSpace(mesh, elem_code, deg)
-            fiat_perms = V2.finat_element.entity_permutations[2][0]
+            V1 = FunctionSpace(mesh, elem_code, deg)
+            fiat_perms = V1.finat_element.entity_permutations[2][0]
+            print("FIAT")
+            res2 = project(V1, mesh, cos((3/4)*pi*x[0]))
+            print(res2)
+            # for i in range(22, 25):
+                # print(nodes[i].pt_dict)
             # for i, j in zip([0, 3, 4], [3, 4, 0]):
             #     # 3,4,0 fixes two
             #     V2.finat_element.entity_permutations[2][0][i] = [2, 0, 1]
@@ -792,20 +796,24 @@ def test_const_two_tet(elem_gen, elem_code, deg, conv_rate):
             # V2.finat_element.entity_permutations[2][0][4] = [1, 2, 0]
             
             V2 = FunctionSpace(mesh, ufl_elem)
-            if g.is_identity:
-                original = dict(sorted(V2.finat_element.entity_permutations[2][0].items()))
-            print(original)
-            print(fiat_perms)
-            for i in range(4):
-                V2.finat_element.entity_permutations[2][i] = fiat_perms
-                V2.finat_element.entity_permutations[2][i][0] = [2, 0, 1]
-                V2.finat_element.entity_permutations[2][i][3] = [0, 1, 2]
-                V2.finat_element.entity_permutations[2][i][4] = [1, 2, 0]
-            print(V2.finat_element.entity_permutations[2][0])
-            #somehow setting these here works but not if they are set before...
+            print("FUSE")
+            # for i in range(22, 25):
+                # print(nodes[i].pt_dict)
+            # if g.is_identity:
+            #     original = V2.finat_element.entity_permutations[2][0]
+            # for i in range(4):
+                # print(dict(sorted(V2.finat_element.entity_permutations[2][i].items())))
+            # print("o", original)
+            # print("fp", fiat_perms)
+            # for i in range(4):
+            #     V2.finat_element.entity_permutations[2][i] = fiat_perms
+            #     # V2.finat_element.entity_permutations[2][i][0] = [2, 0, 1]
+            #     # V2.finat_element.entity_permutations[2][i][3] = [0, 1, 2]
+            #     # V2.finat_element.entity_permutations[2][i][4] = [1, 2, 0]
+            # print(V2.finat_element.entity_permutations[2][0])
+            # somehow setting these here works but not if they are set before...
             # print(V2.finat_element.cell.sub_entities[3][0])
             # print(V2.finat_element.cell.connectivity[(3,1)])
-            # breakpoint()
             # res1 = assemble(interpolate(cos((3/4)*pi*x[0]), V2))
             # cnl = V2.cell_node_list
             # less_than = np.where(cnl < 25, True, False)

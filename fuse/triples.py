@@ -74,6 +74,8 @@ class ElementTriple():
                     nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
                     counter += 1
         self.nodes = nodes
+        # for i in range(4):
+        #     entity_ids[2][i] = [entity_ids[2][i][-1]] + entity_ids[2][i][:-1]
         return entity_ids, nodes
 
     def setup_matrices(self):
@@ -91,7 +93,7 @@ class ElementTriple():
         #     for i in range(6):
         #         matrices[2][j][i][j][j] = -1 * matrices[2][j][i][j][j]
         # breakpoint()
-        for i in range(4):
+        # for i in range(4):
             # entity_perms[2][i][5] = [0, 2, 1]
             # entity_perms[2][i][2] = [1, 0, 2]
             # entity_perms[2][i][1] = [2, 1, 0]
@@ -108,12 +110,12 @@ class ElementTriple():
             # entity_perms[2][i][4] = [1, 2, 0]
             # entity_perms[2][i][3] = [2, 0, 1]
 
-            entity_perms[2][i][1] = [0, 2, 1]
-            entity_perms[2][i][2] = [1, 0, 2]
-            entity_perms[2][i][5] = [2, 1, 0]
-            entity_perms[2][i][0] = [2, 0, 1] # these three work with rotated face
-            entity_perms[2][i][4] = [1, 2, 0] #
-            entity_perms[2][i][3] = [0, 1, 2]
+            # entity_perms[2][i][1] = [0, 2, 1]
+            # entity_perms[2][i][2] = [1, 0, 2]
+            # entity_perms[2][i][5] = [2, 1, 0]
+            # entity_perms[2][i][0] = [2, 0, 1] # these three work with rotated face
+            # entity_perms[2][i][4] = [1, 2, 0] #
+            # entity_perms[2][i][3] = [0, 1, 2]
             # entity_perms[2][i][0] = [1, 2, 0]
             # entity_perms[2][i][4] = [0, 1, 2]
             # entity_perms[2][i][3] = [2, 0, 1]
@@ -187,7 +189,7 @@ class ElementTriple():
             self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
             self.entity_ids, self.nodes = self.setup_ids_and_nodes()
             self.matrices, self.reversed_matrices = self.setup_matrices()
-            return FuseElement(self)
+        return FuseElement(self)
 
     def to_fiat(self):
         # call this to ensure set up is complete
@@ -416,6 +418,7 @@ class ElementTriple():
                 members = e.group.members()
                 oriented_mats_by_entity[dim][e_id] = {}
                 flat_by_entity[dim][e_id] = {}
+                members = sorted(members, key=lambda g: g.numeric_rep())
                 for g in members:
                     val = g.numeric_rep()
                     oriented_mats_by_entity[dim][e_id][val] = dof_id_mat.copy()
@@ -456,11 +459,11 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim(): #g in dof_gen_class[dim].g1.members() and 
                             # Permutation of DOF on the entity they are defined on
-                            sub_mat = g.matrix_form()
+                            sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim():
                             # case for dofs defined on the cell and not immersed
-                            sub_mat = g.matrix_form()
+                            sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1

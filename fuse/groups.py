@@ -142,6 +142,7 @@ class PermutationSetRepresentation():
                     self.identity = p_rep
                 self._members.append(p_rep)
                 counter += 1
+            # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell)
@@ -252,6 +253,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             # remaining_members = self.compute_reps(self.base_group.identity,
             #                                       None, temp_group_elems)
             # assert (len(remaining_members) == 0)
+            # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
         else:
             self.cell = None
 
@@ -400,6 +402,7 @@ A4 = GroupRepresentation(AlternatingGroup(4))
 A3 = GroupRepresentation(AlternatingGroup(3))
 
 tri_C3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([2, 0, 1]), Permutation([1, 0, 2])])
+diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
