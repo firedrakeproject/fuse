@@ -28,6 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Checkout correct firedrake branch/install firedrake
         run: | 
+          /usr/bin/git config --global --add safe.directory /opt/
+          cd /opt/
           curl -O https://raw.githubusercontent.com/firedrakeproject/firedrake/release/scripts/firedrake-configure
           sudo apt install $(python3 firedrake-configure --show-system-packages)
           git clone https://gitlab.com/petsc/petsc.git
@@ -36,7 +38,7 @@ jobs:
           make PETSC_DIR=/path/to/petsc PETSC_ARCH=arch-firedrake-default all
           make check
           cd ..
-          /usr/bin/git config --global --add safe.directory /opt/firedrake/
+         
           git clone https://github.com/firedrakeproject/firedrake.git --branch indiamai/fuse-closures-with-pyop3
           python3 -m pip cache purge
           python3 -m pip install $PETSC_DIR/src/binding/petsc4py
