@@ -477,6 +477,7 @@ class Point():
             connections = [(c.point.id, c.point.group.identity) for c in self.connections]
             # if self.oriented:
             #     connections = self.permute_entities(self.oriented, dim - 1)
+            # ensures compliance with FIAT entity orientations on Faces
             if self.dimension == 2:
                 connections = connections[1:] + [connections[0]]
             # if self.dimension == 2:

@@ -1,5 +1,4 @@
 from fuse import *
-import pytest
 from sympy.combinatorics import Permutation
 import sympy as sp
 import numpy as np
@@ -61,6 +60,7 @@ def construct_tet_cg3():
 
     return cg3
 
+
 def construct_tet_cg4(cell=None):
     tetra = make_tetrahedron()
     vert = tetra.vertices()[0]
@@ -81,7 +81,6 @@ def construct_tet_cg4(cell=None):
     xs = [DOF(DeltaPairing(), PointKernel((-1/3, -np.sqrt(3)/9)))]
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
                              DOFGenerator(xs, diff_C3, S1))
-  
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)
@@ -123,12 +122,9 @@ def test_tet_cg3():
 
 def test_tet_cg4():
     cg4 = construct_tet_cg4()
-    dofs = cg4.generate()
+    cg4.generate()
     cg4.plot(filename="tet_cg4.png")
-    # breakpoint()/
-    cg4.to_ufl()
-    cg4.setup_ids_and_nodes()
-    print(cg4.to_fiat())
+    cg4.to_fiat()
 
 
 def construct_tet_rt(cell=None):
@@ -219,7 +215,6 @@ def construct_tet_nd2(tet=None):
     im_xs = [immerse(tet, face_vec, TrHCurl)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
 
-
     M1 = sp.Matrix([[0, z, -y]])
     M2 = sp.Matrix([[z, 0, -x]])
     M3 = sp.Matrix([[y, -x, 0]])
@@ -227,7 +222,6 @@ def construct_tet_nd2(tet=None):
     vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
     Pd = PolynomialSpace(deg - 1)
     nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
-
 
     ned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [edge_dofs, face_dofs])
     return ned
