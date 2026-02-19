@@ -31,7 +31,7 @@ jobs:
           pip cache purge
           pip install $PETSC_DIR/src/binding/petsc4py
           pip install -r ./requirements-build.txt
-          pip install git+git@github.com:firedrakeproject/petsctools.git@connorjward/cpetsc
+          pip install git+https://github.com/firedrakeproject/petsctools.git@connorjward/cpetsc
           pip list
           python3 -m pip install --no-build-isolation --no-binary h5py --editable './[check,docs]'
           make
