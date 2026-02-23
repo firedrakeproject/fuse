@@ -64,7 +64,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse-closures-with-pyop3
+          ref: refs/heads/connorjward/pyop3-develop
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config
@@ -166,3 +166,17 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: fuse-repo
+    
+      - name: Install checked out fuse
+        run: |
+          python3 -m pip install --break-system-packages -e './fuse-repo[dev]'
+    
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/fiat
+          path: fiat-repo
+          ref: refs/heads/indiamai/integrate_fuse
+        
+      - name: Install checked out FIAT
+        run: |
+          python3 -m pip install --break-system-packages -e './fiat-repo'
