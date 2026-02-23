@@ -61,7 +61,7 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
-          name: firedrakeproject/firedrake
+          repository: firedrakeproject/firedrake
           path: firedrake-repo
           ref: refs/heads/indiamai/fuse-closures-with-pyop3
 
