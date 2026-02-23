@@ -1,4 +1,5 @@
 name: Run tests
+# I stole this from the main firedrake repo
 
 on:
   # Run on pushes to main
@@ -20,7 +21,7 @@ jobs:
       # complex fails and vice-versa
       fail-fast: false
       matrix:
-        arch: [default, complex]
+        arch: [default]
     runs-on: [self-hosted, Linux]
     container:
       image: ubuntu:latest
@@ -97,12 +98,12 @@ jobs:
           python3 ../firedrake-repo/scripts/firedrake-configure \
             --arch ${{ matrix.arch }} --show-petsc-configure-options | \
             xargs -L1 ./configure --with-make-np=8 --download-slepc
-          make PETSC_DIR=/__w/firedrake/firedrake/petsc PETSC_ARCH=arch-firedrake-${{ matrix.arch }}
+          make PETSC_DIR=/__w/fuse/fuse/petsc PETSC_ARCH=arch-firedrake-${{ matrix.arch }}
           make check
           {
-            echo "PETSC_DIR=/__w/firedrake/firedrake/petsc"
+            echo "PETSC_DIR=/__w/fuse/fuse/petsc"
             echo "PETSC_ARCH=arch-firedrake-${{ matrix.arch }}"
-            echo "SLEPC_DIR=/__w/firedrake/firedrake/petsc/arch-firedrake-${{ matrix.arch }}"
+            echo "SLEPC_DIR=/__w/fuse/fuse/petsc/arch-firedrake-${{ matrix.arch }}"
           } >> "$GITHUB_ENV"
 
       - name: Install Firedrake
@@ -161,3 +162,7 @@ jobs:
           . venv/bin/activate
           firedrake-check
         timeout-minutes: 5
+    
+      - uses: actions/checkout@v5
+        with:
+          path: fuse-repo
