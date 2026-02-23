@@ -64,7 +64,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/connorjward/fuse-cleanup
+          ref: refs/heads/connorjward/pyop3-develop
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config
@@ -132,7 +132,7 @@ jobs:
 
           : # We have to pass '--no-build-isolation' to use a custom petsc4py
           EXTRA_BUILD_ARGS='--no-isolation'
-          EXTRA_PIP_FLAGS='--no-build-isolation'
+          EXTRA_PIP_FLAGS='-e --no-build-isolation'
 
           : # Install from an sdist so we can make sure that it is not ill-formed
           pip install build
@@ -146,16 +146,11 @@ jobs:
           firedrake-clean
           pip list
 
-      - name: Upload sdist (default ARCH only)
-        if: matrix.arch == 'default'
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v5
         with:
-          name: dist
-          path: firedrake-repo/dist/*
-
-      - name: Report sdist build status
-        id: report_sdist
-        run: echo "conclusion=success" >> "$GITHUB_OUTPUT"
+          repository: firedrakeproject/firedrake
+          path: firedrake-repo
+          ref: refs/heads/indiamai/fuse-closures-with-pyop3
     
       - uses: actions/checkout@v5
         with:
