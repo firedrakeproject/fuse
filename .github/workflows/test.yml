@@ -156,12 +156,6 @@ jobs:
       - name: Report sdist build status
         id: report_sdist
         run: echo "conclusion=success" >> "$GITHUB_OUTPUT"
-
-      - name: Run firedrake-check
-        run: |
-          . venv/bin/activate
-          firedrake-check
-        timeout-minutes: 5
     
       - uses: actions/checkout@v5
         with:
@@ -169,6 +163,7 @@ jobs:
     
       - name: Install checked out fuse
         run: |
+          . venv/bin/activate
           python3 -m pip install --break-system-packages -e './fuse-repo[dev]'
     
       - uses: actions/checkout@v5
@@ -179,4 +174,58 @@ jobs:
         
       - name: Install checked out FIAT
         run: |
+          . venv/bin/activate
           python3 -m pip install --break-system-packages -e './fiat-repo'
+
+      - name: Run tests
+        run: |
+          . venv/bin/activate
+          pip list
+          make tests
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: covdata
+          include-hidden-files: true
+          path: .coverage.*
+
+  coverage:
+      name: Coverage
+      needs: test
+      runs-on: ubuntu-latest
+      if: success() && github.ref == 'refs/heads/main'
+      container:
+        image: firedrakeproject/firedrake-vanilla-default:latest
+      # Steps represent a sequence of tasks that will be executed as
+      # part of the jobs
+      steps:
+        - name: "Check out the repo"
+          uses: "actions/checkout@v2"
+        - name: Install checkedout fuse
+          run: |
+            python3 -m pip install --break-system-packages -e '.[dev]'
+        - name: "Download coverage data"
+          uses: actions/download-artifact@v4
+          with:
+            name: covdata
+
+        - name: "Combine"
+          run: |
+            make coverage
+            export TOTAL=$(python3 -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
+            echo "total=$TOTAL" >> $GITHUB_ENV
+            echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
+
+        - name: "Make badge"
+          uses: schneegans/dynamic-badges-action@v1.4.0
+          with:
+            # GIST_TOKEN is a GitHub personal access token with scope "gist".
+            auth: ${{ secrets.GIST_SECRET }}
+            gistID: 8d09e14999153441dba99d1759e90707  # replace with your real Gist id.
+            filename: covbadge.json
+            label: Coverage
+            message: ${{ env.total }}%
+            minColorRange: 50
+            maxColorRange: 90
+            valColorRange: ${{ env.total }}
+
