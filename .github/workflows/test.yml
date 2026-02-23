@@ -14,7 +14,7 @@ on:
   pull_request:
 
 jobs:
-  test_linux:
+  test:
     name: Build and test Firedrake (Linux)
     strategy:
       # We want to know all of the tests which fail, so don't kill real if
@@ -64,7 +64,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/connorjward/pyop3-develop
+          ref: refs/heads/connorjward/fuse-cleanup
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config
