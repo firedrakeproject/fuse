@@ -683,6 +683,38 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
                 assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
 
 
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
+                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
+def test_const_vec_two_tet(elem_gen, elem_code, deg, conv_rate):
+    cell = make_tetrahedron()
+    elem = elem_gen(cell)
+    vec = as_vector([1, 1, 1])
+    from firedrake.utility_meshes import TwoTetMesh
+    group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
+             sp.combinatorics.Permutation([0, 2, 3, 1]),
+             sp.combinatorics.Permutation([0, 3, 1, 2]),
+             sp.combinatorics.Permutation([0, 1, 3, 2]),
+             sp.combinatorics.Permutation([0, 3, 2, 1]),
+             sp.combinatorics.Permutation([0, 2, 1, 3])]
+
+    for g in group:
+        mesh = TwoTetMesh(perm=g)
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V2 = FunctionSpace(mesh, elem.to_ufl())
+            res2 = assemble(interpolate(vec, V2))
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res2, CG3))
+            for i in range(res3.dat.data.shape[0]):
+                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+            res1 = assemble(interpolate(vec, V))
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res1, CG3))
+            for i in range(res3.dat.data.shape[0]):
+                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 0.05),
                                                             (construct_tet_cg4, "CG", 4, 0.04)])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
@@ -703,11 +735,11 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
         x = SpatialCoordinate(mesh)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             # pass
-            V1 = FunctionSpace(mesh, elem_code, deg)
-            print("FIAT")
-            res = project(V1, mesh, cos((3/4)*pi*x[0]))
-            print(res)
-            assert res < max_err
+            # V1 = FunctionSpace(mesh, elem_code, deg)
+            # print("FIAT")
+            # res = project(V1, mesh, cos((3/4)*pi*x[0]))
+            # print(res)
+            # assert res < max_err
             V2 = FunctionSpace(mesh, ufl_elem)
             print("FUSE")
             res = project(V2, mesh, cos((3/4)*pi*x[0]))

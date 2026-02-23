@@ -293,3 +293,19 @@ def make_entity_cone_lists(fiat_cell):
         _n = _n1
     _offset_list.append(_offset)
     return _list, _offset_list
+
+
+
+def test_tet_sub_ents():
+    tet = make_tetrahedron()
+    flip_false = tet.get_sub_entities(flip=False)
+    flip_true = tet.get_sub_entities(flip=True)
+    print("False")
+    for i in range(3):
+        for j in range(3):
+            print(f"({i},{j})", flip_false[i][j])
+    print("True")
+    for i in range(3):
+        for j in range(3):
+            print(f"({i},{j})", flip_true[i][j])
+    breakpoint()
