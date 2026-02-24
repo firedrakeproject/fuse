@@ -157,6 +157,12 @@ jobs:
           path: firedrake-repo
           ref: refs/heads/indiamai/fuse-closures-with-pyop3
     
+      - name: Make cython
+        run: |
+          . venv/bin/activate
+          cd ./firedrake-repo
+          make
+    
       - uses: actions/checkout@v5
         with:
           path: fuse-repo
