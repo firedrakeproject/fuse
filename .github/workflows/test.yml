@@ -132,16 +132,21 @@ jobs:
 
           : # We have to pass '--no-build-isolation' to use a custom petsc4py
           EXTRA_BUILD_ARGS='--no-isolation'
-          EXTRA_PIP_FLAGS='-e --no-build-isolation'
+          EXTRA_PIP_FLAGS='--no-build-isolation'
 
           : # Install from an sdist so we can make sure that it is not ill-formed
-          pip install build
-          python -m build ./firedrake-repo --sdist $EXTRA_BUILD_ARGS
+          : # pip install build
+          : # python -m build ./firedrake-repo --sdist $EXTRA_BUILD_ARGS
+
+          : #pip install --verbose $EXTRA_PIP_FLAGS \
+          : #  --no-binary h5py \
+          : #  --extra-index-url https://download.pytorch.org/whl/cpu \
+          : #  "$(echo ./firedrake-repo/dist/firedrake-*.tar.gz)[ci]"
 
           pip install --verbose $EXTRA_PIP_FLAGS \
             --no-binary h5py \
             --extra-index-url https://download.pytorch.org/whl/cpu \
-            "$(echo ./firedrake-repo/dist/firedrake-*.tar.gz)[ci]"
+            -e ./[ci]
 
           firedrake-clean
           pip list

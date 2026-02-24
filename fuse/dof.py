@@ -1,5 +1,6 @@
 from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
+from fuse.traces import TrH1
 import numpy as np
 import sympy as sp
 
@@ -173,7 +174,10 @@ class VectorKernel(BaseKernel):
         super(VectorKernel, self).__init__()
 
     def __repr__(self):
-        x = list(map(str, list(self.pt)))
+        if isinstance(self.pt, tuple):
+            x = list(map(str, list(self.pt)))
+        else:
+            x = [str(self.pt)]
         return ','.join(x)
 
     def degree(self, interpolant_degree):
@@ -186,7 +190,7 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        if immersed:
+        if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
@@ -342,23 +346,34 @@ class DOF():
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
+
+        if self.immersed and isinstance(self.kernel, VectorKernel):
+            # this probably needs generalising
+            basis_change = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*bv) for bv in basis_change])
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed, self.cell.dimension)
 
         if self.immersed:
             # need to compute jacobian from attachment.
-            pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
-            immersion = self.target_space.tabulate(wts, self.pairing.entity)
+            pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
+            # if self.pairing.orientation:
+            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
+            # else:
+            immersion = self.target_space.tabulate(pts, self.pairing.entity)
 
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
-
-            wts = np.outer(wts, immersion)
+            # print("after change", immersion)
+            if isinstance(self.target_space, TrH1):
+                new_wts = wts
+            else:
+                new_wts = np.outer(wts, immersion)
+        else:
+            new_wts = wts
         # else:
         #     pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
-
-        # pt dict is { pt: (weight, component)}
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
+        # pt dict is { pt: [(weight, component)]}
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
         return pt_dict
 
     def __repr__(self, fn="v"):
