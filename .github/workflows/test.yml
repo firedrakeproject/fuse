@@ -180,6 +180,7 @@ jobs:
       - name: Run tests
         run: |
           . venv/bin/activate
+          cd ./fuse-repo
           pip list
           make tests
       - name: Upload coverage
