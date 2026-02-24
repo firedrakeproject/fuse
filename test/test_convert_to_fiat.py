@@ -6,7 +6,7 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt, construct_tet_ned, construct_tet_cg4
+from test_3d_examples_docs import construct_tet_rt, construct_tet_ned, construct_tet_ned2, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -213,7 +213,7 @@ def create_cg2_tet(cell):
     return cg2
 
 
-def create_cg3_tet(cell):
+def create_cg3_tet(cell, perm=True):
 
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -241,7 +241,7 @@ def create_cg3_tet(cell):
     cgfaces = DOFGenerator(f_xs, tet_faces, S1)
 
     cg3 = ElementTriple(cell, (P3, CellH1, "C0"),
-                        [cgverts, cgedges, cgfaces])
+                        [cgverts, cgedges, cgfaces], perm)
 
     return cg3
 
@@ -500,9 +500,7 @@ def helmholtz_solve(V, mesh):
     np.set_printoptions(precision=4, suppress=True)
     print()
     # print(assemble(a).M.values)
-    l_a = assemble(L)
-    print(l_a.dat.data[0:2])
-    print(V.cell_node_list[0:2])
+    # l_a = assemble(L)
     # print(mesh.entity_orientations)
 
     # breakpoint()
@@ -615,7 +613,8 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg3_tet, "CG", 3, 3.8),
                                                               #   (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
-                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
+                                                              (construct_tet_ned, "N1curl", 1, 0.8),
+                                                              (construct_tet_ned2, "N1curl", 2, 0.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -659,7 +658,8 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
-                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
+                                                              (construct_tet_ned, "N1curl", 1, 0.8),
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -684,7 +684,8 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
-                                                              (construct_tet_ned, "N1curl", 1, 0.8)])
+                                                              (construct_tet_ned, "N1curl", 1, 0.8),
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
 def test_const_vec_two_tet(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -719,8 +720,10 @@ def test_const_vec_two_tet(elem_gen, elem_code, deg, conv_rate):
                                                             (construct_tet_cg4, "CG", 4, 0.04)])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
-    elem = elem_gen(cell)
-    ufl_elem = elem.to_ufl()
+    elem_perms = elem_gen(cell, perm=True)
+    elem_mats = elem_gen(cell, perm=False)
+    ufl_elem_perms = elem_perms.to_ufl()
+    ufl_elem_mats = elem_mats.to_ufl()
 
     from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
@@ -732,16 +735,16 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
 
     for g in group:
         mesh = TwoTetMesh(perm=g)
+        print(g)
+        print(mesh.entity_orientations)
         x = SpatialCoordinate(mesh)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            # pass
-            # V1 = FunctionSpace(mesh, elem_code, deg)
-            # print("FIAT")
-            # res = project(V1, mesh, cos((3/4)*pi*x[0]))
-            # print(res)
-            # assert res < max_err
-            V2 = FunctionSpace(mesh, ufl_elem)
-            print("FUSE")
+            V = FunctionSpace(mesh, ufl_elem_perms)
+            res = project(V, mesh, cos((3/4)*pi*x[0]))
+            print(res)
+            assert res < max_err
+
+            V2 = FunctionSpace(mesh, ufl_elem_mats)
             res = project(V2, mesh, cos((3/4)*pi*x[0]))
             print(res)
             assert res < max_err
@@ -750,3 +753,56 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
             # res1 = assemble(interpolate(cos((3/4)*pi*x[0]), V))
             res = project(V, mesh, cos((3/4)*pi*x[0]))
             assert res < max_err
+
+
+# TODO this is not a real test
+def test_scaling_mesh():
+    mesh1 = RectangleMesh(2, 1, 1, 1)
+    mesh2 = RectangleMesh(2, 1, 0.5, 1)
+    vec = as_vector([1, 1])
+    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+
+        elem = construct_rt(polygon(3))
+        V1 = FunctionSpace(mesh1, elem.to_ufl())
+        V2 = FunctionSpace(mesh2, elem.to_ufl())
+    else:
+        V1 = FunctionSpace(mesh1, "RT", 1)
+        V2 = FunctionSpace(mesh2, "RT", 1)
+
+    res1 = assemble(interpolate(vec, V1))
+    print(res1.dat.data)
+    res2 = assemble(interpolate(vec, V2))
+    print(res2.dat.data)
+
+
+@pytest.mark.skip(reason="Obscenely slow")
+def test_quartic_poisson_solve():
+    # Create mesh and define function space
+    r = 1
+    m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, "CG", 4)
+
+    # Define variational problem
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = dot(grad(u), grad(v)) * dx
+    u_e = x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[2] + 6
+    # u_e = 1 + x[0]*x[0] + 2*x[1]*x[1] + 3*x[2]*x[2]
+
+    bcs = [DirichletBC(V, u_e, "on_boundary")]
+    f = Function(V)
+    f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
+    # f = Constant(-12.0)
+    L = f*v*dx
+
+    # Compute solution
+    u_r = Function(V)
+    solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+
+    true = Function(V)
+    true.interpolate(u_e)
+
+    res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
+    print(res)
+    assert np.allclose(res, 0)

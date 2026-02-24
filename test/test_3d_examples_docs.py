@@ -61,7 +61,7 @@ def construct_tet_cg3():
     return cg3
 
 
-def construct_tet_cg4(cell=None):
+def construct_tet_cg4(cell=None, perm=True):
     tetra = make_tetrahedron()
     vert = tetra.vertices()[0]
     edge = tetra.edges()[0]
@@ -69,18 +69,18 @@ def construct_tet_cg4(cell=None):
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
-                        DOFGenerator(xs, S1, S1))
+                        DOFGenerator(xs, S1, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((-np.sqrt(3/7),)))]
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
     dg2_int = ElementTriple(edge, (P2, CellL2, "C0"),
-                            [DOFGenerator(xs, S2, S1), DOFGenerator(center, S1, S1)])
+                            [DOFGenerator(xs, S2, S1), DOFGenerator(center, S1, S1)], perm)
 
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
     xs = [DOF(DeltaPairing(), PointKernel((-1/3, -np.sqrt(3)/9)))]
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
-                             DOFGenerator(xs, C3, S1))
+                             DOFGenerator(xs, C3, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)
@@ -96,7 +96,7 @@ def construct_tet_cg4(cell=None):
     P4 = PolynomialSpace(4)
 
     cg4 = ElementTriple(tetra, (P4, CellH1, "C0"),
-                        [cgverts, cgedges, cgfaces, int_dof])
+                        [cgverts, cgedges, cgfaces, int_dof], perm)
 
     return cg4
 
@@ -142,7 +142,7 @@ def construct_tet_rt(cell=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
+    xs = [DOF(L2Pairing(), VectorKernel(1))]
     dofs = DOFGenerator(xs, S1, S3)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
@@ -173,7 +173,7 @@ def construct_tet_ned(cell=None):
     nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
 
     # [test_tet_ned 0]
-    xs = [DOF(L2Pairing(), VectorKernel((1,)))]
+    xs = [DOF(L2Pairing(), VectorKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
 
     edges = ElementTriple(edge, (vec_Pd, CellHCurl, L2), dofs)
@@ -187,7 +187,7 @@ def construct_tet_ned(cell=None):
     return ElementTriple(tet, (nd_space, CellHCurl, L2), [edge_dofs])
 
 
-def construct_tet_nd2(tet=None):
+def construct_tet_ned2(tet=None):
     if tet is None:
         tet = make_tetrahedron()
     deg = 2
@@ -196,25 +196,6 @@ def construct_tet_nd2(tet=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
     z = sp.Symbol("z")
-
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
-    dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
-    v_2 = np.array(tet.get_node(tet.ordered_vertices()[2], return_coords=True))
-    v_1 = np.array(tet.get_node(tet.ordered_vertices()[1], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-    center_dofs = DOFGenerator(xs, S2, S3)
-    face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
-
-    xs = [immerse(tet, int_ned1, TrHCurl)]
-    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
-                                              Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
-                                              Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
-    edge_dofs = DOFGenerator(xs, tet_edges, S1)
-
-    im_xs = [immerse(tet, face_vec, TrHCurl)]
-    face_dofs = DOFGenerator(im_xs, tet_faces, S1)
-
     M1 = sp.Matrix([[0, z, -y]])
     M2 = sp.Matrix([[z, 0, -x]])
     M3 = sp.Matrix([[y, -x, 0]])
@@ -223,15 +204,36 @@ def construct_tet_nd2(tet=None):
     Pd = PolynomialSpace(deg - 1)
     nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
 
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+
+    v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
+    v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+    center_dofs = DOFGenerator(xs, S2, S3)
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
+    im_xs = [immerse(tet, face_vec, TrH1)]
+    face_dofs = DOFGenerator(im_xs, tet_faces, S1)
+    # tempned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [face_dofs])
+    # ptdicts = [d.to_quadrature(1) for d in tempned.generate()]
+    # print(ptdicts[0])
+    # print(ptdicts[1])
+
+    xs = [immerse(tet, int_ned1, TrHCurl)]
+    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
+                                              Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+                                              Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+    edge_dofs = DOFGenerator(xs, tet_edges, S1)
+
     ned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [edge_dofs, face_dofs])
     return ned
 
 
-def test_plot_tet_nd2():
-    nd = construct_tet_nd2()
+def test_plot_tet_ned2():
+    nd = construct_tet_ned2()
     # nd.plot(filename="new.png")
     nd.to_fiat()
-    breakpoint()
 
 
 def plot_tet_rt():

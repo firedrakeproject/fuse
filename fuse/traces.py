@@ -54,8 +54,9 @@ class TrH1(Trace):
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
-    def tabulate(self, Qwts, trace_entity):
-        return Qwts
+    def tabulate(self, Qpts, trace_entity):
+        return np.ones(len(Qpts))
+        # return Qwts
 
     def __repr__(self):
         return "H1"
@@ -123,6 +124,7 @@ class TrHCurl(Trace):
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
         # result = np.matmul(tangent, subEntityBasis)
         return subEntityBasis
+        # return result
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         vec = self.tabulate([], trace_entity).squeeze()

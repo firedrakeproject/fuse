@@ -27,7 +27,7 @@ class ElementTriple():
     :param: dof_gen: Generator Triple to generate the degrees of freedom.
     """
 
-    def __init__(self, cell, spaces, dof_gen):
+    def __init__(self, cell, spaces, dof_gen, perm=True):
         assert isinstance(cell, Point) or isinstance(cell, TensorProductPoint)
         if isinstance(dof_gen, DOFGenerator):
             dof_gen = [dof_gen]
@@ -49,6 +49,10 @@ class ElementTriple():
         self.flat = False
 
         self.ref_el = None
+
+        self.dofs = None
+        self.dofs = self.generate()
+        self.perm = perm
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
@@ -82,9 +86,10 @@ class ElementTriple():
         self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
-
-        self.pure_perm = pure_perm
-        # self.pure_perm = False
+        if self.perm:
+            self.pure_perm = pure_perm
+        else:
+            self.pure_perm = False
         if self.pure_perm:
             self.apply_matrices = False
         else:
@@ -98,13 +103,14 @@ class ElementTriple():
 
     @cache
     def generate(self):
-        res = []
-        id_counter = 0
-        for dof_gen in self.DOFGenerator:
-            generated = dof_gen.generate(self.cell, self.spaces[1], id_counter)
-            res.extend(generated)
-            id_counter += len(generated)
-        return res
+        if self.dofs is None:
+            self.dofs = []
+            id_counter = 0
+            for dof_gen in self.DOFGenerator:
+                generated = dof_gen.generate(self.cell, self.spaces[1], id_counter)
+                self.dofs.extend(generated)
+                id_counter += len(generated)
+        return self.dofs
 
     def __iter__(self):
         yield self.cell
