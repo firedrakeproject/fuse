@@ -221,7 +221,7 @@ class GroupRepresentation(PermutationSetRepresentation):
         self.generators = []
         if cell is not None:
             self.cell = cell
-            vertices = cell.vertices(return_coords=True)
+            # vertices = cell.vertices(return_coords=True)
             verts = cell.ordered_vertices()
             vertices = [cell.get_node(v, return_coords=True) for v in verts]
 

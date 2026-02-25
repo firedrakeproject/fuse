@@ -935,6 +935,9 @@ class TensorProductPoint():
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = flat
 
+    def ordered_vertices(self):
+        return self.A.ordered_vertices() + self.B.ordered_vertices()
+
     def get_spatial_dimension(self):
         return self.dimension
 
