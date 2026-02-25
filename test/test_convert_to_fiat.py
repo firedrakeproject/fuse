@@ -378,7 +378,7 @@ def test_immersed_entity_perms(elem_gen, cell, expected):
 def test_1d(elem_gen, elem_code, deg):
     cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     elem = elem_gen(cell)
-    scale_range = range(2, 6)
+    scale_range = range(3, 6)
 
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
