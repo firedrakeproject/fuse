@@ -186,4 +186,4 @@ jobs:
         run: |
           . venv/bin/activate
           cd ./fuse-repo
-          firedrake-run-split-tests 1 1 -n 8 "$EXTRA_PYTEST_ARGS" fuse-repo/test
+          firedrake-run-split-tests 1 1 -n 8 "$EXTRA_PYTEST_ARGS" ./test
