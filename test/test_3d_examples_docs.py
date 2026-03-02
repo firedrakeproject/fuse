@@ -143,17 +143,51 @@ def construct_tet_rt(cell=None):
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
     xs = [DOF(L2Pairing(), VectorKernel(1))]
-    dofs = DOFGenerator(xs, S1, S3)
+    dofs = DOFGenerator(xs, S1, S2)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
     im_xs = [immerse(cell, face_vec, TrHDiv)]
-    face = DOFGenerator(im_xs, tet_faces, S4)
+    face = DOFGenerator(im_xs, tet_faces, S1)
 
     rt1 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
                         [face])
     # [test_tet_rt 1]
     return rt1
 
+def construct_tet_rt2(cell=None, perm=None):
+    if cell is None:
+        cell = make_tetrahedron()
+    face = cell.d_entities(2, get_class=True)[0]
+    deg = 2
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
+    M = sp.Matrix([[x, y, z]])
+
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
+
+    xs = [DOF(L2Pairing(), PolynomialKernel(1 - (1/2)*x + (np.sqrt(3)/2)*y, symbols=(x, y)))]
+    dofs = DOFGenerator(xs, C3, S2)
+    face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
+
+    im_xs = [immerse(cell, face_vec, TrHDiv)]
+    faces = DOFGenerator(im_xs, tet_faces, S1)
+
+    v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
+    v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
+    v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+    v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),
+          DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2)),
+          DOF(L2Pairing(), VectorKernel((v_2 - v_3)/2))]
+    interior = DOFGenerator(xs, S1, S4)
+
+    rt1 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
+                        [faces, interior])
+    # [test_tet_rt 1]
+    return rt1
 
 def construct_tet_ned(cell=None):
     deg = 1
@@ -187,7 +221,7 @@ def construct_tet_ned(cell=None):
     return ElementTriple(tet, (nd_space, CellHCurl, L2), [edge_dofs])
 
 
-def construct_tet_ned2(tet=None):
+def construct_tet_ned2(tet=None, perm=None):
     if tet is None:
         tet = make_tetrahedron()
     deg = 2
@@ -208,9 +242,11 @@ def construct_tet_ned2(tet=None):
     dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
 
-    v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
+    v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
     v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+    v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2))]
+    # xs = [DOF(L2Pairing(), VectorKernel((v_1 - v_0)/2)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),]
     center_dofs = DOFGenerator(xs, S2, S3)
     face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
     im_xs = [immerse(tet, face_vec, TrH1)]
@@ -226,7 +262,7 @@ def construct_tet_ned2(tet=None):
                                               Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
 
-    ned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [edge_dofs, face_dofs])
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs])
     return ned
 
 
@@ -240,6 +276,14 @@ def plot_tet_rt():
     rt = construct_tet_rt()
     rt.plot()
 
+def test_tet_rt2():
+    rt2 = construct_tet_rt2()
+    ls = rt2.generate()
+    # TODO make this a proper test
+    for dof in ls:
+        print(dof)
+    rt2.to_fiat()
+    breakpoint()
 
 def test_tet_rt():
     rt1 = construct_tet_rt()

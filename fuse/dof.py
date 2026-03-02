@@ -192,7 +192,9 @@ class VectorKernel(BaseKernel):
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        if not immersed:
+            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -340,17 +342,20 @@ class DOF():
         Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         dim = self.cell_defined_on.get_spatial_dimension()
-        if dim > 0 and self.pairing.orientation:
+        if dim > 0:
             bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
-
+        immersed = self.immersed
         if self.immersed and isinstance(self.kernel, VectorKernel):
-            # this probably needs generalising
-            basis_change = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*bv) for bv in basis_change])
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed, self.cell.dimension)
+            def immersed(pt):
+                basis = np.array(self.cell_defined_on.basis_vectors()).T
+                basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
+                immersed_basis = np.array(self.cell.basis_vectors(entity=self.cell_defined_on))
+                return np.matmul(basis_coeffs, immersed_basis)
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
 
         if self.immersed:
             # need to compute jacobian from attachment.
@@ -359,7 +364,6 @@ class DOF():
             #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
             # else:
             immersion = self.target_space.tabulate(pts, self.pairing.entity)
-
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))

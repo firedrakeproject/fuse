@@ -59,7 +59,7 @@ class TrH1(Trace):
         # return Qwts
 
     def manipulate_basis(self, basis):
-        return np.ones_like(basis)
+        return np.array([1])
 
     def __repr__(self):
         return "H1"

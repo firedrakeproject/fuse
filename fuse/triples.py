@@ -86,7 +86,6 @@ class ElementTriple():
         # self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
-        print(pure_perm)
         if self.perm:
             self.pure_perm = pure_perm
         else:
@@ -160,6 +159,8 @@ class ElementTriple():
         self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
+        # sanity check that the dofs span the space
+        original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         if self.pure_perm:
             dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
         else:
@@ -275,6 +276,7 @@ class ElementTriple():
         return A, new_coeffs_flat
 
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+        raise NotImplementedError("This should be deprecated")
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
         nodes = [d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
@@ -428,39 +430,35 @@ class ElementTriple():
                             # if DOFs on entity are not perms, get the matrix
                             # only get this if they are defined on the current dimension
                             bvs = np.array(e.basis_vectors())
-                            new_bvs = np.array(e.orient(g).basis_vectors())
+                            new_bvs = np.array(e.orient(~g).basis_vectors())
                             basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
-                            if dim == 1:
-                                J = np.zeros_like(basis_change)
-                                for i in range(dim):
-                                    J[dim - i - 1, i] = 1
-                                basis_change = np.matmul(np.matmul(J, basis_change.T), J)
+                            # print((~g).numeric_rep())
+                            # print((~g).matrix_form())
+                            # print(~g).ordered_vertices())
+                            # print(basis_change)
                             if len(ent_dofs_ids) == basis_change.shape[0]:
                                 sub_mat = basis_change
-                            elif len(ent_dofs_ids) != 1:
-                                sub_mat = np.kron((~g).matrix_form(), basis_change)
-                            elif len(ent_dofs_ids) == 1:
-                                # case for single dof with vector immersion
+                            elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:
+                                # equivalently g1 trivial
                                 sub_mat = ent_dofs[0].target_space.manipulate_basis(basis_change)
                             else:
-                                raise NotImplementedError("Unconsidered permuation case")
-                            # res = np.kron(sub_mat, basis_change)
-                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = self.matrices_by_entity[dim][e_id][val]
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat
-                            # print(sub_mat)
-                            # print(self.matrices_by_entity[dim][e_id][val])
-                            # print()
-                            # if not np.allclose(res, self.matrices_by_entity[dim][e_id][val]):
-                            #     breakpoint()
+                                # len(dof_gen_class[dim].g2.members()) == 2:
+                                # case where value change is a restriction of the full transformation of the basis
+                                value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                sub_mat = np.kron((~g).matrix_form(), value_change)
+                                # sub_mat = (~g).matrix_form()
+                            # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
+                                # case for transforms where the basis vector is already included in the dof
+                                # sub_mat = np.kron((~g).matrix_form(), basis_change)
+                            # else:
+                            #     raise NotImplementedError("Unconsidered permuation case")
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
                             sub_mat = (~g).matrix_form()
-                            # if not np.allclose(self.matrices_by_entity[dim][e_id][val][np.ix_(dof_idx, dof_idx)], sub_mat):
-                            #     print(g)
-                            #     print(self.matrices_by_entity[dim][e_id][val][np.ix_(dof_idx, dof_idx)])
-                            #     print(sub_mat)
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim():
                             # case for dofs defined on the cell and not immersed

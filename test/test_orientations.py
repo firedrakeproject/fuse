@@ -38,6 +38,9 @@ def construct_nd2(tri=None):
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
 
+def test_nd2():
+    elem = construct_nd2()
+    elem.to_fiat()
 
 def construct_rt2(tri=None):
     if tri is None:

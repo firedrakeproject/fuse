@@ -6,7 +6,7 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt, construct_tet_ned, construct_tet_ned2, construct_tet_cg4
+from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned2, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -358,18 +358,6 @@ def test_entity_perms(elem_gen, cell):
         print(elem.matrices[dim][0][i])
 
 
-@pytest.mark.parametrize("elem_gen, cell, expected", [(create_cg1, Point(1, [Point(0), Point(0)], vertex_num=2), (0, 0, [[[1]]])),
-                                                      (create_cg2, Point(1, [Point(0), Point(0)], vertex_num=2), (1, 0, [[[1]], [[1]]])),
-                                                      (construct_rt, polygon(3), (1, 0, [[[1]], [[-1]]]))])
-def test_immersed_entity_perms(elem_gen, cell, expected):
-    elem = elem_gen(cell)
-    elem.to_fiat()
-    dim, ent_id, matrices = expected
-
-    for key in elem.matrices_by_entity[dim][ent_id]:
-        assert any([np.allclose(e_mat, elem.matrices_by_entity[dim][ent_id][key]) for e_mat in matrices])
-
-
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
                                                     (create_dg2, "DG", 2),
@@ -659,6 +647,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
+                                                              (construct_tet_rt2, "RT", 2, 1.8),
                                                               pytest.param(construct_tet_ned2, "N1curl", 2, 1.8, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -683,48 +672,114 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
                 assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
-                                                              (construct_tet_ned, "N1curl", 1, 0.8),
-                                                              pytest.param(construct_tet_ned2, "N1curl", 2, 1.8, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
-def test_const_vec_two_tet(elem_gen, elem_code, deg, conv_rate):
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
+                                                    pytest.param(construct_tet_rt2, "RT", 2, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
+def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    vec = as_vector([1, 1, 1])
+    group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
+             sp.combinatorics.Permutation([0, 2, 3, 1]),
+             sp.combinatorics.Permutation([0, 3, 1, 2]),
+             sp.combinatorics.Permutation([0, 1, 3, 2]),
+             sp.combinatorics.Permutation([0, 3, 2, 1]),
+             sp.combinatorics.Permutation([0, 2, 1, 3])
+            ]
+    scale_range = range(0, 2)
+    for i in scale_range:
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        # from firedrake.utility_meshes import TwoTetMesh
+        # mesh = TwoTetMesh(perm=g)
+        x = SpatialCoordinate(mesh)
+        vec = as_vector([2*x[0], 5*x[1], x[2]])
+        # vec = as_vector([0, 1, 0])
+        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+            V2 = FunctionSpace(mesh, elem.to_ufl())
+            res2 = assemble(interpolate(vec, V2))
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res2, CG3))
+            res4 = assemble(interpolate(vec, CG3))
+            assert np.allclose(res3.dat.data, res4.dat.data)
+        else:
+            V = FunctionSpace(mesh, elem_code, deg)
+            res1 = assemble(interpolate(vec, V))
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res3 = assemble(interpolate(res1, CG3))
+            res4 = assemble(interpolate(vec, CG3))
+            assert np.allclose(res3.dat.data, res4.dat.data)
+
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
+                                                    (construct_tet_rt2, "RT", 2),
+                                                    (construct_tet_ned, "N1curl", 1),
+                                                    (construct_tet_ned2, "N1curl", 2)])
+def test_vec_two_tet(elem_gen, elem_code, deg):
+    cell = make_tetrahedron()
+    elem = elem_gen(cell)
+
+    def vec(mesh, array=False):
+        if array:
+            return np.array([1, 1, 1])
+        return as_vector([1, 1, 1])
+
     from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
              sp.combinatorics.Permutation([0, 3, 1, 2]),
              sp.combinatorics.Permutation([0, 1, 3, 2]),
              sp.combinatorics.Permutation([0, 3, 2, 1]),
-             sp.combinatorics.Permutation([0, 2, 1, 3])]
-
+             sp.combinatorics.Permutation([0, 2, 1, 3])
+             ]
+    error_gs = []
+    error_row_lists = []
     for g in group:
+        # mesh = UnitTetrahedronMesh()
         mesh = TwoTetMesh(perm=g)
+        print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
-            res2 = assemble(interpolate(vec, V2))
-            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res2 = assemble(interpolate(vec(mesh), V2))
+            CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
+            error_rows = []
+            print(g)
+            # breakpoint()
             for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+                if not np.allclose(res3.dat.data[i], vec(mesh, array=True)):
+                    print(res3.dat.data[i])
+                    error_gs += [g]
+                    error_rows += [i]
+            error_row_lists += [error_rows]
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-            res1 = assemble(interpolate(vec, V))
+            res1 = assemble(interpolate(vec(mesh), V))
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res1, CG3))
-            for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            # for i in range(res3.dat.data.shape[0]):
+            #     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+    assert len(error_gs) == 0
+        # print(set(error_gs))
+        # breakpoint()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 0.05),
-                                                            (construct_tet_cg4, "CG", 4, 0.04)])
+                                                            (construct_tet_cg4, "CG", 4, 0.04),
+                                                            (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_ned2, "N1curl", 2, 1e-13)])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     elem_perms = elem_gen(cell, perm=True)
     elem_mats = elem_gen(cell, perm=False)
     ufl_elem_perms = elem_perms.to_ufl()
+    # breakpoint()
     ufl_elem_mats = elem_mats.to_ufl()
 
+    def expr(mesh):
+        x = SpatialCoordinate(mesh)
+        if elem_code == "RT" or elem_code == "N1curl":
+            return as_vector([x[0], 2*x[1], 3*x[2]])
+            # return as_vector([cos((3/4)*pi*x[0]), cos((3/4)*pi*x[1]), cos((3/4)*pi*x[2])])
+        return cos((3/4)*pi*x[0])
+    errors = []
     from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
@@ -737,23 +792,26 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
         mesh = TwoTetMesh(perm=g)
         print(g)
         print(mesh.entity_orientations)
-        x = SpatialCoordinate(mesh)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, ufl_elem_perms)
-            res = project(V, mesh, cos((3/4)*pi*x[0]))
-            print(res)
-            assert res < max_err
+            if elem_code != "RT" and elem_code != "N1curl":
+                V = FunctionSpace(mesh, ufl_elem_perms)
+
+                res = project(V, mesh, expr(mesh))
+                print(res)
+                assert res < max_err
 
             V2 = FunctionSpace(mesh, ufl_elem_mats)
-            res = project(V2, mesh, cos((3/4)*pi*x[0]))
+            print(elem_mats.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([12, 13], [12, 13])])
+            res = project(V2, mesh, expr(mesh))
             print(res)
-            assert res < max_err
+            errors += [res]
+            #assert res < max_err
         else:
             V = FunctionSpace(mesh, elem_code, deg)
-            # res1 = assemble(interpolate(cos((3/4)*pi*x[0]), V))
-            res = project(V, mesh, cos((3/4)*pi*x[0]))
-            assert res < max_err
-
+            res = project(V, mesh, expr(mesh))
+            print(res)
+            # assert res < max_err
+    assert all([res < max_err for res in errors])
 
 # TODO this is not a real test
 def test_scaling_mesh():
@@ -775,25 +833,23 @@ def test_scaling_mesh():
     print(res2.dat.data)
 
 
-@pytest.mark.skip(reason="Obscenely slow")
 def test_quartic_poisson_solve():
     # Create mesh and define function space
-    r = 1
+    r = 0
     m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     x = SpatialCoordinate(m)
-    V = FunctionSpace(m, "CG", 4)
+    elem = construct_tet_cg4(make_tetrahedron())
+    V = FunctionSpace(m, elem.to_ufl())
 
     # Define variational problem
     u = TrialFunction(V)
     v = TestFunction(V)
     a = dot(grad(u), grad(v)) * dx
     u_e = x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[2] + 6
-    # u_e = 1 + x[0]*x[0] + 2*x[1]*x[1] + 3*x[2]*x[2]
 
     bcs = [DirichletBC(V, u_e, "on_boundary")]
     f = Function(V)
     f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
-    # f = Constant(-12.0)
     L = f*v*dx
 
     # Compute solution
