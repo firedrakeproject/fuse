@@ -38,9 +38,11 @@ def construct_nd2(tri=None):
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
 
+
 def test_nd2():
     elem = construct_nd2()
     elem.to_fiat()
+
 
 def construct_rt2(tri=None):
     if tri is None:
@@ -231,7 +233,7 @@ def interpolate_vs_project(V, expression, exact):
     return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx))
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8), ])
 def test_convergence(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)

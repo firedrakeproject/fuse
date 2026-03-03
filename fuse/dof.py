@@ -348,14 +348,19 @@ class DOF():
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
-        immersed = self.immersed
         if self.immersed and isinstance(self.kernel, VectorKernel):
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
                 immersed_basis = np.array(self.cell.basis_vectors(entity=self.cell_defined_on))
                 return np.matmul(basis_coeffs, immersed_basis)
+        else:
+            immersed = self.immersed
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
+        if isinstance(self.kernel, PolynomialKernel):
+            print(self)
+            print(self.kernel(*np.matmul(basis_change, Qpts[0])))
+        #     breakpoint()
 
         if self.immersed:
             # need to compute jacobian from attachment.

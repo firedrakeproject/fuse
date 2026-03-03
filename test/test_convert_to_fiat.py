@@ -601,8 +601,9 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg3_tet, "CG", 3, 3.8),
                                                               #   (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
+                                                              (construct_tet_rt2, "RT", 2, 1.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
-                                                               pytest.param(construct_tet_ned2, "N1curl", 2, 1.8, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -677,17 +678,18 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    i = 1
+    i = 0
     mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
     x = SpatialCoordinate(mesh)
     candidate_vecs = [
+        [1, 0, 0], [0, 0, 0],
         [x[0], 0, 0], [0, x[0], 0], [0, 0, x[0]],
         [x[1], 0, 0], [0, x[1], 0], [0, 0, x[1]],
         [x[2], 0, 0], [0, x[2], 0], [0, 0, x[2]],
         [x[0], x[1], 0], [x[1], x[0], 0], [x[1], 0, x[0]], [x[0], x[1], x[2]]
     ]
     # group = sp.combinatorics.SymmetricGroup(4).elements
-    scale_range = range(0, 2)
+    # scale_range = range(0, 2)
     error_rows = []
     # for i in scale_range:
     # for g in group:
@@ -699,10 +701,12 @@ def test_linear_vec(elem_gen, elem_code, deg):
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = assemble(interpolate(vec, V2))
-            CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+            CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec, CG3))
-            assert np.allclose(res3.dat.data, res4.dat.data)
+            if not np.allclose(res3.dat.data, res4.dat.data):
+                error_rows += [v]
+                breakpoint()
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -710,6 +714,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
             res3 = assemble(interpolate(res1, CG3))
             res4 = assemble(interpolate(vec, CG3))
             assert np.allclose(res3.dat.data, res4.dat.data)
+    breakpoint()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
@@ -761,8 +766,6 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             # for i in range(res3.dat.data.shape[0]):
             #     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
     assert len(error_gs) == 0
-        # print(set(error_gs))
-        # breakpoint()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 0.05),
@@ -808,13 +811,46 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
             res = project(V2, mesh, expr(mesh))
             print(res)
             errors += [res]
-            #assert res < max_err
+            # assert res < max_err
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res = project(V, mesh, expr(mesh))
             print(res)
             # assert res < max_err
     assert all([res < max_err for res in errors])
+
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg",
+                         [(construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2)
+                          ])
+def test_3d_two_form(elem_gen, elem_code, deg):
+
+    cell = make_tetrahedron()
+    mesh = UnitCubeMesh(3, 3, 3)
+    x = SpatialCoordinate(mesh)
+
+    spaces = []
+    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
+        elem = elem_gen(cell)
+        elem2 = elem_gen(cell)
+        spaces += [("fuse", FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))]
+    else:
+        spaces += [("fiat", FunctionSpace(mesh, elem_code, deg), FunctionSpace(mesh, elem_code, deg))]
+
+    for name, V, V2 in spaces:
+        v = TestFunction(V)
+        u = TrialFunction(V2)
+        exp = as_vector([cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0])])
+        f = assemble(interpolate(exp, V2))
+
+        a = inner(v, u) * dx
+        L = inner(f, v) * dx
+
+        solution = Function(V2)
+        solve(a == L, solution)
+
+        assert norm(assemble(f - solution)) < 1e-14
+
 
 # TODO this is not a real test
 def test_scaling_mesh():

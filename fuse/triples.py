@@ -315,7 +315,6 @@ class ElementTriple():
                         #     print(temp[np.ix_(dof_ids, dof_ids)])
                         #     sub_mat = (~permuted_g).matrix_form()
                         #     print(sub_mat)
-                            
                         #     breakpoint()
                         # print(e_id, val)
                         # for d in self.generate():
@@ -423,7 +422,7 @@ class ElementTriple():
                         ent_dofs_ids = np.array([self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs], dtype=int)
                         # (dof_gen, ent_dofs)
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
-                        dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
+                        # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
