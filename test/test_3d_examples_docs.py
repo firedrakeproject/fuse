@@ -168,8 +168,8 @@ def construct_tet_rt2(cell=None, perm=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel(1 - (1/2)*x + (np.sqrt(3)/2)*y, symbols=(x, y)))]
-    dofs = DOFGenerator(xs, C3, S2)
+    xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y)))]
+    dofs = DOFGenerator(xs, diff_C3, S2)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
     im_xs = [immerse(cell, face_vec, TrHDiv)]

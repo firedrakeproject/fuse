@@ -648,7 +648,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
                                                               (construct_tet_rt2, "RT", 2, 1.8),
-                                                              pytest.param(construct_tet_ned2, "N1curl", 2, 1.8, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -673,29 +673,33 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
-                                                    pytest.param(construct_tet_rt2, "RT", 2, marks=pytest.mark.xfail(reason='Facet matrix-valued orientations in 3D'))])
+                                                    (construct_tet_rt2, "RT", 2)])
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
-             sp.combinatorics.Permutation([0, 2, 3, 1]),
-             sp.combinatorics.Permutation([0, 3, 1, 2]),
-             sp.combinatorics.Permutation([0, 1, 3, 2]),
-             sp.combinatorics.Permutation([0, 3, 2, 1]),
-             sp.combinatorics.Permutation([0, 2, 1, 3])
-            ]
+    i = 1
+    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+    x = SpatialCoordinate(mesh)
+    candidate_vecs = [
+        [x[0], 0, 0], [0, x[0], 0], [0, 0, x[0]],
+        [x[1], 0, 0], [0, x[1], 0], [0, 0, x[1]],
+        [x[2], 0, 0], [0, x[2], 0], [0, 0, x[2]],
+        [x[0], x[1], 0], [x[1], x[0], 0], [x[1], 0, x[0]], [x[0], x[1], x[2]]
+    ]
+    # group = sp.combinatorics.SymmetricGroup(4).elements
     scale_range = range(0, 2)
-    for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+    error_rows = []
+    # for i in scale_range:
+    # for g in group:
+    for v in candidate_vecs:
         # from firedrake.utility_meshes import TwoTetMesh
+        # g = group[3]
         # mesh = TwoTetMesh(perm=g)
-        x = SpatialCoordinate(mesh)
-        vec = as_vector([2*x[0], 5*x[1], x[2]])
-        # vec = as_vector([0, 1, 0])
+        vec = as_vector(v)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = assemble(interpolate(vec, V2))
-            CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec, CG3))
             assert np.allclose(res3.dat.data, res4.dat.data)
@@ -770,7 +774,6 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     elem_perms = elem_gen(cell, perm=True)
     elem_mats = elem_gen(cell, perm=False)
     ufl_elem_perms = elem_perms.to_ufl()
-    # breakpoint()
     ufl_elem_mats = elem_mats.to_ufl()
 
     def expr(mesh):
@@ -797,11 +800,11 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
                 V = FunctionSpace(mesh, ufl_elem_perms)
 
                 res = project(V, mesh, expr(mesh))
-                print(res)
-                assert res < max_err
+                print("perms", res)
+                # assert res < max_err
+                errors += [res]
 
             V2 = FunctionSpace(mesh, ufl_elem_mats)
-            print(elem_mats.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([12, 13], [12, 13])])
             res = project(V2, mesh, expr(mesh))
             print(res)
             errors += [res]

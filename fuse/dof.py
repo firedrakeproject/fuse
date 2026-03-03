@@ -363,11 +363,10 @@ class DOF():
             # if self.pairing.orientation:
             #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
             # else:
-            immersion = self.target_space.tabulate(pts, self.pairing.entity)
+            immersion = self.target_space.tabulate(pts, self.cell_defined_on)
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
-            # print("after change", immersion)
             if isinstance(self.target_space, TrH1):
                 new_wts = wts
             else:

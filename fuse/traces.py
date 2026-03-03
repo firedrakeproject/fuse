@@ -89,18 +89,18 @@ class TrHDiv(Trace):
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
         # basis = np.matmul(entityBasis, cellEntityBasis)
         basis = cellEntityBasis
-
         if trace_entity.dimension == 1:
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
         elif trace_entity.dimension == 2:
             result = np.cross(basis[0], basis[1])
         else:
             raise ValueError("Immersion of HDiv edges not defined in 3D")
-
         return result
 
     def manipulate_basis(self, basis):
-        if basis.shape[0] == 1:
+        if basis.shape == (1, 1):
+            return basis
+        elif basis.shape == (1, 2):
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
         elif basis.shape[0] == 2:
             result = np.cross(basis[0], basis[1])
