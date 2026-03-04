@@ -678,7 +678,7 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    i = 0
+    i = 1
     mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
     x = SpatialCoordinate(mesh)
     candidate_vecs = [
@@ -690,7 +690,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
     ]
     # group = sp.combinatorics.SymmetricGroup(4).elements
     # scale_range = range(0, 2)
-    error_rows = []
+    # error_rows = []
     # for i in scale_range:
     # for g in group:
     for v in candidate_vecs:
@@ -704,9 +704,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec, CG3))
-            if not np.allclose(res3.dat.data, res4.dat.data):
-                error_rows += [v]
-                breakpoint()
+            assert np.allclose(res3.dat.data, res4.dat.data)
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -714,7 +712,6 @@ def test_linear_vec(elem_gen, elem_code, deg):
             res3 = assemble(interpolate(res1, CG3))
             res4 = assemble(interpolate(vec, CG3))
             assert np.allclose(res3.dat.data, res4.dat.data)
-    breakpoint()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
@@ -751,7 +748,6 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             res3 = assemble(interpolate(res2, CG3))
             error_rows = []
             print(g)
-            # breakpoint()
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], vec(mesh, array=True)):
                     print(res3.dat.data[i])
@@ -821,12 +817,12 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg",
-                         [(construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2)
+                         [(construct_tet_cg4, "CG", 4), (construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2)
                           ])
 def test_3d_two_form(elem_gen, elem_code, deg):
 
     cell = make_tetrahedron()
-    mesh = UnitCubeMesh(3, 3, 3)
+    mesh = UnitTetrahedronMesh()
     x = SpatialCoordinate(mesh)
 
     spaces = []
@@ -840,11 +836,22 @@ def test_3d_two_form(elem_gen, elem_code, deg):
     for name, V, V2 in spaces:
         v = TestFunction(V)
         u = TrialFunction(V2)
-        exp = as_vector([cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0])])
+        if elem_code == "CG":
+            exp = cos((3/4)*pi*x[0])
+        else:
+            exp = as_vector([cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0]), cos((3/4)*pi*x[0])])
+            # exp = as_vector([x[0], x[1], x[2]])
         f = assemble(interpolate(exp, V2))
 
-        a = inner(v, u) * dx
-        L = inner(f, v) * dx
+        # print("A")
+        a = assemble(inner(u, v) * dx)
+        np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        # print(a.M.values[np.ix_(V.cell_node_list[0][12:16], V.cell_node_list[0][12:16])])
+        # np.matmul(L.M.values[np.ix_([0, 1],[0, 1])], transform.T)
+        print("L")
+        L = assemble(inner(f, v) * dx)
+        print(L.dat.data)
+        # L.dat.data_rw[0:2] = np.matmul(L.dat.data[0:2], transform.T)
 
         solution = Function(V2)
         solve(a == L, solution)

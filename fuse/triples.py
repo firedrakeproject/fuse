@@ -431,10 +431,6 @@ class ElementTriple():
                             bvs = np.array(e.basis_vectors())
                             new_bvs = np.array(e.orient(~g).basis_vectors())
                             basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
-                            # print((~g).numeric_rep())
-                            # print((~g).matrix_form())
-                            # print(~g).ordered_vertices())
-                            # print(basis_change)
                             if len(ent_dofs_ids) == basis_change.shape[0]:
                                 sub_mat = basis_change
                             elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:

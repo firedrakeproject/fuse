@@ -401,6 +401,7 @@ D2 = GroupRepresentation(DihedralGroup(2))
 A4 = GroupRepresentation(AlternatingGroup(4))
 A3 = GroupRepresentation(AlternatingGroup(3))
 
+basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
 diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])])  # this group is used for facet dofs
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])

@@ -80,7 +80,7 @@ def construct_tet_cg4(cell=None, perm=True):
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
     xs = [DOF(DeltaPairing(), PointKernel((0, 2*np.sqrt(3)/9)))]
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
-                             DOFGenerator(xs, diff_C3, S1), perm)
+                             DOFGenerator(xs, C3, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)
@@ -123,7 +123,9 @@ def test_tet_cg3():
 def test_tet_cg4():
     cg4 = construct_tet_cg4()
     cg4.generate()
-    cg4.plot(filename="tet_cg4.png")
+    # cg4.plot(filename="tet_cg4.png")
+    for dof in cg4.generate():
+        print(dof)
     cg4.to_fiat()
 
 
@@ -248,6 +250,8 @@ def construct_tet_ned2(tet=None, perm=None):
     # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
     v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2))]
+    # breakpoint()
+    # xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
     # xs = [DOF(L2Pairing(), VectorKernel((v_1 - v_0)/2)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),]
     center_dofs = DOFGenerator(xs, S2, S3)
     face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
@@ -284,9 +288,8 @@ def test_tet_rt2():
     ls = rt2.generate()
     # TODO make this a proper test
     for dof in ls:
-        print(dof)
+        print(dof.to_quadrature(1))
     rt2.to_fiat()
-    breakpoint()
 
 
 def test_tet_rt():

@@ -357,10 +357,6 @@ class DOF():
         else:
             immersed = self.immersed
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
-        if isinstance(self.kernel, PolynomialKernel):
-            print(self)
-            print(self.kernel(*np.matmul(basis_change, Qpts[0])))
-        #     breakpoint()
 
         if self.immersed:
             # need to compute jacobian from attachment.
