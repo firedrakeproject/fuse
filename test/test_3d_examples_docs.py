@@ -80,7 +80,7 @@ def construct_tet_cg4(cell=None, perm=True):
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
     xs = [DOF(DeltaPairing(), PointKernel((0, 2*np.sqrt(3)/9)))]
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
-                             DOFGenerator(xs, C3, S1), perm)
+                             DOFGenerator(xs, diff_C3, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)
