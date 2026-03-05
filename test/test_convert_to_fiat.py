@@ -360,7 +360,7 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
-                                                    (create_dg2, "DG", 2),
+                                                    pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
                                                     (create_cg2, "CG", 2)
                                                     ])
 def test_1d(elem_gen, elem_code, deg):
