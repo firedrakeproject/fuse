@@ -249,7 +249,6 @@ def construct_tet_ned_2nd_kind(tet=None, perm=None):
         tet = make_tetrahedron()
     deg = 1
     edge = tet.edges()[0]
-    face = tet.d_entities(2, get_class=True)[0]
     x = sp.Symbol("x")
 
     vec_Pd = PolynomialSpace(deg, set_shape=True)
