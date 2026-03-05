@@ -223,7 +223,7 @@ class PolynomialKernel(BaseKernel):
     def degree(self, interpolant_degree):
         if len(self.fn.free_symbols) == 0:
             return interpolant_degree
-        return self.fn.as_poly().total_degree() * interpolant_degree
+        return self.fn.as_poly().total_degree() + interpolant_degree
 
     def permute(self, g):
         # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
@@ -339,7 +339,7 @@ class DOF():
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self))
 
     def to_quadrature(self, arg_degree):
-        Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
+        Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         dim = self.cell_defined_on.get_spatial_dimension()
         if dim > 0:
