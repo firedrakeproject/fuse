@@ -189,7 +189,6 @@ def construct_nd_2nd_kind(tri=None):
     deg = 1
     edge = tri.edges()[0]
     x = sp.Symbol("x")
-    y = sp.Symbol("y")
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
@@ -203,13 +202,13 @@ def construct_nd_2nd_kind(tri=None):
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
     return ned
 
+
 def construct_bdm(tri=None):
     if tri is None:
         tri = polygon(3)
     deg = 1
     edge = tri.edges()[0]
     x = sp.Symbol("x")
-    y = sp.Symbol("y")
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
@@ -222,6 +221,7 @@ def construct_bdm(tri=None):
 
     rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
     return rt
+
 
 def test_nd_example():
     tri = polygon(3)
