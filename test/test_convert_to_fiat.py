@@ -6,7 +6,7 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned2, construct_tet_cg4
+from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind, construct_tet_bdm, construct_tet_ned2, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -599,11 +599,12 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
                                                               (create_cg3_tet, "CG", 3, 3.8),
-                                                              #   (construct_tet_cg4, "CG", 4, 4.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_rt2, "RT", 2, 1.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
-                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8),
+                                                              (construct_tet_ned_2nd_kind, "N2curl", 1, 1.8),
+                                                              (construct_tet_bdm, "BDM", 1, 1.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)

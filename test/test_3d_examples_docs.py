@@ -187,10 +187,29 @@ def construct_tet_rt2(cell=None, perm=None):
           DOF(L2Pairing(), VectorKernel((v_2 - v_3)/2))]
     interior = DOFGenerator(xs, S1, S4)
 
-    rt1 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
+    rt2 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
                         [faces, interior])
-    # [test_tet_rt 1]
-    return rt1
+    return rt2
+
+
+def construct_tet_bdm(cell=None, perm=None):
+    if cell is None:
+        cell = make_tetrahedron()
+    face = cell.d_entities(2, get_class=True)[0]
+    deg = 1
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    rt_space = PolynomialSpace(deg, set_shape=True)
+
+    xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y)))]
+    dofs = DOFGenerator(xs, C3, S2)
+    face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
+    im_xs = [immerse(cell, face_vec, TrHDiv)]
+    faces = DOFGenerator(im_xs, tet_faces, S1)
+
+    rt2 = ElementTriple(cell, (rt_space, CellHDiv, "C0"), [faces])
+    return rt2
 
 
 def construct_tet_ned(cell=None):
@@ -225,6 +244,31 @@ def construct_tet_ned(cell=None):
     return ElementTriple(tet, (nd_space, CellHCurl, L2), [edge_dofs])
 
 
+def construct_tet_ned_2nd_kind(tet=None, perm=None):
+    if tet is None:
+        tet = make_tetrahedron()
+    deg = 1
+    edge = tet.edges()[0]
+    face = tet.d_entities(2, get_class=True)[0]
+    x = sp.Symbol("x")
+
+    vec_Pd = PolynomialSpace(deg, set_shape=True)
+    nd_space = vec_Pd
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+
+    xs = [immerse(tet, int_ned1, TrHCurl)]
+    tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
+                                              Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
+                                              Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+    edge_dofs = DOFGenerator(xs, tet_edges, S1)
+
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs])
+    return ned
+
+
 def construct_tet_ned2(tet=None, perm=None):
     if tet is None:
         tet = make_tetrahedron()
@@ -257,10 +301,6 @@ def construct_tet_ned2(tet=None, perm=None):
     face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
     im_xs = [immerse(tet, face_vec, TrH1)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
-    # tempned = ElementTriple(tet, (nd_space, TrHCurl(tet), C0), [face_dofs])
-    # ptdicts = [d.to_quadrature(1) for d in tempned.generate()]
-    # print(ptdicts[0])
-    # print(ptdicts[1])
 
     xs = [immerse(tet, int_ned1, TrHCurl)]
     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
