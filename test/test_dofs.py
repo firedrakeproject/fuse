@@ -101,7 +101,6 @@ def test_permute_nd2():
                 if 0 < i < 2:
                     print(dof(g).convert_to_fiat(cell.to_fiat(), 2, (2,)).pt_dict)
                     print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
-    breakpoint()
 
 
 def test_permute_nd_old():

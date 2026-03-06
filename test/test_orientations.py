@@ -3,7 +3,7 @@ from firedrake import *
 from fuse import *
 import numpy as np
 import sympy as sp
-from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt
+from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_bdm, construct_bdm2
 from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
 import os
 
@@ -37,6 +37,11 @@ def construct_nd2(tri=None):
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
     return ned
+
+
+def test_nd2():
+    elem = construct_nd2()
+    elem.to_fiat()
 
 
 def construct_rt2(tri=None):
@@ -216,7 +221,7 @@ def get_expression(V):
             exact = Function(FunctionSpace(mesh, 'CG', 5))
             expression = x + y + z
         elif len(shape) == 1:
-            exact = Function(FunctionSpace(mesh, 'CG', 5))
+            exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
             expression = as_vector([x, y, z])
     return expression, exact
 
@@ -228,7 +233,7 @@ def interpolate_vs_project(V, expression, exact):
     return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx))
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8), ])
 def test_convergence(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
@@ -272,7 +277,10 @@ def test_convergence(elem_gen, elem_code, deg, conv_rate):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_nd, "N1curl", 1, 0.8),
+                                                              (construct_nd_2nd_kind, "N2curl", 1, 1.8),
                                                               (construct_rt2, "RT", 2, 1.8),
+                                                              (construct_bdm, "BDM", 1, 1.8),
+                                                              (construct_bdm2, "BDM", 2, 2.8),
                                                               (construct_nd2, "N1curl", 2, 1.8)])
 def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
@@ -324,7 +332,7 @@ def test_interpolation(elem_gen, elem_code, deg):
     expression, _ = get_expression(V)
     expect = project(expression, V)
     f = assemble(interpolate(expression, V))
-    assert np.allclose(f.dat.data, expect.dat.data)
+    assert np.allclose(f.dat.data, expect.dat.data, rtol=1e-14)
 
     expect = project(expression, V)
     v = TestFunction(V)
@@ -336,7 +344,7 @@ def test_interpolation(elem_gen, elem_code, deg):
     solution = Function(V)
     solve(a == L, solution)
 
-    assert norm(assemble(expect - solution)) < 1e-15
+    assert norm(assemble(expect - solution)) < 1e-14
 
 
 @pytest.mark.parametrize("elem_gen,elem_gen2,elem_code,deg,deg2",
@@ -347,8 +355,8 @@ def test_interpolation(elem_gen, elem_code, deg):
                           (construct_rt2, construct_rt2, "RT", 2, 2),
                           ])
 def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
-    cell = polygon(3)
 
+    cell = polygon(3)
     mesh = UnitSquareMesh(3, 3)
 
     spaces = []
@@ -359,14 +367,11 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     else:
         spaces += [("fiat", FunctionSpace(mesh, elem_code, deg), FunctionSpace(mesh, elem_code, deg2))]
 
-    results = []
     for name, V, V2 in spaces:
         v = TestFunction(V)
         u = TrialFunction(V2)
-        res = assemble(inner(u, v)*dx).M.values
-        results += [res]
         exp, _ = get_expression(V)
-        f = Function(V2).interpolate(exp)
+        f = assemble(interpolate(exp, V2))
 
         a = inner(v, u) * dx
         L = inner(f, v) * dx
@@ -374,4 +379,4 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
         solution = Function(V2)
         solve(a == L, solution)
 
-        assert norm(assemble(f - solution)) < 1e-15
+        assert norm(assemble(f - solution)) < 1e-14

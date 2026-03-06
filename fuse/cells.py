@@ -478,6 +478,7 @@ class Point():
             # if self.oriented:
             #     connections = self.permute_entities(self.oriented, dim - 1)
             # if self.dimension == 2:
+            #     connections = [connections[-1]] + connections[:-1]
             #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
             #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:
@@ -638,10 +639,10 @@ class Point():
 
         return reordered_entities
 
-    def basis_vectors(self, return_coords=True, entity=None):
+    def basis_vectors(self, return_coords=True, entity=None, order=False):
         if not entity:
             entity = self
-        self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        self_levels = [generation for generation in nx.topological_generations(self.G)]
         vertices = entity.ordered_vertices()
         if self.dimension == 0:
             # return [[]
@@ -933,6 +934,9 @@ class TensorProductPoint():
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = flat
+
+    def ordered_vertices(self):
+        return self.A.ordered_vertices() + self.B.ordered_vertices()
 
     def get_spatial_dimension(self):
         return self.dimension

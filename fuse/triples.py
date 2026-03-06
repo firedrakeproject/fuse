@@ -27,7 +27,7 @@ class ElementTriple():
     :param: dof_gen: Generator Triple to generate the degrees of freedom.
     """
 
-    def __init__(self, cell, spaces, dof_gen):
+    def __init__(self, cell, spaces, dof_gen, perm=True):
         assert isinstance(cell, Point) or isinstance(cell, TensorProductPoint)
         if isinstance(dof_gen, DOFGenerator):
             dof_gen = [dof_gen]
@@ -47,6 +47,12 @@ class ElementTriple():
         self.spaces = tuple(cell_spaces)
         self.DOFGenerator = dof_gen
         self.flat = False
+
+        self.ref_el = None
+
+        self.dofs = None
+        self.dofs = self.generate()
+        self.perm = perm
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
@@ -71,26 +77,19 @@ class ElementTriple():
                     entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
                     counter += 1
+        self.nodes = nodes
+        # for i in range(4):
+        #     entity_ids[2][i] = [entity_ids[2][i][-1]] + entity_ids[2][i][:-1]
         return entity_ids, nodes
 
     def setup_matrices(self):
-        self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        # self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
-        # breakpoint()
-        # matrices[2][0][4][0] = -1 * matrices[2][0][4][0]
-        # matrices[2][1][5][1] = -1 * matrices[2][1][5][1]
-        # matrices[2][3][1][3] = -1 * matrices[2][3][5][3]
-        # for j in range(4):
-        #     for i in [1, 2, 5]:
-        #         matrices[2][j][i] = np.eye(matrices[2][j][i].shape[0])
-        # for j in [0, 1]:
-        #     # for i in [0, 3, 4]:
-        #     for i in range(6):
-        #         matrices[2][j][i][j][j] = -1 * matrices[2][j][i][j][j]
-        # breakpoint()
         reversed_matrices = self.reverse_dof_perms(matrices)
-        self.pure_perm = pure_perm
-        # self.pure_perm = False
+        if self.perm:
+            self.pure_perm = pure_perm
+        else:
+            self.pure_perm = False
         if self.pure_perm:
             self.apply_matrices = False
         else:
@@ -104,13 +103,14 @@ class ElementTriple():
 
     @cache
     def generate(self):
-        res = []
-        id_counter = 0
-        for dof_gen in self.DOFGenerator:
-            generated = dof_gen.generate(self.cell, self.spaces[1], id_counter)
-            res.extend(generated)
-            id_counter += len(generated)
-        return res
+        if self.dofs is None:
+            self.dofs = []
+            id_counter = 0
+            for dof_gen in self.DOFGenerator:
+                generated = dof_gen.generate(self.cell, self.spaces[1], id_counter)
+                self.dofs.extend(generated)
+                id_counter += len(generated)
+        return self.dofs
 
     def __iter__(self):
         yield self.cell
@@ -146,11 +146,12 @@ class ElementTriple():
             return ()
 
     def to_ufl(self):
-        # set up for eventual conversion to FIAT
-        self.ref_el = self.cell.to_fiat()
-        self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
-        self.entity_ids, self.nodes = self.setup_ids_and_nodes()
-        self.matrices, self.reversed_matrices = self.setup_matrices()
+        if self.ref_el is None:
+            # set up for eventual conversion to FIAT if not already done
+            self.ref_el = self.cell.to_fiat()
+            self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
+            self.entity_ids, self.nodes = self.setup_ids_and_nodes()
+            self.matrices, self.reversed_matrices = self.setup_matrices()
         return FuseElement(self)
 
     def to_fiat(self):
@@ -158,6 +159,8 @@ class ElementTriple():
         self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
+        # sanity check that the dofs span the space
+        original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         if self.pure_perm:
             dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
         else:
@@ -273,6 +276,7 @@ class ElementTriple():
         return A, new_coeffs_flat
 
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+        raise NotImplementedError("This should be deprecated")
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
         nodes = [d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
@@ -285,7 +289,7 @@ class ElementTriple():
             dim = e.dim()
             e_id = e.id - min_ids[dim]
             res_dict[dim][e_id] = {}
-            dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
+            # dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
             dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
             # res_dict[dim][e_id][0] = np.eye(len(dof_ids))
             original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
@@ -300,12 +304,18 @@ class ElementTriple():
                     #     res_dict[dim][e_id][val] = np.eye(len(dof_ids))
                     else:
                         def make_mat(perm_g):
+                            # , entity_o=perm_g
                             new_nodes = [d(g, entity_o=perm_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
+                            # new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                             transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                             return np.matmul(transformed_basis, original_V.T)
                         temp = make_mat(permuted_g)
-                        # if dim == 2:
-                        # print(g.numeric_rep(), ~permuted_g)
+                        # if dim == 1 and e_id == 0:
+                        #     print(g, val)
+                        #     print(temp[np.ix_(dof_ids, dof_ids)])
+                        #     sub_mat = (~permuted_g).matrix_form()
+                        #     print(sub_mat)
+                        #     breakpoint()
                         # print(e_id, val)
                         # for d in self.generate():
                         #     if d.cell_defined_on == e:
@@ -315,6 +325,7 @@ class ElementTriple():
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+        raise NotImplementedError("this function should be unnecessary")
         min_ids = self.cell.get_starter_ids()
         dim = self.cell.dim()
         e = self.cell
@@ -379,6 +390,7 @@ class ElementTriple():
                 members = e.group.members()
                 oriented_mats_by_entity[dim][e_id] = {}
                 flat_by_entity[dim][e_id] = {}
+                members = sorted(members, key=lambda g: g.numeric_rep())
                 for g in members:
                     val = g.numeric_rep()
                     oriented_mats_by_entity[dim][e_id][val] = dof_id_mat.copy()
@@ -410,20 +422,42 @@ class ElementTriple():
                         ent_dofs_ids = np.array([self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs], dtype=int)
                         # (dof_gen, ent_dofs)
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
+                        # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
+
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
                             # only get this if they are defined on the current dimension
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = self.matrices_by_entity[dim][e_id][val]
+                            bvs = np.array(e.basis_vectors())
+                            new_bvs = np.array(e.orient(~g).basis_vectors())
+                            basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
+                            if len(ent_dofs_ids) == basis_change.shape[0]:
+                                sub_mat = basis_change
+                            elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:
+                                # equivalently g1 trivial
+                                sub_mat = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                            else:
+                                # len(dof_gen_class[dim].g2.members()) == 2:
+                                # case where value change is a restriction of the full transformation of the basis
+                                value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                sub_mat = np.kron((~g).matrix_form(), value_change)
+                                # sub_mat = (~g).matrix_form()
+                            # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
+                                # case for transforms where the basis vector is already included in the dof
+                                # sub_mat = np.kron((~g).matrix_form(), basis_change)
+                            # else:
+                            #     raise NotImplementedError("Unconsidered permuation case")
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
-                        elif g in dof_gen_class[dim].g1.members() and dim < self.cell.dim():
+                        elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
-                            sub_mat = g.matrix_form()
+                            sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim():
                             # case for dofs defined on the cell and not immersed
-                            sub_mat = g.matrix_form()
+                            sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1

@@ -82,13 +82,6 @@ def test_conj():
         # for row in g.transform_matrix:
         #     print(row)
 
-    # print("tri_c3")
-    # g1 = tri_C3.add_cell(cell)
-    # for g in g1.members():
-    #     print("g", g)
-    #     print("g", g.perm.cycle_structure)
-    #     # for row in g.matrix_form():
-    #     #     print(row)
     # print("others")
     # for g in cell.group.members():
     #     if g not in g1.members():

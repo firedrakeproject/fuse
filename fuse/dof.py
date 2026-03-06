@@ -1,5 +1,6 @@
 from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
+from fuse.traces import TrH1
 import numpy as np
 import sympy as sp
 
@@ -173,7 +174,10 @@ class VectorKernel(BaseKernel):
         super(VectorKernel, self).__init__()
 
     def __repr__(self):
-        x = list(map(str, list(self.pt)))
+        if isinstance(self.pt, tuple):
+            x = list(map(str, list(self.pt)))
+        else:
+            x = [str(self.pt)]
         return ','.join(x)
 
     def degree(self, interpolant_degree):
@@ -186,9 +190,11 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        if immersed:
+        if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        if not immersed:
+            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -203,10 +209,15 @@ class VectorKernel(BaseKernel):
 
 class PolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, g=None, symbols=[]):
-        if len(symbols) != 0 and not sp.sympify(fn).as_poly():
-            raise ValueError("Function argument must be able to be interpreted as a sympy polynomial")
-        self.fn = sp.sympify(fn)
+    def __init__(self, fn, g=None, symbols=[], shape=0):
+        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
+            raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
+        if shape != 0:
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
+            self.shape = shape
+        else:
+            self.fn = sp.sympify(fn)
+            self.shape = 0
         self.g = g
         self.syms = symbols
         super(PolynomialKernel, self).__init__()
@@ -215,22 +226,24 @@ class PolynomialKernel(BaseKernel):
         return str(self.fn)
 
     def degree(self, interpolant_degree):
-        if len(self.fn.free_symbols) == 0:
+        if self.shape != 0:
+            return max([self.fn[i].as_poly().total_degree() for i in range(self.shape)]) + interpolant_degree
+        if len(self.fn.free_symbols) == 0:  # this should probably be removed
             return interpolant_degree
-        return self.fn.as_poly().total_degree() * interpolant_degree
+        return self.fn.as_poly().total_degree() + interpolant_degree
 
     def permute(self, g):
         # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
         new_fn = self.fn
-        return PolynomialKernel(new_fn, g=g, symbols=self.syms)
+        return PolynomialKernel(new_fn, g=g, symbols=self.syms, shape=self.shape)
 
     def __call__(self, *args):
-        res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
-        # if not hasattr(res, '__iter__'):
-        #    return [res]
-        # if self.g:
-        #    print(self.g, self.g(res))
-        #    return self.g(res)
+        if self.shape == 0:
+            res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
+        else:
+            res = []
+            for i in range(self.shape):
+                res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
@@ -333,32 +346,47 @@ class DOF():
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self))
 
     def to_quadrature(self, arg_degree):
-        Qpts, Qwts = self.cell_defined_on.quadrature(arg_degree)
+        Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         dim = self.cell_defined_on.get_spatial_dimension()
-        if dim > 0 and self.pairing.orientation:
+        if dim > 0:
             bvs = np.array(self.cell_defined_on.basis_vectors())
             new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed, self.cell.dimension)
+        if self.immersed and isinstance(self.kernel, VectorKernel):
+            def immersed(pt):
+                basis = np.array(self.cell_defined_on.basis_vectors()).T
+                basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
+                immersed_basis = np.array(self.cell.basis_vectors(entity=self.cell_defined_on))
+                return np.matmul(basis_coeffs, immersed_basis)
+        else:
+            immersed = self.immersed
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
 
         if self.immersed:
             # need to compute jacobian from attachment.
-            pts = [self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts]
-            immersion = self.target_space.tabulate(wts, self.pairing.entity)
-
+            pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
+            # if self.pairing.orientation:
+            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
+            # else:
+            immersion = self.target_space.tabulate(pts, self.cell_defined_on)
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
             if self.entity_o:
                 immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
-
-            wts = np.outer(wts, immersion)
-        # else:
-        #     pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, self.immersed)
-
-        # pt dict is { pt: (weight, component)}
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
+            if isinstance(self.target_space, TrH1):
+                new_wts = wts
+            else:
+                new_wts = np.outer(wts, immersion)
+        else:
+            new_wts = wts
+        # pt dict is { pt: [(weight, component)]}
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
+        if self.cell_defined_on.dimension == 2:
+            np.set_printoptions(linewidth=90, precision=4, suppress=True)
+            for key, val in pt_dict.items():
+                print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):
