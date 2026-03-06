@@ -292,7 +292,6 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
         mesh = UnitSquareMesh(2**n, 2**n)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
-            breakpoint()
         else:
             V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)

@@ -240,10 +240,6 @@ def construct_bdm2(tri=None):
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    v_0 = np.array(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-
     phi_0 = [-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
     phi_1 = [-1/6 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
     phi_2 = [1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]

@@ -363,8 +363,6 @@ class DOF():
                 return np.matmul(basis_coeffs, immersed_basis)
         else:
             immersed = self.immersed
-        if self.cell_defined_on.dimension == 2:
-            print(basis_change)
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
 
         if self.immersed:
