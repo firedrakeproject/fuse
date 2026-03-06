@@ -210,14 +210,14 @@ class VectorKernel(BaseKernel):
 class PolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[], shape=0):
-        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
+        self.shape = shape
+        try:
+            if shape != 0:
+                self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
+            else:
+                self.fn = sp.sympify(fn)
+        except ValueError:
             raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
-        if shape != 0:
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
-            self.shape = shape
-        else:
-            self.fn = sp.sympify(fn)
-            self.shape = 0
         self.g = g
         self.syms = symbols
         super(PolynomialKernel, self).__init__()
