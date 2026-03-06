@@ -3,7 +3,7 @@ from firedrake import *
 from fuse import *
 import numpy as np
 import sympy as sp
-from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_bdm
+from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_bdm, construct_bdm2
 from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
 import os
 
@@ -280,6 +280,7 @@ def test_convergence(elem_gen, elem_code, deg, conv_rate):
                                                               (construct_nd_2nd_kind, "N2curl", 1, 1.8),
                                                               (construct_rt2, "RT", 2, 1.8),
                                                               (construct_bdm, "BDM", 1, 1.8),
+                                                              (construct_bdm2, "BDM", 2, 2.8),
                                                               (construct_nd2, "N1curl", 2, 1.8)])
 def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
@@ -291,6 +292,7 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
         mesh = UnitSquareMesh(2**n, 2**n)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V = FunctionSpace(mesh, elem.to_ufl())
+            breakpoint()
         else:
             V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)
