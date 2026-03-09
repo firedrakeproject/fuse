@@ -12,8 +12,8 @@
     <link rel="stylesheet" type="text/css" href="../_static/additional.css?v=584b47eb" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <script src="../_static/documentation_options.js?v=0e25812e"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="index" title="Index" href="../genindex.html" />
@@ -207,12 +207,12 @@
 <span class="n">Pd</span> <span class="o">=</span> <span class="n">PolynomialSpace</span><span class="p">(</span><span class="n">deg</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 <span class="n">rt_space</span> <span class="o">=</span> <span class="n">vec_Pd</span> <span class="o">+</span> <span class="p">(</span><span class="n">Pd</span><span class="o">.</span><span class="n">restrict</span><span class="p">(</span><span class="n">deg</span> <span class="o">-</span> <span class="mi">2</span><span class="p">,</span> <span class="n">deg</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span><span class="o">*</span><span class="n">M</span>
 
-<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">L2Pairing</span><span class="p">(),</span> <span class="n">PolynomialKernel</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))]</span>
-<span class="n">dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S3</span><span class="p">)</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">L2Pairing</span><span class="p">(),</span> <span class="n">VectorKernel</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
+<span class="n">dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S2</span><span class="p">)</span>
 <span class="n">face_vec</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">face</span><span class="p">,</span> <span class="p">(</span><span class="n">rt_space</span><span class="p">,</span> <span class="n">CellHDiv</span><span class="p">,</span> <span class="s2">&quot;C0&quot;</span><span class="p">),</span> <span class="n">dofs</span><span class="p">)</span>
 
 <span class="n">im_xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">face_vec</span><span class="p">,</span> <span class="n">TrHDiv</span><span class="p">)]</span>
-<span class="n">face</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">im_xs</span><span class="p">,</span> <span class="n">tet_faces</span><span class="p">,</span> <span class="n">S4</span><span class="p">)</span>
+<span class="n">face</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">im_xs</span><span class="p">,</span> <span class="n">tet_faces</span><span class="p">,</span> <span class="n">S1</span><span class="p">)</span>
 
 <span class="n">rt1</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="p">(</span><span class="n">rt_space</span><span class="p">,</span> <span class="n">CellHDiv</span><span class="p">,</span> <span class="s2">&quot;C0&quot;</span><span class="p">),</span>
                     <span class="p">[</span><span class="n">face</span><span class="p">])</span>
@@ -225,15 +225,15 @@
 </section>
 <section id="nedelec-on-a-tetrahedron">
 <h2>Nedelec on a tetrahedron<a class="headerlink" href="#nedelec-on-a-tetrahedron" title="Link to this heading">¶</a></h2>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">L2Pairing</span><span class="p">(),</span> <span class="n">PolynomialKernel</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">DOF</span><span class="p">(</span><span class="n">L2Pairing</span><span class="p">(),</span> <span class="n">VectorKernel</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
 <span class="n">dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">S1</span><span class="p">,</span> <span class="n">S2</span><span class="p">)</span>
-<span class="n">int_ned</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellHCurl</span><span class="p">,</span> <span class="s2">&quot;C0&quot;</span><span class="p">),</span> <span class="n">dofs</span><span class="p">)</span>
 
-<span class="n">im_xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">tetra</span><span class="p">,</span> <span class="n">int_ned</span><span class="p">,</span> <span class="n">TrHCurl</span><span class="p">)]</span>
-<span class="n">edge</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">im_xs</span><span class="p">,</span> <span class="n">tet_edges</span><span class="p">,</span> <span class="n">Z4</span><span class="p">)</span>
-
-<span class="n">ned</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">tetra</span><span class="p">,</span> <span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">CellHCurl</span><span class="p">,</span> <span class="s2">&quot;C0&quot;</span><span class="p">),</span>
-                    <span class="p">[</span><span class="n">edge</span><span class="p">])</span>
+<span class="n">edges</span> <span class="o">=</span> <span class="n">ElementTriple</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="p">(</span><span class="n">vec_Pd</span><span class="p">,</span> <span class="n">CellHCurl</span><span class="p">,</span> <span class="n">L2</span><span class="p">),</span> <span class="n">dofs</span><span class="p">)</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="p">[</span><span class="n">immerse</span><span class="p">(</span><span class="n">tet</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">TrHCurl</span><span class="p">)]</span>
+<span class="n">tet_edges</span> <span class="o">=</span> <span class="n">PermutationSetRepresentation</span><span class="p">([</span><span class="n">Permutation</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span> <span class="n">Permutation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">]),</span>
+                                          <span class="n">Permutation</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]),</span> <span class="n">Permutation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]),</span>
+                                          <span class="n">Permutation</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span> <span class="n">Permutation</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])])</span>
+<span class="n">edge_dofs</span> <span class="o">=</span> <span class="n">DOFGenerator</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">tet_edges</span><span class="p">,</span> <span class="n">S1</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>(<a class="reference download internal" download="" href="../_downloads/7feff60c090ec5d4578b1e5fa9c60a56/test_3d_examples_docs.py"><code class="xref download docutils literal notranslate"><span class="pre">Source</span> <span class="pre">code</span></code></a>, <a class="reference download internal" download="" href="../_downloads/c5abc92b905805efa4c2ab33b0811a98/test_3d_examples_docs_plot_tet_ned.png"><code class="xref download docutils literal notranslate"><span class="pre">png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/f87b512df40f3316b3717f1784646cd6/test_3d_examples_docs_plot_tet_ned.hires.png"><code class="xref download docutils literal notranslate"><span class="pre">hires.png</span></code></a>, <a class="reference download internal" download="" href="../_downloads/1c9b6a8581fd6be69d8ec57904e07e54/test_3d_examples_docs_plot_tet_ned.pdf"><code class="xref download docutils literal notranslate"><span class="pre">pdf</span></code></a>)</p>
@@ -256,7 +256,7 @@
     </p>
     <p>
         &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 8.2.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 9.1.0.<br/>
     </p>
   </div>
 </footer>

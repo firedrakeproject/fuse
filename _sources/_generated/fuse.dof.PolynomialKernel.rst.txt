@@ -20,8 +20,8 @@ PolynomialKernel
       ~PolynomialKernel.__init__
       ~PolynomialKernel.degree
       ~PolynomialKernel.dict_id
+      ~PolynomialKernel.evaluate
       ~PolynomialKernel.permute
-      ~PolynomialKernel.tabulate
    
    
 

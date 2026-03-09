@@ -19,6 +19,7 @@ TrHDiv
    
       ~TrHDiv.__init__
       ~TrHDiv.dict_id
+      ~TrHDiv.manipulate_basis
       ~TrHDiv.plot
       ~TrHDiv.tabulate
       ~TrHDiv.to_tikz

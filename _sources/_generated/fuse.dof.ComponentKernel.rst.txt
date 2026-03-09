@@ -1,11 +1,11 @@
 :tocdepth: 0
 
-L2Pairing
-=========
+ComponentKernel
+===============
 
 .. currentmodule:: fuse.dof
 
-.. autoclass:: L2Pairing
+.. autoclass:: ComponentKernel
    :members:                                    
    :show-inheritance:                        
 
@@ -17,11 +17,11 @@ L2Pairing
 
    .. autosummary::
    
-      ~L2Pairing.__init__
-      ~L2Pairing.add_entity
-      ~L2Pairing.dict_id
-      ~L2Pairing.permute
-      ~L2Pairing.tabulate
+      ~ComponentKernel.__init__
+      ~ComponentKernel.degree
+      ~ComponentKernel.dict_id
+      ~ComponentKernel.evaluate
+      ~ComponentKernel.permute
    
    
 

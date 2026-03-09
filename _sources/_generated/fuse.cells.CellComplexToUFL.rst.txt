@@ -33,6 +33,7 @@ CellComplexToUFL
    .. autosummary::
    
       ~CellComplexToUFL.cellname
+      ~CellComplexToUFL.cells
       ~CellComplexToUFL.edge_types
       ~CellComplexToUFL.edges
       ~CellComplexToUFL.face_types

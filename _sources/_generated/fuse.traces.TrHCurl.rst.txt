@@ -19,6 +19,7 @@ TrHCurl
    
       ~TrHCurl.__init__
       ~TrHCurl.dict_id
+      ~TrHCurl.manipulate_basis
       ~TrHCurl.plot
       ~TrHCurl.tabulate
       ~TrHCurl.to_tikz

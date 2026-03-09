@@ -24,6 +24,8 @@ dof
         
         BaseKernel
         
+        ComponentKernel
+        
         DOF
         
         DeltaPairing
@@ -39,6 +41,8 @@ dof
         PointKernel
         
         PolynomialKernel
+        
+        VectorKernel
    
    
 

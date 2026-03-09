@@ -24,6 +24,7 @@ DOF
       ~DOF.eval
       ~DOF.immerse
       ~DOF.tabulate
+      ~DOF.to_quadrature
    
    
 

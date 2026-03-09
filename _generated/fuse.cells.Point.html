@@ -12,8 +12,8 @@
     <link rel="stylesheet" type="text/css" href="../_static/additional.css?v=584b47eb" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
     <script src="../_static/documentation_options.js?v=0e25812e"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="index" title="Index" href="../genindex.html" />
@@ -216,6 +216,13 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.ComponentKernel.html">ComponentKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel"><code class="docutils literal notranslate"><span class="pre">ComponentKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel.__init__"><code class="docutils literal notranslate"><span class="pre">ComponentKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.DOF.html">DOF</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.dof.DOF.html#fuse.dof.DOF"><code class="docutils literal notranslate"><span class="pre">DOF</span></code></a><ul>
 <li class="toctree-l6"><a class="reference internal" href="fuse.dof.DOF.html#fuse.dof.DOF.__init__"><code class="docutils literal notranslate"><span class="pre">DOF.__init__()</span></code></a></li>
@@ -268,6 +275,13 @@
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.PolynomialKernel.html">PolynomialKernel</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.dof.PolynomialKernel.html#fuse.dof.PolynomialKernel"><code class="docutils literal notranslate"><span class="pre">PolynomialKernel</span></code></a><ul>
 <li class="toctree-l6"><a class="reference internal" href="fuse.dof.PolynomialKernel.html#fuse.dof.PolynomialKernel.__init__"><code class="docutils literal notranslate"><span class="pre">PolynomialKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.VectorKernel.html">VectorKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.VectorKernel.html#fuse.dof.VectorKernel"><code class="docutils literal notranslate"><span class="pre">VectorKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.VectorKernel.html#fuse.dof.VectorKernel.__init__"><code class="docutils literal notranslate"><span class="pre">VectorKernel.__init__()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -623,7 +637,7 @@
 <h1>Point<a class="headerlink" href="#point" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="fuse.cells.Point">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">fuse.cells.</span></span><span class="sig-name descname"><span class="pre">Point</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertex_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oriented</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_orientations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.Point" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">fuse.cells.</span></span><span class="sig-name descname"><span class="pre">Point</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edges</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vertex_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oriented</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">edge_orientations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.cells.Point" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Cell complex representation of a finite element cell</p>
 <section id="attributes">
@@ -656,7 +670,7 @@
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">attachment</span></code>(source, dst)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis_vectors</span></code>([return_coords, entity])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis_vectors</span></code>([return_coords, entity, order])</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cell_attachment</span></code>(dst)</p></td>
@@ -689,7 +703,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Point.edges" title="fuse.cells.Point.edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code></a>([get_class])</p></td>
 <td><p>Get edges (1 dimensional entities) of the cell complex.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_node</span></code>(node[, return_coords])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_facet_parameterisation</span></code>(facet_num)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_node</span></code>(node[, return_coords])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_renumbered_topology</span></code>()</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_shape</span></code>()</p></td>
@@ -731,16 +751,19 @@
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot3d</span></code>([show, plain, ax, filename])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>([name, renumber])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">quadrature</span></code>(degree)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_tikz</span></code>([show, scale])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>([name, renumber])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_ufl</span></code>([name])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_tikz</span></code>([show, scale])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Point.vertices" title="fuse.cells.Point.vertices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code></a>([get_class, return_coords])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_ufl</span></code>([name])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.Point.vertices" title="fuse.cells.Point.vertices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code></a>([get_class, return_coords])</p></td>
 <td><p>Get vertices (0 dimensional entities) of the cell complex.</p></td>
 </tr>
 </tbody>
@@ -849,7 +872,7 @@
     </p>
     <p>
         &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 8.2.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 9.1.0.<br/>
     </p>
   </div>
 </footer>

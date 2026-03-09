@@ -20,8 +20,8 @@ PointKernel
       ~PointKernel.__init__
       ~PointKernel.degree
       ~PointKernel.dict_id
+      ~PointKernel.evaluate
       ~PointKernel.permute
-      ~PointKernel.tabulate
    
    
 

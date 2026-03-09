@@ -21,6 +21,7 @@ PermutationSetRepresentation
       ~PermutationSetRepresentation.add_cell
       ~PermutationSetRepresentation.compute_num_reps
       ~PermutationSetRepresentation.get_member
+      ~PermutationSetRepresentation.get_member_by_val
       ~PermutationSetRepresentation.members
       ~PermutationSetRepresentation.size
       ~PermutationSetRepresentation.transform_between_perms

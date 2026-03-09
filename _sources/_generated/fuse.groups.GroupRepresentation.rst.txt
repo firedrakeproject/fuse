@@ -23,6 +23,7 @@ GroupRepresentation
       ~GroupRepresentation.conjugacy_class
       ~GroupRepresentation.dict_id
       ~GroupRepresentation.get_member
+      ~GroupRepresentation.get_member_by_val
       ~GroupRepresentation.members
       ~GroupRepresentation.size
       ~GroupRepresentation.transform_between_perms

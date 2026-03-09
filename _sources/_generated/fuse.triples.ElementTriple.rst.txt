@@ -28,7 +28,11 @@ ElementTriple
       ~ElementTriple.make_entity_dense_matrices
       ~ElementTriple.make_overall_dense_matrices
       ~ElementTriple.num_dofs
+      ~ElementTriple.orient_mat_perms
       ~ElementTriple.plot
+      ~ElementTriple.reverse_dof_perms
+      ~ElementTriple.setup_ids_and_nodes
+      ~ElementTriple.setup_matrices
       ~ElementTriple.to_fiat
       ~ElementTriple.to_tikz
       ~ElementTriple.to_ufl

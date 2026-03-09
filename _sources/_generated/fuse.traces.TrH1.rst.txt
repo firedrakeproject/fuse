@@ -19,6 +19,7 @@ TrH1
    
       ~TrH1.__init__
       ~TrH1.dict_id
+      ~TrH1.manipulate_basis
       ~TrH1.plot
       ~TrH1.tabulate
       ~TrH1.to_tikz
