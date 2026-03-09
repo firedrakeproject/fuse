@@ -148,6 +148,31 @@ class PermutationSetRepresentation():
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell)
 
+    def conjugacy_class(self, g):
+        conj_class = set()
+        for x in self.members():
+            res = ~x * g * x
+            conj_class.add(res)
+        return conj_class
+
+    def cosets(self, subset):
+        # Divides current group by given subset
+        # can be modified to allow members of given subset not to exist in group self
+        seen = self.members().copy()
+        cosets = []
+        while len(seen) > 0:
+            g = seen[0]
+            coset = []
+            for h in subset.members():
+                # try:
+                coset += [g*h]
+                seen.remove(g*h)
+                # except ValueError:
+                #     # member of subset not a member of superset
+                #     pass
+            cosets += [coset]
+        return cosets
+
     def members(self, perm=False):
         if self.cell is None:
             raise ValueError("Group does not have a domain - members have not been calculated")
@@ -229,10 +254,8 @@ class GroupRepresentation(PermutationSetRepresentation):
             counter = 0
             for g in self.base_group.elements:
                 if len(vertices) > g.size:
-                    temp_perm = Permutation(g, size=len(vertices))
-                    reordered = temp_perm(vertices)
-                else:
-                    reordered = g(vertices)
+                    g = Permutation(g, size=len(vertices))
+                reordered = g(vertices)
                 A = np.c_[np.array(vertices, dtype=float), np.ones(len(vertices))]
                 b = np.array(reordered, dtype=float)
 
@@ -256,14 +279,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
         else:
             self.cell = None
-
-    def conjugacy_class(self, g):
-        conj_class = set()
-        for x in self.members():
-            res = ~x * g * x
-            conj_class.add(res)
-        return conj_class
-
+   
     def add_cell(self, cell):
         return GroupRepresentation(self.base_group, cell=cell)
 

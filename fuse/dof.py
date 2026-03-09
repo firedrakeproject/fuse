@@ -193,7 +193,11 @@ class VectorKernel(BaseKernel):
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         if not immersed:
+            if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+                breakpoint()
             return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+            breakpoint()
         return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
@@ -247,6 +251,9 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+        for pt in Qpts:
+            if not np.allclose(self(*(np.matmul(basis_change, pt))), self(*self.g(pt))):
+                breakpoint()
         return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
@@ -382,10 +389,10 @@ class DOF():
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        if self.cell_defined_on.dimension == 2:
-            np.set_printoptions(linewidth=90, precision=4, suppress=True)
-            for key, val in pt_dict.items():
-                print(np.array(key), ":", np.array([v[0] for v in val]))
+        # if self.cell_defined_on.dimension == 2:
+        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        #     for key, val in pt_dict.items():
+        #         print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):

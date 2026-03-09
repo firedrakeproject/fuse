@@ -732,17 +732,19 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     error_gs = []
     error_row_lists = []
     for g in group:
+        # mesh = UnitTetrahedronMesh()
         mesh = TwoTetMesh(perm=g)
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
+            # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([12, 13], [12, 13])])
             res2 = assemble(interpolate(vec(mesh), V2))
             CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], vec(mesh, array=True)):
-                    print(res3.dat.data[i])
+                    # print(res3.dat.data[i])
                     error_gs += [g]
                     error_rows += [i]
             error_row_lists += [error_rows]
@@ -760,7 +762,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13)])
-def test_const_two_tet(elem_gen, elem_code, deg, max_err):
+def test_project_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     # elem_perms = elem_gen(cell, perm=True)
     elem_mats = elem_gen(cell, perm=False)

@@ -178,14 +178,16 @@ def construct_tet_rt2(cell=None, perm=None):
     im_xs = [immerse(cell, face_vec, TrHDiv)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
-    v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
-    v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
-    v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
-    v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),
-          DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2)),
-          DOF(L2Pairing(), VectorKernel((v_2 - v_3)/2))]
-    interior = DOFGenerator(xs, S1, S4)
+    # v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
+    # v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
+    # v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+    # v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
+    # xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),
+    #       DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2)),
+    #       DOF(L2Pairing(), VectorKernel((v_2 - v_3)/2))]
+    # interior = DOFGenerator(xs, S1, S4)
+    xs = [DOF(L2Pairing(), VectorKernel(cell.basis_vectors()[0]))]
+    interior = DOFGenerator(xs, cell.basis_group, S4)
 
     rt2 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
                         [faces, interior])
@@ -290,24 +292,85 @@ def construct_tet_ned2(tet=None, perm=None):
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
 
     v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
-    # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
+    v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
     v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2))]
-    # breakpoint()
-    # xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-    # xs = [DOF(L2Pairing(), VectorKernel((v_1 - v_0)/2)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),]
+    # xs = [DOF(L2Pairing(), VectorKernel(face.basis_vectors()[1]))]
+    # # breakpoint()
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
+    print((v_2 - v_1)/2)
     center_dofs = DOFGenerator(xs, S2, S3)
+    xs1 = [DOF(L2Pairing(), VectorKernel(face.basis_vectors()[0]))]
+    print(face.basis_vectors()[0])
+    center_dofs1 = DOFGenerator(xs1, face.basis_group, S3)
     face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
     im_xs = [immerse(tet, face_vec, TrH1)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
+    face_vec1 = ElementTriple(face, (P1, CellHCurl, C0), center_dofs1)
+    im_xs1 = [immerse(tet, face_vec1, TrH1)]
+    face_dofs1 = DOFGenerator(im_xs1, tet_faces, S1)
 
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [face_dofs])
+    ned1 = ElementTriple(tet, (nd_space, CellHCurl, C0), [face_dofs1])
+
+    dofs = ned.generate()
+    print("S2")
+    for d in dofs:
+        print(d)
+        pt_dict = d.to_quadrature(1)
+        for key, val in pt_dict.items():
+            print(key, ":", val)
+    dofs1 = ned1.generate()
+    print("basis_group")
+    for d in dofs1:
+        print(d)
+        pt_dict = d.to_quadrature(1)
+        for key, val in pt_dict.items():
+            print(key, ":", val)
     xs = [immerse(tet, int_ned1, TrHCurl)]
     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]),
                                               Permutation([2, 3, 0, 1]), Permutation([1, 3, 0, 2]),
                                               Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
 
-    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs])
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs1])
+    return ned
+
+
+def construct_tet_ned3(tet=None, perm=None):
+    if tet is None:
+        tet = make_tetrahedron()
+    deg = 3
+    edge = tet.edges()[0]
+    face = tet.d_entities(2, get_class=True)[0]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
+    M1 = sp.Matrix([[0, z, -y]])
+    M2 = sp.Matrix([[z, 0, -x]])
+    M3 = sp.Matrix([[y, -x, 0]])
+
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
+    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+    edge_dofs = DOFGenerator([immerse(tet, int_ned1, TrHCurl)], tet_edges, S1)
+
+    phi0 = [1/3 - (1/2)*x + y/(2*np.sqrt(3)), sp.Poly(0, (x, y))]
+    # phi1 = [sp.Poly(0, (x, y)), 1/3 - (1/2)*x + y/(2*np.sqrt(3))]
+    xs = [DOF(L2Pairing(), PolynomialKernel(phi0, symbols=(x, y), shape=2))]
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S3, S3))
+    face_dofs = DOFGenerator([immerse(tet, face_vec, TrH1)], tet_faces, S1)
+
+    xs = [DOF(L2Pairing(), VectorKernel([1, 0, 0])),
+          DOF(L2Pairing(), VectorKernel([0, 1, 0])),
+          DOF(L2Pairing(), VectorKernel([0, 0, 1]))]
+    int_dofs = DOFGenerator(xs, S1, S1)
+
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs, int_dofs])
     return ned
 
 
@@ -350,6 +413,16 @@ def test_tet_nd():
         print(dof)
     # plot_tet_ned()
     nd1.to_fiat()
+
+
+def test_tet_nd3():
+    nd3 = construct_tet_ned3()
+    ls = nd3.generate()
+    for dof in ls:
+        # dof_dict = dof.to_quadrature(1)
+        # print(np.array(list(dof_dict.keys())[0]), list(dof_dict.values()))
+        print(dof)
+    nd3.to_fiat()
 
 
 def plot_tet_ned():
