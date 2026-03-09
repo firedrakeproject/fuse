@@ -1,4 +1,5 @@
 name: Run tests
+# I stole this from the main firedrake repo
 
 on:
   # Run on pushes to main
@@ -6,92 +7,183 @@ on:
     branches:
       - main
   # And all pull requests
+  #   cd /opt/firedrake/
+  #   git fetch
+  #   git checkout indiamai/fuse-closures-with-pyop3
+  #   git pull
   pull_request:
 
 jobs:
   test:
     name: Run tests
-    # Run on the Github hosted runner
-    runs-on: ubuntu-latest
+    strategy:
+      # We want to know all of the tests which fail, so don't kill real if
+      # complex fails and vice-versa
+      fail-fast: false
+      matrix:
+        arch: [default]
+    runs-on: [self-hosted, Linux]
     container:
-      #image: firedrakeproject/firedrake-vanilla-default:latest
-      image: firedrakeproject/firedrake-vanilla-default:dev-main
-    # Steps represent a sequence of tasks that will be executed as
-    # part of the jobs
+      image: ubuntu:latest
+    env:
+      OMPI_ALLOW_RUN_AS_ROOT: 1
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
+      OMP_NUM_THREADS: 1
+      OPENBLAS_NUM_THREADS: 1
+      FIREDRAKE_CI: 1
+      PYOP2_SPMD_STRICT: 1
+      EXTRA_PYTEST_ARGS: --splitting-algorithm least_duration --timeout=600 --timeout-method=thread -o faulthandler_timeout=660 --durations-path=./fuse-repo/test/test_durations.json --durations=50
+      PYTEST_MPI_MAX_NPROCS: 8
+      FIREDRAKE_USE_FUSE: 1
     steps:
-      - name: fix home
+      - name: Fix HOME
+        # For unknown reasons GitHub actions overwrite HOME to /github/home
+        # which will break everything unless fixed
+        # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
-      - name: Checkout correct firedrake branch
+
+      - name: Pre-run cleanup
+        # Make sure the current directory is empty
+        run: find . -delete
+
+      # Use a different mirror to fetch apt packages from to get around
+      # temporary outage.
+      # (https://askubuntu.com/questions/1549622/problem-with-archive-ubuntu-com-most-of-the-servers-are-not-responding)
+      # The mirror was chosen from https://launchpad.net/ubuntu/+archivemirrors.
+      - name: Configure apt
         run: |
-          /usr/bin/git config --global --add safe.directory /opt/firedrake/
-          cd /opt/firedrake/
-          git fetch
-          git checkout indiamai/fuse-quads
-          git pull
-          pip install pybind11 Cython
+          sed -i 's|http://archive.ubuntu.com/ubuntu|http://www.mirrorservice.org/sites/archive.ubuntu.com/ubuntu/|g' /etc/apt/sources.list.d/ubuntu.sources
+          apt-get update
+
+      # Git is needed for actions/checkout and Python for firedrake-configure
+      - name: Install system dependencies (1)
+        run: apt-get -y install git python3
+
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/firedrake
+          path: firedrake-repo
+          ref: refs/heads/connorjward/pyop3-develop
+
+      - name: Validate single source of truth
+        run: ./firedrake-repo/scripts/check-config
+
+      # Check that the Dockerfile is using the latest Ubuntu version.
+      # The version is hardcoded into the Dockerfile so that the OS
+      # for each release is fixed.
+      - name: Check Dockerfile Ubuntu version
+        run: |
+          latest_version=$(grep "VERSION_ID=" /etc/os-release | cut -d '"' -f 2)
+          docker_version=$(grep FROM firedrake-repo/docker/Dockerfile.vanilla | cut -d ':' -f 2)
+          echo "Latest version: $latest_version"
+          echo "Docker version: $docker_version"
+          if [[ "$docker_version" != "$latest_version" ]]; then
+            echo "Ubuntu version ${docker_version} in Dockerfile is out of date with latest version ${latest_version}"
+            exit 1
+          fi
+
+      - name: Install system dependencies (2)
+        run: |
+          apt-get -y install \
+            $(python3 ./firedrake-repo/scripts/firedrake-configure --arch ${{ matrix.arch }} --show-system-packages)
+          apt-get -y install python3-venv
+          : # Dependencies needed to run the test suite
+          apt-get -y install fonts-dejavu graphviz graphviz-dev parallel poppler-utils
+
+      - name: Install PETSc
+        run: |
+          git clone --depth 1 https://gitlab.com/petsc/petsc.git
+          cd petsc
+          python3 ../firedrake-repo/scripts/firedrake-configure \
+            --arch ${{ matrix.arch }} --show-petsc-configure-options | \
+            xargs -L1 ./configure --with-make-np=8 --download-slepc
+          make PETSC_DIR=/__w/fuse/fuse/petsc PETSC_ARCH=arch-firedrake-${{ matrix.arch }}
+          make check
+          {
+            echo "PETSC_DIR=/__w/fuse/fuse/petsc"
+            echo "PETSC_ARCH=arch-firedrake-${{ matrix.arch }}"
+            echo "SLEPC_DIR=/__w/fuse/fuse/petsc/arch-firedrake-${{ matrix.arch }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Install Firedrake
+        id: install
+        run: |
+          export $(python3 ./firedrake-repo/scripts/firedrake-configure --arch "${{ matrix.arch }}" --show-env)
+          python3 -m venv venv
+          . venv/bin/activate
+
+          : # Empty the pip cache to ensure that everything is compiled from scratch
+          pip cache purge
+
+          : # Fix for petsc4py+slepc4py build
+          echo 'setuptools<81' > constraints.txt
+          export PIP_CONSTRAINT=constraints.txt
+
+          : # Install build dependencies
+          pip install "$PETSC_DIR"/src/binding/petsc4py
+          pip install -r ./firedrake-repo/requirements-build.txt
+
+          : # Install runtime dependencies that have been removed from the pyproject.toml
+          : # because they rely on non-PyPI versions of petsc4py.
+          pip install --no-build-isolation --no-deps \
+              "$PETSC_DIR"/"$PETSC_ARCH"/externalpackages/git.slepc/src/binding/slepc4py
+          pip install --no-deps git+https://github.com/NGSolve/ngsPETSc.git netgen-mesher netgen-occt
+
+          : # We have to pass '--no-build-isolation' to use a custom petsc4py
+          EXTRA_BUILD_ARGS='--no-isolation'
+          EXTRA_PIP_FLAGS='--no-build-isolation'
+
+          : # Install from an sdist so we can make sure that it is not ill-formed
+          : # pip install build
+          : # python -m build ./firedrake-repo --sdist $EXTRA_BUILD_ARGS
+
+          : #pip install --verbose $EXTRA_PIP_FLAGS \
+          : #  --no-binary h5py \
+          : #  --extra-index-url https://download.pytorch.org/whl/cpu \
+          : #  "$(echo ./firedrake-repo/dist/firedrake-*.tar.gz)[ci]"
+
+          pip install --verbose $EXTRA_PIP_FLAGS \
+            --no-binary h5py \
+            --extra-index-url https://download.pytorch.org/whl/cpu \
+            -e ./firedrake-repo[ci]
+
+          firedrake-clean
+          pip list
+
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/firedrake
+          path: firedrake-repo
+          ref: refs/heads/indiamai/fuse-closures-with-pyop3
+    
+      - name: Make cython
+        run: |
+          . venv/bin/activate
+          cd ./firedrake-repo
           make
-      - name: Install checkedout fuse
+    
+      - uses: actions/checkout@v5
+        with:
+          path: fuse-repo
+    
+      - name: Install checked out fuse
         run: |
-          python3 -m pip install --break-system-packages -e '.[dev]'
-      - name: Checkout correct FIAT branch
+          . venv/bin/activate
+          python3 -m pip install --break-system-packages -e './fuse-repo[dev]'
+    
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/fiat
+          path: fiat-repo
+          ref: refs/heads/indiamai/integrate_fuse
+        
+      - name: Install checked out FIAT
         run: |
-          /usr/bin/git config --global --add safe.directory ~/
-          cd ~
-          git clone https://github.com/firedrakeproject/fiat.git
-          /usr/bin/git config --global --add safe.directory ~/fiat
-          cd fiat
-          git fetch
-          git checkout indiamai/integrate_fuse
-          git status
-          python3 -m pip install --break-system-packages -e .
+          . venv/bin/activate
+          python3 -m pip install --break-system-packages -e './fiat-repo'
+
       - name: Run tests
         run: |
-          pip list
-          make tests
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: covdata
-          include-hidden-files: true
-          path: .coverage.*
-
-  coverage:
-      name: Coverage
-      needs: test
-      runs-on: ubuntu-latest
-      if: success() && github.ref == 'refs/heads/main'
-      container:
-        image: firedrakeproject/firedrake-vanilla-default:latest
-      # Steps represent a sequence of tasks that will be executed as
-      # part of the jobs
-      steps:
-        - name: "Check out the repo"
-          uses: "actions/checkout@v2"
-        - name: Install checkedout fuse
-          run: |
-            python3 -m pip install --break-system-packages -e '.[dev]'
-        - name: "Download coverage data"
-          uses: actions/download-artifact@v4
-          with:
-            name: covdata
-
-        - name: "Combine"
-          run: |
-            make coverage
-            export TOTAL=$(python3 -c "import json;print(json.load(open('coverage.json'))['totals']['percent_covered_display'])")
-            echo "total=$TOTAL" >> $GITHUB_ENV
-            echo "### Total coverage: ${TOTAL}%" >> $GITHUB_STEP_SUMMARY
-
-        - name: "Make badge"
-          uses: schneegans/dynamic-badges-action@v1.4.0
-          with:
-            # GIST_TOKEN is a GitHub personal access token with scope "gist".
-            auth: ${{ secrets.GIST_SECRET }}
-            gistID: 8d09e14999153441dba99d1759e90707  # replace with your real Gist id.
-            filename: covbadge.json
-            label: Coverage
-            message: ${{ env.total }}%
-            minColorRange: 50
-            maxColorRange: 90
-            valColorRange: ${{ env.total }}
+          . venv/bin/activate
+          cd ./fuse-repo
+          firedrake-run-split-tests 1 1 -n 8 "$EXTRA_PYTEST_ARGS" ./test

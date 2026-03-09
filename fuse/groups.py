@@ -9,12 +9,12 @@ import sympy as sp
 
 def perm_matrix_to_perm_array(p_mat):
     summed = np.sum(p_mat, axis=0)
-    if np.all(summed == np.zeros_like(summed)):
+    if np.allclose(summed, np.zeros_like(summed)):
         return list(np.zeros_like(summed))
-    assert np.all(summed == np.ones_like(summed))
+    assert np.allclose(summed, np.ones_like(summed))
     res = []
     for row in p_mat:
-        indices = list(row).index(1)
+        indices = list(np.isclose(row, 1)).index(True)
         res += [indices]
     return res
 
@@ -78,7 +78,11 @@ class GroupMemberRep(object):
 
     def __mul__(self, x):
         assert isinstance(x, GroupMemberRep)
-        return self.group.get_member(self.perm * x.perm)
+        max_size = max(self.perm.size, x.perm.size)
+        larger_group = self.group if len(self.group.members()) >= len(x.group.members()) else x.group
+        x_perm = Permutation(x.perm, size=max_size)
+        self_perm = Permutation(self.perm, size=max_size)
+        return larger_group.get_member(self_perm * x_perm)
 
     def __invert__(self):
         return self.group.get_member(~self.perm)
@@ -138,6 +142,7 @@ class PermutationSetRepresentation():
                     self.identity = p_rep
                 self._members.append(p_rep)
                 counter += 1
+            # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell)
@@ -164,6 +169,13 @@ class PermutationSetRepresentation():
             if m.perm == perm:
                 return m
         raise ValueError("Permutation not a member of group")
+
+    def get_member_by_val(self, val):
+        for m in self.members():
+            if m.numeric_rep() == val:
+                return m
+
+        raise ValueError("Value does not represent a group member")
 
     def compute_num_reps(self, base_val=0):
         """ Compute the numerical represention of each member as compared to the identity.
@@ -209,7 +221,9 @@ class GroupRepresentation(PermutationSetRepresentation):
         self.generators = []
         if cell is not None:
             self.cell = cell
-            vertices = cell.vertices(return_coords=True)
+            # vertices = cell.vertices(return_coords=True)
+            verts = cell.ordered_vertices()
+            vertices = [cell.get_node(v, return_coords=True) for v in verts]
 
             self._members = []
             counter = 0
@@ -239,6 +253,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             # remaining_members = self.compute_reps(self.base_group.identity,
             #                                       None, temp_group_elems)
             # assert (len(remaining_members) == 0)
+            # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
         else:
             self.cell = None
 
@@ -272,11 +287,13 @@ class GroupRepresentation(PermutationSetRepresentation):
         assert perm2 in member_perms
         return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
 
-    def get_member(self, perm):
-        for m in self.members():
-            if m.perm == perm:
-                return m
-        raise ValueError("Permutation not a member of group")
+    # def get_member(self, perm):
+    #    if not isinstance(perm, Permutation):
+    #        perm = Permutation.from_sequence(perm)
+    #    for m in self.members():
+    #        if m.perm == perm:
+    #            return m
+    #    raise ValueError("Permutation not a member of group")
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members
@@ -384,7 +401,8 @@ D2 = GroupRepresentation(DihedralGroup(2))
 A4 = GroupRepresentation(AlternatingGroup(4))
 A3 = GroupRepresentation(AlternatingGroup(3))
 
-tri_C3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([2, 0, 1]), Permutation([1, 0, 2])])
+basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
+diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])])  # this group is used for facet dofs
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
