@@ -315,8 +315,8 @@ class Point():
         self.group = group
         if not group:
             self.group = self.compute_cell_group()
-
         self.group = self.group.add_cell(self)
+        self.basis_group = self.compute_basis_group()
 
     def compute_attachments(self, n, points, orientations=None):
         """
@@ -387,6 +387,19 @@ class Point():
                         accepted_perms.remove(element)
                         break
         return fuse_groups.PermutationSetRepresentation(list(accepted_perms))
+
+    def compute_basis_group(self):
+        if self.dimension == 0:
+            return fuse_groups.S1.add_cell(self)
+        bvs = self.basis_vectors()
+        bv_0 = bvs[0]
+        basis_group_members = []
+        for bv in bvs:
+            for g in self.group.members():
+                if np.allclose(np.array(g(bv_0)), np.array(bv)):
+                    basis_group_members += [g.perm]
+                    break
+        return fuse_groups.PermutationSetRepresentation(list(basis_group_members)).add_cell(self)
 
     def get_spatial_dimension(self):
         return self.dimension
@@ -475,12 +488,8 @@ class Point():
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
         if dim > 1:
             connections = [(c.point.id, c.point.group.identity) for c in self.connections]
-            # if self.oriented:
-            #     connections = self.permute_entities(self.oriented, dim - 1)
             # if self.dimension == 2:
             #     connections = [connections[-1]] + connections[:-1]
-            #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
-            #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:
                 p = self.get_node(e).orient(o)
                 p_dim = p.get_spatial_dimension()

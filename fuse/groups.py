@@ -123,7 +123,8 @@ class PermutationSetRepresentation():
 
         if cell is not None:
             self.cell = cell
-            vertices = cell.vertices(return_coords=True)
+            verts = cell.ordered_vertices()
+            vertices = [cell.get_node(v, return_coords=True) for v in verts]
             self._members = []
             counter = 0
 
@@ -221,7 +222,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         self.generators = []
         if cell is not None:
             self.cell = cell
-            # vertices = cell.vertices(return_coords=True)
             verts = cell.ordered_vertices()
             vertices = [cell.get_node(v, return_coords=True) for v in verts]
 
@@ -271,29 +271,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         if hasattr(self, "_members"):
             assert len(self._members) == self.base_group.order()
         return self.base_group.order()
-
-    def members(self, perm=False):
-        if self.cell is None:
-            raise ValueError("Group does not have a domain - members have not been calculated")
-        if perm:
-            return [m.perm for m in self._members]
-        return self._members
-
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
-
-    # def get_member(self, perm):
-    #    if not isinstance(perm, Permutation):
-    #        perm = Permutation.from_sequence(perm)
-    #    for m in self.members():
-    #        if m.perm == perm:
-    #            return m
-    #    raise ValueError("Permutation not a member of group")
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members

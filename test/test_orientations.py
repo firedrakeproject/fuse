@@ -22,13 +22,11 @@ def construct_nd2(tri=None):
 
     dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-
-    center_dofs = DOFGenerator(xs, S2, S3)
     xs = [immerse(tri, int_ned1, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
+
+    xs = [DOF(L2Pairing(), VectorKernel(tri.basis_vectors()[0]))]
+    center_dofs = DOFGenerator(xs, tri.basis_group, S3)
 
     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
     Pk = PolynomialSpace(deg - 1)
@@ -60,10 +58,8 @@ def construct_rt2(tri=None):
     xs = [immerse(tri, int_rt2, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-    i_dofs = DOFGenerator(i_xs, S2, S3)
+    i_xs = [DOF(L2Pairing(), VectorKernel(tri.basis_vectors()[0]))]
+    i_dofs = DOFGenerator(i_xs, tri.basis_group, S3)
 
     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
     Pk = PolynomialSpace(deg - 1)

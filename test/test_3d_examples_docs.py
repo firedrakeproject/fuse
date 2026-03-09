@@ -178,14 +178,8 @@ def construct_tet_rt2(cell=None, perm=None):
     im_xs = [immerse(cell, face_vec, TrHDiv)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
-    v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
-    v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
-    v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
-    v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),
-          DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2)),
-          DOF(L2Pairing(), VectorKernel((v_2 - v_3)/2))]
-    interior = DOFGenerator(xs, S1, S4)
+    xs = [DOF(L2Pairing(), VectorKernel(cell.basis_vectors()[0]))]
+    interior = DOFGenerator(xs, cell.basis_group, S4)
 
     rt2 = ElementTriple(cell, (rt_space, CellHDiv, "C0"),
                         [faces, interior])
@@ -289,12 +283,9 @@ def construct_tet_ned2(tet=None, perm=None):
     dofs = DOFGenerator(xs, S2, S2)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
 
-    v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
-    # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
-    v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2))]
+    xs = [DOF(L2Pairing(), VectorKernel(cell.basis_vectors()[0]))]
 
-    center_dofs = DOFGenerator(xs, S2, S3)
+    center_dofs = DOFGenerator(xs, cell.basis_group, S3)
     face_vec = ElementTriple(face, (P1, CellHCurl, C0), center_dofs)
     im_xs = [immerse(tet, face_vec, TrH1)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
