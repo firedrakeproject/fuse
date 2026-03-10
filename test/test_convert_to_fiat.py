@@ -563,13 +563,27 @@ def test_quad(elem_gen):
     assert (poisson_solve(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
-# # @pytest.mark.xfail(reason="Issue with quad cell")
-# def test_non_tensor_quad():
-#     elem = create_cg1_quad()
-#     ufl_elem = elem.to_ufl()
-#     print(elem.to_fiat().entity_permutations())
-#     # elem.cell.hasse_diagram(filename="cg1quad.png")
-#     assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)
+@pytest.mark.xfail(reason="Issue with quad cell")
+def test_non_tensor_quad():
+    elem = create_cg1_quad()
+    ufl_elem = elem.to_ufl()
+    print(elem.to_fiat().entity_permutations())
+    # elem.cell.hasse_diagram(filename="cg1quad.png")
+    assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)
+
+
+def project(U, mesh, func):
+    f = assemble(interpolate(func, U))
+
+    out = Function(U)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)
+
+    res = sqrt(assemble(dot(out - func, out - func) * dx))
+    return res
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg2_tri, "CG", 2),

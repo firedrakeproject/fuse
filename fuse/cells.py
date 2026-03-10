@@ -926,7 +926,9 @@ class Edge():
                     if len(attach_comp.atoms(sp.Symbol)) <= len(x):
                         res.append(sympy_to_numpy(attach_comp, syms, x))
                     else:
-                        res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
+                        res_val = attach_comp.subs({syms[i]: x[i] for i in range(len(x))})
+                        res.append(res_val)
+
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -1046,7 +1048,7 @@ class FlattenedPoint(Point, TensorProductPoint):
                 # of all combinations of point, take those where at least one changes and at least one is the same
                 if any(a[i] == b[i] for i in range(len(a))) and any(a[i] != b[i] for i in range(len(sub_cells))):
                     # ensure if they change, that edge exists in the existing topology
-                    if all([a[i] == b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i].topology[1].values()) for i in range(len(sub_cells))]):
+                    if all([a[i] == b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i]._topology[1].values()) for i in range(len(sub_cells))]):
                         edges.append((a, b))
         # hasse level 1
         edge_cls1 = {e: None for e in edges}

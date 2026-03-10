@@ -29,7 +29,7 @@ def sympy_to_numpy(array, symbols, values):
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
 
-    if len(array.atoms(sp.Symbol)) == len(values) and all(not isinstance(v, sp.Expr) for v in values):
+    if len(array.atoms(sp.Symbol)) <= len(values) and all(not isinstance(v, sp.Expr) for v in values):
         nparray = np.array(substituted).astype(np.float64)
 
         if len(nparray.shape) > 1:
