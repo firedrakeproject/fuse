@@ -183,7 +183,7 @@ def test_self_equality(C):
     assert C == C
 
 
-@pytest.mark.parametrize(["A", "B", "res"], [(firedrake_triangle(), polygon(3), False),
+@pytest.mark.parametrize(["A", "B", "res"], [(ufc_triangle(), polygon(3), False),
                                              (line(), line(), True),])
 def test_equivalence(A, B, res):
     assert A.equivalent(B) == res

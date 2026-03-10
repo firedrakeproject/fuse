@@ -1,5 +1,6 @@
 import pytest
 import numpy as np
+import sympy as sp
 from fuse import *
 from firedrake import *
 from sympy.combinatorics import Permutation
