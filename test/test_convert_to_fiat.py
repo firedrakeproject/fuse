@@ -566,7 +566,7 @@ def test_quad(elem_gen):
 @pytest.mark.xfail(reason="Issue with quad cell")
 def test_non_tensor_quad():
     elem = create_cg1_quad()
-    ufl_elem = elem.to_ufl()
+    # ufl_elem = elem.to_ufl()
     print(elem.to_fiat().entity_permutations())
     # elem.cell.hasse_diagram(filename="cg1quad.png")
     assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)

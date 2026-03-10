@@ -1,9 +1,9 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import ufc_triangle, ufc_tetrahedron
+from fuse.cells import ufc_triangle
 import pytest
 import numpy as np
-from FIAT.reference_element import default_simplex, ufc_simplex
+from FIAT.reference_element import default_simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
