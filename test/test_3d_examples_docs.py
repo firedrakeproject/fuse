@@ -336,7 +336,7 @@ def construct_tet_ned2(tet=None, perm=None):
     return ned
 
 
-def construct_tet_ned3(tet=None, perm=None):
+def construct_tet_ned3(tet=None, both=False):
     if tet is None:
         tet = make_tetrahedron()
     deg = 3
@@ -359,11 +359,24 @@ def construct_tet_ned3(tet=None, perm=None):
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1, TrHCurl)], tet_edges, S1)
 
-    phi0 = [1/3 - (1/2)*x + y/(2*np.sqrt(3)), sp.Poly(0, (x, y))]
-    # phi1 = [sp.Poly(0, (x, y)), 1/3 - (1/2)*x + y/(2*np.sqrt(3))]
-    xs = [DOF(L2Pairing(), PolynomialKernel(phi0, symbols=(x, y), shape=2))]
-    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S3, S3))
-    face_dofs = DOFGenerator([immerse(tet, face_vec, TrH1)], tet_faces, S1)
+    phi_0 = [-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
+    phi_1 = [-1/6 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
+    phi_2 = [1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]
+    xs = [DOF(L2Pairing(), PolynomialKernel(phi_0, symbols=(x, y), shape=2)),
+          DOF(L2Pairing(), PolynomialKernel(phi_1, symbols=(x, y), shape=2)),
+          DOF(L2Pairing(), PolynomialKernel(phi_2, symbols=(x, y), shape=2))]
+    # face_vec = DOFGenerator(xs, S1, S1)
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S1, S1))
+    # phi0 = [1/3 - (1/2)*x + y/(2*np.sqrt(3)), sp.Poly(0, (x, y))]
+    # xs = [DOF(L2Pairing(), PolynomialKernel(phi0, symbols=(x, y), shape=2))]
+    # if both:
+    #     phi1 = [sp.Poly(0, (x, y)), 1/3 - (1/2)*x + y/(2*np.sqrt(3))]
+    #     xs += [DOF(L2Pairing(), PolynomialKernel(phi1, symbols=(x, y), shape=2))]
+    # if both:
+    #     face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, C3, S3))
+    # else:
+    #     face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S3, S3))
+    face_dofs = DOFGenerator([immerse(tet, face_vec, TrHCurl)], tet_faces, S1)
 
     xs = [DOF(L2Pairing(), VectorKernel([1, 0, 0])),
           DOF(L2Pairing(), VectorKernel([0, 1, 0])),
@@ -418,10 +431,21 @@ def test_tet_nd():
 def test_tet_nd3():
     nd3 = construct_tet_ned3()
     ls = nd3.generate()
-    for dof in ls:
-        # dof_dict = dof.to_quadrature(1)
+    # for dof in ls:
+    #     dof_dict = dof.to_quadrature(1)
         # print(np.array(list(dof_dict.keys())[0]), list(dof_dict.values()))
-        print(dof)
+        # print(dof)
+    # print("both")
+    # nd3 = construct_tet_ned3()
+    # ls1 = nd3.generate()
+    for dof in ls:
+        print("A", dof)
+        dof.to_quadrature(1)
+        # print("B", dof1)
+        # dof1.to_quadrature(1)
+        # print(np.array(list(dof_dict.keys())[0]), list(dof_dict.values()))
+        # print(dof)
+    # breakpoint()
     nd3.to_fiat()
 
 

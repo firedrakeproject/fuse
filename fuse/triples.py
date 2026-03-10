@@ -451,12 +451,12 @@ class ElementTriple():
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
                             new_ent_dofs_ids = [int(g_to_ent_id[str(sub_g.perm.array_form)]) for coset in cosets for sub_g in coset]
                             if not np.allclose(new_ent_dofs_ids, ent_dofs_ids):
-                                print("original", sub_mat)
+                                # print("original", sub_mat)
                                 # ent_dofs_ids = new_ent_dofs_ids
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(new_ent_dofs_ids, new_ent_dofs_ids)] = sub_mat.copy()
                             else:
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            print("added", oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)])
+                            # print("added", oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)])
                             # if len(ent_dofs_ids) == basis_change.shape[0]:
                             #     sub_mat = basis_change
                             # elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:

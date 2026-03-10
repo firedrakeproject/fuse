@@ -251,11 +251,13 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        for pt in Qpts:
-            if not np.allclose(self(*(np.matmul(basis_change, pt))), self(*self.g(pt))):
-                breakpoint()
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-
+        # for pt in Qpts:
+        #     if not np.allclose(self(*(np.matmul(basis_change, pt))), self(*self.g(pt))):
+        #         breakpoint()
+            # print("normal", self(*self.g(pt)))
+            # print("double rotate", self.g(self(*((~self.g)(pt)))))
+        return Qpts, np.array([wt*self(*(self.g(pt))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        
     def _to_dict(self):
         o_dict = {"fn": self.fn}
         return o_dict
@@ -389,10 +391,10 @@ class DOF():
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        # if self.cell_defined_on.dimension == 2:
-        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        #     for key, val in pt_dict.items():
-        #         print(np.array(key), ":", np.array([v[0] for v in val]))
+        if self.cell_defined_on.dimension == 2:
+            np.set_printoptions(linewidth=90, precision=4, suppress=True)
+            for key, val in pt_dict.items():
+                print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):
