@@ -271,6 +271,7 @@ def test_nd_example():
     for dof in ned.generate():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
+    ned.to_fiat()
 
 
 def construct_rt(tri=None):

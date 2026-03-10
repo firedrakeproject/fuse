@@ -193,7 +193,11 @@ class VectorKernel(BaseKernel):
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         if not immersed:
+            if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+                breakpoint()
             return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+            breakpoint()
         return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
@@ -210,14 +214,14 @@ class VectorKernel(BaseKernel):
 class PolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[], shape=0):
-        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
+        self.shape = shape
+        try:
+            if shape != 0:
+                self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
+            else:
+                self.fn = sp.sympify(fn)
+        except ValueError:
             raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
-        if shape != 0:
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
-            self.shape = shape
-        else:
-            self.fn = sp.sympify(fn)
-            self.shape = 0
         self.g = g
         self.syms = symbols
         super(PolynomialKernel, self).__init__()
@@ -247,8 +251,13 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-
+        # for pt in Qpts:
+        #     if not np.allclose(self(*(np.matmul(basis_change, pt))), self(*self.g(pt))):
+        #         breakpoint()
+            # print("normal", self(*self.g(pt)))
+            # print("double rotate", self.g(self(*((~self.g)(pt)))))
+        return Qpts, np.array([wt*self(*(self.g(pt))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        
     def _to_dict(self):
         o_dict = {"fn": self.fn}
         return o_dict
@@ -279,9 +288,8 @@ class ComponentKernel(BaseKernel):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 #        return tuple(args[c] for c in self.comp)
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+    def evaluate(self, Qpts, Qwts, immersed, dim):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
-        # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
         o_dict = {"comp": self.comp}
