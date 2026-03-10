@@ -429,8 +429,16 @@ class ElementTriple():
                             # if DOFs on entity are not perms, get the matrix
                             # only get this if they are defined on the current dimension
                             bvs = np.array(e.basis_vectors())
+                            new_bvs1 = np.array([(~g)(b) for b in bvs])
                             new_bvs = np.array(e.orient(~g).basis_vectors())
                             basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
+                            if dim == 2:
+                                print(g.numeric_rep())
+                                print("original")
+                                print(basis_change)
+                                # print("amended")
+                                # basis_change = np.matmul(np.array([[-1, 0], [-1, 1]]), basis_change)
+                                # print(basis_change)
                             if len(ent_dofs_ids) == basis_change.shape[0]:
                                 sub_mat = basis_change
                             elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:

@@ -401,7 +401,9 @@ class Point():
                 if np.allclose(np.array(g(bv_0)), np.array(bv)):
                     basis_group_members += [g.perm]
                     break
-        return fuse_groups.PermutationSetRepresentation(list(basis_group_members)).add_cell(self)
+        from sympy.combinatorics import CyclicGroup
+        return fuse_groups.GroupRepresentation(CyclicGroup(self.dimension)).add_cell(self)
+        # return fuse_groups.PermutationSetRepresentation(list(basis_group_members)).add_cell(self)
 
     def get_spatial_dimension(self):
         return self.dimension

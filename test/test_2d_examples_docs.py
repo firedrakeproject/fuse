@@ -416,4 +416,4 @@ def test_rt_second_order():
 
     for dof in rt2.generate():
         dof.eval(phi)
-    rt2.plot()
+    # rt2.plot()

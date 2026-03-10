@@ -193,8 +193,8 @@ class VectorKernel(BaseKernel):
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         if not immersed:
-            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+            return Qpts, np.array([wt*np.matmul(basis_change, self.pt)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*immersed(np.matmul(basis_change, self.pt))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -247,7 +247,7 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*self(*(np.matmul(basis_change, pt))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -359,6 +359,11 @@ class DOF():
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
                 immersed_basis = np.array(self.cell.basis_vectors(entity=self.cell_defined_on))
+
+                # print(basis)
+                print("coeffs", basis_coeffs)
+                # print(immersed_basis)
+                # print(np.matmul(basis_coeffs, immersed_basis))
                 return np.matmul(basis_coeffs, immersed_basis)
         else:
             immersed = self.immersed
@@ -382,10 +387,10 @@ class DOF():
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        if self.cell_defined_on.dimension == 2:
-            np.set_printoptions(linewidth=90, precision=4, suppress=True)
-            for key, val in pt_dict.items():
-                print(np.array(key), ":", np.array([v[0] for v in val]))
+        # if self.cell_defined_on.dimension == 2:
+        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        #     for key, val in pt_dict.items():
+        #         print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):

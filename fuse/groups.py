@@ -130,10 +130,10 @@ class PermutationSetRepresentation():
 
             for p in self.perm_list:
                 if len(vertices) > p.size:
-                    temp_perm = Permutation(p, size=len(vertices))
-                    reordered = temp_perm(vertices)
-                else:
-                    reordered = p(vertices)
+                    p = Permutation(p, size=len(vertices))
+                    # reordered = temp_perm(vertices)
+                # else:
+                reordered = p(vertices)
                 A = np.c_[np.array(vertices, dtype=float), np.ones(len(vertices))]
                 b = np.array(reordered, dtype=float)
 
@@ -229,10 +229,10 @@ class GroupRepresentation(PermutationSetRepresentation):
             counter = 0
             for g in self.base_group.elements:
                 if len(vertices) > g.size:
-                    temp_perm = Permutation(g, size=len(vertices))
-                    reordered = temp_perm(vertices)
-                else:
-                    reordered = g(vertices)
+                    g = Permutation(g, size=len(vertices))
+                #     reordered = temp_perm(vertices)
+                # else:
+                reordered = g(vertices)
                 A = np.c_[np.array(vertices, dtype=float), np.ones(len(vertices))]
                 b = np.array(reordered, dtype=float)
 

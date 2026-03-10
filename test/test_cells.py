@@ -50,7 +50,6 @@ def test_basis_group(C):
                 basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
 
-
 def test_sub_basis_vectors():
     cell = polygon(3)
 
