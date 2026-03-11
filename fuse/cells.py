@@ -835,6 +835,15 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
 
+    def attachment_J_det(self, source, dst):
+        attachment = self.attachment(source, dst)
+        symbol_names = ["x", "y", "z"]
+        symbols = []
+        for i in range(self.dim_of_node(dst)):
+            symbols += [sp.Symbol(symbol_names[i])]
+        J = sp.Matrix(attachment(*symbols)).jacobian(sp.Matrix(symbols))
+        return np.sqrt(abs(float(sp.det(J.T * J))))
+
     def quadrature(self, degree):
         fiat_el = self.to_fiat()
         Q = create_quadrature(fiat_el, degree)

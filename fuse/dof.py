@@ -375,18 +375,22 @@ class DOF():
 
         if self.immersed:
             # need to compute jacobian from attachment.
+            old_pts = pts
             pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
+            J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
+            if not np.allclose(J_det, 1):
+                raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
             # if self.pairing.orientation:
             #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
             # else:
             immersion = self.target_space.tabulate(pts, self.cell_defined_on)
             # Special case - force evaluation on different orientation of entity for construction of matrix transforms
-            if self.entity_o:
-                immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
+            # if self.entity_o:
+            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
             if isinstance(self.target_space, TrH1):
-                new_wts = wts
+                new_wts = wts * J_det
             else:
-                new_wts = np.outer(wts, immersion)
+                new_wts = np.outer(wts * J_det, immersion)
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
