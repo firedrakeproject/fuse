@@ -190,7 +190,7 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
-        comps = [(i,) for v in value_shape for i in range(v)]
+        comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
@@ -350,6 +350,7 @@ class DOF():
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         # TODO deriv dict needs implementing (currently {})
+        print(value_shape)
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
