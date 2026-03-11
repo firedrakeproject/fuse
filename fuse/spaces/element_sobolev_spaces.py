@@ -1,5 +1,5 @@
 from functools import total_ordering
-
+from ufl.sobolevspace import H1, HDiv, HCurl, L2, H2
 
 @total_ordering
 class ElementSobolevSpace(object):
@@ -54,6 +54,9 @@ class CellH1(ElementSobolevSpace):
 
     def __repr__(self):
         return "H1"
+    
+    def to_ufl(self):
+        return H1
 
 
 class CellHDiv(ElementSobolevSpace):
@@ -64,6 +67,9 @@ class CellHDiv(ElementSobolevSpace):
     def __repr__(self):
         return "HDiv"
 
+    def to_ufl(self):
+        return HDiv
+
 
 class CellHCurl(ElementSobolevSpace):
 
@@ -72,6 +78,9 @@ class CellHCurl(ElementSobolevSpace):
 
     def __repr__(self):
         return "HCurl"
+
+    def to_ufl(self):
+        return HCurl
 
 
 class CellH2(ElementSobolevSpace):
@@ -82,6 +91,9 @@ class CellH2(ElementSobolevSpace):
     def __repr__(self):
         return "H2"
 
+    def to_ufl(self):
+        return H2
+
 
 class CellL2(ElementSobolevSpace):
 
@@ -90,3 +102,6 @@ class CellL2(ElementSobolevSpace):
 
     def __repr__(self):
         return "L2"
+
+    def to_ufl(self):
+        return L2
