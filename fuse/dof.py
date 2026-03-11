@@ -190,7 +190,11 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
-        comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
@@ -374,8 +378,6 @@ class DOF():
         pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         if self.immersed:
-            # need to compute jacobian from attachment.
-            old_pts = pts
             pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
             J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
             if not np.allclose(J_det, 1):

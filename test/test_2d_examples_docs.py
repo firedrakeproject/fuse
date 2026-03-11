@@ -32,7 +32,7 @@ def construct_dg1():
 
 def construct_dg0_integral(cell=None):
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel(1))]
     dg0 = ElementTriple(edge, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
     return dg0
 
