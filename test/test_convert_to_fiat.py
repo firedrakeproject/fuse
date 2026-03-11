@@ -5,7 +5,7 @@ from fuse import *
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_dg1_integral, construct_dg2_integral
 from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind, construct_tet_bdm, construct_tet_ned2, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
@@ -358,6 +358,8 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
+                                                    (construct_dg1_integral, "DG", 1),
+                                                    (construct_dg2_integral, "DG", 2),
                                                     pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
                                                     (create_cg2, "CG", 2)
                                                     ])

@@ -152,7 +152,7 @@ class PointKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -189,12 +189,13 @@ class VectorKernel(BaseKernel):
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        comps = [(i,) for v in value_shape for i in range(v)]
         if isinstance(self.pt, int):
-            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
-            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), comps
+        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -209,7 +210,11 @@ class VectorKernel(BaseKernel):
 
 class PolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, g=None, symbols=[], shape=0):
+    def __init__(self, fn, g=None, symbols=[]):
+        if hasattr(fn, "__iter__"):
+            shape = len(fn)
+        else:
+            shape = 0
         if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
             raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
         if shape != 0:
@@ -235,19 +240,21 @@ class PolynomialKernel(BaseKernel):
     def permute(self, g):
         # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
         new_fn = self.fn
-        return PolynomialKernel(new_fn, g=g, symbols=self.syms, shape=self.shape)
+        return PolynomialKernel(new_fn, g=g, symbols=self.syms)
 
     def __call__(self, *args):
         if self.shape == 0:
             res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         else:
-            res = []
-            for i in range(self.shape):
-                res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
+            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -343,9 +350,9 @@ class DOF():
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         # TODO deriv dict needs implementing (currently {})
-        return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree), {}, str(self))
+        return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
-    def to_quadrature(self, arg_degree):
+    def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         dim = self.cell_defined_on.get_spatial_dimension()
@@ -363,7 +370,7 @@ class DOF():
                 return np.matmul(basis_coeffs, immersed_basis)
         else:
             immersed = self.immersed
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
+        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         if self.immersed:
             # need to compute jacobian from attachment.
