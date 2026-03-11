@@ -96,9 +96,7 @@ class PolynomialSpace(object):
         the sympy object on the right. This is due to Sympy's implementation of __mul__ not
         passing to this handler as it should.
         """
-        if isinstance(x, sp.Symbol):
-            return ConstructedPolynomialSpace([x], [self])
-        elif isinstance(x, sp.Matrix):
+        if isinstance(x, sp.Symbol) or isinstance(x, sp.Expr) or isinstance(x, sp.Matrix):
             return ConstructedPolynomialSpace([x], [self])
         else:
             raise TypeError(f'Cannot multiply a PolySpace with {type(x)}')
