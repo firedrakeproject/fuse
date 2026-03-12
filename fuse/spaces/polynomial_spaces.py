@@ -174,7 +174,7 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         ref_el = cell_to_simplex(ref_el)
 
         # otherwise have to work on this through tabulation
-        
+
         weighted_sets = []
 
         for (s, w) in zip(self.spaces, self.weights):

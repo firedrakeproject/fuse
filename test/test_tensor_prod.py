@@ -36,10 +36,10 @@ def mass_solve(U):
 
 
 @pytest.mark.parametrize("generator1, generator2, code1, code2, deg1, deg2",
-                          [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
-                           (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
-                           (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
-                           (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
+                         [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
+                          (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
+                          (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
+                          (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
 def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
     m = UnitIntervalMesh(2)
     mesh = ExtrudedMesh(m, 2)
@@ -137,3 +137,59 @@ def test_flattening(A, B, res):
     else:
         cell = tensor_cell.flatten()
         cell.construct_fuse_rep()
+
+
+# def test_trace_galerkin_projection():
+#     mesh = UnitSquareMesh(10, 10, quadrilateral=True)
+
+#     x, y = SpatialCoordinate(mesh)
+#     A = construct_cg1()
+#     B = construct_dg0_integral()
+#     elem = tensor_product(A, B)
+#     elem = elem.flatten()
+
+#     # Define the Trace Space
+#     T = FunctionSpace(mesh, elem.to_ufl())
+
+#     # Define trial and test functions
+#     lambdar = TrialFunction(T)
+#     gammar = TestFunction(T)
+
+#     # Define right hand side function
+
+#     V = FunctionSpace(mesh, "CG", 1)
+#     f = Function(V)
+#     f.interpolate(cos(x*pi*2)*cos(y*pi*2))
+
+#     # Construct bilinear form
+#     a = inner(lambdar, gammar) * ds + inner(lambdar('+'), gammar('+')) * dS
+
+#     # Construct linear form
+#     l = inner(f, gammar) * ds + inner(f('+'), gammar('+')) * dS
+
+#     # Compute the solution
+#     t = Function(T)
+#     solve(a == l, t, solver_parameters={'ksp_rtol': 1e-14})
+
+#     # Compute error in trace norm
+#     trace_error = sqrt(assemble(FacetArea(mesh)*inner((t - f)('+'), (t - f)('+')) * dS))
+
+#     assert trace_error < 1e-13
+
+# def test_hdiv():
+#     np.set_printoptions(linewidth=90, precision=4, suppress=True)
+#     m = UnitIntervalMesh(2)
+#     mesh = ExtrudedMesh(m, 2)
+#     CG_1 = FiniteElement("CG", interval, 1)
+#     DG_0 = FiniteElement("DG", interval, 0)
+#     P1P0 = TensorProductElement(CG_1, DG_0)
+#     RT_horiz = HDivElement(P1P0)
+#     P0P1 = TensorProductElement(DG_0, CG_1)
+#     RT_vert = HDivElement(P0P1)
+#     elt = RT_horiz + RT_vert
+#     V = FunctionSpace(mesh, elt)
+#     tabulation = V.finat_element.fiat_equivalent.tabulate(0, [(0, 0), (1, 0)])
+#     for ent, arr in tabulation.items():
+#         print(ent)
+#         for comp in arr:
+#             print(comp[0], comp[1])
