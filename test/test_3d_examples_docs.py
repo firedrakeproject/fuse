@@ -327,7 +327,7 @@ def test_tet_rt2():
     ls = rt2.generate()
     # TODO make this a proper test
     for dof in ls:
-        print(dof.to_quadrature(1))
+        print(dof.to_quadrature(1, value_shape=(2,)))
     rt2.to_fiat()
 
 
