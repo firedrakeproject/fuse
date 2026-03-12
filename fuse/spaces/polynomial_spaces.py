@@ -174,9 +174,7 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         ref_el = cell_to_simplex(ref_el)
 
         # otherwise have to work on this through tabulation
-
-        Q = create_quadrature(ref_el, 2 * (k + 1))
-        Qpts, Qwts = Q.get_points(), Q.get_weights()
+        
         weighted_sets = []
 
         for (s, w) in zip(self.spaces, self.weights):
@@ -194,6 +192,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
                 else:
                     vec = True
                 w_deg = max_deg_sp_expr(w)
+                Q = create_quadrature(ref_el, 2 * (k + w_deg + 1))
+                Qpts, Qwts = Q.get_points(), Q.get_weights()
                 Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, shape, scale="orthonormal")
                 # vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, (sd,), scale="orthonormal")
 
@@ -204,11 +204,11 @@ class ConstructedPolynomialSpace(PolynomialSpace):
                 if s.set_shape or vec:
                     scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
                 else:
-                    # breakpoint()
                     scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
                     scaled_at_Qpts = scaled_at_Qpts.squeeze()
                 PkHw_coeffs = np.dot(np.multiply(scaled_at_Qpts, Qwts), Pkpw_at_Qpts.T)
-                # breakpoint()
+                if len(PkHw_coeffs.shape) == 1:
+                    PkHw_coeffs = PkHw_coeffs.reshape(1, -1)
                 weighted_sets.append(polynomial_set.PolynomialSet(ref_el,
                                                                   space.degree + w_deg,
                                                                   space.degree + w_deg,

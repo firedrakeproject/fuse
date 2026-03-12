@@ -67,11 +67,10 @@ def max_deg_sp_expr(sp_expr):
         for comp in sp_expr:
             # only compute degree if component is a polynomial
             if sp.sympify(comp).as_poly():
-                degs += [sp.sympify(comp).as_poly().degree()]
+                degs += [sp.sympify(comp).as_poly().total_degree()]
     else:
         if sp.sympify(sp_expr).as_poly():
-            degs += [sp.sympify(sp_expr).as_poly().degree()]
-
+            degs += [sp.sympify(sp_expr).as_poly().total_degree()]
     return max(degs)
 
 
