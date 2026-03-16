@@ -172,7 +172,7 @@ def construct_tet_rt2(cell=None, perm=None):
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
     xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y)))]
-    dofs = DOFGenerator(xs, C3, S2)
+    dofs = DOFGenerator(xs, C3, S3)
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
     im_xs = [immerse(cell, face_vec, TrHDiv)]
@@ -202,16 +202,54 @@ def construct_tet_bdm(cell=None, perm=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    rt_space = PolynomialSpace(deg, set_shape=True)
+    space = PolynomialSpace(deg, set_shape=True)
 
     xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y)))]
     dofs = DOFGenerator(xs, C3, S2)
-    face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
+    face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
     im_xs = [immerse(cell, face_vec, TrHDiv)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
-    rt2 = ElementTriple(cell, (rt_space, CellHDiv, "C0"), [faces])
-    return rt2
+    bdm = ElementTriple(cell, (space, CellHDiv, "C0"), [faces])
+    return bdm
+
+
+def construct_tet_bdm2(cell=None, perm=None):
+    if cell is None:
+        cell = make_tetrahedron()
+    face = cell.d_entities(2, get_class=True)[0]
+    deg = 2
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    z = sp.Symbol("z")
+
+    space = PolynomialSpace(deg, set_shape=True)
+
+    s = np.sqrt(3)
+    vertex_basis = (1/9)*(-1 + s*y + (2/3)*y**2)
+    edge_basis = (4/9)*(1 - 4*s*y) - x**2 + (1/3)*(y**2)
+    xs = [DOF(L2Pairing(), PolynomialKernel(vertex_basis, symbols=(x, y)))]
+    xs1 = [DOF(L2Pairing(), PolynomialKernel(edge_basis, symbols=(x, y)))]
+    dofs = [DOFGenerator(xs, C3, S3), DOFGenerator(xs1, C3, S3)]
+    face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
+    im_xs = [immerse(cell, face_vec, TrHDiv)]
+    faces = DOFGenerator(im_xs, tet_faces, S1)
+
+    s2 = np.sqrt(2)
+    N = {}
+    N[(1, 2)] = [y/4 + z/4, -x/4 - s2/8, -x/4 - s2/8]
+    N[(1, 3)] = [-y/4 - s2/8, x/4 + z/4, -y/4 - s2/8]
+    N[(1, 4)] = [-z/4 - s2/8, -z/4 - s2/8, x/4 + y/4]
+    N[(2, 3)] = [z/4 - s2/8, -z/4 + s2/8, -x/4 + y/4]
+    N[(2, 4)] = [y/4 - s2/8, -x/4 + z/4, -y/4 + s2/8]
+    N[(3, 4)] = [-y/4 + z/4, x/4 - s2/8, -x/4 + s2/8]
+    xs = [DOF(L2Pairing(), PolynomialKernel(N[phi], symbols=(x, y, z))) for phi in N.keys()]
+    interior = DOFGenerator(xs, S1, S1)
+
+    bdm2 = ElementTriple(cell, (space, CellHDiv, "C0"), [faces, interior])
+    breakpoint()
+    return bdm2
+
 
 
 def construct_tet_ned(cell=None):

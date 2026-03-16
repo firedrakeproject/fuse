@@ -479,10 +479,11 @@ class ElementTriple():
                             # Permutation of DOF on the entity they are defined on
                             sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(g.perm.array_form):
-                            # case for dofs defined on the cell and not immersed
-                            sub_mat = (~g).matrix_form()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == g.perm.size:
+                            # case for dofs defined on the cell and not immersed - since they are interior the orientations don't matter
+                            # sub_mat = (~g).matrix_form()
+                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         else:
                             # TODO what if an orientation is not in G1
                             # also the case of 3 dofs inside a 3d shape

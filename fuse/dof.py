@@ -215,19 +215,74 @@ class VectorKernel(BaseKernel):
         return VectorKernel(tuple(obj_dict["pt"]))
 
 
-class PolynomialKernel(BaseKernel):
+class BarycentricPolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[]):
         if hasattr(fn, "__iter__"):
-            shape = len(fn)
+            if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape)):
+                raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
+            self.shape = len(fn)
         else:
-            shape = 0
-        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
-            raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
-        if shape != 0:
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
-            self.shape = shape
+            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
+            self.fn = sp.sympify(fn)
+            self.shape = 0
+        self.g = g
+        self.syms = symbols
+        super(PolynomialKernel, self).__init__()
+
+    def __repr__(self):
+        return str(self.fn)
+
+    def degree(self, interpolant_degree):
+        if self.shape != 0:
+            return max([self.fn[i].as_poly().total_degree() for i in range(self.shape)]) + interpolant_degree
+        if len(self.fn.free_symbols) == 0:  # this should probably be removed
+            return interpolant_degree
+        return self.fn.as_poly().total_degree() + interpolant_degree
+
+    def permute(self, g):
+        new_fn = self.fn
+        return PolynomialKernel(new_fn, g=g, symbols=self.syms)
+
+    def __call__(self, *args):
+        if self.shape == 0:
+            res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         else:
+            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
+        return res
+
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+            breakpoint()
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+
+    def _to_dict(self):
+        o_dict = {"fn": self.fn}
+        return o_dict
+
+    def dict_id(self):
+        return "PolynomialKernel"
+
+    def _from_dict(obj_dict):
+        return PolynomialKernel(obj_dict["fn"])
+
+class PolynomialKernel(BaseKernel):
+
+     def __init__(self, fn, g=None, symbols=[]):
+        if hasattr(fn, "__iter__"):
+            if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape)):
+                raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
+            self.shape = len(fn)
+        else:
+            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
             self.fn = sp.sympify(fn)
             self.shape = 0
         self.g = g
@@ -262,7 +317,7 @@ class PolynomialKernel(BaseKernel):
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
         return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
-
+        
     def _to_dict(self):
         o_dict = {"fn": self.fn}
         return o_dict

@@ -269,15 +269,16 @@ def construct_bdm2(tri=None):
     phi_0 = [-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
     phi_1 = [-1/6 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
     phi_2 = [1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]
-    xs = [DOF(L2Pairing(), PolynomialKernel(phi_0, symbols=(x, y))),
-          DOF(L2Pairing(), PolynomialKernel(phi_1, symbols=(x, y))),
-          DOF(L2Pairing(), PolynomialKernel(phi_2, symbols=(x, y)))]
-    interior = DOFGenerator(xs, S1, S1)
+    xs = [DOF(L2Pairing(), PolynomialKernel(phi_0, symbols=(x, y)))]
+        #   DOF(L2Pairing(), PolynomialKernel(phi_1, symbols=(x, y))),
+        #   DOF(L2Pairing(), PolynomialKernel(phi_2, symbols=(x, y)))]
+    interior = DOFGenerator(xs, C3, S1)
 
-    nd = PolynomialSpace(deg, set_shape=True)
+    space = PolynomialSpace(deg, set_shape=True)
 
-    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs, interior])
-    return rt
+    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    breakpoint()
+    return bdm2
 
 
 def test_nd_example():
