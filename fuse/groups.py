@@ -175,12 +175,12 @@ class PermutationSetRepresentation():
             g = seen[0]
             coset = []
             for h in subset.members():
-                # try:
-                coset += [g*h]
-                seen.remove(g*h)
-                # except ValueError:
-                #     # member of subset not a member of superset
-                #     pass
+                try:
+                    coset += [g*h]
+                    seen.remove(g*h)
+                except ValueError:
+                    # member of subset not a member of superset
+                    pass
             cosets += [coset]
         return cosets
 
@@ -295,7 +295,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
         else:
             self.cell = None
-   
+
     def add_cell(self, cell):
         return GroupRepresentation(self.base_group, cell=cell)
 

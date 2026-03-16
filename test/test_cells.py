@@ -50,12 +50,12 @@ def test_basis_group(C):
                 basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
 
+
 def test_cosets():
     cell = polygon(3)
-    g = cell.basis_group.members()[1]
+    # g = cell.basis_group.members()[1]
     conj = cell.group.cosets(cell.basis_group)
     print(conj)
-    breakpoint()
 
 
 def test_sub_basis_vectors():
