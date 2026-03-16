@@ -428,7 +428,7 @@ class ElementTriple():
                         ent_dofs = entity_associations[dim][e_id][dof_gen]
                         ent_dofs_ids = np.array([self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs], dtype=int)
                         # (dof_gen, ent_dofs)
-                        total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
+                        total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if self.dof_id_to_fiat_id[ed.id] not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
                         g_to_ent_id = {str(sub_g.perm.array_form): ent_id for ent_id, sub_g in zip(ent_dofs_ids, dof_gen_class[dim].g1.members())}
@@ -562,6 +562,21 @@ class ElementTriple():
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
 
+    def __add__(self, other):
+        """ Construct a new element triple by combining the degrees of freedom
+        This implementation does not make assertions about the properties
+        of the resulting element.
+
+        Elements being adding must be defined over the same cell and have the same
+        value shape and mapping"""
+        assert self.cell == other.cell
+        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert str(self.spaces[1]) == str(other.spaces[1])
+
+        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], max([self.spaces[2], other.spaces[2]]))
+
+        return ElementTriple(self.cell, spaces, self.DOFGenerator + other.DOFGenerator)
+
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
         return o_dict
@@ -599,21 +614,20 @@ class DOFGenerator():
         return self.dof_numbers
 
     def generate(self, cell, space, id_counter):
-        if self.ls is None:
-            self.ls = []
-            for l_g in self.x:
-                i = 0
-                for g in self.g1.members():
-                    generated = l_g(g)
-                    if not isinstance(generated, list):
-                        generated = [generated]
-                    for dof in generated:
-                        dof.add_context(self, cell, space, g, id_counter, i)
-                        id_counter += 1
-                        i += 1
-                    self.ls.extend(generated)
-            self.dof_numbers = len(self.ls)
-            self.dof_ids = [dof.id for dof in self.ls]
+        self.ls = []
+        for l_g in self.x:
+            i = 0
+            for g in self.g1.members():
+                generated = l_g(g)
+                if not isinstance(generated, list):
+                    generated = [generated]
+                for dof in generated:
+                    dof.add_context(self, cell, space, g, id_counter, i)
+                    id_counter += 1
+                    i += 1
+                self.ls.extend(generated)
+        self.dof_numbers = len(self.ls)
+        self.dof_ids = [dof.id for dof in self.ls]
         return self.ls
 
     def make_entity_ids(self):
