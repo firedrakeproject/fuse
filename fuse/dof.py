@@ -207,14 +207,70 @@ class VectorKernel(BaseKernel):
         return VectorKernel(tuple(obj_dict["pt"]))
 
 
+class BarycentricPolynomialKernel(BaseKernel):
+
+    def __init__(self, fn, g=None, symbols=[]):
+        if hasattr(fn, "__iter__"):
+            # if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
+            #     raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
+            self.shape = len(fn)
+        else:
+            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
+            self.fn = sp.sympify(fn)
+            self.shape = 0
+        self.g = g
+        self.syms = symbols
+        super(BarycentricPolynomialKernel, self).__init__()
+
+    def __repr__(self):
+        return str(self.fn)
+
+    def degree(self, interpolant_degree):
+        if self.shape != 0:
+            return max([self.fn[i].as_poly().total_degree() for i in range(self.shape)]) + interpolant_degree
+        if len(self.fn.free_symbols) == 0:  # this should probably be removed
+            return interpolant_degree
+        return self.fn.as_poly().total_degree() + interpolant_degree
+
+    def permute(self, g):
+        new_fn = self.fn
+        return BarycentricPolynomialKernel(new_fn, g=g, symbols=self.syms)
+
+    def __call__(self, *args):
+        if self.shape == 0:
+            res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
+        else:
+            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
+        return res
+
+    def evaluate(self, Qpts, bary_pts, Qwts, basis_change, immersed, dim, value_shape):
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        return Qpts, np.array([wt*self(*self.g.permute(pt)) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), comps
+
+    def _to_dict(self):
+        o_dict = {"fn": self.fn}
+        return o_dict
+
+    def dict_id(self):
+        return "BarycentricPolynomialKernel"
+
+    def _from_dict(obj_dict):
+        return BarycentricPolynomialKernel(obj_dict["fn"])
+
+
 class PolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, g=None, symbols=[], shape=0):
-        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
-            raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
-        if shape != 0:
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
-            self.shape = shape
+    def __init__(self, fn, g=None, symbols=[]):
+        if hasattr(fn, "__iter__"):
+            if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
+                raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
+            self.shape = len(fn)
         else:
             self.fn = sp.sympify(fn)
             self.shape = 0
@@ -246,8 +302,12 @@ class PolynomialKernel(BaseKernel):
                 res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -277,7 +337,6 @@ class ComponentKernel(BaseKernel):
 
     def __call__(self, *args):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
-#        return tuple(args[c] for c in self.comp)
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
@@ -355,6 +414,7 @@ class DOF():
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
         else:
             basis_change = np.eye(dim)
+
         if self.immersed and isinstance(self.kernel, VectorKernel):
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
@@ -363,18 +423,20 @@ class DOF():
                 return np.matmul(basis_coeffs, immersed_basis)
         else:
             immersed = self.immersed
-        pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension)
+
+        if isinstance(self.kernel, BarycentricPolynomialKernel):
+            bary_pts = self.cell_defined_on.cartesian_to_barycentric(Qpts)
+            pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
+        else:
+            pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         if self.immersed:
             # need to compute jacobian from attachment.
             pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
-            # if self.pairing.orientation:
-            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
-            # else:
+            J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
+            if not np.allclose(J_det, 1):
+                raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
             immersion = self.target_space.tabulate(pts, self.cell_defined_on)
-            # Special case - force evaluation on different orientation of entity for construction of matrix transforms
-            if self.entity_o:
-                immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
             if isinstance(self.target_space, TrH1):
                 new_wts = wts
             else:
@@ -383,7 +445,8 @@ class DOF():
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        if self.cell_defined_on.dimension == 2:
+        if self.cell_defined_on.dimension >= 2:
+            print(self)
             np.set_printoptions(linewidth=90, precision=4, suppress=True)
             for key, val in pt_dict.items():
                 print(np.array(key), ":", np.array([v[0] for v in val]))

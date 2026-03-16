@@ -164,8 +164,6 @@ def construct_nd(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    # xs = [DOF(L2Pairing(), PointKernel((1,)))]
     xs = [DOF(L2Pairing(), VectorKernel(1))]
 
     dofs = DOFGenerator(xs, S1, S2)
@@ -203,6 +201,31 @@ def construct_nd_2nd_kind(tri=None):
     return ned
 
 
+def construct_nd2_2nd_kind(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 2
+    edge = tri.edges()[0]
+
+    s_0 = sp.Symbol("s_0")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,)))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,)))]
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
+    int_ned = ElementTriple(edge, (PolynomialSpace(deg, set_shape=True), CellHCurl, C0), dofs)
+
+    xs = [immerse(tri, int_ned, TrHCurl)]
+    edge_dofs = DOFGenerator(xs, C3, S1)
+
+    s_1 = sp.Symbol("s_1")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1)))]
+    face_dofs = DOFGenerator(xs, C3, S2)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    ned = ElementTriple(tri, (nd, CellHCurl, C0), [edge_dofs, face_dofs])
+    return ned
+
+
 def construct_bdm(tri=None):
     if tri is None:
         tri = polygon(3)
@@ -223,13 +246,32 @@ def construct_bdm(tri=None):
     return rt
 
 
+def construct_bdm_bary(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 1
+    edge = tri.edges()[0]
+    s_0 = sp.Symbol("s_0")
+
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+
+    xs = [immerse(tri, int_rt, TrHDiv)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
+    return rt
+
+
 def construct_bdm2(tri=None):
     if tri is None:
         tri = polygon(3)
     deg = 2
     edge = tri.edges()[0]
     x = sp.Symbol("x")
-    y = sp.Symbol("y")
 
     xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
     centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
@@ -240,18 +282,17 @@ def construct_bdm2(tri=None):
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    phi_0 = [-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
-    phi_1 = [-1/6 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
-    phi_2 = [1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]
-    xs = [DOF(L2Pairing(), PolynomialKernel(phi_0, symbols=(x, y), shape=2)),
-          DOF(L2Pairing(), PolynomialKernel(phi_1, symbols=(x, y), shape=2)),
-          DOF(L2Pairing(), PolynomialKernel(phi_2, symbols=(x, y), shape=2))]
-    interior = DOFGenerator(xs, S1, S1)
+    s_1 = sp.Symbol("s_1")
+    s_0 = sp.Symbol("s_0")
+    phi_0 = [1 - s_1, s_0]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1)))]
+    interior = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, set_shape=True)
 
-    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs, interior])
-    return rt
+    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    dofs = bdm2.generate()
+    return bdm2
 
 
 def test_nd_example():

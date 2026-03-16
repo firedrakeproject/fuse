@@ -139,6 +139,7 @@ class TrHCurl(Trace):
         # return result
 
     def manipulate_basis(self, basis):
+        breakpoint()
         return basis[0]
 
     def plot(self, ax, coord, trace_entity, **kwargs):
