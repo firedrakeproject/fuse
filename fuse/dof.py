@@ -250,7 +250,9 @@ class BarycentricPolynomialKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        return Qpts, np.array([wt*self(*self.g.permute(pt)) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), comps
+        if not immersed or self.shape == 0:
+            return Qpts, np.array([wt*self(*self.g.permute(pt)) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        return Qpts, np.array([wt*immersed(self(*self.g.permute(pt))) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -307,7 +309,9 @@ class PolynomialKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+        if not immersed or self.shape == 0:
+            return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+        return Qpts, np.array([wt*immersed(self(*(np.matmul(pt, basis_change)))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -415,7 +419,7 @@ class DOF():
         else:
             basis_change = np.eye(dim)
 
-        if self.immersed and isinstance(self.kernel, VectorKernel):
+        if self.immersed and (isinstance(self.kernel, VectorKernel) or isinstance(self.kernel, BarycentricPolynomialKernel) or isinstance(self.kernel, PolynomialKernel)):
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
@@ -440,16 +444,19 @@ class DOF():
             if isinstance(self.target_space, TrH1):
                 new_wts = wts
             else:
-                new_wts = np.outer(wts, immersion)
+                new_wts = np.outer(wts * J_det, immersion)
+                # shape is wrong for 2d face on tet
+            # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
+            #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        if self.cell_defined_on.dimension >= 2:
-            print(self)
-            np.set_printoptions(linewidth=90, precision=4, suppress=True)
-            for key, val in pt_dict.items():
-                print(np.array(key), ":", np.array([v[0] for v in val]))
+        # if self.cell_defined_on.dimension >= 2:
+        #     print(self)
+        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        #     for key, val in pt_dict.items():
+        #         print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):
