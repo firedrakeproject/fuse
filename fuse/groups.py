@@ -65,9 +65,15 @@ class GroupMemberRep(object):
         return val, val_list
 
     def numeric_rep(self):
+        """ Uses a standard formula to number permutations in the group.
+        For the case where this doesn't automatically number from 0..n (ie the group is not the full symmetry group),
+        a mapping is constructed on group creation"""
         identity = self.group.identity.perm.array_form
         m_array = self.perm.array_form
-        return orientation_value(identity, m_array)
+        val = orientation_value(identity, m_array)
+        if self.group.group_rep_numbering is not None:
+            return self.group.group_rep_numbering[val]
+        return val
 
     def __eq__(self, x):
         assert isinstance(x, GroupMemberRep)
@@ -123,7 +129,8 @@ class PermutationSetRepresentation():
 
         if cell is not None:
             self.cell = cell
-            vertices = cell.vertices(return_coords=True)
+            verts = cell.ordered_vertices()
+            vertices = [cell.get_node(v, return_coords=True) for v in verts]
             self._members = []
             counter = 0
 
@@ -144,8 +151,38 @@ class PermutationSetRepresentation():
                 counter += 1
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
+            self.group_rep_numbering = None
+            numeric_reps = [m.numeric_rep() for m in self.members()]
+            if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
+
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell)
+
+    def conjugacy_class(self, g):
+        conj_class = set()
+        for x in self.members():
+            res = ~x * g * x
+            conj_class.add(res)
+        return conj_class
+
+    def cosets(self, subset):
+        # Divides current group by given subset
+        # can be modified to allow members of given subset not to exist in group self
+        seen = self.members().copy()
+        cosets = []
+        while len(seen) > 0:
+            g = seen[0]
+            coset = []
+            for h in subset.members():
+                try:
+                    coset += [g*h]
+                    seen.remove(g*h)
+                except ValueError:
+                    # member of subset not a member of superset
+                    pass
+            cosets += [coset]
+        return cosets
 
     def members(self, perm=False):
         if self.cell is None:
@@ -221,7 +258,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         self.generators = []
         if cell is not None:
             self.cell = cell
-            # vertices = cell.vertices(return_coords=True)
             verts = cell.ordered_vertices()
             vertices = [cell.get_node(v, return_coords=True) for v in verts]
 
@@ -229,10 +265,8 @@ class GroupRepresentation(PermutationSetRepresentation):
             counter = 0
             for g in self.base_group.elements:
                 if len(vertices) > g.size:
-                    temp_perm = Permutation(g, size=len(vertices))
-                    reordered = temp_perm(vertices)
-                else:
-                    reordered = g(vertices)
+                    g = Permutation(g, size=len(vertices))
+                reordered = g(vertices)
                 A = np.c_[np.array(vertices, dtype=float), np.ones(len(vertices))]
                 b = np.array(reordered, dtype=float)
 
@@ -242,6 +276,11 @@ class GroupRepresentation(PermutationSetRepresentation):
                 if g.is_Identity:
                     self.identity = p_rep
                 counter += 1
+
+            self.group_rep_numbering = None
+            numeric_reps = [m.numeric_rep() for m in self.members()]
+            if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
 
             # this order produces simpler generator lists
             # self.generators.reverse()
@@ -257,13 +296,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         else:
             self.cell = None
 
-    def conjugacy_class(self, g):
-        conj_class = set()
-        for x in self.members():
-            res = ~x * g * x
-            conj_class.add(res)
-        return conj_class
-
     def add_cell(self, cell):
         return GroupRepresentation(self.base_group, cell=cell)
 
@@ -271,29 +303,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         if hasattr(self, "_members"):
             assert len(self._members) == self.base_group.order()
         return self.base_group.order()
-
-    def members(self, perm=False):
-        if self.cell is None:
-            raise ValueError("Group does not have a domain - members have not been calculated")
-        if perm:
-            return [m.perm for m in self._members]
-        return self._members
-
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
-
-    # def get_member(self, perm):
-    #    if not isinstance(perm, Permutation):
-    #        perm = Permutation.from_sequence(perm)
-    #    for m in self.members():
-    #        if m.perm == perm:
-    #            return m
-    #    raise ValueError("Permutation not a member of group")
 
     # def compute_reps(self, g, path, remaining_members):
     #     # breadth first search to find generator representations of all members

@@ -5,8 +5,8 @@ from fuse import *
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind, construct_tet_bdm, construct_tet_ned2, construct_tet_cg4
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_dg0_integral, construct_dg1_integral, construct_dg2_integral
+from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind, construct_tet_ned_2nd_kind_2, construct_tet_bdm, construct_tet_bdm2, construct_tet_ned2, construct_tet_cg4
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -110,13 +110,11 @@ def create_cg1(cell):
 
 def create_cg1_quad():
     deg = 1
-    cell = polygon(4)
-    # cell = constructCellComplex("quadrilateral").cell_complex
-
-    vert_dg = create_dg0(cell.vertices()[0])
+    cell = TensorProductPoint(line(), line()).flatten()
+    print(cell, type(cell))
+    vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
-
-    Pk = PolynomialSpace(deg, deg + 1)
+    Pk = PolynomialSpace(deg + 1, deg)
     cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
@@ -360,6 +358,9 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
+                                                    pytest.param(construct_dg0_integral, "DG", 0, marks=pytest.mark.xfail(reason='Passes locally, fails in CI, probably same as dg2')),
+                                                    (construct_dg1_integral, "DG", 1),
+                                                    (construct_dg2_integral, "DG", 2),
                                                     pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
                                                     (create_cg2, "CG", 2)
                                                     ])
@@ -503,9 +504,33 @@ def helmholtz_solve(V, mesh):
 def poisson_solve(r, elem, parameters={}, quadrilateral=False):
     # Create mesh and define function space
     m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem)
 
+    # Define variational problem
+    u = Function(V)
+    v = TestFunction(V)
+    a = inner(grad(u), grad(v)) * dx
+
+    bcs = [DirichletBC(V, Constant(0), 3),
+           DirichletBC(V, Constant(42), 4)]
+
+    # Compute solution
+    solve(a == 0, u, solver_parameters=parameters, bcs=bcs)
+
+    f = Function(V)
+    f.interpolate(42*x[1])
+
+    return sqrt(assemble(inner(u - f, u - f) * dx))
+
+
+def run_test_original(r, elem_code, deg, parameters={}, quadrilateral=False):
+    # Create mesh and define function space
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem_code, deg)
     # Define variational problem
     u = Function(V)
     v = TestFunction(V)
@@ -534,16 +559,14 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
+                         [(create_cg1_quad_tensor,),
+                          pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Issue with cell/mesh'))
+                          ])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
     ufl_elem = elem.to_ufl()
     assert (poisson_solve(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
-
-
-def test_non_tensor_quad():
-    create_cg1_quad()
 
 
 def project(U, mesh, func):
@@ -604,7 +627,9 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
                                                               (construct_tet_ned2, "N1curl", 2, 1.8),
                                                               (construct_tet_ned_2nd_kind, "N2curl", 1, 1.8),
-                                                              (construct_tet_bdm, "BDM", 1, 1.8)])
+                                                              (construct_tet_ned_2nd_kind_2, "N2curl", 2, 2.8),
+                                                              (construct_tet_bdm, "BDM", 1, 1.8),
+                                                              (construct_tet_bdm2, "BDM", 2, 2.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -675,7 +700,9 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
-                                                    (construct_tet_rt2, "RT", 2)])
+                                                    (construct_tet_rt2, "RT", 2),
+                                                    (construct_tet_bdm2, "BDM", 2),
+                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2)])
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -711,7 +738,9 @@ def test_linear_vec(elem_gen, elem_code, deg):
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_ned, "N1curl", 1),
-                                                    (construct_tet_ned2, "N1curl", 2)])
+                                                    (construct_tet_ned2, "N1curl", 2),
+                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2)
+                                                    ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -732,17 +761,19 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     error_gs = []
     error_row_lists = []
     for g in group:
+        # mesh = UnitTetrahedronMesh()
         mesh = TwoTetMesh(perm=g)
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
+            # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([12, 13], [12, 13])])
             res2 = assemble(interpolate(vec(mesh), V2))
             CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], vec(mesh, array=True)):
-                    print(res3.dat.data[i])
+                    # print(res3.dat.data[i])
                     error_gs += [g]
                     error_rows += [i]
             error_row_lists += [error_rows]
@@ -760,7 +791,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13)])
-def test_const_two_tet(elem_gen, elem_code, deg, max_err):
+def test_project_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     # elem_perms = elem_gen(cell, perm=True)
     elem_mats = elem_gen(cell, perm=False)
