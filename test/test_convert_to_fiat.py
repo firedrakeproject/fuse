@@ -5,8 +5,10 @@ from fuse import *
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_dg0_integral, construct_dg1_integral, construct_dg2_integral
-from test_3d_examples_docs import construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind, construct_tet_ned_2nd_kind_2, construct_tet_bdm, construct_tet_bdm2, construct_tet_ned2, construct_tet_cg4
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
+from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind,
+                                   construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
+                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_ned2, construct_tet_cg4)
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -683,8 +685,9 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    i = 1
+    i = 0
     mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+    # mesh = UnitTetrahedronMesh()
     x = SpatialCoordinate(mesh)
     candidate_vecs = [
         [1, 0, 0], [0, 0, 0],
@@ -693,7 +696,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
         [x[2], 0, 0], [0, x[2], 0], [0, 0, x[2]],
         [x[0], x[1], 0], [x[1], x[0], 0], [x[1], 0, x[0]], [x[0], x[1], x[2]]
     ]
-
+    print(mesh.entity_orientations)
     for v in candidate_vecs:
         vec = as_vector(v)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -702,7 +705,8 @@ def test_linear_vec(elem_gen, elem_code, deg):
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec, CG3))
-            assert np.allclose(res3.dat.data, res4.dat.data)
+            if not np.allclose(res3.dat.data, res4.dat.data):
+                print(vec)
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -710,24 +714,28 @@ def test_linear_vec(elem_gen, elem_code, deg):
             res3 = assemble(interpolate(res1, CG3))
             res4 = assemble(interpolate(vec, CG3))
             assert np.allclose(res3.dat.data, res4.dat.data)
+    assert False
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_ned, "N1curl", 1),
                                                     (construct_tet_ned2, "N1curl", 2),
-                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2)
+                                                    (construct_tet_bdm2, "BDM", 2),
+                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2),
+                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2)
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
     def vec(mesh, array=False):
+        x = SpatialCoordinate(mesh)
         if array:
-            return np.array([1, 1, 1])
-        return as_vector([1, 1, 1])
+            return np.array([x[1], 0, 0])
+        return as_vector([x[1], 0, 0])
 
-    from firedrake.utility_meshes import TwoTetMesh
+    from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
              sp.combinatorics.Permutation([0, 3, 1, 2]),
@@ -742,13 +750,15 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
+            # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20], [18, 19, 20])])
             res2 = assemble(interpolate(vec(mesh), V2))
             CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
+            res4 = assemble(interpolate(vec(mesh), CG3))
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
-                if not np.allclose(res3.dat.data[i], vec(mesh, array=True)):
-                    print(res3.dat.data[i])
+                if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
+                    print("error")
                     error_gs += [g]
                     error_rows += [i]
             error_row_lists += [error_rows]
@@ -814,7 +824,7 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg",
-                         [(construct_tet_cg4, "CG", 4), (construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2)
+                         [(construct_tet_cg4, "CG", 4), (construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2), (construct_tet_bdm2, "BDM", 2),
                           ])
 def test_3d_two_form(elem_gen, elem_code, deg):
 

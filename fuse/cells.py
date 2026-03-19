@@ -544,6 +544,9 @@ class Point():
                 return self.oriented.permute(verts)
             return verts
 
+    def ordered_vertex_coords(self):
+        return [self.get_node(o, return_coords=True) for o in self.ordered_vertices()]
+
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
