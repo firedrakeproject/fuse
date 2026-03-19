@@ -140,7 +140,9 @@ def create_cg1_flipped(cell):
     return cg
 
 
-def create_cg2(cell):
+def create_cg2(cell=None):
+    if cell == None:
+        cell = line()
     deg = 2
     if cell.dim() > 1:
         raise NotImplementedError("This method is for cg2 on edges, please use create_cg2_tri for triangles")

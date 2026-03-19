@@ -22,6 +22,10 @@ class TensorProductTriple(ElementTriple):
         self.cell = TensorProductPoint(A.cell, B.cell)
         self.flat = flat
         self.apply_matrices = False
+        if self.flat:
+            self.unflat_cell = self.cell
+            self.cell = self.cell.flatten()
+            self.setup_matrices()
 
     def sub_elements(self):
         return [self.A, self.B]
@@ -30,18 +34,58 @@ class TensorProductTriple(ElementTriple):
         return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
 
     def setup_matrices(self):
-        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.A.generate() + self.B.generate())
+        if self.A.dimension > 1 or self.B.dimension > 1:
+            raise NotImplementedError("Combining of matrices not implemented in 3D")
+        self.A.to_ufl()
+        self.B.to_ufl()
+        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate())
+        unflat_top = self.unflat_cell.to_fiat().get_topology()
+        for dim in unflat_top.keys():
+            a_ents = self.A.cell.get_topology()[dim[0]].keys()
+            b_ents = self.A.cell.get_topology()[dim[1]].keys()
+            ents = [(a, b) for a in a_ents for b in b_ents]
+            for e, (a, b) in enumerate(ents):
+                ent_dofs = self.entity_dofs[dim][(a, b)]
+                if len(ent_dofs) > 1:
+                    sub_mat = oriented_mats_by_entity[sum(dim)][e]
+                    a_mat = self.A.matrices[dim[0]][a]
+                    b_mat = self.B.matrices[dim[1]][b]
+                    # need to make groups for tensor product cell that are
+                    # different for flat or not
+                    breakpoint()
+        from collections import defaultdict
+        from FIAT.reference_element import tuple_sum
+
         breakpoint()
-        for dim in range(self.cell.dimension):
-            for dimA in range(self.A.cell.dimension):
-                pass
-            for dimB in range(self.B.cell_dimension):
-                pass
         return super().setup_matrices()
+
+    def generate(self):
+        a_dofs = self.A.generate()
+        b_dofs = self.B.generate()
+        a_ent_assocs, _, _ = self.A._entity_associations(a_dofs, overall=False)
+        b_ent_assocs, _, _ = self.B._entity_associations(b_dofs, overall=False)
+        unflat_top = self.unflat_cell.to_fiat().get_topology()
+        self.entity_dofs = {}
+        dofs = []
+        counter = 0
+        for dim in unflat_top.keys():
+            ents_A = a_ent_assocs[dim[0]].keys()
+            ents_B = b_ent_assocs[dim[1]].keys()
+            self.entity_dofs[dim] = {(a_e, b_e): tuple() for a_e in ents_A for b_e in ents_B}
+            for a_e, b_e in self.entity_dofs[dim].keys():
+                a_dofs = [d for dofs in a_ent_assocs[dim[0]][a_e].values() for d in dofs]
+                b_dofs = [d for dofs in b_ent_assocs[dim[1]][b_e].values() for d in dofs]
+                new_dofs = [(a, b) for a in a_dofs for b in b_dofs]
+                dofs += new_dofs
+                self.entity_dofs[dim][(a_e, b_e)] = [i + counter for i in range(len(new_dofs))]
+                counter += len(new_dofs)
+        self.dofs = dofs
+        return dofs
+
 
     def to_ufl(self):
         if self.flat:
-            return FuseElement(self, self.cell.flatten().to_ufl())
+            return FuseElement(self, self.cell.to_ufl())
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements()]
         return TensorProductElement(*ufl_sub_elements, cell=self.cell.to_ufl())
 

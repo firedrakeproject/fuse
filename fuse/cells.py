@@ -980,6 +980,15 @@ class TensorProductPoint():
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
 
+    def get_starter_ids(self):
+        # this doesn't actually make sense - remove when confirmed all changes to eliminate min ids from triple is done
+        a_starts = self.A.get_starter_ids()
+        b_starts = self.B.get_starter_ids()
+        ids = []
+        for a, b in zip(a_starts, b_starts):
+            ids += [max(a, b)]
+        return ids
+
     def get_spatial_dimension(self):
         return self.dimension
 

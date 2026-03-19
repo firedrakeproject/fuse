@@ -343,9 +343,8 @@ class ElementTriple():
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
 
-    def _entity_associations(self, dofs):
-        min_ids = self.cell.get_starter_ids()
-        entity_associations = {dim: {e.id - min_ids[dim]: {} for e in self.cell.d_entities(dim)}
+    def _entity_associations(self, dofs, overall=True):
+        entity_associations = {dim: {i: {} for i, e in enumerate(self.cell.d_entities(dim))}
                                for dim in range(self.cell.dim() + 1)}
         cell_dim = self.cell.dim()
         cell_dict = entity_associations[cell_dim][0]
@@ -355,8 +354,13 @@ class ElementTriple():
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
             sub_dim = d.cell_defined_on.dim()
-            sub_dict = entity_associations[sub_dim][d.cell_defined_on.id - min_ids[sub_dim]]
-            for dim in set([sub_dim, cell_dim]):
+            cell_defined_on_id = self.cell.d_entities_ids(sub_dim).index(d.cell_defined_on.id)
+            sub_dict = entity_associations[sub_dim][cell_defined_on_id]
+            if overall:
+                dims = set([sub_dim, cell_dim])
+            else:
+                dims = [sub_dim]
+            for dim in dims:
                 dof_gen = str(d.generation[dim])
 
                 if not len(d.generation[dim].g2.members()) == 1:
@@ -369,7 +373,6 @@ class ElementTriple():
                     sub_dict[dof_gen] += [d]
                 elif dim < cell_dim or not d.immersed:
                     sub_dict[dof_gen] = [d]
-
                 if dof_gen in cell_dict.keys() and dim == cell_dim and d.immersed:
                     cell_dict[dof_gen] += [d]
                 elif dim == cell_dim and d.immersed:
@@ -385,8 +388,10 @@ class ElementTriple():
             oriented_mats_by_entity[dim] = {}
             flat_by_entity[dim] = {}
             ents = self.cell.d_entities(dim)
-            for e in ents:
-                e_id = e.id - min_ids[dim]
+            for e_id, e in enumerate(ents):
+                old_e_id = e.id - min_ids[dim]
+                if e_id != old_e_id:
+                    raise ValueError("e id problems")
                 members = e.group.members()
                 oriented_mats_by_entity[dim][e_id] = {}
                 flat_by_entity[dim][e_id] = {}
@@ -411,8 +416,10 @@ class ElementTriple():
         # dof mapping according to the generation
         for dim in range(self.cell.dim() + 1):
             ents = self.cell.d_entities(dim)
-            for e in ents:
-                e_id = e.id - min_ids[dim]
+            for e_id, e in enumerate(ents):
+                old_e_id = e.id - min_ids[dim]
+                if e_id != old_e_id:
+                    raise ValueError("e id problems")
                 members = e.group.members()
                 for g in members:
                     val = g.numeric_rep()
@@ -478,7 +485,10 @@ class ElementTriple():
                             g_sub_mat = perm_list_to_matrix(identity, [sub_e for sub_e, _ in permuted_ents])
                             for sub_e, sub_g in permuted_ents:
                                 sub_e = self.cell.get_node(sub_e)
-                                sub_e_id = sub_e.id - min_ids[sub_e.dim()]
+                                old_sub_e_id = sub_e.id - min_ids[sub_e.dim()]
+                                sub_e_id = self.cell.d_entities(sub_e.dim(), get_class=False).index(sub_e.id)
+                                if sub_e_id != old_sub_e_id:
+                                    raise ValueError("sub e id problems")
                                 sub_ent_ids = []
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
                                     sub_ent_ids += [self.dof_id_to_fiat_id[e.id] for e in v]
