@@ -976,9 +976,24 @@ class TensorProductPoint():
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = False
+        self.fiat_elem = None
+        self.group = self.compute_cell_group().add_cell(self)
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
+
+    def compute_cell_group(self):
+        """
+        Systematically work out the symmetry group of the tensor product cell.
+        """
+        verts = self.vertices()
+        group = [(g_a, g_b) for g_a in self.A.group.members() for g_b in self.A.group.members()]
+        perms = []
+        for g_a, g_b in group:
+            new_verts = [(v_a, v_b) for v_a in g_a.permute(self.A.vertices()) for v_b in g_b.permute(self.B.vertices())]
+            perm = [verts.index(v) for v in new_verts]
+            perms += [fuse_groups.Permutation(perm)]
+        return fuse_groups.PermutationSetRepresentation(perms)
 
     def get_starter_ids(self):
         # this doesn't actually make sense - remove when confirmed all changes to eliminate min ids from triple is done
@@ -993,8 +1008,7 @@ class TensorProductPoint():
         return self.dimension
 
     def get_sub_entities(self):
-        self.A.get_sub_entities()
-        self.B.get_sub_entities()
+        return self.to_fiat().sub_entities
 
     def dim(self):
         return (self.A.dimension, self.B.dimension)
@@ -1004,18 +1018,19 @@ class TensorProductPoint():
 
     def vertices(self, get_class=True, return_coords=False):
         # TODO maybe refactor with get_node
-        verts = self.d_entities(0, get_class)
         if return_coords:
             a_verts = self.A.vertices(return_coords=return_coords)
             b_verts = self.B.vertices(return_coords=return_coords)
             return [a + b for a in a_verts for b in b_verts]
-        return verts
+        return [(a, b) for a in self.A.vertices() for b in self.B.vertices()]
 
     def to_ufl(self, name=None):
         return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
 
     def to_fiat(self, name=None):
-        return CellComplexToFiatTensorProduct(self, name)
+        if self.fiat_elem is None:
+            self.fiat_elem =  CellComplexToFiatTensorProduct(self, name)
+        return self.fiat_elem
 
     def flatten(self):
         assert self.A.equivalent(self.B)
