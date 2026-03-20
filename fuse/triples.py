@@ -56,7 +56,7 @@ class ElementTriple():
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
-        degree = self.spaces[0].degree()
+        degree = self.spaces[0].degree() + 1
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
@@ -440,7 +440,7 @@ class ElementTriple():
                                 # len(dof_gen_class[dim].g2.members()) == 2:
                                 # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
-                                if g not in dof_gen_class[dim].g1.members():
+                                if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                     value_change = -1*value_change
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
                                 # sub_mat = (~g).matrix_form()

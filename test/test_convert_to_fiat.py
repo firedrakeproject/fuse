@@ -723,16 +723,17 @@ def test_linear_vec(elem_gen, elem_code, deg):
                                                     (construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
                                                     (construct_tet_ned_2nd_kind_2, "N2curl", 2),
-                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2)
+                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
+                                                    (construct_tet_cg4, "CG", 4),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
-    def vec(mesh, array=False):
+    def vec(mesh):
         x = SpatialCoordinate(mesh)
-        if array:
-            return np.array([x[1], 0, 0])
+        if elem_code == "CG":
+            return x[1]
         return as_vector([x[1], 0, 0])
 
     from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
@@ -752,7 +753,13 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20], [18, 19, 20])])
             res2 = assemble(interpolate(vec(mesh), V2))
-            CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+            # print(res2.dat.data[9:12])
+            # print(res2.dat.data[0:9])
+            # print(res2.dat.data[30:39])
+            if elem_code == "CG":
+                CG3 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+            else:
+                CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec(mesh), CG3))
             error_rows = []
@@ -775,17 +782,19 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13)])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     # elem_perms = elem_gen(cell, perm=True)
-    elem_mats = elem_gen(cell, perm=False)
+    elem_mats = elem_gen(cell)
     # ufl_elem_perms = elem_perms.to_ufl()
     ufl_elem_mats = elem_mats.to_ufl()
 
     def expr(mesh):
         x = SpatialCoordinate(mesh)
-        if elem_code == "RT" or elem_code == "N1curl":
+        if elem_code != "CG":
             return as_vector([x[0], 2*x[1], 3*x[2]])
         return x[0]
     errors = []

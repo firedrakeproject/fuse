@@ -269,25 +269,6 @@ def construct_tet_bdm(cell=None, perm=None):
     bdm = ElementTriple(cell, (space, CellHDiv, "C0"), [faces])
     return bdm
 
-def construct_tet_bdm(cell=None, perm=None):
-    if cell is None:
-        cell = make_tetrahedron()
-    face = cell.d_entities(2, get_class=True)[0]
-    deg = 1
-
-    space = PolynomialSpace(deg, set_shape=True)
-
-    s_0 = sp.Symbol("s_0")
-    s_1 = sp.Symbol("s_1")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(1 - s_0 - s_1, symbols=(s_0, s_1)))]
-    dofs = DOFGenerator(xs, C3, S2)
-    face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
-    im_xs = [immerse(cell, face_vec, TrHDiv)]
-    faces = DOFGenerator(im_xs, tet_faces, S1)
-
-    bdm = ElementTriple(cell, (space, CellHDiv, "C0"), [faces])
-    return bdm
-
 
 def construct_tet_bdm2(cell=None, perm=None):
     if cell is None:
@@ -312,13 +293,7 @@ def construct_tet_bdm2(cell=None, perm=None):
     s_0 = sp.Symbol("s_0")
     s_1 = sp.Symbol("s_1")
     s_2 = sp.Symbol("s_2")
-    zero = sp.Poly(0, (s_0, s_1, s_2))
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_1 - s_2 + 1, s_0, s_0], symbols=(s_0, s_1, s_2)))]
-        #   DOF(L2Pairing(), BarycentricPolynomialKernel([s_1, -s_0 - s_2 + 1, s_1], symbols=(s_0, s_1, s_2))),
-        #   DOF(L2Pairing(), BarycentricPolynomialKernel([s_2, s_2, -s_0 - s_1 + 1], symbols=(s_0, s_1, s_2))),
-        #   DOF(L2Pairing(), BarycentricPolynomialKernel([-s_1, s_0, zero], symbols=(s_0, s_1, s_2))),
-        #   DOF(L2Pairing(), BarycentricPolynomialKernel([-s_2, zero, s_0], symbols=(s_0, s_1, s_2))),
-        #   DOF(L2Pairing(), BarycentricPolynomialKernel([zero, - s_2, s_1], symbols=(s_0, s_1, s_2)))]
     interior = DOFGenerator(xs, tet_edges, S1)
 
     bdm2 = ElementTriple(cell, (space, CellHDiv, "C0"), [faces, interior])
@@ -460,12 +435,13 @@ def construct_tet_ned_2nd_kind_2(tet=None, both=False):
 
     s_1 = sp.Symbol("s_1")
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([s_0, 1 + s_1], symbols=(s_0, s_1)))]
-    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, diff_C3, S1))
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, C3, S1))
 
     face_dofs = DOFGenerator([immerse(tet, face_vec, TrH1)], tet_faces, S1)
 
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs])
     return ned
+
 
 def construct_tet_ned_2nd_kind_2_non_bary(tet=None, both=False):
     if tet is None:
@@ -544,6 +520,7 @@ def construct_tet_ned3(tet=None, both=False):
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs, int_dofs])
     return ned
 
+
 def test_plot_tet_ned2():
     nd = construct_tet_ned2()
     # nd.plot(filename="new.png")
@@ -604,10 +581,27 @@ def construct_V(elem):
     return V
 
 
+def inte_mom(pt_dict, fn):
+    pts = list(pt_dict.keys())
+    wts = np.array([foo[0][0] for foo in list(pt_dict.values())])
+    result = np.dot(wts, [fn(p) for p in pts])
+
+    return result
+
+
 def test_tet_nd3():
-    nd3 = construct_tet_ned3()
-    nd3.to_fiat()
+    # nd3 = construct_tet_rt2()
+    # nd3.to_fiat()
     # nd3 = construct_tet_ned_2nd_kind_2()
+    nd3 = construct_tet_cg4()
+    for dof in nd3.generate():
+        dof_dict = dof.to_quadrature(1, (3,))
+        if dof.cell_defined_on.id == nd3.cell.get_starter_ids()[2]:
+            print(dof.pairing.orientation)
+            # print(np.array(list(dof_dict.keys())[0]))
+            # print("vals")
+            # print(np.array([[v[0] for v in val]for val in list(dof_dict.values())]))
+            print(inte_mom(dof_dict, lambda x: x))
     # bdm2 = construct_tet_bdm2()
     # nd3.to_ufl()
     # nd3.to_fiat()

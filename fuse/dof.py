@@ -433,7 +433,7 @@ class DOF():
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            pts = [np.matmul(pt, basis_change) for pt in Qpts]
+            pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
