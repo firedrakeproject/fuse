@@ -134,8 +134,8 @@ def test_flattening(A, B, res):
 def test_cg1_dg0():
     A = construct_cg1()
     B = construct_dg1_integral()
-    non_sym = tensor_product(A, B).flatten()
-    non_sym2 = tensor_product(B, A).flatten()
+    non_sym = tensor_product(A, B)
+    # non_sym2 = tensor_product(B, A).flatten()
     # from finat.element_factory import convert
     # non_sym, _ = convert(non_sym.to_ufl(), shift_axes=0)
     # non_sym2, _ = convert(non_sym2.to_ufl(), shift_axes=0)

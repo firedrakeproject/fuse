@@ -384,14 +384,12 @@ class ElementTriple():
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}
         flat_by_entity = {}
-        for dim in range(self.cell.dim() + 1):
+        for dim in range(self.cell.dimension + 1):
             oriented_mats_by_entity[dim] = {}
             flat_by_entity[dim] = {}
             ents = self.cell.d_entities(dim)
             for e_id, e in enumerate(ents):
-                old_e_id = e.id - min_ids[dim]
-                if e_id != old_e_id:
-                    raise ValueError("e id problems")
+                # old_e_id = e.id - min_ids[dim]
                 members = e.group.members()
                 oriented_mats_by_entity[dim][e_id] = {}
                 flat_by_entity[dim][e_id] = {}

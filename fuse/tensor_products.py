@@ -22,10 +22,10 @@ class TensorProductTriple(ElementTriple):
         self.cell = TensorProductPoint(A.cell, B.cell)
         self.flat = flat
         self.apply_matrices = False
+        self.setup_matrices()
         if self.flat:
             self.unflat_cell = self.cell
             self.cell = self.cell.flatten()
-            self.setup_matrices()
 
     def sub_elements(self):
         return [self.A, self.B]
@@ -34,13 +34,18 @@ class TensorProductTriple(ElementTriple):
         return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
 
     def setup_matrices(self):
-        if self.A.dimension > 1 or self.B.dimension > 1:
+        if self.A.cell.dimension > 1 or self.B.cell.dimension > 1:
             raise NotImplementedError("Combining of matrices not implemented in 3D")
+        if self.cell.flat:
+            raise NotImplementedError("Matrices for flattened cells not yet implemented")
         self.A.to_ufl()
         self.B.to_ufl()
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate())
-        unflat_top = self.unflat_cell.to_fiat().get_topology()
-        for dim in unflat_top.keys():
+        if self.flat:
+            top = self.unflat_cell.to_fiat().get_topology()
+        else:
+            top = self.cell.to_fiat().get_topology()
+        for dim in top.keys():
             a_ents = self.A.cell.get_topology()[dim[0]].keys()
             b_ents = self.A.cell.get_topology()[dim[1]].keys()
             ents = [(a, b) for a in a_ents for b in b_ents]
@@ -64,11 +69,14 @@ class TensorProductTriple(ElementTriple):
         b_dofs = self.B.generate()
         a_ent_assocs, _, _ = self.A._entity_associations(a_dofs, overall=False)
         b_ent_assocs, _, _ = self.B._entity_associations(b_dofs, overall=False)
-        unflat_top = self.unflat_cell.to_fiat().get_topology()
+        if self.flat:
+            top = self.unflat_cell.to_fiat().get_topology()
+        else:
+            top = self.cell.to_fiat().get_topology()
         self.entity_dofs = {}
         dofs = []
         counter = 0
-        for dim in unflat_top.keys():
+        for dim in top.keys():
             ents_A = a_ent_assocs[dim[0]].keys()
             ents_B = b_ent_assocs[dim[1]].keys()
             self.entity_dofs[dim] = {(a_e, b_e): tuple() for a_e in ents_A for b_e in ents_B}
@@ -81,7 +89,6 @@ class TensorProductTriple(ElementTriple):
                 counter += len(new_dofs)
         self.dofs = dofs
         return dofs
-
 
     def to_ufl(self):
         if self.flat:
