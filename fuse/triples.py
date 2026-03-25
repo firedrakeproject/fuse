@@ -440,8 +440,8 @@ class ElementTriple():
                                 # len(dof_gen_class[dim].g2.members()) == 2:
                                 # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
-                                if g not in dof_gen_class[dim].g1.members() and value_change == 1:
-                                    value_change = -1*value_change
+                                # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
+                                #     value_change = -1*value_change
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?

@@ -12,7 +12,7 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
-np.set_printoptions(linewidth=90, precision=4, suppress=True)
+np.set_printoptions(linewidth=120, precision=4, suppress=True)
 
 
 def create_dg0(cell):
@@ -607,6 +607,7 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_ned2, "N1curl", 2, 1.8),
                                                               (construct_tet_ned_2nd_kind, "N2curl", 1, 1.8),
                                                               (construct_tet_ned_2nd_kind_2, "N2curl", 2, 2.8),
+                                                              (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2, 2.8),
                                                               (construct_tet_bdm, "BDM", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8)])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
@@ -681,7 +682,8 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
-                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2)])
+                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2),
+                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2)])
 def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -717,6 +719,257 @@ def test_linear_vec(elem_gen, elem_code, deg):
     assert False
 
 
+def test_ned_2nd_kind_edges():
+    elem = construct_tet_ned_2nd_kind_2()
+    from firedrake.utility_meshes import OneTetMesh
+    mesh = OneTetMesh()
+    V2 = FunctionSpace(mesh, elem.to_ufl())
+    coords = mesh.coordinates.dat.data
+    o = coords[1]
+    t_0 = as_vector(coords[2] - o)
+    t_1 = as_vector(coords[3] - o)
+    t_2 = as_vector(coords[0] - o)
+    t_3 = as_vector(coords[2] - coords[3])
+    t_4 = as_vector(coords[0] - coords[3])
+    t_5 = as_vector(coords[2] - coords[0])
+    x = SpatialCoordinate(mesh)
+    vs = [t_0, t_1, t_2, t_3, t_4, t_5]
+    for vec in vs:
+        res = assemble(interpolate(vec, V2)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) == 3
+
+
+def test_ned_2nd_kind_faces():
+    elem = construct_tet_ned_2nd_kind_2()
+    from firedrake.utility_meshes import OneTetMesh
+    mesh = OneTetMesh()
+    V2 = FunctionSpace(mesh, elem.to_ufl())
+    coords = mesh.coordinates.dat.data
+    o = coords[1]
+    t_0 = as_vector(coords[2] - o)
+    t_1 = as_vector(coords[3] - o)
+    t_2 = as_vector(coords[0] - o)
+    t_3 = as_vector(coords[2] - coords[3])
+    t_4 = as_vector(coords[0] - coords[3])
+    x = SpatialCoordinate(mesh)
+    vs = [cross(t_0, t_1), cross(t_1, t_2), cross(t_2, t_0), cross(t_3, t_4)]
+    for vec in vs:
+        res = assemble(interpolate(vec, V2)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) == 12
+
+def test_face_basis():
+    print()
+    elem_nb, face = construct_tet_ned_2nd_kind_2()
+    elem_nb, face_nb = construct_tet_ned_2nd_kind_2_non_bary()
+    rt = construct_rt()
+    l1 = lambda x: (1/3) - x[0]/2 - x[1]/2*np.sqrt(3)
+    l2 = lambda x: (1/3) - x[1]/np.sqrt(3)
+    l3 = lambda x: (1/3) + x[0]/2 - x[1]/2*np.sqrt(3)
+    tangents = [face.cell.basis_vectors(entity=face.cell.d_entities(1)[i]) for i in range(3)]
+    dl1, dl2, dl3 = np.array([-1/2, -1/2*np.sqrt(3)]), np.array([0, -1/np.sqrt(3)]), np.array([1/2, -1/2*np.sqrt(3)])
+    vecs = [lambda x: l2(x)*dl1 - l1(x)*dl2, lambda x: l1(x)*dl3 - l3(x)*dl1, lambda x: l2(x)*dl3 - l3(x)*dl2]
+
+    nd_vecs = [lambda x: [1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]],
+               lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]],
+               lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]]]
+
+    rt_vecs = [lambda x: [(np.sqrt(3)/6)*x[0], -1/3 + (np.sqrt(3)/6)*x[1]],
+               lambda x: [(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]],
+               lambda x: [(np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]]]
+    # vecs = [lambda x: bary(x)*-np.matmul(tangent, np.array([[0, -1], [1, 0]])).squeeze() for bary, tangent in zip([l1,l2,l3], tangents)]
+    dofs = face.generate()
+    res = np.zeros((3, 3))
+    for j, v in enumerate(vecs):
+        for i in range(len(rt.generate())):
+                res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+    print(res)
+    dofs = face_nb.generate()
+    res = np.zeros((3, 3))
+    for j, v in enumerate(vecs):
+        for i in range(len(rt.generate())):
+                res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+    print(res)
+
+    dofs = rt.generate()
+    res = np.zeros((3, 3))
+    for j, v in enumerate(rt_vecs):
+        for i in range(len(rt.generate())):
+                res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+    print(res)
+
+    mesh = UnitTriangleMesh()
+    V = FunctionSpace(mesh, "RT", 1)
+    dual = V.finat_element.fiat_equivalent.dual
+    res_node = np.zeros_like(res)
+    for j, v in enumerate(rt_vecs):
+        for i in range(len(dual.nodes)):
+            res_node[j][i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
+    print(res_node)
+    breakpoint()
+
+def test_ned_2nd_kind_basis_funcs_gen():
+    elem, _ = construct_tet_ned_2nd_kind_2()
+    elem2, _ = construct_tet_ned_2nd_kind_2_non_bary()
+    cell = elem.cell
+    x, y, z = sp.Symbol("x"), sp.Symbol("y"), sp.Symbol("z")
+    symbols = [x, y, z]
+    v_0 = cell.ordered_vertex_coords()[0]
+    bvs = np.array(cell.basis_vectors(norm=False))
+    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y, z) - v_0))
+    bary = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
+    db = []
+    for b in bary:
+        db += [np.array((sp.diff(b, x), sp.diff(b, y), sp.diff(b, z))).astype(np.float64)]
+    vecs = [sp.Matrix(l1*dl2 - l2*dl1) for l1, dl1 in zip(bary, db) for l2, dl2 in zip(bary, db) if not np.allclose(dl1, dl2) ]
+    from firedrake.utility_meshes import OneTetMesh
+    mesh = OneTetMesh()
+    V3 = FunctionSpace(mesh, elem2.to_ufl())
+    V2 = FunctionSpace(mesh, elem.to_ufl())
+    V = FunctionSpace(mesh, "N2curl", 2)
+    x_m = SpatialCoordinate(mesh)
+    total_fuse_zeros = 0
+    for v in vecs:
+        print(v)
+        vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
+        res3 = assemble(interpolate(vec, V3)).dat.data
+        res2 = assemble(interpolate(vec, V2)).dat.data
+        res = assemble(interpolate(vec, V)).dat.data
+        # breakpoint()
+        # def vec(x):
+        #     JtJ1J = np.linalg.inv(J.T @ J) @ J.T
+        #     return (JtJ1J @ (x - o)) @ J.T
+        # plot_vector_field(coords, vec)
+        # dual = V.finat_element.fiat_equivalent.dual
+        # dual2 = V2.finat_element.fiat_equivalent.dual
+        # res_node2 = np.zeros_like(res2)
+        # res_node = np.zeros_like(res)
+        # for i in range(len(dual.nodes)):
+        #     res_node[i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
+        #     res_node2[i] = evaluate_pt_dict(dual2.nodes[i].pt_dict, v)
+        print("FUSE NB", res3[V3.cell_node_list[0][18:]])
+        print("FUSE   ", res2[V2.cell_node_list[0][18:]])
+        print("FIAT   ", res[V.cell_node_list[0][18:]])
+        # print("FUSE N", res_node2[21:24])
+        # print("FIAT N", res_node[21:24])
+        # print(res2)
+        print("FUSE NB", sum([np.allclose(res3[i], 0) for i in list(V3.cell_node_list[0][18:])]))
+        print("FUSE   ", sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][18:])]))
+        print("FIAT   ", sum([np.allclose(res[i], 0) for i in list(V.cell_node_list[0][18:])]))
+        total_fuse_zeros += sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][18:])])
+    assert total_fuse_zeros == 8*len(vecs)
+
+def test_ned_2nd_kind_basis_funcs():
+    elem, _ = construct_tet_ned_2nd_kind_2()
+    elem2, _ = construct_tet_ned_2nd_kind_2_non_bary()
+    from firedrake.utility_meshes import OneTetMesh
+    mesh = OneTetMesh()
+    V3 = FunctionSpace(mesh, elem2.to_ufl())
+    V2 = FunctionSpace(mesh, elem.to_ufl())
+    V = FunctionSpace(mesh, "N2curl", 2)
+    coords = mesh.coordinates.dat.data
+    o = coords[1]
+    t_0 = coords[2] - o
+    t_1 = coords[3] - o
+    t_2 = coords[0] - o
+    t_3 = coords[2] - coords[3]
+    t_4 = coords[0] - coords[3]
+    x = SpatialCoordinate(mesh)
+    Js = [np.column_stack([t_0, t_1])]
+        #   np.column_stack([t_1, t_2]),
+        #   np.column_stack([t_2, t_0]),
+        #   np.column_stack([t_3, t_4])]
+    vecs = [lambda x: [x[2]/4 + np.sqrt(2)/8, x[2]/4 + np.sqrt(2)/8, -(x[0]+x[1])/4],
+            lambda x: [-x[1]/4 - np.sqrt(2)/8, (x[0]+x[2])/4, -x[1]/4 - np.sqrt(2)/8],
+            lambda x: [(x[2]-x[1])/4, x[0]/4 - np.sqrt(2)/8, -x[0]/4 + np.sqrt(2)/8]]
+    print()
+    total_fuse_zeros = 0
+    for v in vecs:
+        vec = as_tensor(v(x))
+    #     JtJ1J = np.linalg.inv(J.T @ J) @ J.T
+    #     tri = UnitTriangleMesh()
+    #     RT = FunctionSpace(tri, "RT", 1).finat_element.fiat_equivalent.get_nodal_basis()
+
+    #     breakpoint()
+    #     vec = RT.tabulate(x)
+        
+        # vec = dot(vec, as_tensor(J.T))
+        # vec = dot(dot(as_tensor(JtJ1J), (x - as_vector(o))), as_tensor(J.T))
+        res3 = assemble(interpolate(vec, V3)).dat.data
+        res2 = assemble(interpolate(vec, V2)).dat.data
+        res = assemble(interpolate(vec, V)).dat.data
+        # breakpoint()
+        # def vec(x):
+        #     JtJ1J = np.linalg.inv(J.T @ J) @ J.T
+        #     return (JtJ1J @ (x - o)) @ J.T
+        # plot_vector_field(coords, vec)
+        # dual = V.finat_element.fiat_equivalent.dual
+        # dual2 = V2.finat_element.fiat_equivalent.dual
+        # res_node2 = np.zeros_like(res2)
+        # res_node = np.zeros_like(res)
+        # for i in range(len(dual.nodes)):
+        #     res_node[i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
+        #     res_node2[i] = evaluate_pt_dict(dual2.nodes[i].pt_dict, v)
+        print("FUSE NB", res3[V3.cell_node_list[0][21:24]])
+        print("FUSE", res2[V2.cell_node_list[0][21:24]])
+        print("FIAT", res[V.cell_node_list[0][21:24]])
+        # print("FUSE N", res_node2[21:24])
+        # print("FIAT N", res_node[21:24])
+        # print(res2)
+        print("FUSE NB", sum([np.allclose(res3[i], 0) for i in list(V3.cell_node_list[0][21:24])]))
+        print("FUSE", sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][21:24])]))
+        print("FIAT", sum([np.allclose(res[i], 0) for i in list(V.cell_node_list[0][21:24])]))
+        total_fuse_zeros += sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][21:24])])
+    assert total_fuse_zeros == 3
+    breakpoint()
+
+
+def plot_vector_field(coords, fn=FileNotFoundError):
+    from mpl_toolkits.mplot3d import axes3d
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    x, y, z = np.meshgrid(np.arange(min(coords[:, 0]), max(coords[:, 0]), 0.3),
+                          np.arange(min(coords[:, 1]), max(coords[:, 1]), 0.3),
+                          np.arange(min(coords[:, 2]), max(coords[:, 2]), 0.3))
+    for i in range(len(coords)):
+        ax.plot([coords[i][0], coords[(i + 1) % len(coords)][0]],
+                [coords[i][1], coords[(i + 1) % len(coords)][1]],
+                zs=[coords[i][2], coords[(i + 1) % len(coords)][2]])
+        ax.plot([coords[i][0], coords[(i + 2) % len(coords)][0]],
+                [coords[i][1], coords[(i + 2) % len(coords)][1]],
+                zs=[coords[i][2], coords[(i + 2) % len(coords)][2]])
+        ax.plot([coords[i][0], coords[(i + 3) % len(coords)][0]],
+                [coords[i][1], coords[(i + 3) % len(coords)][1]],
+                zs=[coords[i][2], coords[(i + 3) % len(coords)][2]])
+    x = x.flatten()
+    y = y.flatten()
+    z = z.flatten()
+    uvw = np.array([fn([x[i], y[i], z[i]]) for i in range(len(x))])
+    x = x.reshape((5, 5, 5))
+    y = y.reshape((5, 5, 5))
+    z = z.reshape((5, 5, 5))
+    u = uvw[:, 0].reshape((5, 5, 5))
+    v = uvw[:, 1].reshape((5, 5, 5))
+    w = uvw[:, 2].reshape((5, 5, 5))
+    # u = np.sin(np.pi * x) * np.cos(np.pi * y) * np.cos(np.pi * z)
+    # v = -np.cos(np.pi * x) * np.sin(np.pi * y) * np.cos(np.pi * z)
+    # w = (np.sqrt(2.0 / 3.0) * np.cos(np.pi * x) * np.cos(np.pi * y) *
+    #     np.sin(np.pi * z))
+
+    ax.quiver(x, y, z, u, v, w, length=0.1)
+    plt.savefig("fn.png")
+    # plt.show()l
+
+
+def evaluate_pt_dict(pt_dict, fn):
+    pts = list(pt_dict.keys())
+    wts = np.array([[foo[i][0] for i in range(len(foo))] for foo in list(pt_dict.values())])
+    result = np.tensordot(wts, [fn(p) for p in pts])
+    return result
+
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_ned, "N1curl", 1),
@@ -728,13 +981,31 @@ def test_linear_vec(elem_gen, elem_code, deg):
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
-    elem = elem_gen(cell)
+    elem, _ = elem_gen(cell)
 
     def vec(mesh):
+        coords = mesh.coordinates.dat.data
+        o = coords[1]
+        t_0 = coords[2] - coords[1]
+        t_1 = coords[3] - coords[1]
+        t_2 = coords[0] - coords[1]
         x = SpatialCoordinate(mesh)
         if elem_code == "CG":
             return x[1]
-        return as_vector([x[1], 0, 0])
+        # return as_vector(2*t_0 + t_1)
+        # return as_vector((1/2)*(t_0 + t_1))
+        J = np.column_stack([t_0, t_1])
+        JtJ1J = np.linalg.inv(J.T @ J) @ J.T
+        res = dot(dot(as_tensor(JtJ1J), (x - as_vector(o))), as_tensor(J.T))
+        # def f(x):
+        #     return (JtJ1J @ (x - o))
+        # @ J.T
+        # breakpoint()
+        # return res
+        # return as_vector(np.linalg.norm(x - o - t_0)*np.linalg.norm(x - o - t_1)*(1/2)*(t_0 + t_1))
+        # return as_vector(np.cross(t_2, t_1))
+        return as_vector([x[0], 0, 0])
+    
 
     from firedrake.utility_meshes import TwoTetMesh, OneTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
@@ -747,6 +1018,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     error_gs = []
     error_row_lists = []
     for g in group:
+        # mesh = OneTetMesh()
         mesh = TwoTetMesh(perm=g)
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -762,6 +1034,8 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                 CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec(mesh), CG3))
+            print(res2.dat.data)
+            # breakpoint()
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
@@ -861,7 +1135,6 @@ def test_3d_two_form(elem_gen, elem_code, deg):
 
         # print("A")
         a = assemble(inner(u, v) * dx)
-        np.set_printoptions(linewidth=90, precision=4, suppress=True)
         # print(a.M.values[np.ix_(V.cell_node_list[0][12:16], V.cell_node_list[0][12:16])])
         # np.matmul(L.M.values[np.ix_([0, 1],[0, 1])], transform.T)
         print("L")
