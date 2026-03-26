@@ -762,12 +762,13 @@ def test_face_basis():
     elem_nb, face = construct_tet_ned_2nd_kind_2()
     elem_nb, face_nb = construct_tet_ned_2nd_kind_2_non_bary()
     rt = construct_rt()
+    nd = construct_nd()
     l1 = lambda x: (1/3) - x[0]/2 - x[1]/2*np.sqrt(3)
     l2 = lambda x: (1/3) - x[1]/np.sqrt(3)
     l3 = lambda x: (1/3) + x[0]/2 - x[1]/2*np.sqrt(3)
     tangents = [face.cell.basis_vectors(entity=face.cell.d_entities(1)[i]) for i in range(3)]
     dl1, dl2, dl3 = np.array([-1/2, -1/2*np.sqrt(3)]), np.array([0, -1/np.sqrt(3)]), np.array([1/2, -1/2*np.sqrt(3)])
-    vecs = [lambda x: l2(x)*dl1 - l1(x)*dl2, lambda x: l1(x)*dl3 - l3(x)*dl1, lambda x: l2(x)*dl3 - l3(x)*dl2]
+    vecs = [lambda x: l1(x)*dl2 - l2(x)*dl1, lambda x: l3(x)*dl1 - l1(x)*dl3, lambda x: l2(x)*dl3 - l3(x)*dl2]
 
     nd_vecs = [lambda x: [1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]],
                lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]],
@@ -780,31 +781,31 @@ def test_face_basis():
     dofs = face.generate()
     res = np.zeros((3, 3))
     for j, v in enumerate(vecs):
-        for i in range(len(rt.generate())):
+        for i in range(len(dofs)):
                 res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
     print(res)
     dofs = face_nb.generate()
     res = np.zeros((3, 3))
     for j, v in enumerate(vecs):
-        for i in range(len(rt.generate())):
+        for i in range(len(dofs)):
                 res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
     print(res)
 
-    dofs = rt.generate()
+    dofs = nd.generate()
     res = np.zeros((3, 3))
-    for j, v in enumerate(rt_vecs):
-        for i in range(len(rt.generate())):
+    for j, v in enumerate(vecs):
+        for i in range(len(nd.generate())):
                 res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
     print(res)
 
-    mesh = UnitTriangleMesh()
-    V = FunctionSpace(mesh, "RT", 1)
-    dual = V.finat_element.fiat_equivalent.dual
-    res_node = np.zeros_like(res)
-    for j, v in enumerate(rt_vecs):
-        for i in range(len(dual.nodes)):
-            res_node[j][i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
-    print(res_node)
+    # mesh = UnitTriangleMesh()
+    # V = FunctionSpace(mesh, "RT", 1)
+    # dual = V.finat_element.fiat_equivalent.dual
+    # res_node = np.zeros_like(res)
+    # for j, v in enumerate(rt_vecs):
+    #     for i in range(len(dual.nodes)):
+    #         res_node[j][i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
+    # print(res_node)
     breakpoint()
 
 def test_ned_2nd_kind_basis_funcs_gen():
@@ -834,24 +835,10 @@ def test_ned_2nd_kind_basis_funcs_gen():
         res3 = assemble(interpolate(vec, V3)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data
         res = assemble(interpolate(vec, V)).dat.data
-        # breakpoint()
-        # def vec(x):
-        #     JtJ1J = np.linalg.inv(J.T @ J) @ J.T
-        #     return (JtJ1J @ (x - o)) @ J.T
-        # plot_vector_field(coords, vec)
-        # dual = V.finat_element.fiat_equivalent.dual
-        # dual2 = V2.finat_element.fiat_equivalent.dual
-        # res_node2 = np.zeros_like(res2)
-        # res_node = np.zeros_like(res)
-        # for i in range(len(dual.nodes)):
-        #     res_node[i] = evaluate_pt_dict(dual.nodes[i].pt_dict, v)
-        #     res_node2[i] = evaluate_pt_dict(dual2.nodes[i].pt_dict, v)
+
         print("FUSE NB", res3[V3.cell_node_list[0][18:]])
         print("FUSE   ", res2[V2.cell_node_list[0][18:]])
         print("FIAT   ", res[V.cell_node_list[0][18:]])
-        # print("FUSE N", res_node2[21:24])
-        # print("FIAT N", res_node[21:24])
-        # print(res2)
         print("FUSE NB", sum([np.allclose(res3[i], 0) for i in list(V3.cell_node_list[0][18:])]))
         print("FUSE   ", sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][18:])]))
         print("FIAT   ", sum([np.allclose(res[i], 0) for i in list(V.cell_node_list[0][18:])]))
