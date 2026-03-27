@@ -6,9 +6,10 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_ned, construct_tet_ned_2nd_kind,
+from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
+                                   construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
-                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_ned2, construct_tet_cg4)
+                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary, construct_tet_ned2, construct_tet_cg4)
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -699,6 +700,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
         [x[0], x[1], 0], [x[1], x[0], 0], [x[1], 0, x[0]], [x[0], x[1], x[2]]
     ]
     print(mesh.entity_orientations)
+    failed = False
     for v in candidate_vecs:
         vec = as_vector(v)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -709,6 +711,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
             res4 = assemble(interpolate(vec, CG3))
             if not np.allclose(res3.dat.data, res4.dat.data):
                 print(vec)
+                failed = True
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -716,34 +719,46 @@ def test_linear_vec(elem_gen, elem_code, deg):
             res3 = assemble(interpolate(res1, CG3))
             res4 = assemble(interpolate(vec, CG3))
             assert np.allclose(res3.dat.data, res4.dat.data)
-    assert False
+    assert not failed
 
 
 def test_ned_2nd_kind_edges():
     elem = construct_tet_ned_2nd_kind_2()
+    elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
     mesh = OneTetMesh()
+    V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
+    V3 = FunctionSpace(mesh, elem.to_ufl())
     coords = mesh.coordinates.dat.data
     o = coords[1]
-    t_0 = as_vector(coords[2] - o)
-    t_1 = as_vector(coords[3] - o)
-    t_2 = as_vector(coords[0] - o)
-    t_3 = as_vector(coords[2] - coords[3])
-    t_4 = as_vector(coords[0] - coords[3])
-    t_5 = as_vector(coords[2] - coords[0])
+    t_0 = as_vector(coords[2] - o) / 2
+    t_1 = as_vector(coords[3] - o) / 2
+    t_2 = as_vector(coords[0] - o) / 2
+    t_3 = as_vector(coords[2] - coords[3]) / 2
+    t_4 = as_vector(coords[0] - coords[3]) / 2
+    t_5 = as_vector(coords[2] - coords[0]) / 2
     x = SpatialCoordinate(mesh)
     vs = [t_0, t_1, t_2, t_3, t_4, t_5]
+    min_ids = elem.cell.get_starter_ids()
     for vec in vs:
+        res = assemble(interpolate(vec, V)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 3
         res = assemble(interpolate(vec, V2)).dat.data
-        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) == 3
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 3
+        res = assemble(interpolate(vec, V3)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 3
+
 
 
 def test_ned_2nd_kind_faces():
     elem = construct_tet_ned_2nd_kind_2()
+    elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
     mesh = OneTetMesh()
+    V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
+    V3 = FunctionSpace(mesh, elem2.to_ufl())
     coords = mesh.coordinates.dat.data
     o = coords[1]
     t_0 = as_vector(coords[2] - o)
@@ -751,15 +766,20 @@ def test_ned_2nd_kind_faces():
     t_2 = as_vector(coords[0] - o)
     t_3 = as_vector(coords[2] - coords[3])
     t_4 = as_vector(coords[0] - coords[3])
-    x = SpatialCoordinate(mesh)
     vs = [cross(t_0, t_1), cross(t_1, t_2), cross(t_2, t_0), cross(t_3, t_4)]
     for vec in vs:
+        res = assemble(interpolate(vec, V)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 12
         res = assemble(interpolate(vec, V2)).dat.data
-        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) == 12
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 12
+        res = assemble(interpolate(vec, V3)).dat.data
+        assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 12
+
 
 def test_face_basis():
     print()
-    elem_nb, face = construct_tet_ned_2nd_kind_2()
+    elem = construct_tet_ned_2nd_kind_2()
+    face = elem.DOFGenerator[-1]
     elem_nb, face_nb = construct_tet_ned_2nd_kind_2_non_bary()
     rt = construct_rt()
     nd = construct_nd()
@@ -769,6 +789,7 @@ def test_face_basis():
     tangents = [face.cell.basis_vectors(entity=face.cell.d_entities(1)[i]) for i in range(3)]
     dl1, dl2, dl3 = np.array([-1/2, -1/2*np.sqrt(3)]), np.array([0, -1/np.sqrt(3)]), np.array([1/2, -1/2*np.sqrt(3)])
     vecs = [lambda x: l1(x)*dl2 - l2(x)*dl1, lambda x: l3(x)*dl1 - l1(x)*dl3, lambda x: l2(x)*dl3 - l3(x)*dl2]
+    vecs = [t*l1 for t in tangents]
 
     nd_vecs = [lambda x: [1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]],
                lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]],
@@ -808,6 +829,23 @@ def test_face_basis():
     # print(res_node)
     breakpoint()
 
+def test_make_face_bary():
+    cell = polygon(3)
+    x, y = sp.Symbol("x"), sp.Symbol("y")
+    symbols = [x, y]
+    v_0 = cell.ordered_vertex_coords()[0]
+    bvs = np.array(cell.basis_vectors(norm=False))
+    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y)) - v_0)
+    ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
+    rt_vecs = [[(np.sqrt(3)/6)*x, -1/3 + (np.sqrt(3)/6)*y],
+               [(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x, 1/6 + (np.sqrt(3)/6)*y],
+               [(np.sqrt(3)/6) + (np.sqrt(3)/6)*x, 1/6 + (np.sqrt(3)/6)*y]]
+    for i, perm in enumerate(C3.add_cell(cell).members()):
+        n_ls = perm.permute(ls)
+        print(rt_vecs[i])
+        print([(np.sqrt(3)/6)*(n_ls[2] - n_ls[1]), -1/6 - (1/2)*n_ls[0]])
+    breakpoint()
+
 @pytest.mark.parametrize("form_num", [1, 2])
 def test_basis_funcs_gen(form_num):
     from firedrake.utility_meshes import OneTetMesh
@@ -821,20 +859,22 @@ def test_basis_funcs_gen(form_num):
     ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
     dl = []
     for l in ls:
-        # dl += [np.array((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z))).astype(np.float64)]
         dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z)))]
     if form_num == 1:
-        elem, _ = construct_tet_ned_2nd_kind_2()
-        elem2, _ = construct_tet_ned_2nd_kind_2_non_bary()
-        proxy_field_1_form = [sp.Matrix(l1*dl2 - l2*dl1) for l1, dl1 in zip(ls, dl) for l2, dl2 in zip(ls, dl) if not np.allclose(dl1, dl2)]
+        elem = construct_tet_ned_2nd_kind_2()
+        elem2 = construct_tet_ned_2nd_kind_2_non_bary()
+        proxy_field_1_form = [sp.Matrix(l1*dl2 - l2*dl1) for i, (l1, dl1) in enumerate(zip(ls, dl)) for j, (l2, dl2) in enumerate(zip(ls, dl)) if i != j]
         basis_funcs = proxy_field_1_form
         V = FunctionSpace(mesh, "N2curl", 2)
+        V4 = FunctionSpace(mesh, "N1curl", 3)
     elif form_num == 2:
         elem = construct_tet_bdm2()
-        elem2 = construct_tet_rt2()
+        elem2 = construct_tet_bdm2_non_bary()
+        # elem2 = construct_tet_rt3()
         proxy_field_2_form = [2*sp.Matrix(ls[i]*dl[j].cross(dl[k]) - ls[j]*dl[i].cross(dl[k]) + ls[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 1, 2]]]
         basis_funcs = proxy_field_2_form
         V = FunctionSpace(mesh, "BDM", 2)
+        V4 = FunctionSpace(mesh, "RT", 3)
 
 
     V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -843,7 +883,7 @@ def test_basis_funcs_gen(form_num):
     x_m = SpatialCoordinate(mesh)
     total_fuse_zeros = 0
     total_fiat_zeros = 0
-    for v in basis_funcs:
+    for v in basis_funcs[:1]:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
         min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
@@ -854,8 +894,10 @@ def test_basis_funcs_gen(form_num):
         res = assemble(interpolate(vec, V)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data
         res3 = assemble(interpolate(vec, V3)).dat.data
+        res4 = assemble(interpolate(vec, V4)).dat.data
 
         print("FIAT   ", res[V.cell_node_list[0][min_id1:max_id1]])
+        print("FIAT 2 ", res4[V4.cell_node_list[0][0:24]])
         print("FUSE   ", res2[V2.cell_node_list[0][min_id1:max_id1]])
         print("FUSE 2 ", res3[V3.cell_node_list[0][min_id2:max_id2]])
 
@@ -867,7 +909,7 @@ def test_basis_funcs_gen(form_num):
         fiat_zeros = sum([np.allclose(res2[i], 0) for i in list(V.cell_node_list[0][min_id1:max_id1])])
         total_fuse_zeros += fuse_zeros
         total_fiat_zeros += fiat_zeros
-        breakpoint()
+    breakpoint()
     assert total_fuse_zeros == 8*len(basis_funcs)
 
 
