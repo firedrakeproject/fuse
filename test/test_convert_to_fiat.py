@@ -808,42 +808,68 @@ def test_face_basis():
     # print(res_node)
     breakpoint()
 
-def test_ned_2nd_kind_basis_funcs_gen():
-    elem, _ = construct_tet_ned_2nd_kind_2()
-    elem2, _ = construct_tet_ned_2nd_kind_2_non_bary()
-    cell = elem.cell
+@pytest.mark.parametrize("form_num", [1, 2])
+def test_basis_funcs_gen(form_num):
+    from firedrake.utility_meshes import OneTetMesh
+    mesh = OneTetMesh()
+    cell = make_tetrahedron()
     x, y, z = sp.Symbol("x"), sp.Symbol("y"), sp.Symbol("z")
     symbols = [x, y, z]
     v_0 = cell.ordered_vertex_coords()[0]
     bvs = np.array(cell.basis_vectors(norm=False))
     res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y, z) - v_0))
-    bary = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
-    db = []
-    for b in bary:
-        db += [np.array((sp.diff(b, x), sp.diff(b, y), sp.diff(b, z))).astype(np.float64)]
-    vecs = [sp.Matrix(l1*dl2 - l2*dl1) for l1, dl1 in zip(bary, db) for l2, dl2 in zip(bary, db) if not np.allclose(dl1, dl2) ]
-    from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh()
-    V3 = FunctionSpace(mesh, elem2.to_ufl())
+    ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
+    dl = []
+    for l in ls:
+        # dl += [np.array((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z))).astype(np.float64)]
+        dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z)))]
+    if form_num == 1:
+        elem, _ = construct_tet_ned_2nd_kind_2()
+        elem2, _ = construct_tet_ned_2nd_kind_2_non_bary()
+        proxy_field_1_form = [sp.Matrix(l1*dl2 - l2*dl1) for l1, dl1 in zip(ls, dl) for l2, dl2 in zip(ls, dl) if not np.allclose(dl1, dl2)]
+        basis_funcs = proxy_field_1_form
+        V = FunctionSpace(mesh, "N2curl", 2)
+    elif form_num == 2:
+        elem = construct_tet_bdm2()
+        elem2 = construct_tet_rt2()
+        proxy_field_2_form = [2*sp.Matrix(ls[i]*dl[j].cross(dl[k]) - ls[j]*dl[i].cross(dl[k]) + ls[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 1, 2]]]
+        basis_funcs = proxy_field_2_form
+        V = FunctionSpace(mesh, "BDM", 2)
+
+
     V2 = FunctionSpace(mesh, elem.to_ufl())
-    V = FunctionSpace(mesh, "N2curl", 2)
+    V3 = FunctionSpace(mesh, elem2.to_ufl())
+
     x_m = SpatialCoordinate(mesh)
     total_fuse_zeros = 0
-    for v in vecs:
+    total_fiat_zeros = 0
+    for v in basis_funcs:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
-        res3 = assemble(interpolate(vec, V3)).dat.data
-        res2 = assemble(interpolate(vec, V2)).dat.data
-        res = assemble(interpolate(vec, V)).dat.data
+        min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
+        max_id1 = max([v for e in elem.entity_ids[2].values() for v in e]) + 1
+        min_id2 = min([v for e in elem2.entity_ids[2].values() for v in e])
+        max_id2 = max([v for e in elem2.entity_ids[2].values() for v in e]) + 1
 
-        print("FUSE NB", res3[V3.cell_node_list[0][18:]])
-        print("FUSE   ", res2[V2.cell_node_list[0][18:]])
-        print("FIAT   ", res[V.cell_node_list[0][18:]])
-        print("FUSE NB", sum([np.allclose(res3[i], 0) for i in list(V3.cell_node_list[0][18:])]))
-        print("FUSE   ", sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][18:])]))
-        print("FIAT   ", sum([np.allclose(res[i], 0) for i in list(V.cell_node_list[0][18:])]))
-        total_fuse_zeros += sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][18:])])
-    assert total_fuse_zeros == 8*len(vecs)
+        res = assemble(interpolate(vec, V)).dat.data
+        res2 = assemble(interpolate(vec, V2)).dat.data
+        res3 = assemble(interpolate(vec, V3)).dat.data
+
+        print("FIAT   ", res[V.cell_node_list[0][min_id1:max_id1]])
+        print("FUSE   ", res2[V2.cell_node_list[0][min_id1:max_id1]])
+        print("FUSE 2 ", res3[V3.cell_node_list[0][min_id2:max_id2]])
+
+        print("FIAT   ", sum([np.allclose(res[i], 0) for i in list(V.cell_node_list[0][min_id1:max_id1])]))
+        print("FUSE   ", sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][min_id1:max_id1])]))
+        print("FUSE 2 ", sum([np.allclose(res3[i], 0) for i in list(V3.cell_node_list[0][min_id2:max_id2])]))
+
+        fuse_zeros = sum([np.allclose(res2[i], 0) for i in list(V2.cell_node_list[0][min_id1:max_id1])])
+        fiat_zeros = sum([np.allclose(res2[i], 0) for i in list(V.cell_node_list[0][min_id1:max_id1])])
+        total_fuse_zeros += fuse_zeros
+        total_fiat_zeros += fiat_zeros
+        breakpoint()
+    assert total_fuse_zeros == 8*len(basis_funcs)
+
 
 def test_ned_2nd_kind_basis_funcs():
     elem, _ = construct_tet_ned_2nd_kind_2()
@@ -878,7 +904,6 @@ def test_ned_2nd_kind_basis_funcs():
 
     #     breakpoint()
     #     vec = RT.tabulate(x)
-        
         # vec = dot(vec, as_tensor(J.T))
         # vec = dot(dot(as_tensor(JtJ1J), (x - as_vector(o))), as_tensor(J.T))
         res3 = assemble(interpolate(vec, V3)).dat.data

@@ -283,8 +283,8 @@ def construct_tet_bdm2(cell=None, perm=None):
     symbols = (s_0, s_1)
     vertex_basis = 2*s_0**2 + 4*s_0*s_1 - 3*s_0 + 2*s_1**2 - 3*s_1 + 1
     edge_basis = 4*s_0*(-s_0 - s_1 + 1)
-    xs = [DOF(L2Pairing(), PolynomialKernel(vertex_basis, symbols=symbols))]
-    xs1 = [DOF(L2Pairing(), PolynomialKernel(edge_basis, symbols=symbols))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=symbols))]
+    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=symbols))]
     dofs = [DOFGenerator(xs, C3, S3), DOFGenerator(xs1, C3, S3)]
     face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
     im_xs = [immerse(cell, face_vec, TrHDiv)]
