@@ -6,7 +6,7 @@ from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
-from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2,
+from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
                                    construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary, construct_tet_ned2, construct_tet_cg4)
@@ -604,6 +604,7 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (create_cg3_tet, "CG", 3, 3.8),
                                                               (construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_rt2, "RT", 2, 1.8),
+                                                              (construct_tet_rt3, "RT", 3, 2.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
                                                               (construct_tet_ned2, "N1curl", 2, 1.8),
                                                               (construct_tet_ned_2nd_kind, "N2curl", 1, 1.8),
@@ -782,48 +783,48 @@ def test_ned_2nd_kind_faces():
         assert sum([np.allclose(res[i], 0) for i in range(len(res))]) >= 12
 
 
-def test_face_basis():
-    print()
-    elem = construct_tet_ned_2nd_kind_2()
-    face = elem.DOFGenerator[-1]
-    elem_nb, face_nb = construct_tet_ned_2nd_kind_2_non_bary()
-    # rt = construct_rt()
-    nd = construct_nd()
-    l1 = lambda x: (1/3) - x[0]/2 - x[1]/2*np.sqrt(3)
-    l2 = lambda x: (1/3) - x[1]/np.sqrt(3)
-    l3 = lambda x: (1/3) + x[0]/2 - x[1]/2*np.sqrt(3)
-    tangents = [face.cell.basis_vectors(entity=face.cell.d_entities(1)[i]) for i in range(3)]
-    dl1, dl2, dl3 = np.array([-1/2, -1/2*np.sqrt(3)]), np.array([0, -1/np.sqrt(3)]), np.array([1/2, -1/2*np.sqrt(3)])
-    vecs = [lambda x: l1(x)*dl2 - l2(x)*dl1, lambda x: l3(x)*dl1 - l1(x)*dl3, lambda x: l2(x)*dl3 - l3(x)*dl2]
-    vecs = [t*l1 for t in tangents]
+# def test_face_basis():
+#     print()
+#     elem = construct_tet_ned_2nd_kind_2()
+#     face = elem.DOFGenerator[-1]
+#     elem_nb, face_nb = construct_tet_ned_2nd_kind_2_non_bary()
+#     # rt = construct_rt()
+#     nd = construct_nd()
+#     l1 = lambda x: (1/3) - x[0]/2 - x[1]/2*np.sqrt(3)
+#     l2 = lambda x: (1/3) - x[1]/np.sqrt(3)
+#     l3 = lambda x: (1/3) + x[0]/2 - x[1]/2*np.sqrt(3)
+#     tangents = [face.cell.basis_vectors(entity=face.cell.d_entities(1)[i]) for i in range(3)]
+#     dl1, dl2, dl3 = np.array([-1/2, -1/2*np.sqrt(3)]), np.array([0, -1/np.sqrt(3)]), np.array([1/2, -1/2*np.sqrt(3)])
+#     vecs = [lambda x: l1(x)*dl2 - l2(x)*dl1, lambda x: l3(x)*dl1 - l1(x)*dl3, lambda x: l2(x)*dl3 - l3(x)*dl2]
+#     vecs = [t*l1 for t in tangents]
 
-    # nd_vecs = [lambda x: [1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]],
-    #            lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]],
-    #            lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]]]
+#     # nd_vecs = [lambda x: [1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]],
+#     #            lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]],
+#     #            lambda x: [-1/6 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0]]]
 
-    # rt_vecs = [lambda x: [(np.sqrt(3)/6)*x[0], -1/3 + (np.sqrt(3)/6)*x[1]],
-    #            lambda x: [(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]],
-    #            lambda x: [(np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]]]
-    # vecs = [lambda x: bary(x)*-np.matmul(tangent, np.array([[0, -1], [1, 0]])).squeeze() for bary, tangent in zip([l1,l2,l3], tangents)]
-    dofs = face.generate()
-    res = np.zeros((3, 3))
-    for j, v in enumerate(vecs):
-        for i in range(len(dofs)):
-            res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
-    print(res)
-    dofs = face_nb.generate()
-    res = np.zeros((3, 3))
-    for j, v in enumerate(vecs):
-        for i in range(len(dofs)):
-            res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
-    print(res)
+#     # rt_vecs = [lambda x: [(np.sqrt(3)/6)*x[0], -1/3 + (np.sqrt(3)/6)*x[1]],
+#     #            lambda x: [(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]],
+#     #            lambda x: [(np.sqrt(3)/6) + (np.sqrt(3)/6)*x[0], 1/6 + (np.sqrt(3)/6)*x[1]]]
+#     # vecs = [lambda x: bary(x)*-np.matmul(tangent, np.array([[0, -1], [1, 0]])).squeeze() for bary, tangent in zip([l1,l2,l3], tangents)]
+#     dofs = face.generate()
+#     res = np.zeros((3, 3))
+#     for j, v in enumerate(vecs):
+#         for i in range(len(dofs)):
+#             res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+#     print(res)
+#     dofs = face_nb.generate()
+#     res = np.zeros((3, 3))
+#     for j, v in enumerate(vecs):
+#         for i in range(len(dofs)):
+#             res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+#     print(res)
 
-    dofs = nd.generate()
-    res = np.zeros((3, 3))
-    for j, v in enumerate(vecs):
-        for i in range(len(nd.generate())):
-            res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
-    print(res)
+#     dofs = nd.generate()
+#     res = np.zeros((3, 3))
+#     for j, v in enumerate(vecs):
+#         for i in range(len(nd.generate())):
+#             res[j][i] = evaluate_pt_dict(dofs[i].to_quadrature(2, (2,)), v)
+#     print(res)
 
 
 def test_make_face_bary():
@@ -1041,7 +1042,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         x = SpatialCoordinate(mesh)
         if elem_code == "CG":
             return x[1]
-        return as_vector([x[0], 0, 0])
+        return as_vector([1, 1, 1])
 
     from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
@@ -1080,8 +1081,8 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             res1 = assemble(interpolate(vec(mesh), V))
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res1, CG3))
-            # for i in range(res3.dat.data.shape[0]):
-            #     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            for i in range(res3.dat.data.shape[0]):
+                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
     assert len(error_gs) == 0
 
 

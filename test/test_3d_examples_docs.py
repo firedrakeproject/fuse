@@ -208,17 +208,18 @@ def construct_tet_rt3(cell=None, perm=None):
 
     s_0 = sp.Symbol("s_0")
     s_1 = sp.Symbol("s_1")
-    vertex_dofs = [DOF(L2Pairing(), BarycentricPolynomialKernel(2*s_0**2 + 4*s_0*s_1 - 3*s_0 + 2*s_1**2 - 3*s_1 + 1, symbols=(s_0, s_1)))]
-    edge_dofs = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0 - s_1), symbols=(s_0, s_1)))]
-    dofs = [DOFGenerator(vertex_dofs, C3, S3), DOFGenerator(edge_dofs, C3, S3)]
+    s_2 = sp.Symbol("s_2")
+    symbols = (s_0, s_1, s_2)
+    vertex_basis = s_0*(2*s_0 - 1)
+    edge_basis = 4*s_1*s_0
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=symbols))]
+    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=symbols))]
+    dofs = [DOFGenerator(xs, diff_C3, S3), DOFGenerator(xs1, C3, S3)]
     face_vec = ElementTriple(face, (rt_space, CellHDiv, "C0"), dofs)
 
     im_xs = [immerse(cell, face_vec, TrHDiv)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
-    # xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([s_0, sp.Poly(0, s_0), sp.Poly(0, s_0)], symbols=(s_0, s_1))),
-    #       DOF(L2Pairing(), BarycentricPolynomialKernel([sp.Poly(0, s_0), s_0, sp.Poly(0, s_0)], symbols=(s_0, s_1))),
-    #       DOF(L2Pairing(), BarycentricPolynomialKernel([sp.Poly(0, s_0), sp.Poly(0, s_0), s_0], symbols=(s_0, s_1)))]
     v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
     v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
     v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
@@ -597,7 +598,7 @@ def test_tet_rt2():
     ls = rt2.generate()
     # TODO make this a proper test
     for dof in ls:
-        print(dof.to_quadrature(1))
+        print(dof.to_quadrature(1, (3,)))
     rt2.to_fiat()
 
 
@@ -615,7 +616,7 @@ def test_tet_nd():
     ls = nd1.generate()
     # TODO make this a proper test
     for dof in ls:
-        # dof_dict = dof.to_quadrature(1)
+        # dof_dict = dof.to_quadrature(1, (3,))
         # print(np.array(list(dof_dict.keys())[0]), list(dof_dict.values()))
         print(dof)
     # plot_tet_ned()
@@ -651,7 +652,9 @@ def inte_mom(pt_dict, fn):
 def test_tet_nd3():
     # nd3 = construct_tet_rt2()
     # nd3.to_fiat()
-    nd3 = construct_tet_ned_2nd_kind_2()
+    nd3 = construct_tet_ned3()
+    nd3.to_fiat()
+    # nd3 = construct_tet_ned_2nd_kind_2()
     # nd3 = construct_tet_cg4()
     print()
     for dof in nd3.generate():
@@ -662,7 +665,6 @@ def test_tet_nd3():
             print("vals")
             print(np.array([[v[0] for v in val]for val in list(dof_dict.values())]))
             print(inte_mom(dof_dict, lambda x: x))
-            breakpoint()
 
     # bdm2 = construct_tet_bdm2()
     # nd3.to_ufl()

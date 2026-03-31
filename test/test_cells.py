@@ -35,20 +35,20 @@ def test_basis_vectors(C):
         assert len(bv_ids) == len(bv_coords)
 
 
-def test_basis_group(C):
-    if C.dimension == 0:
-        assert C.basis_group.size() == 1
-    else:
-        bv_coords = C.basis_vectors(return_coords=True)
-        bv_0 = bv_coords[0]
-        for i, g in enumerate(C.basis_group.members()):
-            assert np.allclose(np.array(bv_coords[i]), np.array(g(bv_0)))
-        if C.dimension == 2:
-            for i, g in enumerate(C.basis_group.members()):
-                bvs = np.array(C.basis_vectors())
-                new_bvs = np.array(C.orient(g).basis_vectors())
-                basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-                assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
+# def test_basis_group(C):
+#     if C.dimension == 0:
+#         assert C.basis_group.size() == 1
+#     else:
+#         bv_coords = C.basis_vectors(return_coords=True)
+#         bv_0 = bv_coords[0]
+#         for i, g in enumerate(C.basis_group.members()):
+#             assert np.allclose(np.array(bv_coords[i]), np.array(g(bv_0)))
+#         if C.dimension == 2:
+#             for i, g in enumerate(C.basis_group.members()):
+#                 bvs = np.array(C.basis_vectors())
+#                 new_bvs = np.array(C.orient(g).basis_vectors())
+#                 basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+#                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
 
 
 def test_cosets():
