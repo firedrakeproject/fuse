@@ -437,7 +437,7 @@ class DOF():
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
 
                 J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
-                J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
+                # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
                 # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
                 #     breakpoint()
                 return np.matmul(J, basis_coeffs)
