@@ -653,6 +653,7 @@ def test_tet_nd3():
     # nd3 = construct_tet_rt2()
     # nd3.to_fiat()
     nd3 = construct_tet_ned3()
+    print(nd3)
     # nd3.to_fiat()
     # nd3 = construct_tet_ned_2nd_kind_2()
     # nd3 = construct_tet_cg4()
