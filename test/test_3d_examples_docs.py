@@ -653,18 +653,18 @@ def test_tet_nd3():
     # nd3 = construct_tet_rt2()
     # nd3.to_fiat()
     nd3 = construct_tet_ned3()
-    nd3.to_fiat()
+    # nd3.to_fiat()
     # nd3 = construct_tet_ned_2nd_kind_2()
     # nd3 = construct_tet_cg4()
-    print()
-    for dof in nd3.generate():
-        dof_dict = dof.to_quadrature(1, (3,))
-        if dof.cell_defined_on.id == nd3.cell.get_starter_ids()[2]:
-            print(dof.pairing.orientation)
-            print(np.array(list(dof_dict.keys())[0]))
-            print("vals")
-            print(np.array([[v[0] for v in val]for val in list(dof_dict.values())]))
-            print(inte_mom(dof_dict, lambda x: x))
+    # print()
+    # for dof in nd3.generate():
+    #     dof_dict = dof.to_quadrature(1, (3,))
+    #     if dof.cell_defined_on.id == nd3.cell.get_starter_ids()[2]:
+    #         print(dof.pairing.orientation)
+    #         print(np.array(list(dof_dict.keys())[0]))
+    #         print("vals")
+    #         print(np.array([[v[0] for v in val]for val in list(dof_dict.values())]))
+    #         print(inte_mom(dof_dict, lambda x: x))
 
     # bdm2 = construct_tet_bdm2()
     # nd3.to_ufl()

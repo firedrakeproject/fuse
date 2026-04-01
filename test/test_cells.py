@@ -51,13 +51,6 @@ def test_basis_vectors(C):
 #                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
 
 
-def test_cosets():
-    cell = polygon(3)
-    # g = cell.basis_group.members()[1]
-    conj = cell.group.cosets(cell.basis_group)
-    print(conj)
-
-
 def test_sub_basis_vectors():
     cell = polygon(3)
 

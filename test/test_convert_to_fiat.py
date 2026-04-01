@@ -873,8 +873,8 @@ def test_basis_funcs_gen(form_num):
         proxy_field_2_form = [2*sp.Matrix(ls[i]*dl[j].cross(dl[k]) - ls[j]*dl[i].cross(dl[k]) + ls[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 1, 2]]]
         basis_funcs = proxy_field_2_form
         # V = FunctionSpace(mesh, "BDM", 2)
-        V = FunctionSpace(mesh, "RT", 3)
-        V4 = FunctionSpace(mesh, "BDM", 2)
+        V4 = FunctionSpace(mesh, "RT", 3)
+        V = FunctionSpace(mesh, "BDM", 2)
 
     V3 = FunctionSpace(mesh, elem2.to_ufl())
     print("BDM 2")
@@ -921,8 +921,6 @@ def test_basis_funcs_gen(form_num):
         for i in range(len(dofs)):
             res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,)), vec)
         print(res)
-    breakpoint()
-    assert total_fuse_zeros == 8*len(basis_funcs)
 
 
 # def test_ned_2nd_kind_basis_funcs():
