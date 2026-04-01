@@ -211,17 +211,17 @@ def get_expression(V):
     shape = V.value_shape
     if dim == 2:
         if len(shape) == 0:
-            exact = Function(FunctionSpace(mesh, 'CG', 5))
+            exact = Function(FunctionSpace(mesh, 'CG', 8))
             expression = x
         elif len(shape) == 1:
-            exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
+            exact = Function(VectorFunctionSpace(mesh, 'CG', 8))
             expression = as_vector([x, y])
     elif dim == 3:
         if len(shape) == 0:
-            exact = Function(FunctionSpace(mesh, 'CG', 5))
+            exact = Function(FunctionSpace(mesh, 'CG', 8))
             expression = x + y + z
         elif len(shape) == 1:
-            exact = Function(VectorFunctionSpace(mesh, 'CG', 5))
+            exact = Function(VectorFunctionSpace(mesh, 'CG', 8))
             expression = as_vector([x, y, z])
     return expression, exact
 
@@ -233,7 +233,7 @@ def interpolate_vs_project(V, expression, exact):
     return sqrt(assemble(inner((expect - exact), (expect - exact)) * dx)), sqrt(assemble(inner((f - exact), (f - exact)) * dx))
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8), ])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_cg3, "CG", 3, 3.8)])
 def test_convergence(elem_gen, elem_code, deg, conv_rate):
     cell = polygon(3)
     elem = elem_gen(cell)
