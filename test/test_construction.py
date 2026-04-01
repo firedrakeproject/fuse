@@ -6,13 +6,13 @@ from fuse.element_construction import periodic_table
 from firedrake import *
 
 
-@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 3]])
+@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 1, 3]])
 def test_construction(k, deg):
     elem = periodic_table(0, 2, k, deg)
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("k,deg,conv_rate", [(0, deg, deg+0.8) for deg in list(range(1, 7))] + [(3, deg, deg + 0.8) for deg in list(range(0, 3))])
+@pytest.mark.parametrize("k,deg,conv_rate", [(0, deg, deg + 0.8) for deg in list(range(1, 7))] + [(1, deg, deg - 0.2) for deg in list(range(0, 3))] + [(3, deg, deg + 0.8) for deg in list(range(0, 3))])
 def test_convergence(k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(0, 2, k, deg)
@@ -25,6 +25,8 @@ def test_convergence(k, deg, conv_rate):
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
+        if len(elem.get_value_shape()) > 0:
+            expr = as_vector([expr, expr])
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
 

@@ -216,8 +216,8 @@ class BarycentricPolynomialKernel(BaseKernel):
             self.fn = [sp.Poly(fn[i], symbols) for i in range(len(fn))]
             self.shape = len(fn)
         else:
-            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
-                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
+            # if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+            #     raise ValueError("Function must be able to be interpreted as a sympy polynomial")
             # self.fn = sp.sympify(fn)
             self.fn = sp.Poly(fn, symbols)
             self.shape = 0

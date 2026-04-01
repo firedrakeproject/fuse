@@ -113,9 +113,10 @@ class PermutationSetRepresentation():
             cell (optional): the cell the group is representing the operations on
 
     """
-    def __init__(self, perm_list, cell=None):
+    def __init__(self, perm_list, cell=None, name=None):
         assert len(perm_list) > 0
         self.perm_list = perm_list
+        self.name = name
 
         if not any([p.is_Identity for p in self.perm_list]):
             p = self.perm_list[0]
@@ -227,6 +228,8 @@ class PermutationSetRepresentation():
         return PermutationSetRepresentation(list(set(self.perm_list + other_group.perm_list)))
 
     def __repr__(self):
+        if self.name is not None:
+            return self.name + str(self.size())
         return "GS" + str(self.size())
 
 
@@ -240,9 +243,10 @@ class GroupRepresentation(PermutationSetRepresentation):
 
     """
 
-    def __init__(self, base_group, cell=None):
+    def __init__(self, base_group, cell=None, name=None):
         assert isinstance(base_group, PermutationGroup)
         self.base_group = base_group
+        self.name = name
         self.generators = []
         if cell is not None:
             self.cell = cell
@@ -370,6 +374,8 @@ class GroupRepresentation(PermutationSetRepresentation):
         return GroupRepresentation(PermutationGroup(remaining_perms))
 
     def __repr__(self):
+        if self.name is not None:
+            return self.name + str(self.size())
         return "GR" + str(self.size())
 
     # def __eq__(self, other):
@@ -407,7 +413,7 @@ S4 = GroupRepresentation(SymmetricGroup(4))
 
 D4 = GroupRepresentation(DihedralGroup(4))
 
-C3 = GroupRepresentation(CyclicGroup(3))
+C3 = GroupRepresentation(CyclicGroup(3), name="C")
 C4 = GroupRepresentation(CyclicGroup(4))
 
 Z2 = GroupRepresentation(CyclicGroup(2))
@@ -420,7 +426,7 @@ A4 = GroupRepresentation(AlternatingGroup(4))
 A3 = GroupRepresentation(AlternatingGroup(3))
 
 basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
-diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])])  # this group is used for facet dofs
+diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
