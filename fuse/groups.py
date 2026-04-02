@@ -225,7 +225,12 @@ class PermutationSetRepresentation():
 
     def __mul__(self, other_group):
         # convert to set to remove duplicates
-        return PermutationSetRepresentation(list(set(self.perm_list + other_group.perm_list)))
+        # return PermutationSetRepresentation(list(set(self.perm_list + other_group.perm_list)))
+        if isinstance(other_group, GroupRepresentation):
+            elements = list(set([a*b for a in self.perm_list for b in other_group.base_group.elements]))
+            return PermutationSetRepresentation(elements)
+        elements = list(set([a*b for a in self.perm_list for b in other_group.perm_list]))
+        return PermutationSetRepresentation(elements)
 
     def __repr__(self):
         if self.name is not None:
@@ -350,7 +355,10 @@ class GroupRepresentation(PermutationSetRepresentation):
     #     return remaining_members
 
     def __mul__(self, other_group):
-        return GroupRepresentation(PermutationGroup(self.base_group.generators + other_group.base_group.generators))
+        if isinstance(other_group, GroupRepresentation):
+            return GroupRepresentation(PermutationGroup(self.base_group.generators + other_group.base_group.generators))
+        elements = [a*b for a in self.base_group.elements for b in other_group.perm_list]
+        return PermutationSetRepresentation(elements)
 
     def __truediv__(self, other_frac):
         """ This isn't a mathematically accurate representation of

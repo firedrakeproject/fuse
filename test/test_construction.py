@@ -12,7 +12,7 @@ def test_construction(k, deg):
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("k,deg,conv_rate", [(0, deg, deg + 0.8) for deg in list(range(1, 7))] + [(1, deg, deg - 0.2) for deg in list(range(0, 3))] + [(3, deg, deg + 0.8) for deg in list(range(0, 3))])
+@pytest.mark.parametrize("k,deg,conv_rate", [(0, deg, deg + 0.8) for deg in list(range(1, 7))] + [(1, deg, deg - 0.2) for deg in list(range(1, 7))] + [(3, deg, deg + 0.8) for deg in list(range(0, 3))])
 def test_convergence(k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(0, 2, k, deg)

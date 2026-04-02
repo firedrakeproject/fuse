@@ -19,7 +19,7 @@ def convert_to_generation(coords, verts=np.array([(-1, -np.sqrt(3)/3), (0, 2*np.
             coords_S1 += [c]
             coords.remove(c)
 
-    midpoint0 = ((verts[2][0] + verts[1][0])/2, (verts[2][1] + verts[1][1])/2)
+    # midpoint0 = ((verts[2][0] + verts[1][0])/2, (verts[2][1] + verts[1][1])/2)
     midpoint1 = ((verts[0][0] + verts[1][0])/2, (verts[0][1] + verts[1][1])/2)
     midpoint2 = ((verts[0][0] + verts[2][0])/2, (verts[0][1] + verts[2][1])/2)
     cond1 = lambda coord: check_multiple(coord, verts[0]) and check_below_line(verts[2], midpoint1, coord) <= 0
@@ -173,6 +173,7 @@ def construct_tri_ndN(deg):
     edge = cell.edges()[0]
     verts = cell.vertices(return_coords=True)
     verts.reverse()
+    verts = [verts[0], verts[2], verts[1]]
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
@@ -182,19 +183,22 @@ def construct_tri_ndN(deg):
         xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf, symbols=symbols))]
         dofs += [DOFGenerator(xs, grp, S2)]
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+    xs = [immerse(cell, int_ned1, TrHCurl)]
+    tri_dofs = [DOFGenerator(xs, C3, S1)]
 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(2, verts, deg - 2)
     center_dofs = []
-    if len(basis_funcs) > 1:
-        raise NotImplementedError("Centre dofs of nedelec above 2nd order not implemented")
     for bf, grp in zip(basis_funcs, groups):
-        v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+        v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
         v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
-        xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-        center_dofs += [DOFGenerator(xs, S2, S3)]
-
-    xs = [immerse(cell, int_ned1, TrHCurl)]
-    tri_dofs = [DOFGenerator(xs, C3, S1)]
+        v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+        xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols))]
+        if grp.size() > 3:
+            center_dofs += [DOFGenerator(xs, grp, S1)]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
+            center_dofs += [DOFGenerator(xs, grp, S1)]
+        else:
+            center_dofs += [DOFGenerator(xs, S2*grp, S1)]
 
     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
     Pk = PolynomialSpace(deg - 1)
@@ -210,13 +214,14 @@ def construct_tri_rtN(deg):
 
 
 def construct_tri_dgN(deg):
+    return construct_tri_dgN(deg + 1)
+
+
+def construct_tri_dgNminus(deg):
     cell = polygon(3)
     Pk = PolynomialSpace(deg)
     int_dofs = lagrange_facet(cell, deg + 3)
     return ElementTriple(cell, (Pk, CellL2, C0), int_dofs)
-
-def construct_tri_dgNminus(deg):
-    return construct_tri_dgN(deg - 1)
 
 
 # column: dimension: form number
