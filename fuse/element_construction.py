@@ -135,18 +135,33 @@ def lagrange_barycentric_basis(dim, verts, deg):
     fns = [const(idx)*math.prod(s**i for s, i in zip(symbols, idx))for idx in multiindices]
     return fns, grps, symbols
 
-# def nedelec_barycentric_basis(cell):
-#     symbols = []
-#     for i in range(cell.dimension + 1):
-#         symbols += [sp.Symbol(f"s_{i}")]
-#     v_0 = cell.ordered_vertex_coords()[0]
-#     bvs = np.array(cell.basis_vectors(norm=False))
-#     res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y, z) - v_0))
-#     ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
-#     dl = []
-#     for l in ls:
-#         dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z)))]
-#     proxy_field_1_form = [sp.Matrix(ls[i]*dl[j] - ls[j]*dl[i]) for (i, j) in [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]]
+def nedelec_barycentric_basis(cell):
+    symbols = []
+    for i in range(cell.dimension + 1):
+        symbols += [sp.Symbol(f"s_{i}")]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+    v_0 = np.array(cell.ordered_vertex_coords()[0])
+    bvs = np.array(cell.basis_vectors(norm=False))
+    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y) - v_0))
+    ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
+    dl = []
+    for l in ls:
+        dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y)))]
+    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(0, 1), (0, 2), (1, 2)]]
+    return bfs, [diff_C3], symbols
+
+
+def nedelec_facet_fns(cell, deg):
+    nd_basis_funcs, _, symbols = nedelec_barycentric_basis(cell)
+    basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg - 1)
+    dofs = []
+    for nd_bf in nd_basis_funcs:
+        for bf, grp in zip(basis_funcs, groups):
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(nd_bf*bf, symbols=symbols))]
+            dofs += [DOFGenerator(xs, grp, S1)]
+    return dofs
+
 
 def lagrange_facet_fns(shp, cell, deg):
     dofs = []
@@ -156,9 +171,6 @@ def lagrange_facet_fns(shp, cell, deg):
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf, symbols=symbols))]
             dofs += [DOFGenerator(xs, grp, S2)]
         elif shp == 2:
-            #[12.0*s_0**2*s_1*s_2, 6.0*s_0**2*s_1**2, 4.0*s_0**3*s_1, 1.0*s_0**4]
-            #[diff_C3, GR6, GR6, diff_C3]
-            # [C3, diff_C3, GR6, C3]
             v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
             v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
             v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
@@ -295,40 +307,17 @@ def construct_tri_rtN(deg):
 def construct_tri_bdmN(deg):
     cell = polygon(3)
     edge = cell.edges()[0]
-    verts = cell.vertices(return_coords=True)
-    verts.reverse()
-    verts = [verts[0], verts[2], verts[1]]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
 
-    center_dofs = lagrange_facet_fns(2, cell, deg)
+    dofs = lagrange_facet_fns(1, edge, deg)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
     xs = [immerse(cell, int_ned1, TrHDiv)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
-    basis_funcs, groups, symbols = lagrange_barycentric_basis(2, verts, deg - 2) # replace this with nedelec basis
-    center_dofs = []
-    for bf, grp in zip(basis_funcs, groups):
-        v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
-        v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
-        v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
-        xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols))]
-        if grp.size() > 3:
-            center_dofs += [DOFGenerator(xs, grp, S1)]
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
-            center_dofs += [DOFGenerator(xs, grp, S1)]
-        else:
-            center_dofs += [DOFGenerator(xs, S2*grp, S1)]
+    center_dofs = nedelec_facet_fns(cell, deg - 1)
 
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
+    vec_Pd = PolynomialSpace(deg, set_shape=True)
 
-    M = sp.Matrix([[x, y]])
-    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
-    Pd = PolynomialSpace(deg - 1)
-    rt = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
-
-    ned = ElementTriple(cell, (rt, CellHDiv, C0), tri_dofs + center_dofs)
+    ned = ElementTriple(cell, (vec_Pd, CellHDiv, C0), tri_dofs + center_dofs)
     return ned
 
 
@@ -339,7 +328,7 @@ def construct_tri_dgN(deg):
 def construct_tri_dgNminus(deg):
     cell = polygon(3)
     Pk = PolynomialSpace(deg)
-    int_dofs = lagrange_facet(cell, deg + 3)
+    int_dofs = lagrange_facet_pts(cell, deg + 3)
     return ElementTriple(cell, (Pk, CellL2, C0), int_dofs)
 
 

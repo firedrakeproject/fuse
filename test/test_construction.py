@@ -12,16 +12,23 @@ def test_construction(k, deg):
     elem.to_fiat()
 
 
-cg_params = [(0, deg, deg + 0.8) for deg in list(range(1, 7))]
-nd_params = [(1, deg, deg - 0.2) for deg in list(range(1, 7))]
-rt_params = [(2, deg, deg - 0.2) for deg in list(range(1, 7))]
-dg_params = [(3, deg, deg + 0.8) for deg in list(range(0, 3))]
+@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3]])
+def test_construction1(k, deg):
+    elem = periodic_table(1, 2, k, deg)
+    elem.to_fiat()
 
 
-@pytest.mark.parametrize("k,deg,conv_rate", cg_params + nd_params + rt_params + dg_params)
-def test_convergence(k, deg, conv_rate):
+cg_params = [(0, 0, deg, deg + 0.8) for deg in list(range(1, 7))] + [(1, 0, deg, deg + 0.8) for deg in list(range(1, 3))]
+nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 7))]
+rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 7))]
+dg_params = [(0, 3, deg, deg + 0.8) for deg in list(range(0, 3))] + [(1, 3, deg, deg + 0.8) for deg in list(range(0, 3))]
+bdm_params = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 7))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params + nd_params + rt_params + dg_params + bdm_params)
+def test_convergence(col, k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
-    elem = periodic_table(0, 2, k, deg)
+    elem = periodic_table(col, 2, k, deg)
     scale_range = range(3, 6)
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
