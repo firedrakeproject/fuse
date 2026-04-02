@@ -1,6 +1,7 @@
 import pytest
 from firedrake import *
 from fuse import *
+from fuse.element_construction import periodic_table
 import numpy as np
 import sympy as sp
 from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_nd2_2nd_kind, construct_bdm, construct_bdm2, construct_bdm2_bary, construct_bdm_bary
@@ -136,7 +137,8 @@ def test_surface_const_nd(elem_gen, elem_code, deg):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_rt, "RT", 1),
-                                                    (construct_rt2, "RT", 2)])
+                                                    (construct_rt2, "RT", 2),
+                                                    (lambda cell: periodic_table(0, 2, 2, 2), "RT", 2)])
 def test_surface_const_rt(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)

@@ -210,7 +210,48 @@ def construct_tri_ndN(deg):
 
 
 def construct_tri_rtN(deg):
-    raise NotImplementedError("General degree raviart thomas on triangles not yet implemented")
+    # raise NotImplementedError("General degree raviart thomas on triangles not yet implemented")
+    cell = polygon(3)
+    edge = cell.edges()[0]
+    verts = cell.vertices(return_coords=True)
+    verts.reverse()
+    verts = [verts[0], verts[2], verts[1]]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    basis_funcs, groups, symbols = lagrange_barycentric_basis(1, edge.vertices(return_coords=True), deg - 1)
+    dofs = []
+    for bf, grp in zip(basis_funcs, groups):
+        xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf, symbols=symbols))]
+        dofs += [DOFGenerator(xs, grp, S2)]
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+    xs = [immerse(cell, int_ned1, TrHDiv)]
+    tri_dofs = [DOFGenerator(xs, C3, S1)]
+
+    basis_funcs, groups, symbols = lagrange_barycentric_basis(2, verts, deg - 2)
+    center_dofs = []
+    for bf, grp in zip(basis_funcs, groups):
+        v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
+        v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
+        v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+        xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols))]
+        if grp.size() > 3:
+            center_dofs += [DOFGenerator(xs, grp, S1)]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
+            center_dofs += [DOFGenerator(xs, grp, S1)]
+        else:
+            center_dofs += [DOFGenerator(xs, S2*grp, S1)]
+
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    M = sp.Matrix([[x, y]])
+    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    Pd = PolynomialSpace(deg - 1)
+    rt = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
+
+    ned = ElementTriple(cell, (rt, CellHDiv, C0), tri_dofs + center_dofs)
+    return ned
 
 
 def construct_tri_dgN(deg):
