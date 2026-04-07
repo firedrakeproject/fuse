@@ -39,14 +39,16 @@ def convert_to_generation(coords, verts):
 
 
 def identify_generation_group(b_coord, verts, bary=True):
-    """Identify the correct generation group from a (optionally) barycentric coordinate on a triangle or interval"""
-    verts = sorted(verts)
+    """Identify the correct generation group from a (optionally) barycentric coordinate on a triangle or interval.
+    
+        Assumes the coordinate lies in the lower left region of the triangle, defined by the sorted vertices."""
     if bary:
+        # respect vertex order to compute barycentric coord
         assert len(b_coord) == len(verts)
         c = sum(b_coord[i]*np.array(verts)[i] for i in range(len(verts)))
-        print(c)
     else:
         c = b_coord
+    verts = sorted(verts) # ensure consistent vertex order to check points in given region
     center = tuple(sum([v[i] for v in verts])/len(verts) for i in range(len(verts[0])))
     if np.allclose(center, c):
         return S1
@@ -61,9 +63,9 @@ def identify_generation_group(b_coord, verts, bary=True):
     cond3 = lambda coord: (check_multiple(coord, midpoint1) and check_below_line(midpoint2, (0, 0), coord) <= 0)
     if cond1(c):
         return C3
-    elif cond2(c) or cond3(c):
+    elif cond2(c): # cond3(c) or
         return diff_C3
-    elif check_below_line(verts[1], (0, 0), c) == -1 and check_below_line(midpoint2, (0, 0), c) == -1:
+    elif check_below_line(verts[0], (0, 0), c) == -1 and check_below_line(midpoint2, (0, 0), c) == -1:
         return S3
     raise ValueError("Group not identified")
 
@@ -127,7 +129,9 @@ def lagrange_barycentric_basis(dim, verts, deg):
     for idx in acc_indices:
         if sum(idx) == deg:
             multiindices += [idx]
-    # multiindices = [(i, j, k) for i in range(0, deg + 1) for j in range(0, i + 1) for k in range(0, j + 1) if i + j + k == deg]
+    # multiindices1 = [(i, j, k) for i in range(0, deg + 1) for j in range(0, i + 1) for k in range(0, j + 1) if i + j + k == deg]
+    # if len(verts) > 2:
+    #     breakpoint()
 
     scale = 1 if deg == 0 else deg
     grps = [identify_generation_group(tuple(i / scale for i in idx), verts) for idx in multiindices]
@@ -252,6 +256,7 @@ def construct_tri_ndN(deg):
     ned = ElementTriple(cell, (nd, CellHCurl, C0), tri_dofs + center_dofs)
     return ned
 
+
 def construct_tri_ndN_2(deg):
     cell = polygon(3)
     edge = cell.edges()[0]
@@ -274,7 +279,7 @@ def construct_tri_ndN_2(deg):
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 
-    ned = ElementTriple(cell, (nd, CellHCurl, C0), tri_dofs + center_dofs)
+    ned = ElementTriple(cell, (nd, CellHCurl, C0), tri_dofs + dofs)
     return ned
 
 

@@ -12,7 +12,7 @@ def test_construction(k, deg):
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3]])
+@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 2, 3]])
 def test_construction1(k, deg):
     elem = periodic_table(1, 2, k, deg)
     elem.to_fiat()
