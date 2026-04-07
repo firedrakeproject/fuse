@@ -2,7 +2,7 @@ import pytest
 import os
 import numpy as np
 from test_orientations import interpolate_vs_project, get_expression
-from fuse.element_construction import periodic_table
+from fuse.element_construction import periodic_table, check_below_plane
 from firedrake import *
 
 
@@ -55,3 +55,11 @@ def test_convergence(col, k, deg, conv_rate):
     conv2 = np.log2(diff_inte[:-1] / diff_inte[1:])
     print("convergence order:", conv2)
     assert all([c > conv_rate for c in conv2])
+
+
+def test_plane():
+    from fuse import make_tetrahedron
+    cell = make_tetrahedron()
+    verts = cell.ordered_vertex_coords()
+    res = check_below_plane(verts[1], verts[2], verts[3], (verts[1] + verts[2] + verts[3])/3)
+    print(res)
