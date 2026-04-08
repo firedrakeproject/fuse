@@ -56,7 +56,7 @@ class ElementTriple():
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
-        degree = self.spaces[0].degree()
+        degree = self.spaces[0].degree() + 1
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
@@ -440,6 +440,8 @@ class ElementTriple():
                                 # len(dof_gen_class[dim].g2.members()) == 2:
                                 # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
+                                #     value_change = -1*value_change
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
@@ -455,7 +457,7 @@ class ElementTriple():
                             # Permutation of DOF on the entity they are defined on
                             sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim():
+                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
                             # case for dofs defined on the cell and not immersed
                             sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
