@@ -56,7 +56,7 @@ class ElementTriple():
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
-        degree = self.spaces[0].degree()
+        degree = self.spaces[0].degree() + 1
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
@@ -460,6 +460,11 @@ class ElementTriple():
                                 sub_mat = value_change
                             else:
                                 # check if this should be the cyclic variant
+                                # len(dof_gen_class[dim].g2.members()) == 2:
+                                # case where value change is a restriction of the full transformation of the basis
+                                value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
+                                #     value_change = -1*value_change
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
                             new_ent_dofs_ids = [int(g_to_ent_id[str(sub_g.perm.array_form)]) for coset in cosets for sub_g in coset]
                             if not np.allclose(new_ent_dofs_ids, ent_dofs_ids):
@@ -491,11 +496,10 @@ class ElementTriple():
                             # Permutation of DOF on the entity they are defined on
                             sub_mat = (~g).matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == g.perm.size:
-                            # case for dofs defined on the cell and not immersed - since they are interior the orientations don't matter
-                            # sub_mat = (~g).matrix_form()
-                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
+                        elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
+                            # case for dofs defined on the cell and not immersed
+                            sub_mat = (~g).matrix_form()
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                         else:
                             # TODO what if an orientation is not in G1
                             # also the case of 3 dofs inside a 3d shape

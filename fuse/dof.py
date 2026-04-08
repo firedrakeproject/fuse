@@ -221,12 +221,13 @@ class BarycentricPolynomialKernel(BaseKernel):
         if hasattr(fn, "__iter__"):
             # if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
             #     raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
+            self.fn = [sp.Poly(fn[i], symbols) for i in range(len(fn))]
             self.shape = len(fn)
         else:
             if len(symbols) != 0 and not sp.sympify(fn).as_poly():
                 raise ValueError("Function must be able to be interpreted as a sympy polynomial")
-            self.fn = sp.sympify(fn)
+            # self.fn = sp.sympify(fn)
+            self.fn = sp.Poly(fn, symbols)
             self.shape = 0
         self.g = g
         self.syms = symbols
@@ -258,9 +259,13 @@ class BarycentricPolynomialKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        if not immersed or self.shape == 0:
-            return Qpts, np.array([wt*self(*self.g.permute(pt)) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*immersed(self(*self.g.permute(pt))) for pt, wt in zip(bary_pts, Qwts)]).astype(np.float64), comps
+        if self.shape != 0 and not immersed:
+            wts = [wt*np.matmul(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
+        elif self.shape == 0:
+            wts = [wt*self(*pt) for pt, wt in zip(bary_pts, Qwts)]
+        else:
+            wts = [wt*immersed(np.matmul(basis_change, self(*pt))) for pt, wt in zip(bary_pts, Qwts)]
+        return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -317,9 +322,16 @@ class PolynomialKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        if not immersed or self.shape == 0:
-            return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
-        return Qpts, np.array([wt*immersed(self(*(np.matmul(pt, basis_change)))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+        # if not immersed or self.shape == 0:
+        #     return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+        # return Qpts, np.array([wt*immersed(np.matmul(basis_change, self(*(np.matmul(basis_change, pt))))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
+        if self.shape != 0 and not immersed:
+            wts = [wt*np.matmul(basis_change, self(*np.matmul(basis_change.T, pt))) for pt, wt in zip(Qpts, Qwts)]
+        elif self.shape == 0:
+            wts = [wt*self(*np.matmul(basis_change.T, pt)) for pt, wt in zip(Qpts, Qwts)]
+        else:
+            wts = [wt*immersed(np.matmul(basis_change, self(*np.matmul(basis_change.T, pt)))) for pt, wt in zip(Qpts, Qwts)]
+        return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"fn": self.fn}
@@ -430,13 +442,18 @@ class DOF():
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
-                immersed_basis = np.array(self.cell.basis_vectors(entity=self.cell_defined_on))
-                return np.matmul(basis_coeffs, immersed_basis)
+
+                J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
+                # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
+                # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
+                #     breakpoint()
+                return np.matmul(J, basis_coeffs)
         else:
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            bary_pts = self.cell_defined_on.cartesian_to_barycentric(Qpts)
+            pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
+            bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
