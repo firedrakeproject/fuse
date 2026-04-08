@@ -347,14 +347,13 @@ class DOF():
             self.pairing = self.pairing.add_entity(cell)
         if self.target_space is None:
             self.target_space = space
-        if self.id is None and overall_id is not None:
+        if overall_id is not None:
             self.id = overall_id
-        if self.sub_id is None and generator_id is not None:
+        if generator_id is not None:
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
         # TODO deriv dict needs implementing (currently {})
-        print(value_shape)
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
