@@ -209,6 +209,13 @@
 </ul>
 </li>
 <li class="toctree-l3 current"><a class="reference internal" href="fuse.dof.html">dof</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html">BarycentricPolynomialKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html#fuse.dof.BarycentricPolynomialKernel"><code class="docutils literal notranslate"><span class="pre">BarycentricPolynomialKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html#fuse.dof.BarycentricPolynomialKernel.__init__"><code class="docutils literal notranslate"><span class="pre">BarycentricPolynomialKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.BaseKernel.html">BaseKernel</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel"><code class="docutils literal notranslate"><span class="pre">BaseKernel</span></code></a><ul>
 <li class="toctree-l6"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.__init__"><code class="docutils literal notranslate"><span class="pre">BaseKernel.__init__()</span></code></a></li>
@@ -582,6 +589,7 @@
 <li class="toctree-l2 current"><a class="reference internal" href="fuse.html">fuse</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="fuse.cells.html">cells</a></li>
 <li class="toctree-l3 current"><a class="reference internal" href="fuse.dof.html">dof</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html">BarycentricPolynomialKernel</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.BaseKernel.html">BaseKernel</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.ComponentKernel.html">ComponentKernel</a></li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.DOF.html">DOF</a></li>
@@ -622,17 +630,17 @@
 <h1>PolynomialKernel<a class="headerlink" href="#polynomialkernel" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="fuse.dof.PolynomialKernel">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">fuse.dof.</span></span><span class="sig-name descname"><span class="pre">PolynomialKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.dof.PolynomialKernel" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">fuse.dof.</span></span><span class="sig-name descname"><span class="pre">PolynomialKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.dof.PolynomialKernel" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel" title="fuse.dof.BaseKernel"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseKernel</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="fuse.dof.PolynomialKernel.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.dof.PolynomialKernel.__init__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#fuse.dof.PolynomialKernel.__init__" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <p class="rubric">Methods</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.dof.PolynomialKernel.__init__" title="fuse.dof.PolynomialKernel.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(fn[, g, symbols, shape])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.dof.PolynomialKernel.__init__" title="fuse.dof.PolynomialKernel.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(fn[, g, symbols])</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">degree</span></code>(interpolant_degree)</p></td>
@@ -641,7 +649,7 @@
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict_id</span></code>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code>(Qpts, Qwts, basis_change, immersed, dim)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code>(Qpts, Qwts, basis_change, immersed, ...)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">permute</span></code>(g)</p></td>

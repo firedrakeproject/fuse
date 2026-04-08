@@ -19,7 +19,9 @@ Point
    
       ~Point.__init__
       ~Point.attachment
+      ~Point.attachment_J
       ~Point.basis_vectors
+      ~Point.cartesian_to_barycentric
       ~Point.cell_attachment
       ~Point.compute_attachments
       ~Point.compute_cell_group
@@ -41,6 +43,7 @@ Point
       ~Point.graph
       ~Point.graph_dim
       ~Point.hasse_diagram
+      ~Point.ordered_vertex_coords
       ~Point.ordered_vertices
       ~Point.orient
       ~Point.permute_entities

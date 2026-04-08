@@ -20,6 +20,8 @@ PermutationSetRepresentation
       ~PermutationSetRepresentation.__init__
       ~PermutationSetRepresentation.add_cell
       ~PermutationSetRepresentation.compute_num_reps
+      ~PermutationSetRepresentation.conjugacy_class
+      ~PermutationSetRepresentation.cosets
       ~PermutationSetRepresentation.get_member
       ~PermutationSetRepresentation.get_member_by_val
       ~PermutationSetRepresentation.members

@@ -1,0 +1,30 @@
+:tocdepth: 0
+
+BarycentricPolynomialKernel
+===========================
+
+.. currentmodule:: fuse.dof
+
+.. autoclass:: BarycentricPolynomialKernel
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BarycentricPolynomialKernel.__init__
+      ~BarycentricPolynomialKernel.degree
+      ~BarycentricPolynomialKernel.dict_id
+      ~BarycentricPolynomialKernel.evaluate
+      ~BarycentricPolynomialKernel.permute
+   
+   
+
+   
+   
+   

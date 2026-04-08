@@ -22,6 +22,8 @@ dof
       :template: custom-class-template.rst               
    
         
+        BarycentricPolynomialKernel
+        
         BaseKernel
         
         ComponentKernel

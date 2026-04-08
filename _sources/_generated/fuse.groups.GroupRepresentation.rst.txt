@@ -21,6 +21,7 @@ GroupRepresentation
       ~GroupRepresentation.add_cell
       ~GroupRepresentation.compute_num_reps
       ~GroupRepresentation.conjugacy_class
+      ~GroupRepresentation.cosets
       ~GroupRepresentation.dict_id
       ~GroupRepresentation.get_member
       ~GroupRepresentation.get_member_by_val

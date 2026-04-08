@@ -209,6 +209,13 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="fuse.dof.html">dof</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html">BarycentricPolynomialKernel</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html#fuse.dof.BarycentricPolynomialKernel"><code class="docutils literal notranslate"><span class="pre">BarycentricPolynomialKernel</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="fuse.dof.BarycentricPolynomialKernel.html#fuse.dof.BarycentricPolynomialKernel.__init__"><code class="docutils literal notranslate"><span class="pre">BarycentricPolynomialKernel.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l4"><a class="reference internal" href="fuse.dof.BaseKernel.html">BaseKernel</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel"><code class="docutils literal notranslate"><span class="pre">BaseKernel</span></code></a><ul>
 <li class="toctree-l6"><a class="reference internal" href="fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.__init__"><code class="docutils literal notranslate"><span class="pre">BaseKernel.__init__()</span></code></a></li>
@@ -670,7 +677,13 @@
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">attachment</span></code>(source, dst)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis_vectors</span></code>([return_coords, entity, order])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">attachment_J</span></code>(source, dst)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">basis_vectors</span></code>([return_coords, entity, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cartesian_to_barycentric</span></code>(pts)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cell_attachment</span></code>(dst)</p></td>
@@ -736,34 +749,37 @@
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hasse_diagram</span></code>([counter, filename])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ordered_vertices</span></code>([get_class])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ordered_vertex_coords</span></code>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.Point.orient" title="fuse.cells.Point.orient"><code class="xref py py-obj docutils literal notranslate"><span class="pre">orient</span></code></a>(o)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ordered_vertices</span></code>([get_class])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Point.orient" title="fuse.cells.Point.orient"><code class="xref py py-obj docutils literal notranslate"><span class="pre">orient</span></code></a>(o)</p></td>
 <td><p>Orientation node is always labelled with -1</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">permute_entities</span></code>(g, d)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">permute_entities</span></code>(g, d)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.Point.plot" title="fuse.cells.Point.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>([show, plain, ax, filename])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Point.plot" title="fuse.cells.Point.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>([show, plain, ax, filename])</p></td>
 <td><p>for now into 2 dimensional space</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot3d</span></code>([show, plain, ax, filename])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot3d</span></code>([show, plain, ax, filename])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">quadrature</span></code>(degree)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">quadrature</span></code>(degree)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>([name, renumber])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_fiat</span></code>([name, renumber])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_tikz</span></code>([show, scale])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_tikz</span></code>([show, scale])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_ufl</span></code>([name])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_ufl</span></code>([name])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#fuse.cells.Point.vertices" title="fuse.cells.Point.vertices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code></a>([get_class, return_coords])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#fuse.cells.Point.vertices" title="fuse.cells.Point.vertices"><code class="xref py py-obj docutils literal notranslate"><span class="pre">vertices</span></code></a>([get_class, return_coords])</p></td>
 <td><p>Get vertices (0 dimensional entities) of the cell complex.</p></td>
 </tr>
 </tbody>
