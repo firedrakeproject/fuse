@@ -151,6 +151,13 @@ def compute_scaled_verts(d, n):
         raise ValueError("Dimension {} not supported".format(d))
 
 
+def line():
+    """
+    Constructs the default 1D interval
+    """
+    return Point(1, [Point(0), Point(0)], vertex_num=2)
+
+
 def polygon(n):
     """
     Constructs the 2D default cell with n sides/vertices
@@ -373,6 +380,7 @@ class Point():
         """
         verts = self.ordered_vertices()
         v_coords = [self.get_node(v, return_coords=True) for v in verts]
+
         n = len(verts)
         max_group = SymmetricGroup(n)
         edges = [edge.ordered_vertices() for edge in self.edges()]
@@ -501,6 +509,15 @@ class Point():
 
         min_ids = [min(dimension) for dimension in structure]
         return min_ids
+
+    def local_id(self, node):
+        structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        structure.reverse()
+        min_id = self.get_starter_ids()
+        for d in range(len(structure)):
+            if node.id in structure[d]:
+                return node.id - min_id[d]
+        raise ValueError("Node not found in cell")
 
     def graph_dim(self):
         if self.oriented:
@@ -648,7 +665,6 @@ class Point():
         self_levels = [generation for generation in nx.topological_generations(self.G)]
         vertices = entity.ordered_vertices()
         if self.dimension == 0:
-            # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
         if self.oriented:
             # ordered_vertices() handles the orientation so we want to drop the orientation node
@@ -822,6 +838,17 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
 
+    def attachment_J_det(self, source, dst):
+        attachment = self.attachment(source, dst)
+        symbol_names = ["x", "y", "z"]
+        symbols = []
+        if self.dim_of_node(dst) == 0:
+            return 1
+        for i in range(self.dim_of_node(dst)):
+            symbols += [sp.Symbol(symbol_names[i])]
+        J = sp.Matrix(attachment(*symbols)).jacobian(sp.Matrix(symbols))
+        return np.sqrt(abs(float(sp.det(J.T * J))))
+
     def attachment_J(self, source, dst):
         attachment = self.attachment(source, dst)
         symbol_names = ["x", "y", "z"]
@@ -903,6 +930,13 @@ class Point():
     def _from_dict(o_dict):
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
+    def equivalent(self, other):
+        if self.dimension != other.dimension:
+            return False
+        if set(self.ordered_vertex_coords()) != set(other.ordered_vertex_coords()):
+            return False
+        return self.get_topology() == other.get_topology()
+
 
 class Edge():
     """
@@ -926,7 +960,12 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    res.append(sympy_to_numpy(attach_comp, syms, x))
+                    if len(attach_comp.atoms(sp.Symbol)) <= len(x):
+                        res.append(sympy_to_numpy(attach_comp, syms, x))
+                    else:
+                        res_val = attach_comp.subs({syms[i]: x[i] for i in range(len(x))})
+                        res.append(res_val)
+
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -958,11 +997,11 @@ class Edge():
 
 class TensorProductPoint():
 
-    def __init__(self, A, B, flat=False):
+    def __init__(self, A, B):
         self.A = A
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
-        self.flat = flat
+        self.flat = False
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
@@ -974,8 +1013,8 @@ class TensorProductPoint():
         self.A.get_sub_entities()
         self.B.get_sub_entities()
 
-    def dimension(self):
-        return tuple(self.A.dimension, self.B.dimension)
+    def dim(self):
+        return (self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
@@ -990,17 +1029,91 @@ class TensorProductPoint():
         return verts
 
     def to_ufl(self, name=None):
-        if self.flat:
-            return CellComplexToUFL(self, "quadrilateral")
         return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
 
     def to_fiat(self, name=None):
-        if self.flat:
-            return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
-        return TensorProductPoint(self.A, self.B, True)
+        assert self.A.equivalent(self.B)
+        return FlattenedPoint(self.A, self.B)
+
+
+class FlattenedPoint(Point, TensorProductPoint):
+
+    def __init__(self, A, B):
+        self.A = A
+        self.B = B
+        self.dimension = self.A.dimension + self.B.dimension
+        self.flat = True
+        fuse_edges = self.construct_fuse_rep()
+        super().__init__(self.dimension, fuse_edges)
+
+    def to_ufl(self, name=None):
+        return CellComplexToUFL(self, "quadrilateral")
+
+    def to_fiat(self, name=None):
+        # TODO this should check if it actually is a hypercube
+        fiat = CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+        return fiat
+
+    def construct_fuse_rep(self):
+        sub_cells = [self.A, self.B]
+        dims = (self.A.dimension, self.B.dimension)
+
+        points = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
+        attachments = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
+
+        for d in range(max(dims) + 1):
+            for cell in sub_cells:
+                if d <= cell.dimension:
+                    sub_ent = cell.d_entities(d, get_class=True)
+                    points[cell][d].extend(sub_ent)
+                    for s in sub_ent:
+                        attachments[cell][d].extend(s.connections)
+
+        prod_points = list(itertools.product(*[points[cell][0] for cell in sub_cells]))
+        # temp = prod_points[1]
+        # prod_points[1] = prod_points[2]
+        # prod_points[2] = temp
+        point_cls = [Point(0) for i in range(len(prod_points))]
+        edges = []
+
+        # generate edges of tensor product result
+        for a in prod_points:
+            for b in prod_points:
+                # of all combinations of point, take those where at least one changes and at least one is the same
+                if any(a[i] == b[i] for i in range(len(a))) and any(a[i] != b[i] for i in range(len(sub_cells))):
+                    # ensure if they change, that edge exists in the existing topology
+                    if all([a[i] == b[i] or (sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i]._topology[1].values()) for i in range(len(sub_cells))]):
+                        edges.append((a, b))
+        # hasse level 1
+        edge_cls1 = {e: None for e in edges}
+        for i in range(len(sub_cells)):
+            for (a, b) in edges:
+                a_idx = prod_points.index(a)
+                b_idx = prod_points.index(b)
+                if a[i] != b[i]:
+                    a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
+                    b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
+                    edge_cls1[(a, b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
+                                                  Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
+        edge_cls2 = []
+        # hasse level 2
+        for i in range(len(sub_cells)):
+            for (a, b) in edges:
+                if a[i] == b[i]:
+                    x = sp.Symbol("x")
+                    a_edge = [att for att in attachments[sub_cells[i]][1] if att.point == a[i]][0]
+                    if i == 0:
+                        attach = (x,) + a_edge.attachment
+                    else:
+                        attach = a_edge.attachment + (x,)
+                    edge_cls2.append(Edge(edge_cls1[(a, b)], attach, a_edge.o))
+        return edge_cls2
+
+    def flatten(self):
+        return self
 
 
 class CellComplexToFiatSimplex(Simplex):
@@ -1190,9 +1303,8 @@ def constructCellComplex(name):
         return polygon(3).to_ufl(name)
         # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
-        interval = Point(1, [Point(0), Point(0)], vertex_num=2)
-        return TensorProductPoint(interval, interval).flatten().to_ufl(name)
-        # return ufc_quad().to_ufl(name)
+        return TensorProductPoint(line(), line()).flatten().to_ufl(name)
+        # return firedrake_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
         # return ufc_tetrahedron().to_ufl(name)
