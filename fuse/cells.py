@@ -544,6 +544,9 @@ class Point():
                 return self.oriented.permute(verts)
             return verts
 
+    def ordered_vertex_coords(self):
+        return [self.get_node(o, return_coords=True) for o in self.ordered_vertices()]
+
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
@@ -639,7 +642,7 @@ class Point():
 
         return reordered_entities
 
-    def basis_vectors(self, return_coords=True, entity=None, order=False):
+    def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True):
         if not entity:
             entity = self
         self_levels = [generation for generation in nx.topological_generations(self.G)]
@@ -659,7 +662,10 @@ class Point():
         for v in vertices[1:]:
             if return_coords:
                 v_coords = self.attachment(top_level_node, v)()
-                sub = normalise(np.subtract(v_coords, v_0_coords))
+                if norm:
+                    sub = normalise(np.subtract(v_coords, v_0_coords))
+                else:
+                    sub = np.subtract(v_coords, v_0_coords)
                 if not hasattr(sub, "__iter__"):
                     basis_vecs.append((sub,))
                 else:
@@ -816,11 +822,34 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
 
+    def attachment_J(self, source, dst):
+        attachment = self.attachment(source, dst)
+        symbol_names = ["x", "y", "z"]
+        symbols = []
+        if self.dim_of_node(dst) == 0:
+            return 1
+        for i in range(self.dim_of_node(dst)):
+            symbols += [sp.Symbol(symbol_names[i])]
+        J = sp.Matrix(attachment(*symbols)).jacobian(sp.Matrix(symbols))
+        return J
+
     def quadrature(self, degree):
         fiat_el = self.to_fiat()
         Q = create_quadrature(fiat_el, degree)
         pts, wts = Q.get_points(), Q.get_weights()
         return pts, wts
+
+    def cartesian_to_barycentric(self, pts):
+        verts = np.array(self.ordered_vertex_coords())
+        v_0 = self.ordered_vertex_coords()[0]
+        bvs = np.array(self.basis_vectors(norm=False))
+        bary_coords = []
+        for pt in pts:
+            res = np.matmul(np.linalg.inv(bvs.T), np.array(pt - v_0))
+            assert np.allclose(sum(bvs[i]*res[i] for i in range(len(bvs))), np.array(pt - v_0))
+            bary_coords += [(1 - sum(res),) + tuple(res[i] for i in range(len(res)))]
+            assert np.allclose(np.array(sum(bary_coords[-1][i]*verts[i] for i in range(len(verts)))), pt)
+        return bary_coords
 
     def cell_attachment(self, dst):
         if not isinstance(dst, int):
