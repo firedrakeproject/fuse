@@ -444,20 +444,22 @@ class ElementTriple():
                             if len(ent_dofs_ids) == len(basis_change):
                                 value_change = basis_change
                             elif len(cosets[0]) < len(bvs):
-                                if e.basis_group.size() > 2:
-                                    raise NotImplementedError("This logic is only valid for facets of 2 dimensions or less")
-                                value_change = None
-                                for coset in cosets:
-                                    if g in coset:
-                                        value_change = 1
-                                    elif g*e.basis_group.members()[1] in coset:
-                                        value_change = -1
-                                if value_change is None:
-                                    raise ValueError("Basis group and generation group do not form the full symmetry group")
+                                value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                # if e.basis_group.size() > 2:
+                                #     raise NotImplementedError("This logic is only valid for facets of 2 dimensions or less")
+                                # value_change = None
+                                # for coset in cosets:
+                                #     if g*e.basis_group.members()[1] in coset:
+                                #         value_change = -1
+                                #     else:
+                                #         # if g in coset:
+                                #         value_change = 1
+                                # if value_change is None:
+                                #     raise ValueError("Basis group and generation group do not form the full symmetry group")
                             else:
                                 value_change = basis_change
                             if len(cosets) == 1 or len(ent_dofs_ids) == len(basis_change):
-                                sub_mat = value_change
+                                sub_mat = np.array(value_change)
                             else:
                                 # check if this should be the cyclic variant
                                 # len(dof_gen_class[dim].g2.members()) == 2:
@@ -466,6 +468,7 @@ class ElementTriple():
                                 # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                 #     value_change = -1*value_change
                                 sub_mat = np.kron((~g).matrix_form(), value_change)
+                            
                             new_ent_dofs_ids = [int(g_to_ent_id[str(sub_g.perm.array_form)]) for coset in cosets for sub_g in coset]
                             if not np.allclose(new_ent_dofs_ids, ent_dofs_ids):
                                 # print("original", sub_mat)

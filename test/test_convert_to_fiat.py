@@ -1083,7 +1083,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
-            # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20], [18, 19, 20])])
+            print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([0], [0])])
             res2 = assemble(interpolate(vec(mesh), V2))
             if elem_code == "CG":
                 CG3 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())

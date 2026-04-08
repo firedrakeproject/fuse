@@ -176,8 +176,9 @@ class PermutationSetRepresentation():
             coset = []
             for h in subset.members():
                 try:
-                    coset += [g*h]
-                    seen.remove(g*h)
+                    if g*h in self.members():
+                        coset += [g*h]
+                        seen.remove(g*h)
                 except ValueError:
                     # member of subset not a member of superset
                     pass
