@@ -190,9 +190,17 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+
         if isinstance(self.pt, int):
-            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
+        if not np.allclose(np.matmul(basis_change, self.pt), self.g(self.pt)):
+            breakpoint()
         if not immersed:
+
             return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
@@ -279,6 +287,8 @@ class PolynomialKernel(BaseKernel):
             self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
             self.shape = len(fn)
         else:
+            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
             self.fn = sp.sympify(fn)
             self.shape = 0
         self.g = g
@@ -304,9 +314,7 @@ class PolynomialKernel(BaseKernel):
         if self.shape == 0:
             res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         else:
-            res = []
-            for i in range(self.shape):
-                res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
+            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
@@ -354,9 +362,8 @@ class ComponentKernel(BaseKernel):
     def __call__(self, *args):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+    def evaluate(self, Qpts, Qwts, immersed, dim):
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
-        # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
     def _to_dict(self):
         o_dict = {"comp": self.comp}
@@ -411,9 +418,9 @@ class DOF():
             self.pairing = self.pairing.add_entity(cell)
         if self.target_space is None:
             self.target_space = space
-        if self.id is None and overall_id is not None:
+        if overall_id is not None:
             self.id = overall_id
-        if self.sub_id is None and generator_id is not None:
+        if generator_id is not None:
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
@@ -452,15 +459,13 @@ class DOF():
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         if self.immersed:
-            # need to compute jacobian from attachment.
             pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
-            # J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
-            J_det = 1
+            J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
             if not np.allclose(J_det, 1):
                 raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
             immersion = self.target_space.tabulate(pts, self.cell_defined_on)
             if isinstance(self.target_space, TrH1):
-                new_wts = wts
+                new_wts = wts * J_det
             else:
                 new_wts = np.outer(wts * J_det, immersion)
                 # shape is wrong for 2d face on tet

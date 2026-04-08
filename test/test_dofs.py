@@ -220,6 +220,6 @@ def test_generate_quadrature():
         print("fiat", d.pt_dict)
     print()
     for d in elem.generate():
-        print("fuse", d.to_quadrature(degree, (2,)))
+        print("fuse", d.to_quadrature(degree, value_shape=(2,)))
 
     elem.to_fiat()
