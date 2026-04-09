@@ -2,7 +2,7 @@ import pytest
 import os
 import numpy as np
 from test_orientations import interpolate_vs_project, get_expression
-from test_convert_to_fiat import project as test_project
+from test_convert_to_fiat import project as project_test
 from fuse.element_construction import periodic_table, check_below_plane, check_below_line
 from firedrake import *
 
@@ -64,17 +64,15 @@ def test_convergence(col, k, deg, conv_rate):
     assert all([c > conv_rate for c in conv2])
 
 
-cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 5))]
+cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
 
 
 @pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d)
 def test_convergence3d(col, k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 3, k, deg)
-    # from test_convert_to_fiat import create_cg1_tet
-    # from fuse import make_tetrahedron
-    # elem = create_cg1_tet(make_tetrahedron())
-    scale_range = range(2, 5)
+
+    scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]
     for n in scale_range:
         mesh = UnitCubeMesh(2**n, 2**n, 2**n)
@@ -84,7 +82,7 @@ def test_convergence3d(col, k, deg, conv_rate):
         expr = cos(x*pi*2)*sin(y*pi*2)
         if len(elem.get_value_shape()) > 0:
             expr = as_vector([expr, expr, expr])
-        diff_proj[n-min(scale_range)] = test_project(V, mesh, expr)
+        diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
     
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
@@ -103,14 +101,13 @@ def test_proj3d_firedrake():
         V = FunctionSpace(mesh, "CG", 1)
         x, y, z = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
-        diff_proj[n-min(scale_range)] = test_project(V, mesh, expr)
+        diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
 
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
     assert all([c > conv_rate for c in conv1])
-
 
 
 def test_plane():

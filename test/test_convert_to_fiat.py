@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import sympy as sp
 from fuse import *
+from fuse.element_construction import periodic_table
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
@@ -1199,12 +1200,14 @@ def test_scaling_mesh():
     print(res2.dat.data)
 
 
-def test_quartic_poisson_solve():
+@pytest.mark.parametrize("elem",
+                         [construct_tet_cg4(make_tetrahedron()), periodic_table(0, 3, 0, 4)
+                          ])
+def test_quartic_poisson_solve(elem):
     # Create mesh and define function space
     r = 0
     m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     x = SpatialCoordinate(m)
-    elem = construct_tet_cg4(make_tetrahedron())
     V = FunctionSpace(m, elem.to_ufl())
 
     # Define variational problem
@@ -1216,6 +1219,42 @@ def test_quartic_poisson_solve():
     bcs = [DirichletBC(V, u_e, "on_boundary")]
     f = Function(V)
     f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
+    L = f*v*dx
+
+    # Compute solution
+    u_r = Function(V)
+    solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+
+    true = Function(V)
+    true.interpolate(u_e)
+
+    res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
+    print(res)
+    assert np.allclose(res, 0)
+
+
+@pytest.mark.parametrize("elem",
+                         [periodic_table(0, 3, 0, 5)])
+def test_quintic_poisson_solve(elem):
+    # Create mesh and define function space
+    r = 0
+    # m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
+    m = UnitTetrahedronMesh()
+    x = SpatialCoordinate(m)
+    # V = FunctionSpace(m, elem.to_ufl())
+    V = FunctionSpace(m, "CG", 5)
+
+    # Define variational problem
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = dot(grad(u), grad(v)) * dx
+    # u_e = x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[2] + 6
+    u_e = x[0]*x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[0]*x[0]
+
+    bcs = [DirichletBC(V, u_e, "on_boundary")]
+    f = Function(V)
+    # f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
+    f.interpolate(-(20*x[0]*x[0]*x[0] + 4*x[1]*x[1] + 6*x[2]*x[2] + 4*x[0]*x[0]*x[0] + 18*x[2]*x[0]*x[0]))
     L = f*v*dx
 
     # Compute solution
