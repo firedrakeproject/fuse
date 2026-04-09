@@ -153,7 +153,6 @@ class PointKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
