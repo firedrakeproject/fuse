@@ -1237,7 +1237,7 @@ def test_quartic_poisson_solve(elem):
                          [periodic_table(0, 3, 0, 5)])
 def test_quintic_poisson_solve(elem):
     # Create mesh and define function space
-    r = 0
+    # r = 0
     # m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     m = UnitTetrahedronMesh()
     x = SpatialCoordinate(m)

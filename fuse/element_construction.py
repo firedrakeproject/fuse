@@ -1,5 +1,4 @@
 from fuse import *
-from enum import Enum
 import math
 import numpy as np
 import sympy as sp
@@ -37,7 +36,7 @@ def identify_generation_group(b_coord, verts, bary=True):
         c = b_coord
     # ensure consistent vertex order to check points in given region
     verts = np.array(verts)
-    inds = np.lexsort(tuple(verts[:, i] for i in range(len(verts) - 2, -1, -1))) # lex sort prioritises last row, so reverse order
+    inds = np.lexsort(tuple(verts[:, i] for i in range(len(verts) - 2, -1, -1)))  # lex sort prioritises last row, so reverse order
     verts = verts[inds]
 
     center = tuple(sum([v[i] for v in verts])/len(verts) for i in range(len(verts[0])))

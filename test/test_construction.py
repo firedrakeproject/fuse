@@ -83,7 +83,7 @@ def test_convergence3d(col, k, deg, conv_rate):
         if len(elem.get_value_shape()) > 0:
             expr = as_vector([expr, expr, expr])
         diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
-    
+
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
