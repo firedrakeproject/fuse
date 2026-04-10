@@ -1237,24 +1237,20 @@ def test_quartic_poisson_solve(elem):
                          [periodic_table(0, 3, 0, 5)])
 def test_quintic_poisson_solve(elem):
     # Create mesh and define function space
-    # r = 0
-    # m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     m = UnitTetrahedronMesh()
     x = SpatialCoordinate(m)
-    # V = FunctionSpace(m, elem.to_ufl())
-    V = FunctionSpace(m, "CG", 5)
+    V = FunctionSpace(m, elem.to_ufl())
+    # V = FunctionSpace(m, "CG", 5)
 
     # Define variational problem
     u = TrialFunction(V)
     v = TestFunction(V)
     a = dot(grad(u), grad(v)) * dx
-    # u_e = x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[2] + 6
-    u_e = x[0]*x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[0]*x[0]
+    u_e = x[0]*x[0]*x[0]*x[0]*x[0]
 
     bcs = [DirichletBC(V, u_e, "on_boundary")]
     f = Function(V)
-    # f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
-    f.interpolate(-(20*x[0]*x[0]*x[0] + 4*x[1]*x[1] + 6*x[2]*x[2] + 4*x[0]*x[0]*x[0] + 18*x[2]*x[0]*x[0]))
+    f.interpolate(-20*x[0]*x[0]*x[0])
     L = f*v*dx
 
     # Compute solution

@@ -58,17 +58,15 @@ def identify_generation_group(b_coord, verts, bary=True):
             return S3
     if len(verts) == 4:
         midpoint1 = (verts[1] + verts[0])/2
-        midpoint2 = (verts[0] + verts[2])/2
-        midpoint3 = (verts[1] + verts[3])/2
-        midpoint4 = (verts[2] + verts[3])/2
-        plane1 = lambda coord: check_below_plane(verts[2], verts[3], midpoint1, coord) >= 0
-        plane2 = lambda coord: check_below_plane(verts[1], verts[3], midpoint2, coord) >= 0
-        plane3 = lambda coord: check_below_plane(verts[0], verts[2], midpoint3, coord) >= 0
-        plane4 = lambda coord: check_below_plane(verts[0], verts[1], midpoint4, coord) >= 0
-        if check_multiple(c, verts[0]) and plane1(c) and plane2(c):
+        face_center = (verts[0] + verts[1] + verts[2]) / 3
+        plane3 = lambda coord: check_below_plane(verts[0], face_center, center, coord) > 0
+        plane4 = lambda coord: check_below_plane(midpoint1, face_center, center, coord) > 0
+        plane5 = lambda coord: check_below_plane(verts[0], midpoint1, center, coord) > 0
+        if check_multiple(c, verts[0]):
             return C4
-        # add diff C4 ?? need to work out if needed
-        elif plane1(c) and plane2(c) and plane3(c) and plane4(c):
+        if check_multiple(c, midpoint1):
+            return tet_edges
+        if plane3(c) and plane4(c) and plane5(c):
             return tet_faces
     raise ValueError("Group not identified")
 
@@ -92,6 +90,7 @@ def check_below_line(x_0, x_1, coord, fix_order=True):
     coord = np.array(coord)
     v_0 = np.array(x_1) - np.array(x_0)
     n = np.matmul(np.array([[0, -1], [1, 0]]), v_0)
+
     eq = lambda x: np.dot(n, x - x_0)
 
     if np.allclose(eq(coord), 0):
@@ -116,11 +115,31 @@ def check_below_plane(x_0, x_1, x_2, coord):
         return -1
 
 
+def check_within_plane(x_0, x_1, x_2, coord):
+    if check_below_plane(x_0, x_1, x_2, coord) != 0:
+        return False
+    tol = 10e-12
+    w = coord - x_0
+    b1 = np.dot(w, x_1 - x_0)
+    b2 = np.dot(w, x_2 - x_0)
+
+    # 3) bounds check
+    return (-tol <= b1 <= 1 + tol) and (-tol <= b2 <= 1 + tol)
+
+
 def check_multiple(coord_1, coord_2):
-    if len(coord_1) == 2:
-        return np.allclose(check_below_line(coord_2, (0, 0), coord_1), 0)
-    div = coord_1 / coord_2
-    return np.allclose(div, div[0])
+    """ Checks coord_2 lies on the line segment between coord_1 and the origin"""
+    # if len(coord_1) == 2:
+    #   return np.allclose(check_below_line(coord_2, (0, 0), coord_1), 0)
+    if np.allclose(coord_2, 0):
+        return True
+    scale = None
+    for i in range(len(coord_1)):
+        if scale is None and not np.allclose(coord_2[i], 0):
+            scale = coord_1[i] / coord_2[i]
+    if scale < 0 or scale > 1:
+        return False
+    return np.allclose(coord_1, np.array(coord_2)*scale)
 
 
 def lagrange_barycentric_basis(dim, verts, deg):
