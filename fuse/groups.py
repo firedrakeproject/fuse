@@ -146,7 +146,7 @@ class PermutationSetRepresentation():
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
     def add_cell(self, cell):
-        return PermutationSetRepresentation(self.perm_list, cell=cell)
+        return PermutationSetRepresentation(self.perm_list, cell=cell, name=self.name)
 
     def conjugacy_class(self, g):
         conj_class = set()
@@ -292,7 +292,7 @@ class GroupRepresentation(PermutationSetRepresentation):
             self.cell = None
 
     def add_cell(self, cell):
-        return GroupRepresentation(self.base_group, cell=cell)
+        return GroupRepresentation(self.base_group, cell=cell, name=self.name)
 
     def size(self):
         if hasattr(self, "_members"):
@@ -435,6 +435,7 @@ A3 = GroupRepresentation(AlternatingGroup(3))
 
 basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
 diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
+new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),

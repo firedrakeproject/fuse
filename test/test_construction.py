@@ -7,21 +7,15 @@ from fuse.element_construction import periodic_table, check_below_plane, check_b
 from firedrake import *
 
 
-@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3]])
-def test_construction(k, deg):
-    elem = periodic_table(0, 2, k, deg)
+@pytest.mark.parametrize("col,k,deg", [(col, 3, 0) for col in [0, 1]] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
+def test_construction(col, k, deg):
+    elem = periodic_table(col, 2, k, deg)
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("k,deg", [(3, 0)] + [(k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3]])
-def test_construction1(k, deg):
-    elem = periodic_table(1, 2, k, deg)
-    elem.to_fiat()
-
-
-@pytest.mark.parametrize("k,deg", [(k, deg) for deg in range(1, 7) for k in [0]])
-def test_construction3d(k, deg):
-    elem = periodic_table(0, 3, k, deg)
+@pytest.mark.parametrize("col,k,deg", [(col, k, deg) for deg in range(1, 7) for k in [0, 2] for col in [0, 1]])
+def test_construction3d(col, k, deg):
+    elem = periodic_table(col, 3, k, deg)
     elem.to_fiat()
 
 
@@ -65,15 +59,18 @@ def test_convergence(col, k, deg, conv_rate):
 
 
 cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
+bdm_params3d = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 4))]
 
-
-@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d)
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + bdm_params3d)
 def test_convergence3d(col, k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 3, k, deg)
+    # from test_3d_examples_docs import construct_tet_bdm
+    # elem2 = construct_tet_bdm()
 
     scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]
+    # diff_proj2 = [0 for i in scale_range]
     for n in scale_range:
         mesh = UnitCubeMesh(2**n, 2**n, 2**n)
 
@@ -83,11 +80,22 @@ def test_convergence3d(col, k, deg, conv_rate):
         if len(elem.get_value_shape()) > 0:
             expr = as_vector([expr, expr, expr])
         diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
+        # V = FunctionSpace(mesh, elem2.to_ufl())
+        # x, y, z = SpatialCoordinate(mesh)
+        # expr = cos(x*pi*2)*sin(y*pi*2)
+        # if len(elem.get_value_shape()) > 0:
+        #     expr = as_vector([expr, expr, expr])
+        # diff_proj2[n-min(scale_range)] = project_test(V, mesh, expr)
 
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
+    
+    # print("projection l2 error norms:", diff_proj2)
+    # diff_proj = np.array(diff_proj2)
+    # conv2 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    # print("convergence order:", conv2)
     assert all([c > conv_rate for c in conv1])
 
 
@@ -103,7 +111,8 @@ def test_polynomial_poisson_solve(deg):
     x = SpatialCoordinate(m)
     elem = periodic_table(0, 3, 0, deg)
     V = FunctionSpace(m, elem.to_ufl())
-    # V = FunctionSpace(m, "CG", 5)
+    # from test_3d_examples_docs import construct_tet_cg4
+    # V = FunctionSpace(m, construct_tet_cg4().to_ufl())
 
     # Define variational problem
     u = TrialFunction(V)

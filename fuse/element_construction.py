@@ -51,9 +51,9 @@ def identify_generation_group(b_coord, verts, bary=True):
         cond1 = lambda coord: check_multiple(coord, verts[0]) and check_below_line(verts[2], midpoint1, coord) >= 0
         cond2 = lambda coord: (check_multiple(coord, midpoint2) and check_below_line(midpoint1, (0, 0), coord) >= 0)
         if cond1(c):
-            return C3
-        elif cond2(c):  # cond3(c) or
             return diff_C3
+        elif cond2(c):  # cond3(c) or
+            return C3
         elif check_below_line(verts[0], (0, 0), c) == 1 and check_below_line(midpoint2, (0, 0), c) == 1:
             return S3
     if len(verts) == 4:
@@ -176,25 +176,31 @@ def lagrange_barycentric_basis(dim, verts, deg):
 
 def proxy_field_1_form(cell, deg, rot=False):
     symbols = []
+    coords = []
     for i in range(cell.dimension + 1):
         symbols += [sp.Symbol(f"s_{i}")]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
+        if i < cell.dimension:
+            coords += [sp.Symbol(f"s_{i}")]
     v_0 = np.array(cell.ordered_vertex_coords()[0])
     bvs = np.array(cell.basis_vectors(norm=False))
-    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y) - v_0))
+    res = np.matmul(np.linalg.inv(bvs.T), np.array(coords - v_0))
     ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
     dl = []
     for l in ls:
-        dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y)))]
+        dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
     bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(0, 1), (0, 2), (1, 2)]]
     if rot:
+        assert cell.dimension <= 2
         perp = lambda x: np.array([[0, -1], [1, 0]]) @ x
         bfs = [perp(bf) for bf in bfs]
-    return bfs, [diff_C3], symbols
+    if cell.dimension == 2:
+        grp = [diff_C3]
+    else:
+        grp = [tet_edges]
+    return bfs, grp, symbols
 
 
-def vector_facet_fns(cell, deg, rot=False):
+def vector_basis_fns(cell, deg, rot=False):
     """
     Returns vector valued basis functions of a given degree over a given cell, by default returning
     Nedelec basis functions, and returning Raviart Thomas if rot=True
@@ -206,45 +212,67 @@ def vector_facet_fns(cell, deg, rot=False):
     for nd_bf, nd_grp in zip(nd_basis_funcs, nd_grps):
         for bf, grp in zip(basis_funcs, groups):
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(nd_bf*bf, symbols=symbols))]
-            if grp.size() > 3:
-                breakpoint()
+            # if (nd_grp*grp).size() > 3:
+            #     breakpoint()
             dofs += [DOFGenerator(xs, nd_grp*grp, S1)]
 
-    basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg - 2)
+    interior_deg = deg - 2
+    if cell.dimension == 3:
+        face = cell.d_entities(2)[0]
+        face_dofs = vector_basis_fns(face, deg)[-1]
+        dofs += [DOFGenerator(face_dofs.x, tet_faces*face_dofs.g1, S1)]
+        interior_deg = deg - 3
+
+    basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
     for bf, grp in zip(basis_funcs, groups):
         v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
         v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
         v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
+
         xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_2)/2, symbols=symbols))]
-        if grp.size() > 3:
+        if cell.dimension == 3:
+            v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
             dofs += [DOFGenerator(xs, grp, S1)]
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_1)/2, symbols=symbols))]
             dofs += [DOFGenerator(xs, grp, S1)]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_3)/2, symbols=symbols))]
+            dofs += [DOFGenerator(xs, grp, S1)]
         else:
-            dofs += [DOFGenerator(xs, S2*grp, S1)]
+            if grp.size() > 3:
+                dofs += [DOFGenerator(xs, grp, S1)]
+                xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_1)/2, symbols=symbols))]
+                dofs += [DOFGenerator(xs, grp, S1)]
+            else:
+                dofs += [DOFGenerator(xs, S2*grp, S1)]
     return dofs
 
 
-def lagrange_facet_fns(shp, cell, deg):
+def lagrange_facet_fns(cell, deg, interior=False):
     dofs = []
+    if interior:
+        g2 = S1
+    else:
+        g2 = cell.group
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg)
     for bf, grp in zip(basis_funcs, groups):
-        if shp == 1:
+        if not interior:
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf, symbols=symbols))]
-            dofs += [DOFGenerator(xs, grp, S2)]
-        elif shp == 2:
+            dofs += [DOFGenerator(xs, grp, g2)]
+        else:
             v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
             v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
             v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols))]
+            if cell.dimension == 3:
+                raise NotImplementedError("basis group for tets")
             if grp.size() > 3:
-                dofs += [DOFGenerator(xs, grp, S1)]
+                dofs += [DOFGenerator(xs, grp, g2)]
                 xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
-                dofs += [DOFGenerator(xs, grp, S1)]
+                dofs += [DOFGenerator(xs, grp, g2)]
             else:
-                dofs += [DOFGenerator(xs, S2*grp, S1)]
-        else:
-            raise NotImplementedError("Facet functions on facets with dimension greater than 2 not supported")
+
+                dofs += [DOFGenerator(xs, S2*grp, g2)]
+
     return dofs
 
 
@@ -330,12 +358,12 @@ def construct_tri_ndN(deg):
     cell = polygon(3)
     edge = cell.edges()[0]
 
-    dofs = lagrange_facet_fns(1, edge, deg - 1)
+    dofs = lagrange_facet_fns(edge, deg - 1)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     xs = [immerse(cell, int_ned1, TrHCurl)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
-    center_dofs = lagrange_facet_fns(2, cell, deg - 2)
+    center_dofs = lagrange_facet_fns(cell, deg - 2, interior=True)
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
@@ -355,12 +383,12 @@ def construct_tri_ndN_2(deg):
     verts.reverse()
     verts = [verts[0], verts[2], verts[1]]
 
-    dofs = lagrange_facet_fns(1, edge, deg)
+    dofs = lagrange_facet_fns(edge, deg)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     xs = [immerse(cell, int_ned1, TrHCurl)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
-    dofs = vector_facet_fns(cell, deg - 1, rot=True)
+    dofs = vector_basis_fns(cell, deg - 1, rot=True)
 
     vec_Pk = PolynomialSpace(deg, set_shape=True)
 
@@ -376,12 +404,12 @@ def construct_tri_rtN(deg):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    dofs = lagrange_facet_fns(1, edge, deg - 1)
+    dofs = lagrange_facet_fns(edge, deg - 1)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
     xs = [immerse(cell, int_ned1, TrHDiv)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
-    center_dofs = lagrange_facet_fns(2, cell, deg - 2)
+    center_dofs = lagrange_facet_fns(cell, deg - 2, interior=True)
 
     x = sp.Symbol("x")
     y = sp.Symbol("y")
@@ -399,18 +427,37 @@ def construct_tri_bdmN(deg):
     cell = polygon(3)
     edge = cell.edges()[0]
 
-    dofs = lagrange_facet_fns(1, edge, deg)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
-    xs = [immerse(cell, int_ned1, TrHDiv)]
+    dofs = lagrange_facet_fns(edge, deg)
+    edge_trip = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+    xs = [immerse(cell, edge_trip, TrHDiv)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
-    center_dofs = vector_facet_fns(cell, deg - 1)
+    center_dofs = vector_basis_fns(cell, deg - 1)
 
     vec_Pd = PolynomialSpace(deg, set_shape=True)
 
-    ned = ElementTriple(cell, (vec_Pd, CellHDiv, C0), tri_dofs + center_dofs)
-    assert len(ned.generate()) == (deg + 1)*(deg + 2)
-    return ned
+    bdm = ElementTriple(cell, (vec_Pd, CellHDiv, C0), tri_dofs + center_dofs)
+    assert len(bdm.generate()) == (deg + 1)*(deg + 2)
+    return bdm
+
+
+def construct_tet_bdmN(deg):
+    cell = make_tetrahedron()
+    face = cell.d_entities(2)[0]
+
+    dofs = lagrange_facet_fns(face, deg)
+    int = ElementTriple(face, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+    xs = [immerse(cell, int, TrHDiv)]
+    face_dofs = [DOFGenerator(xs, tet_faces, S1)]
+
+    center_dofs = vector_basis_fns(cell, deg - 1)
+
+    vec_Pd = PolynomialSpace(deg, set_shape=True)
+
+    bdm = ElementTriple(cell, (vec_Pd, CellHDiv, C0), face_dofs + center_dofs)
+    assert len(bdm.generate()) == (1/2)*(deg + 1)*(deg + 2)*(deg + 3)
+    return bdm
+
 
 
 def construct_tri_dgN(deg):
@@ -443,6 +490,10 @@ constructors = {
             1: construct_tri_ndN_2,
             2: construct_tri_bdmN,
             3: construct_tri_dgN,
+        },
+        3: {
+            0: construct_tet_cgN,
+            2: construct_tet_bdmN,
         },
     },
 }
