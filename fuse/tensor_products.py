@@ -1,5 +1,6 @@
 from fuse.triples import ElementTriple
 from fuse.cells import TensorProductPoint
+import numpy as np
 from finat.ufl import TensorProductElement, FuseElement
 
 
@@ -47,22 +48,29 @@ class TensorProductTriple(ElementTriple):
             top = self.cell.to_fiat().get_topology()
         for dim in top.keys():
             a_ents = self.A.cell.get_topology()[dim[0]].keys()
-            b_ents = self.A.cell.get_topology()[dim[1]].keys()
+            b_ents = self.B.cell.get_topology()[dim[1]].keys()
             ents = [(a, b) for a in a_ents for b in b_ents]
+            comp_os = self.cell.component_orientations()
             for e, (a, b) in enumerate(ents):
                 ent_dofs = self.entity_dofs[dim][(a, b)]
                 if len(ent_dofs) > 1:
-                    sub_mat = oriented_mats_by_entity[sum(dim)][e]
+                    sub_mat = oriented_mats_by_entity[dim][e]
                     a_mat = self.A.matrices[dim[0]][a]
+                    a_ent_ids = self.A.entity_ids[dim[0]][a]
                     b_mat = self.B.matrices[dim[1]][b]
-                    # need to make groups for tensor product cell that are
-                    # different for flat or not
-                    breakpoint()
-        from collections import defaultdict
-        from FIAT.reference_element import tuple_sum
+                    b_ent_ids = self.B.entity_ids[dim[1]][b]
 
-        breakpoint()
-        return super().setup_matrices()
+                    os = [(o_a, o_b) for o_a in a_mat.keys() for o_b in b_mat.keys()]
+                    for o in os:
+                        a_sub_mat = a_mat[o[0]][np.ix_(a_ent_ids, a_ent_ids)]
+                        b_sub_mat = b_mat[o[1]][np.ix_(b_ent_ids, b_ent_ids)]
+                        combined_sub_mat = np.kron(a_sub_mat, b_sub_mat)
+                        new_o = comp_os[dim][o]
+                        sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
+        # from collections import defaultdict
+        # from FIAT.reference_element import tuple_sum
+        self.matrices = oriented_mats_by_entity
+        self.reversed_matrices = self.reverse_dof_perms(self.matrices)
 
     def generate(self):
         a_dofs = self.A.generate()

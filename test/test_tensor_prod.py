@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from fuse import *
 from firedrake import *
-from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
+from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg1_integral
 from test_convert_to_fiat import create_cg2
 # from test_convert_to_fiat import create_cg1
 
@@ -97,6 +97,7 @@ def test_on_quad_mesh():
     U = FunctionSpace(m, "CG", 1)
     mass_solve(U)
 
+
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
                                                                          (create_cg2, "CG", 2, 3.8)])
 def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
@@ -131,6 +132,7 @@ def test_flattening(A, B, res):
         cell = tensor_cell.flatten()
         cell.construct_fuse_rep()
 
+
 def test_cg1_dg0():
     A = construct_cg1()
     B = construct_dg1_integral()
@@ -145,6 +147,7 @@ def test_cg1_dg0():
     # print(non_sym2.entity_dofs())
     # print(flatten_entities(non_sym.entity_dofs()))
     # print(flatten_entities(non_sym2.entity_dofs()))
+    print(non_sym)
     breakpoint()
 
 
@@ -156,7 +159,6 @@ def test_trace_galerkin_projection():
     B = construct_dg1_integral()
     elem = tensor_product(A, B).flatten()
     elem2 = tensor_product(B, A).flatten()
-
 
     # Define the Trace Space
     T = FunctionSpace(mesh, elem.to_ufl() + elem2.to_ufl())
@@ -186,20 +188,35 @@ def test_trace_galerkin_projection():
 
     assert trace_error < 1e-13
 
-# def test_hdiv():
-#     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-#     m = UnitIntervalMesh(2)
-#     mesh = ExtrudedMesh(m, 2)
-#     CG_1 = FiniteElement("CG", interval, 1)
-#     DG_0 = FiniteElement("DG", interval, 0)
-#     P1P0 = TensorProductElement(CG_1, DG_0)
-#     RT_horiz = HDivElement(P1P0)
-#     P0P1 = TensorProductElement(DG_0, CG_1)
-#     RT_vert = HDivElement(P0P1)
-#     elt = RT_horiz + RT_vert
-#     V = FunctionSpace(mesh, elt)
-#     tabulation = V.finat_element.fiat_equivalent.tabulate(0, [(0, 0), (1, 0)])
-#     for ent, arr in tabulation.items():
-#         print(ent)
-#         for comp in arr:
-#             print(comp[0], comp[1])
+
+def test_hdiv():
+    np.set_printoptions(linewidth=90, precision=4, suppress=True)
+    m = UnitIntervalMesh(2)
+    mesh = ExtrudedMesh(m, 2)
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
+    P1P0 = TensorProductElement(CG_1, DG_0)
+    RT_horiz = HDivElement(P1P0)
+    P0P1 = TensorProductElement(DG_0, CG_1)
+    RT_vert = HDivElement(P0P1)
+    elt = RT_horiz + RT_vert
+    # mesh = UnitSquareMesh(1, 1, quadrilateral=True)
+    V = FunctionSpace(mesh, elt)
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    f = Function(V)
+    x, y = SpatialCoordinate(mesh)
+    f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
+    f = project(f_vec, V)
+    a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+    L = inner(f, v) * dx
+    u = Function(V)
+    solve(a == L, u)
+    breakpoint()
+    # f.interpolate(cos(x*pi*2)*cos(y*pi*2))
+    # V.finat_element.basis_evaluation(1, [(0, 0)])
+    # tabulation = V.finat_element.fiat_equivalent.tabulate(0, [(0, 0), (1, 0)])
+    # for ent, arr in tabulation.items():
+    #     print(ent)
+    #     for comp in arr:
+    #         print(comp[0], comp[1])

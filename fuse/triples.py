@@ -380,13 +380,18 @@ class ElementTriple():
         return entity_associations, pure_perm, sub_pure_perm
 
     def _initialise_entity_dicts(self, dofs):
-        min_ids = self.cell.get_starter_ids()
+        # min_ids = self.cell.get_starter_ids()
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}
         flat_by_entity = {}
-        for dim in range(self.cell.dimension + 1):
+        if isinstance(self.cell, TensorProductPoint):
+            dims = [(a_d, b_d) for a_d in range(self.cell.A.dimension + 1) for b_d in range(self.cell.B.dimension + 1)]
+        else:
+            dims = [i for i in range(self.cell.dimension + 1)]
+        for dim in dims:
             oriented_mats_by_entity[dim] = {}
             flat_by_entity[dim] = {}
+
             ents = self.cell.d_entities(dim)
             for e_id, e in enumerate(ents):
                 # old_e_id = e.id - min_ids[dim]
@@ -531,13 +536,16 @@ class ElementTriple():
             num_ents += len(ents)
 
     def reverse_dof_perms(self, matrices):
-        min_ids = self.cell.get_starter_ids()
+        # min_ids = self.cell.get_starter_ids()
         reversed_mats = {}
         for dim in matrices.keys():
             reversed_mats[dim] = {}
             ents = self.cell.d_entities(dim)
             for e in ents:
-                e_id = e.id - min_ids[dim]
+                # old_e_id = e.id - min_ids[dim]
+                e_id = self.cell.d_entities(e.dim(), get_class=False).index(e.id)
+                if isinstance(dim, tuple):
+                    breakpoint()
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:

@@ -141,7 +141,7 @@ def create_cg1_flipped(cell):
 
 
 def create_cg2(cell=None):
-    if cell == None:
+    if cell is None:
         cell = line()
     deg = 2
     if cell.dim() > 1:

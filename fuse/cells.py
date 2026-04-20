@@ -972,28 +972,50 @@ class Edge():
 class TensorProductPoint():
 
     def __init__(self, A, B):
+        self.id = next(self.id_iter)
         self.A = A
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = False
         self.fiat_elem = None
-        self.group = self.compute_cell_group().add_cell(self)
+        self.group = self.compute_cell_group()
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
+
+    def component_orientations(self):
+        from fuse.utils import orientation_value
+        self.component_os_to_os = {}
+        for dim in self.to_fiat().get_topology():
+            self.component_os_to_os[dim] = {}
+            a_ent = self.A.d_entities(dim[0])[0]
+            b_ent = self.B.d_entities(dim[1])[0]
+            verts = [(v_a, v_b) for v_a in a_ent.vertices() for v_b in b_ent.vertices()]
+            ident = [i for i in range(len(verts))]
+            group = [(g_a, g_b) for g_a in a_ent.group.members() for g_b in b_ent.group.members()]
+            for g_a, g_b in group:
+                new_verts = [(v_a, v_b) for v_a in g_a.permute(a_ent.vertices()) for v_b in g_b.permute(b_ent.vertices())]
+                perm = [verts.index(v) for v in new_verts]
+                o_val = orientation_value(ident, perm)
+                if sum(dim) == self.dimension and self.group.group_rep_numbering is not None:
+                    o_val = self.group.group_rep_numbering[o_val]
+                self.component_os_to_os[dim][(g_a.numeric_rep(), g_b.numeric_rep())] = o_val
+        return self.component_os_to_os
 
     def compute_cell_group(self):
         """
         Systematically work out the symmetry group of the tensor product cell.
         """
         verts = self.vertices()
-        group = [(g_a, g_b) for g_a in self.A.group.members() for g_b in self.A.group.members()]
+        group = [(g_a, g_b) for g_a in self.A.group.members() for g_b in self.B.group.members()]
         perms = []
         for g_a, g_b in group:
             new_verts = [(v_a, v_b) for v_a in g_a.permute(self.A.vertices()) for v_b in g_b.permute(self.B.vertices())]
             perm = [verts.index(v) for v in new_verts]
             perms += [fuse_groups.Permutation(perm)]
-        return fuse_groups.PermutationSetRepresentation(perms)
+
+        grp = fuse_groups.PermutationSetRepresentation(perms).add_cell(self)
+        return grp
 
     def get_starter_ids(self):
         # this doesn't actually make sense - remove when confirmed all changes to eliminate min ids from triple is done
@@ -1014,6 +1036,9 @@ class TensorProductPoint():
         return (self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
+        if isinstance(d, tuple):
+            return [TensorProductPoint(e_a, e_b) for e_a in self.A.d_entities(d[0], get_class) for e_b in self.B.d_entities(d[1], get_class)]
+        raise NotImplementedError("not sure this is right")
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
 
     def vertices(self, get_class=True, return_coords=False):
@@ -1029,7 +1054,7 @@ class TensorProductPoint():
 
     def to_fiat(self, name=None):
         if self.fiat_elem is None:
-            self.fiat_elem =  CellComplexToFiatTensorProduct(self, name)
+            self.fiat_elem = CellComplexToFiatTensorProduct(self, name)
         return self.fiat_elem
 
     def flatten(self):
