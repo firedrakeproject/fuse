@@ -1,6 +1,7 @@
 from fuse import *
 import sympy as sp
 import numpy as np
+import pytest
 
 np.set_printoptions(legacy="1.25")
 
@@ -32,7 +33,7 @@ def construct_dg1():
 
 def construct_dg0_integral(cell=None):
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
-    xs = [DOF(L2Pairing(), VectorKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel(0.5))]
     dg0 = ElementTriple(edge, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
     return dg0
 
@@ -343,6 +344,15 @@ def test_rt_example():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
     rt.to_fiat()
+
+
+@pytest.mark.parametrize(["triple", "expected"], [(construct_dg1_integral(), 1),
+                                                  (construct_cg1(), 0),
+                                                  (construct_rt(), 1),
+                                                  (construct_dg1_tri(), 2)])
+def test_form_degree(triple, expected):
+    from fuse.triples import compute_form_degree
+    assert compute_form_degree(triple.cell, triple.spaces) == expected
 
 
 def construct_hermite():

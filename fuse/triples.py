@@ -18,6 +18,20 @@ import scipy
 from functools import cache
 
 
+def compute_form_degree(cell, spaces):
+    if str(spaces[1]) == "L2":
+        return cell.dimension
+    elif str(spaces[1]) == "H1":
+        return 0
+    if cell.dimension < 2:
+        raise ValueError(f"Cells of dimension {cell.dimension} can only be 0 or 1 forms")
+    if cell.dimension == 2:
+        return 1
+    elif str(spaces[1]) == "HDiv":
+        return 1
+    elif str(spaces[1]) == "HCurl":
+        return 2    
+
 class ElementTriple():
     """
     Class to represent the three core parts of the element
@@ -157,7 +171,8 @@ class ElementTriple():
     def to_fiat(self):
         # call this to ensure set up is complete
         self.to_ufl()
-        form_degree = 1 if self.spaces[0].set_shape else 0
+        # form_degree = 1 if self.spaces[0].set_shape else 0
+        form_degree = compute_form_degree(self.cell, self.spaces)
         degree = self.spaces[0].degree()
         # sanity check that the dofs span the space
         original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
@@ -544,8 +559,6 @@ class ElementTriple():
             for e in ents:
                 # old_e_id = e.id - min_ids[dim]
                 e_id = self.cell.d_entities(e.dim(), get_class=False).index(e.id)
-                if isinstance(dim, tuple):
-                    breakpoint()
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:

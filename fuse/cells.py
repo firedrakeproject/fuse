@@ -970,6 +970,7 @@ class Edge():
 
 
 class TensorProductPoint():
+    id_iter = itertools.count()
 
     def __init__(self, A, B):
         self.id = next(self.id_iter)
@@ -979,6 +980,15 @@ class TensorProductPoint():
         self.flat = False
         self.fiat_elem = None
         self.group = self.compute_cell_group()
+        self.entities = {}
+        for d in [(a_d, b_d) for a_d in range(self.A.dimension + 1) for b_d in range(self.B.dimension + 1)]:
+            if d == (self.A.dimension, self.B.dimension):
+                self.entities[d] = [self]
+            else:
+                self.entities[d] = [TensorProductPoint(e_a, e_b) for e_a in self.A.d_entities(d[0], True) for e_b in self.B.d_entities(d[1], True)]
+        
+
+
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
@@ -1037,7 +1047,9 @@ class TensorProductPoint():
 
     def d_entities(self, d, get_class=True):
         if isinstance(d, tuple):
-            return [TensorProductPoint(e_a, e_b) for e_a in self.A.d_entities(d[0], get_class) for e_b in self.B.d_entities(d[1], get_class)]
+            if get_class:
+                return self.entities[d]
+            return [e.id for e in self.entities[d]]
         raise NotImplementedError("not sure this is right")
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
 

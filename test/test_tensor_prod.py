@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from fuse import *
 from firedrake import *
-from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg1_integral
+from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
 from test_convert_to_fiat import create_cg2
 # from test_convert_to_fiat import create_cg1
 
@@ -148,6 +148,10 @@ def test_cg1_dg0():
     # print(flatten_entities(non_sym.entity_dofs()))
     # print(flatten_entities(non_sym2.entity_dofs()))
     print(non_sym)
+    A = construct_dg1_integral()
+    B = construct_dg1_integral()
+    non_sym1 = tensor_product(A, B)
+    print(non_sym1)
     breakpoint()
 
 
@@ -195,10 +199,16 @@ def test_hdiv():
     mesh = ExtrudedMesh(m, 2)
     CG_1 = FiniteElement("CG", "interval", 1)
     DG_0 = FiniteElement("DG", "interval", 0)
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+    p1p0 = tensor_product(cg1, dg0).to_ufl()
     P1P0 = TensorProductElement(CG_1, DG_0)
-    RT_horiz = HDivElement(P1P0)
+    RT_horiz = HDivElement(p1p0)
+    # RT_horiz = HDivElement(P1P0)
+    p0p1 = tensor_product(dg0, cg1).to_ufl()
     P0P1 = TensorProductElement(DG_0, CG_1)
-    RT_vert = HDivElement(P0P1)
+    RT_vert = HDivElement(p0p1)
+    # RT_vert = HDivElement(P0P1)
     elt = RT_horiz + RT_vert
     # mesh = UnitSquareMesh(1, 1, quadrilateral=True)
     V = FunctionSpace(mesh, elt)
@@ -206,7 +216,8 @@ def test_hdiv():
     v = TestFunction(V)
     f = Function(V)
     x, y = SpatialCoordinate(mesh)
-    f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
+    # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
+    f_vec = as_vector((2, 3))
     f = project(f_vec, V)
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
     L = inner(f, v) * dx
