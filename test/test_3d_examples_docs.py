@@ -78,9 +78,11 @@ def construct_tet_cg4(cell=None, perm=True):
 
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
-    xs = [DOF(DeltaPairing(), PointKernel((0, 2*np.sqrt(3)/9)))]
+    xs = [DOF(DeltaPairing(), PointKernel((-0.333534405313151, -0.1925661786915493)))]
+    # xs = [DOF(DeltaPairing(), PointKernel((0, 2*np.sqrt(3)/9)))]
+    new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
     dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
-                             DOFGenerator(xs, diff_C3, S1), perm)
+                             DOFGenerator(xs, new_C3, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)
@@ -269,8 +271,8 @@ def construct_tet_bdm(cell=None, perm=None):
 
     s_0 = sp.Symbol("s_0")
     s_1 = sp.Symbol("s_1")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(1 - s_0 - s_1, symbols=(s_0, s_1)))]
-    dofs = DOFGenerator(xs, C3, S2)
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0, s_1)))]
+    dofs = DOFGenerator(xs, diff_C3, S3)
     face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
     im_xs = [immerse(cell, face_vec, TrHDiv)]
     faces = DOFGenerator(im_xs, tet_faces, S1)

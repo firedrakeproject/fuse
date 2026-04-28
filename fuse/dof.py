@@ -210,14 +210,14 @@ class VectorKernel(BaseKernel):
 class BarycentricPolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[]):
-        if hasattr(fn, "__iter__"):
+        if hasattr(fn, "__iter__") or isinstance(fn, sp.Matrix):
             # if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
             #     raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
             self.fn = [sp.Poly(fn[i], symbols) for i in range(len(fn))]
             self.shape = len(fn)
         else:
-            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
-                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
+            # if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+            #     raise ValueError("Function must be able to be interpreted as a sympy polynomial")
             # self.fn = sp.sympify(fn)
             self.fn = sp.Poly(fn, symbols)
             self.shape = 0
