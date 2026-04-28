@@ -3,7 +3,7 @@ import os
 import numpy as np
 from test_orientations import interpolate_vs_project, get_expression
 from test_convert_to_fiat import project as project_test
-from fuse.element_construction import periodic_table, check_below_plane, check_below_line
+from fuse.element_construction import periodic_table, check_below_plane, check_below_line, check_on_line
 from firedrake import *
 
 
@@ -13,7 +13,7 @@ def test_construction(col, k, deg):
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("col,k,deg", [(col, k, deg) for deg in range(1, 7) for k in [0, 2] for col in [0, 1]])
+@pytest.mark.parametrize("col,k,deg", [(col, 3, 0) for col in [0, 1]] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
 def test_construction3d(col, k, deg):
     elem = periodic_table(col, 3, k, deg)
     elem.to_fiat()
@@ -59,14 +59,21 @@ def test_convergence(col, k, deg, conv_rate):
 
 
 cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
+nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
+rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
+nd2_params3d = [(1, 1, deg, deg + 0.8) for deg in list(range(1, 4))]
 bdm_params3d = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 4))]
 
-@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + bdm_params3d)
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + nd_params3d + rt_params3d + nd2_params3d + bdm_params3d)
 def test_convergence3d(col, k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 3, k, deg)
-    # from test_3d_examples_docs import construct_tet_bdm
-    # elem2 = construct_tet_bdm()
+    from test_3d_examples_docs import construct_tet_ned_2nd_kind_2
+    elem2 = construct_tet_ned_2nd_kind_2()
+    # print(elem)
+    # print(elem2)
+    # breakpoint()
 
     scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]
@@ -155,8 +162,13 @@ def test_check_line():
     midpoint = (verts[1] + verts[2])/2
     midpoint1 = (verts[0] + verts[2])/2
     assert check_below_line(verts[0], midpoint, (0, 0)) == 0
+    assert check_on_line(verts[0], midpoint, (0, 0))
+    assert check_on_line(verts[1], verts[2], midpoint)
+    assert not check_on_line(verts[1], verts[2], midpoint1)
 
     assert check_below_line(verts[0], midpoint, (-0.5, 0)) == -1
     assert check_below_line(verts[0], midpoint, (0, -0.5)) == 1
 
     assert check_below_line(verts[1], midpoint1, verts[0]) == 1
+
+# test_construction3d(1,3, 2)

@@ -124,7 +124,8 @@ class PermutationSetRepresentation():
 
         if cell is not None:
             self.cell = cell
-            vertices = cell.vertices(return_coords=True)
+            # vertices = cell.vertices(return_coords=True)
+            vertices = cell.ordered_vertex_coords()
             self._members = []
             counter = 0
 
@@ -256,8 +257,7 @@ class GroupRepresentation(PermutationSetRepresentation):
         if cell is not None:
             self.cell = cell
             # vertices = cell.vertices(return_coords=True)
-            verts = cell.ordered_vertices()
-            vertices = [cell.get_node(v, return_coords=True) for v in verts]
+            vertices = cell.ordered_vertex_coords()
 
             self._members = []
             counter = 0
