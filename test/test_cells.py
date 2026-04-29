@@ -309,3 +309,26 @@ def make_entity_cone_lists(fiat_cell):
         _n = _n1
     _offset_list.append(_offset)
     return _list, _offset_list
+
+
+def test_tet_groups():
+    cosets = []
+    for cell in [ufc_tetrahedron(), make_tetrahedron()]:
+        group = S4.add_cell(cell)
+        for j in [1, 2]:
+
+            sub_group = []
+            for i in range(len(cell.d_entities(j))):
+                face = cell.d_entities(j)[i]
+                print(face)
+                for g in group.members():
+                    res = cell.permute_entities(g, j)[0]
+                    if res[1].perm.is_Identity and res[0] == face.id and (j == 2 or g.perm.is_even):
+                        
+                        print(g, res)
+                        sub_group += [g.perm]
+                print()
+            print([s.array_form for s in sub_group])
+            breakpoint()
+            cosets += [cell.group.cosets_by_submember(PermutationSetRepresentation(sub_group).add_cell(cell))]
+    breakpoint()

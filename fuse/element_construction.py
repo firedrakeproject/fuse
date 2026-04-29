@@ -6,120 +6,24 @@ from recursivenodes import recursive_nodes
 import itertools
 from functools import reduce
 from operator import mul
-from matplotlib import pyplot as plt
-import matplotlib
-matplotlib.use('Qt5Agg')
 
 
-def convert_to_generation(coords, verts):
+def convert_to_generation(coords, verts, return_idx=False):
     """Reduces a full list of cartesian coordinates to only those required for generation,
-       and divides them into groups """
-    coords_grps = {}
+       and divides them into groups
+       return idx argument returns generators as index into list. without this, the coordinate is returned"""
     n = len(coords)
-    for c in coords:
-        try:
-            grp = identify_generation_group(c, verts, bary=False)
-            if grp in coords_grps.keys():
-                coords_grps[grp] += [c]
-            else:
-                coords_grps[grp] = [c]
-            print("accepted", c)
-        except ValueError:
-            print("rejected", c)
-            pass
-
-    # new_coords = []
-    # if len(coords[0]) == 3:
-    #     for grp, cs in coords_grps.items():
-    #         # new_coords += [c for c in cs]
-    #         new_coords += [g(c) for c in cs for g in grp.add_cell(make_tetrahedron()).members()]
-    #     if len(coords) > 4:
-    #         fig = plt.figure()
-    #         ax = fig.add_subplot(projection='3d')
-    #         npcoords = np.array(coords)
-    #         verts = np.array(verts)
-    #         inds = np.lexsort(tuple(verts[:, i] for i in range(len(verts) - 2, -1, -1)))  # lex sort prioritises last row, so reverse order
-    #         verts = verts[inds]
-            
-    #         center = tuple(sum([v[i] for v in verts])/len(verts) for i in range(len(verts[0])))
-    #         midpoint1 = (verts[1] + verts[0])/2
-    #         midpoint2 = (verts[2] + verts[0])/2
-    #         face_center = (verts[0] + verts[1] + verts[2]) / 3
-    #         fig = plt.figure()
-    #         ax = fig.add_subplot(projection='3d', computed_zorder=False)
-    #         for i, v in enumerate(verts):
-    #             ax.scatter(v[0], v[1], v[2], color="g")
-    #             ax.text(v[0], v[1], v[2], f"{i}")
-    #         # for pt, txt in zip([center, midpoint1, midpoint2, face_center], ["center", "midpoint1", "midpoint2", "face_center"]):
-    #         #     ax.scatter(pt[0], pt[1], pt[2], color="g")
-    #         #     ax.text(pt[0], pt[1], pt[2], txt)
-
-    #         plane3 = lambda coord: check_below_plane(verts[0], face_center, center, coord)
-    #         plane4 = lambda coord: check_below_plane(midpoint1, center, face_center, coord)
-    #         plane5 = lambda coord: check_below_plane(verts[0], center, midpoint1, coord)
-    #         plane6 = lambda coord: check_below_plane(midpoint2, face_center, center, coord)
-    #         plane7 = lambda coord: check_below_plane(verts[0], midpoint2, center, coord)
-    #         # j = 3
-    #         # count = 0
-    #         # for i in range(len(coords)):
-    #         #     c = npcoords[i]
-    #         #     if plane4(c)[0] <= 0 and plane5(c)[0] <= 0 and plane6(c)[0] <= 0 and plane7(c)[0] <= 0:
-    #         #         count += 1
-    #         #         # ax.scatter(npcoords[i, 0], npcoords[i, 1], npcoords[i, 2], color="r")
-    #         #     else:
-    #         #         # pass
-    #         #         ax.scatter(npcoords[i, 0], npcoords[i, 1], npcoords[i, 2], color="b")
-    #         # lambda c: plane4(c) <= 0 and plane5(c) <= 0 and plane6(c) <= 0 and plane7(c) <= 0, 
-    #         # for plane in [plane4, plane5, plane6, plane7]:
-    #         #     pln = plane(npcoords[0])[1]
-    #         #     normal = pln[1] - pln[0]
-    #         #     xx, yy = np.meshgrid(range(-1, 2), range(-1, 2))
-    #         #     d = -pln[0].dot(normal)
-
-    #         #     # calculate corresponding z
-    #         #     z = (-normal[0] * xx - normal[1] * yy - d) * 1. / normal[2]
-    #         #     ax.plot_surface(xx, yy, z, alpha=0.5)
-    #         #     ax.plot([pln[0][0], pln[1][0]],
-    #         #             [pln[0][1], pln[1][1]],
-    #         #             [pln[0][2], pln[1][2]], marker="o")
-    #                 # if any([np.allclose(npcoords[i], nc) for nc in new_coords]):
-    #         for i in range(len(coords)):
-    #             c = npcoords[i]
-    #             ax.scatter(npcoords[i, 0], npcoords[i, 1], npcoords[i, 2], color="r")
-    #             # if plane4(c)[0] <= 0 and plane5(c)[0] <= 0 and plane6(c)[0] <= 0 and plane7(c)[0] <= 0:
-    #                 # pass
-    #             # else:
-    #             #     pass
-    #                 # ax.scatter(npcoords[i, 0], npcoords[i, 1], npcoords[i, 2], color="b")
-    #         new_coords = np.array(new_coords)
-    #         for i in range(len(new_coords)):
-    #             # c = new_coords[i]
-    #             # if plane4(c)[0] <= 0 and plane5(c)[0] <= 0 and plane6(c)[0] <= 0 and plane7(c)[0] <= 0:
-    #                 # pass
-    #             ax.scatter(new_coords[i, 0], new_coords[i, 1], new_coords[i, 2], color="y")
-    #         # for grp, cs in coords_grps.items():
-    #         #     for c in cs:
-    #         #         ax.scatter(c[0], c[1], c[2], color="r")
-    #         # plt.show()
-    #         plt.savefig(f"plane.png")
-    #         # plt.show()
-    #         # j += 1
-    #         breakpoint()
     verts = np.array(verts)
-    # verts = np.array(polygon(3).vertices(return_coords=True))
-    # inds = np.lexsort(tuple(verts[:, i] for i in range(len(verts) - 2, -1, -1)))  # lex sort prioritises last row, so reverse order
-    # verts = verts[inds]
-    coords_grps2 = group_with_mappings(coords, verts)
+    coords_grps = group_with_mappings(coords, verts, return_idx)
     assert n == sum([len(coords_grps[grp])*grp.size() for grp in coords_grps.keys()])
-    assert n == sum([len(coords_grps2[grp])*grp.size() for grp in coords_grps2.keys()])
-    return coords_grps2
+    return coords_grps
 
 
 def barycentric_coords(p, verts):
     """
     Compute barycentric coordinates of point p wrt listed of verts
     """
-    A = np.vstack((verts.T, np.ones(len(verts))))   # 4x4
+    A = np.vstack((verts.T, np.ones(len(verts))))
     b = np.append(p, 1.0)
     return np.linalg.solve(A, b)
 
@@ -143,13 +47,19 @@ def find_permutation(lam_i, lam_j, tol=1e-6):
     Find permutation sigma such that lam_j ≈ lam_i permuted by sigma.
     Returns permutation as a tuple, or None.
     """
+    perms = []
     for perm in itertools.permutations(range(len(lam_i))):
         if np.allclose(lam_i, lam_j[list(perm)], atol=tol):
-            return perm
+            perms += [perm]
+    if len(perms) > 1:
+        for p in perms:
+            if Permutation(p).is_even:
+                return p
+    return perms[0]
     return None
 
 
-def group_with_mappings(points, verts, tol=1e-6):
+def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
     points = [np.array(p) for p in points]
 
     # compute barycentric coordinates
@@ -157,14 +67,12 @@ def group_with_mappings(points, verts, tol=1e-6):
 
     # first group using fast method
     raw_groups = group_by_symmetry(points, verts, tol)
-
     result = {}
 
     for group in raw_groups:
         base = group[0]
         lam_base = bary[base]
 
-        mappings = {}
         perm_list = []
         for j in group:
             lam_j = bary[j]
@@ -174,20 +82,19 @@ def group_with_mappings(points, verts, tol=1e-6):
             if perm is None:
                 raise ValueError("Failed to find permutation")
 
-            mappings[j] = perm
             perm_list += [Permutation(perm)]
         perm_group = PermutationSetRepresentation(perm_list)
-        result[perm_group] = [tuple(points[base])]
-        # "indices": group,
-        # "base": base,
-        # "mappings": mappings  # maps base → j
+        if return_idx:
+            result[perm_group] = [base]
+        else:
+            result[perm_group] = [tuple(points[base])]
 
     return result
 
 
 def group_by_symmetry(points, verts, tol=1e-6):
     """
-    Fast grouping using sorted barycentric coordinates.
+    Group points into symmetry orbits using sorted barycentric coordinates.
     """
     points = [np.array(p) for p in points]
 
@@ -195,10 +102,8 @@ def group_by_symmetry(points, verts, tol=1e-6):
     for i, p in enumerate(points):
         lam = barycentric_coords(p, verts)
 
-        # numerical cleanup
+        # numerical cleanup and normalise
         lam[np.abs(lam) < tol] = 0.0
-
-        # normalize (optional but safer)
         lam = lam / np.sum(lam)
 
         # canonical key = sorted barycentric coords
@@ -212,192 +117,29 @@ def group_by_symmetry(points, verts, tol=1e-6):
     return list(groups.values())
 
 
-def identify_generation_group(b_coord, verts, bary=True):
-    """Identify the correct generation group from a (optionally) barycentric coordinate on a triangle or interval.
-
-        Assumes the coordinate lies in the lower left region of the triangle, defined by the sorted vertices."""
-    if bary:
-        # respect vertex order to compute barycentric coord
-        assert len(b_coord) == len(verts)
-        c = sum(b_coord[i]*np.array(verts)[i] for i in range(len(verts)))
+def multiindices(k, n):
+    if n == 1:
+        yield (k,)
     else:
-        c = b_coord
-    # ensure consistent vertex order to check points in given region
-    verts = np.array(verts)
-    inds = np.lexsort(tuple(verts[:, i] for i in range(len(verts) - 2, -1, -1)))  # lex sort prioritises last row, so reverse order
-    verts = verts[inds]
-
-    center = tuple(sum([v[i] for v in verts])/len(verts) for i in range(len(verts[0])))
-    if np.allclose(center, c):
-        return S1
-
-    if len(verts) == 2:
-        return S2
-    if len(verts) == 3:
-        midpoint1 = ((verts[1][0] + verts[0][0])/2, (verts[1][1] + verts[0][1])/2)
-        midpoint2 = ((verts[0][0] + verts[2][0])/2, (verts[0][1] + verts[2][1])/2)
-        cond1 = lambda coord: check_multiple(coord, verts[0]) and check_below_line(verts[2], midpoint1, coord) >= 0
-        cond2 = lambda coord: (check_multiple(coord, midpoint2) and check_below_line(midpoint1, (0, 0), coord) >= 0)
-        if cond1(c):
-            return diff_C3
-        elif cond2(c):  # cond3(c) or
-            return C3
-        elif check_below_line(verts[0], (0, 0), c) == 1 and check_below_line(midpoint2, (0, 0), c) == 1:
-            return S3
-    if len(verts) == 4:
-        midpoint1 = (verts[1] + verts[0])/2
-        midpoint2 = (verts[2] + verts[0])/2
-        midpoint3 = (verts[2] + verts[1])/2
-        face_center = (verts[0] + verts[1] + verts[2]) / 3
-        plane3 = lambda coord: check_below_plane(verts[0], face_center, center, coord)[0]
-        plane4 = lambda coord: check_below_plane(midpoint1, center, face_center, coord)[0]
-        plane5 = lambda coord: check_below_plane(verts[0], center, midpoint1, coord)[0]
-        plane6 = lambda coord: check_below_plane(midpoint2, face_center, center, coord)[0]
-        plane7 = lambda coord: check_below_plane(verts[0], midpoint2, center, coord)[0]
-        plane8 = lambda coord: check_below_plane(midpoint3,  center, face_center, coord)[0]
-        if check_multiple(c, verts[0]):
-            return C4
-        if any([check_multiple(c, verts[i]) for i in range(len(verts))]):
-            raise ValueError("Vertex coordinate already accounted for")
-        if check_multiple(c, face_center) and plane5(c) < 0:
-            return tet_faces
-        # if plane3(c) <= 0 and plane4(c) <= 0 and plane5(c) <= 0: # and plane5(c) > 0
-        #     return tet_faces
-        if plane5(c) == 0 and plane6(c) < 0 and plane8(c) <= 0:
-            return tet_edges
-        if plane4(c) < 0 and plane5(c) < 0 and plane6(c) < 0 and plane7(c) < 0:
-            return tet_faces * C3
-        # if plane3(c) >= 0 and plane4(c) > 0: # and plane5(c) > 0
-        #     return tet_faces
-        # if any([plane3(c) == 0 , plane4(c) == 0, plane5 == 0]):
-        #     breakpoint()
-    raise ValueError("Group not identified")
-
-
-
-def check_below_line(x_0, x_1, coord, fix_order=True):
-    """
-    Checks position of coord in relation to the segment defined by x_0 and x_1.
-
-    Fixes order of input coords such that line segment is oriented left to right (or down to up),
-    returning 1 if coord is below or to the left.
-    """
-    if fix_order:
-        if x_1[0] < x_0[0] and not np.allclose(x_1[0], x_0[0]):
-            temp = x_0
-            x_0 = x_1
-            x_1 = temp
-        elif np.allclose(x_1[0], x_0[0]) and x_1[1] > x_0[1]:
-            temp = x_0
-            x_0 = x_1
-            x_1 = temp
-    coord = np.array(coord)
-    v_0 = np.array(x_1) - np.array(x_0)
-    n = np.matmul(np.array([[0, -1], [1, 0]]), v_0)
-
-    eq = lambda x: np.dot(n, x - x_0)
-
-    if np.allclose(eq(coord), 0):
-        return 0
-    elif eq(coord) < 0:
-        return 1
-    else:
-        return -1
-
-
-def check_on_line(x_0, x_1, coord):
-    """ finds the value t such that coord = x_0 + t*(x_1 - x_0) 0 < t < 1
-    returns true if it exists and false if it doesn't
-    """
-    eq = lambda t: x_0 + t*(x_1 - x_0)
-    numerator = coord - x_0
-    denom = x_1 - x_0
-    scales = []
-    for i in range(len(x_0)):
-        if denom[i] == 0 and numerator[i] != 0:
-            return False
-        if denom[i] != 0:
-            scales += [numerator[i] / denom[i]]
-    if not all([np.allclose(scales[0], scales[i]) for i in range(len(scales))]):
-        return False
-    scale = scales[0]
-    if scale <= 0 or scale >= 1:
-        return False
-    assert np.allclose(eq(scale), coord)
-    return True
-
-
-def check_below_plane(x_0, x_1, x_2, coord):
-    v_0 = np.array(x_1) - np.array(x_0)
-    v_1 = np.array(x_2) - np.array(x_0)
-    n = np.cross(v_0, v_1)
-    eq = lambda x: np.dot(n, x - x_0)
-    return eq(coord), (x_0, x_0 + n)
-
-    if np.allclose(eq(coord), 0):
-        return 0
-    elif eq(coord[0]) < 0:
-        return 1
-    else:
-        return -1
-
-
-def check_within_plane(x_0, x_1, x_2, coord):
-    if check_below_plane(x_0, x_1, x_2, coord) != 0:
-        return False
-    tol = 10e-12
-    w = coord - x_0
-    b1 = np.dot(w, x_1 - x_0)
-    b2 = np.dot(w, x_2 - x_0)
-
-    # 3) bounds check
-    return (-tol <= b1 <= 1 + tol) and (-tol <= b2 <= 1 + tol)
-
-
-def check_multiple(coord_1, coord_2):
-    """ Checks coord_2 lies on the line segment between coord_1 and the origin"""
-    # if len(coord_1) == 2:
-    #   return np.allclose(check_below_line(coord_2, (0, 0), coord_1), 0)
-    if np.allclose(coord_2, 0):
-        return True
-    scale = None
-    for i in range(len(coord_1)):
-        if scale is None and not np.allclose(coord_2[i], 0):
-            scale = coord_1[i] / coord_2[i]
-    if scale < 0 or scale > 1:
-        return False
-    return np.allclose(coord_1, np.array(coord_2)*scale)
+        for i in range(k + 1):
+            for tail in multiindices(k - i, n - 1):
+                yield (i,) + tail
 
 
 def lagrange_barycentric_basis(dim, verts, deg):
     symbols = []
     for i in range(dim + 1):
         symbols += [sp.Symbol(f"s_{i}")]
-
-    if dim == 2:
-        # hack to ensure (-1, -np.sqrt(3)/3) is the first vertex
-        verts = verts[1:] + [verts[0]]
-
-    # Construct multiindices of the generation basis functions
-    acc_indices = [tuple()]
-    multiindices = []
-    ext = deg + 1
-    for d in range(dim + 1):
-        temp = []
-        for idx in acc_indices:
-            if len(idx) > 0:
-                ext = idx[-1] + 1
-            for i in range(0, ext):
-                temp += [idx + (i,)]
-        acc_indices = temp
-    for idx in acc_indices:
-        if sum(idx) == deg:
-            multiindices += [idx]
+    verts = np.array(verts)
 
     scale = 1 if deg == 0 else deg
-    grps = [identify_generation_group(tuple(i / scale for i in idx), verts) for idx in multiindices]
+    new_mul = list(multiindices(deg, dim + 1))
+    coords = [sum((i / scale)*verts[j] for j, i in enumerate(idx)) for idx in new_mul]
+    coords_grps = convert_to_generation(coords, verts, return_idx=True)
+
+    grps = [grp for grp in coords_grps.keys()]
     const = lambda idx: math.factorial(deg) / math.prod(math.factorial(i) for i in idx)
-    fns = [const(idx)*math.prod(s**i for s, i in zip(symbols, idx))for idx in multiindices]
+    fns = [const(new_mul[idx])*math.prod(s**i for s, i in zip(symbols, new_mul[idx])) for idxs in coords_grps.values() for idx in idxs]
     return fns, grps, symbols
 
 
@@ -455,7 +197,7 @@ def vector_basis_fns(cell, deg, rot=False):
 
     interior_deg = deg - 2
 
-    if cell.dimension == 3 and interior_deg >= 0:
+    if cell.dimension == 3 and interior_deg >= 1:
         face = cell.d_entities(2)[0]
         face_dofs = vector_basis_fns(face, deg)
         if len(face_dofs) > 0:
@@ -516,14 +258,24 @@ def lagrange_facet_fns(cell, deg, interior=False, vector=False):
             v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols))]
             if cell.dimension == 3:
-                raise NotImplementedError("basis group for tets")
-            if grp.size() > 3:
+                # if grp.size() > 3:
+                v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
                 dofs += [DOFGenerator(xs, grp, g2)]
                 xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
                 dofs += [DOFGenerator(xs, grp, g2)]
+                xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_3)/2, symbols=symbols))]
+                dofs += [DOFGenerator(xs, grp, g2)]
+                # else:
+                #     dofs += [DOFGenerator(xs, C3*grp, g2)]
             else:
+                # raise NotImplementedError("basis group for tets")
+                if grp.size() > 3:
+                    dofs += [DOFGenerator(xs, grp, g2)]
+                    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
+                    dofs += [DOFGenerator(xs, grp, g2)]
+                else:
 
-                dofs += [DOFGenerator(xs, S2*grp, g2)]
+                    dofs += [DOFGenerator(xs, S2*grp, g2)]
 
     return dofs
 
@@ -683,14 +435,16 @@ def construct_tri_ndN_2(deg):
 
 
 def construct_tet_ndN_2(deg):
-    cell = make_tetrahedron()
+    # cell = make_tetrahedron()
+    from fuse.cells import ufc_tetrahedron
+    cell = ufc_tetrahedron()
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-
+    from fuse.groups import tet_faces_ufc, tet_edges_ufc
     dofs = lagrange_facet_fns(edge, deg)
     edge_elem = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     xs = [immerse(cell, edge_elem, TrHCurl)]
-    edge_dofs = [DOFGenerator(xs, tet_edges, S1)]
+    edge_dofs = [DOFGenerator(xs, tet_edges_ufc, S1)]
 
     face_dofs = []
     if deg >= 2:
@@ -698,7 +452,7 @@ def construct_tet_ndN_2(deg):
         # not correct poly space
         face_elem = ElementTriple(face, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), face_dofs)
         xs = [immerse(cell, face_elem, TrH1)]
-        face_dofs = [DOFGenerator(xs, tet_faces, S1)]
+        face_dofs = [DOFGenerator(xs, tet_faces_ufc, S1)]
 
     center_dofs = []
     if deg >= 3:

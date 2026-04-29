@@ -58,7 +58,7 @@ class GroupMemberRep(object):
 
     def compute_perm(self, base_val=None):
         if base_val:
-            val_list = [x + base_val for x in self.perm.array_form]
+            val_list = [x + base_val for x in self.array_form]
         else:
             val_list = self.perm.array_form
         val = self.numeric_rep()
@@ -89,11 +89,32 @@ class GroupMemberRep(object):
 
     def __repr__(self):
         string = "g"
-        string += str(self.perm.array_form)
+        string += str(self.array_form)
         return string
 
+    @property
+    def array_form(self):
+        return tuple(self.perm.array_form)
+
     def matrix_form(self):
-        return np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
+        # try:
+        members = [m.numeric_rep() for m in self.group.members()]
+        permuted_members = [(self*m).numeric_rep() for m in self.group.members()]
+        # except ValueError:
+        #     cosets = self.group.cell.group.cosets_by_submember(self.group)
+        #     members = [cosets[m.array_form] for m in self.group.members()]
+        #     # permuted_members = [cosets[tuple((self.perm*m.perm).array_form)] for m in self.group.members()]
+        #     permuted_members = [cosets[m.array_form]*cosets[self.array_form] for m in self.group.members()]
+        #     breakpoint()
+        mat = perm_list_to_matrix(members, permuted_members)
+        return mat
+    #     mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
+    #     return mat
+
+    # def perm_members_matrix_form(self):
+    #     members = [m.numeric_rep() for m in self.group.members()]
+    #     permuted_members = [(self*m).numeric_rep() for m in self.group.members()]
+    #     mat = perm_list_to_matrix(members, permuted_members)
 
     def lin_combination_form(self):
         if self.group.cell.dimension == 0:
@@ -173,6 +194,14 @@ class PermutationSetRepresentation():
                     pass
             cosets += [coset]
         return cosets
+
+    def cosets_by_submember(self, subset):
+        cosets = self.cosets(subset)
+        cosets_by_submember = {}
+        for i, m in enumerate(subset.members()):
+            for coset in cosets:
+                cosets_by_submember[coset[i].array_form] = m
+        return cosets_by_submember     
 
     def members(self, perm=False):
         if self.cell is None:
@@ -440,10 +469,14 @@ new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
                                           Permutation([1, 3, 0, 2]), Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+tet_edges_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2]),
+                                              Permutation([1, 2, 0, 3]), Permutation([3, 1, 0, 2]), Permutation([2, 3, 0, 1])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 0, 3, 1]),
 #                                           Permutation([3, 2, 0, 1]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
-tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]),
-                                          Permutation([3, 0, 2, 1])])
+tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1])])
+tet_faces_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 3, 2, 0]), Permutation([1, 2, 3, 0]), Permutation([3, 0, 2, 1])])
+# tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]), Permutation([3, 0, 1, 2])])
+tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 0, 3, 2]), Permutation([3, 0, 1, 2])])
 # tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([0, 3, 1, 2]),
 #                                           Permutation([3, 2, 0, 1])])
 
