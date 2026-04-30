@@ -334,6 +334,3 @@ def test_tet_groups():
                 print()
             print([s.array_form for s in sub_group])
             print([s.array_form for s in flip_group])
-            breakpoint()
-            cosets += [cell.group.cosets_by_submember(PermutationSetRepresentation(sub_group).add_cell(cell))]
-    breakpoint()

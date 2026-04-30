@@ -451,7 +451,7 @@ class ElementTriple():
                                 #     value_change = -1*value_change
                                 # sub_mat1 = cosets[(~g).array_form].matrix_form()
                                 sub_mat1 = (~g).matrix_form()
-                                sub_mat2 = (g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                                sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                                 sub_mat = np.kron(sub_mat2, value_change)
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
@@ -466,13 +466,13 @@ class ElementTriple():
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
                             sub_mat = (~g).matrix_form()
-                            sub_mat2 = (g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                             # sub_mat = cosets[(~g).array_form].matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
                             # case for dofs defined on the cell and not immersed - doesn't actually matter for facet agreement
                             sub_mat = (~g).matrix_form()
-                            sub_mat2 = (g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                             try:
                                 # sub_mat = cosets[(~g).array_form].matrix_form()
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()

@@ -286,10 +286,7 @@ def lagrange_facet_fns(cell, deg, interior=False, vector=False):
                 dofs += [DOFGenerator(xs, grp, g2)]
                 xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_3)/2, symbols=symbols))]
                 dofs += [DOFGenerator(xs, grp, g2)]
-                # else:
-                #     dofs += [DOFGenerator(xs, C3*grp, g2)]
             else:
-                # raise NotImplementedError("basis group for tets")
                 if grp.size() > 3:
                     dofs += [DOFGenerator(xs, grp, g2)]
                     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols))]
