@@ -97,24 +97,19 @@ class GroupMemberRep(object):
         return tuple(self.perm.array_form)
 
     def matrix_form(self):
-        # try:
-        members = [m.numeric_rep() for m in self.group.members()]
-        permuted_members = [(self*m).numeric_rep() for m in self.group.members()]
-        # except ValueError:
-        #     cosets = self.group.cell.group.cosets_by_submember(self.group)
-        #     members = [cosets[m.array_form] for m in self.group.members()]
-        #     # permuted_members = [cosets[tuple((self.perm*m.perm).array_form)] for m in self.group.members()]
-        #     permuted_members = [cosets[m.array_form]*cosets[self.array_form] for m in self.group.members()]
-        #     breakpoint()
-        mat = perm_list_to_matrix(members, permuted_members)
+        mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         return mat
-    #     mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
-    #     return mat
 
-    # def perm_members_matrix_form(self):
-    #     members = [m.numeric_rep() for m in self.group.members()]
-    #     permuted_members = [(self*m).numeric_rep() for m in self.group.members()]
-    #     mat = perm_list_to_matrix(members, permuted_members)
+    def matrix_form_subgroup(self, group):
+        if group.size() == self.group.size():
+            members = [m.numeric_rep() for m in group.members()]
+            permuted_members = [(self*m).numeric_rep() for m in group.members()]
+            mat = perm_list_to_matrix(members, permuted_members)
+        elif group.size() == self.perm.size:
+            mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
+        else:
+            raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
+        return mat
 
     def lin_combination_form(self):
         if self.group.cell.dimension == 0:
@@ -450,6 +445,7 @@ S4 = GroupRepresentation(SymmetricGroup(4))
 
 D4 = GroupRepresentation(DihedralGroup(4))
 
+tet_C2 = GroupRepresentation(sp.combinatorics.PermutationGroup(Permutation([[0, 1], [2, 3]])))
 C3 = GroupRepresentation(CyclicGroup(3), name="C")
 C4 = GroupRepresentation(CyclicGroup(4))
 

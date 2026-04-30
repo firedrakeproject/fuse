@@ -191,27 +191,46 @@ def vector_basis_fns(cell, deg, rot=False):
         for bf, grp in zip(basis_funcs, groups):
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(nd_bf*bf, symbols=symbols))]
             if grp.size() != 1:
-                dofs += [DOFGenerator(xs, nd_grp*grp, S1)]
+                if cell.dimension == 3 and grp.size() == 2:
+                    dofs += [DOFGenerator(xs, nd_grp*tet_C2, S1)]
+                else:
+                    dofs += [DOFGenerator(xs, nd_grp*grp, S1)]
             else:
                 dofs += [DOFGenerator(xs, nd_grp, S1)]
 
     interior_deg = deg - 2
 
-    if cell.dimension == 3 and interior_deg >= 1:
+    if cell.dimension == 3 and interior_deg >= 0 and not rot:
         face = cell.d_entities(2)[0]
         face_dofs = vector_basis_fns(face, deg)
         if len(face_dofs) > 0:
             face_dofs = face_dofs[-1]
 
-            def immersed(pt):
-                basis = np.array(face.basis_vectors()).T
+            def immersed(face, pt, o):
+                basis = np.array(face.orient(o).basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
                 J = np.array(cell.basis_vectors(entity=face)).T
                 return np.matmul(J, basis_coeffs)
             original_kernel = face_dofs.x[0].kernel
-            kernel = type(original_kernel)(immersed(original_kernel.fn), symbols=original_kernel.syms)
-            new_dof = DOF(face_dofs.x[0].pairing, kernel)
-            dofs += [DOFGenerator([new_dof], tet_faces*face_dofs.g1, S1)]
+            extra_sym = sp.Symbol("s_3")
+            symbols = original_kernel.syms + [extra_sym]
+            new_dofs = []
+            for f in cell.d_entities(2):
+                bary_verts = np.rint(np.array(cell.cartesian_to_barycentric([cell.get_node(v, return_coords=True) for v in f.ordered_vertices()]))).astype(np.int64)
+                new_kernel_fn = [poly.subs({o_sym: sum(symbols[j] for j in range(len(b)) if b[j] == 1) for o_sym, b in zip(original_kernel.syms, bary_verts)}) for poly in original_kernel.fn]
+                kernels = [type(original_kernel)(immersed(f, new_kernel_fn, o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
+                new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
+
+            # grp = face_dofs.g1
+            # if grp.size() == 2:
+            #     # grp = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1]),
+            #     #                                     Permutation([2, 1, 0, 3]), Permutation([0, 2, 3, 1]), Permutation([2, 3, 0, 1]), Permutation([3, 0, 1, 2])])
+            #     grp = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1]),
+            #                                         Permutation([3, 1, 2, 0]), Permutation([1, 2, 0, 3]), Permutation([1, 3, 0, 2]), Permutation([1, 0, 2, 3])])
+            #     breakpoint()
+            # else:
+            #     grp = tet_faces*grp
+            dofs += [DOFGenerator(new_dofs, S1, S1)]
             interior_deg = deg - 3
 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
@@ -222,6 +241,8 @@ def vector_basis_fns(cell, deg, rot=False):
 
         xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_2)/2, symbols=symbols))]
         if cell.dimension == 3:
+            if grp.size() == 2:
+                grp = tet_C2
             v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
             dofs += [DOFGenerator(xs, grp, S1)]
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_1)/2, symbols=symbols))]
@@ -435,16 +456,13 @@ def construct_tri_ndN_2(deg):
 
 
 def construct_tet_ndN_2(deg):
-    # cell = make_tetrahedron()
-    from fuse.cells import ufc_tetrahedron
-    cell = ufc_tetrahedron()
+    cell = make_tetrahedron()
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-    from fuse.groups import tet_faces_ufc, tet_edges_ufc
     dofs = lagrange_facet_fns(edge, deg)
     edge_elem = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     xs = [immerse(cell, edge_elem, TrHCurl)]
-    edge_dofs = [DOFGenerator(xs, tet_edges_ufc, S1)]
+    edge_dofs = [DOFGenerator(xs, tet_edges, S1)]
 
     face_dofs = []
     if deg >= 2:
@@ -452,7 +470,7 @@ def construct_tet_ndN_2(deg):
         # not correct poly space
         face_elem = ElementTriple(face, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), face_dofs)
         xs = [immerse(cell, face_elem, TrH1)]
-        face_dofs = [DOFGenerator(xs, tet_faces_ufc, S1)]
+        face_dofs = [DOFGenerator(xs, tet_faces, S1)]
 
     center_dofs = []
     if deg >= 3:
