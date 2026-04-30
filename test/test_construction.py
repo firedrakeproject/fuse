@@ -97,7 +97,6 @@ def test_convergence3d(col, k, deg, conv_rate):
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
-    
     # print("projection l2 error norms:", diff_proj2)
     # diff_proj = np.array(diff_proj2)
     # conv2 = np.log2(diff_proj[:-1] / diff_proj[1:])

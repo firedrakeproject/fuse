@@ -479,6 +479,7 @@ def construct_tet_ndN_2(deg):
     assert len(nd2.generate()) == (1/2)*(deg + 1)*(deg + 2)*(deg + 3)
     return nd2
 
+
 def construct_tri_rtN(deg):
     cell = polygon(3)
     edge = cell.edges()[0]

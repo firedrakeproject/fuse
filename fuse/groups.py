@@ -196,7 +196,7 @@ class PermutationSetRepresentation():
         for i, m in enumerate(subset.members()):
             for coset in cosets:
                 cosets_by_submember[coset[i].array_form] = m
-        return cosets_by_submember     
+        return cosets_by_submember
 
     def members(self, perm=False):
         if self.cell is None:

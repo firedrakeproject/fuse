@@ -430,7 +430,7 @@ class ElementTriple():
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
-                        cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
+                        # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
@@ -450,7 +450,7 @@ class ElementTriple():
                                 # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                 #     value_change = -1*value_change
                                 # sub_mat1 = cosets[(~g).array_form].matrix_form()
-                                sub_mat1 = (~g).matrix_form()
+                                # sub_mat1 = (~g).matrix_form()
                                 sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                                 sub_mat = np.kron(sub_mat2, value_change)
                                 # sub_mat = (~g).matrix_form()
@@ -465,13 +465,13 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
-                            sub_mat = (~g).matrix_form()
+                            # sub_mat = (~g).matrix_form()
                             sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                             # sub_mat = cosets[(~g).array_form].matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
                             # case for dofs defined on the cell and not immersed - doesn't actually matter for facet agreement
-                            sub_mat = (~g).matrix_form()
+                            # sub_mat = (~g).matrix_form()
                             sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                             try:
                                 # sub_mat = cosets[(~g).array_form].matrix_form()

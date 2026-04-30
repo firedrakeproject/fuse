@@ -312,7 +312,6 @@ def make_entity_cone_lists(fiat_cell):
 
 
 def test_tet_groups():
-    cosets = []
     for cell in [make_tetrahedron(), ufc_tetrahedron()]:
         group = S4.add_cell(cell)
         for j in [1, 2]:
