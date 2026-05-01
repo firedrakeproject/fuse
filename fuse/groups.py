@@ -101,12 +101,20 @@ class GroupMemberRep(object):
         return mat
 
     def matrix_form_subgroup(self, group):
+        if group.size() == 1:
+            # Trivial case
+            return np.array([1])
         if group.size() == self.group.size():
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(self*m).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
             mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
+        elif group.size() < self.group.size():
+            cosets = self.group.cosets_by_submember(group)
+            members = [cosets[m.array_form].numeric_rep() for m in group.members()]
+            permuted_members = [cosets[(self*m).array_form].numeric_rep() for m in group.members()]
+            mat = perm_list_to_matrix(members, permuted_members)
         else:
             raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
         return mat

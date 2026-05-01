@@ -167,40 +167,59 @@ def proxy_field_bfs(cell, deg, rot=False):
     else:
         grp = [tet_edges]
     if rot:
-        # assert cell.dimension <= 2
         if cell.dimension == 2:
             perp = lambda x: np.array([[0, -1], [1, 0]]) @ x
             bfs = [perp(bf) for bf in bfs]
             grp = [C3]
         else:
-            bfs = [2*sp.Matrix(symbols[i]*dl[j].cross(dl[k]) - symbols[j]*dl[i].cross(dl[k]) + symbols[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 1, 2]]]
-            grp = [tet_faces]
+            bfs = [sp.Matrix(symbols[i]*dl[j].cross(dl[k]) + symbols[j]*dl[k].cross(dl[i]) + symbols[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
+            grp = [S1, S1, S1, S1]
 
     return bfs, grp, symbols
 
 
+def immerse_and_generate_on_interior_face(cell, face_dofs):
+    def immersed(face, pt, o):
+        basis = np.array(face.orient(o).basis_vectors()).T
+        basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
+        J = np.array(cell.basis_vectors(entity=face)).T
+        return np.matmul(J, basis_coeffs)
+    original_kernel = face_dofs.x[0].kernel
+    extra_sym = sp.Symbol("s_3")
+    symbols = original_kernel.syms + [extra_sym]
+    new_dofs = []
+    for f in cell.d_entities(2):
+        bary_verts = np.rint(np.array(cell.cartesian_to_barycentric([cell.get_node(v, return_coords=True) for v in f.ordered_vertices()]))).astype(np.int64)
+        new_kernel_fn = [poly.subs({o_sym: sum(symbols[j] for j in range(len(b)) if b[j] == 1) for o_sym, b in zip(original_kernel.syms, bary_verts)}) for poly in original_kernel.fn]
+        kernels = [type(original_kernel)(immersed(f, new_kernel_fn, o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
+        new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
+    return new_dofs
+
+
 def vector_basis_fns(cell, deg, rot=False):
     """
-    Returns vector valued basis functions of a given degree over a given cell, by default returning
-    Nedelec basis functions, and returning Raviart Thomas if rot=True
+    Returns dofs that are moments against vector valued basis functions of a given degree over a given cell,
+    by default returning Nedelec basis functions, and returning Raviart Thomas if rot=True
+
+    All transformation groups are S1 as these are interior to the cell.
     """
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-    nd_basis_funcs, nd_grps, symbols = proxy_field_bfs(cell, deg, rot)
-    basis_funcs, groups, symbols = lagrange_barycentric_basis(edge.dimension, edge.ordered_vertex_coords(), deg - 1)
-    if cell.dimension == 3 and rot:
-        basis_funcs, groups, symbols = lagrange_barycentric_basis(face.dimension, face.ordered_vertex_coords(), deg - 1)
+    pf_basis_funcs, pf_grps, symbols = proxy_field_bfs(cell, deg, rot)
+    basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(edge.dimension, edge.ordered_vertex_coords(), deg - 1)
     dofs = []
-    for nd_bf, nd_grp in zip(nd_basis_funcs, nd_grps):
+    if cell.dimension == 3 and rot:
+        basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(face.dimension, face.ordered_vertex_coords(), deg - 1)
+    for pf_bf, pf_grp in zip(pf_basis_funcs, pf_grps):
         for bf, grp in zip(basis_funcs, groups):
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(nd_bf*bf, symbols=symbols))]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
             if grp.size() != 1:
                 if cell.dimension == 3 and grp.size() == 2:
-                    dofs += [DOFGenerator(xs, nd_grp*tet_C2, S1)]
+                    dofs += [DOFGenerator(xs, pf_grp*tet_C2, S1)]
                 else:
-                    dofs += [DOFGenerator(xs, nd_grp*grp, S1)]
+                    dofs += [DOFGenerator(xs, pf_grp*grp, S1)]
             else:
-                dofs += [DOFGenerator(xs, nd_grp, S1)]
+                dofs += [DOFGenerator(xs, pf_grp, S1)]
 
     interior_deg = deg - 2
 
@@ -209,31 +228,7 @@ def vector_basis_fns(cell, deg, rot=False):
         face_dofs = vector_basis_fns(face, deg)
         if len(face_dofs) > 0:
             face_dofs = face_dofs[-1]
-
-            def immersed(face, pt, o):
-                basis = np.array(face.orient(o).basis_vectors()).T
-                basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
-                J = np.array(cell.basis_vectors(entity=face)).T
-                return np.matmul(J, basis_coeffs)
-            original_kernel = face_dofs.x[0].kernel
-            extra_sym = sp.Symbol("s_3")
-            symbols = original_kernel.syms + [extra_sym]
-            new_dofs = []
-            for f in cell.d_entities(2):
-                bary_verts = np.rint(np.array(cell.cartesian_to_barycentric([cell.get_node(v, return_coords=True) for v in f.ordered_vertices()]))).astype(np.int64)
-                new_kernel_fn = [poly.subs({o_sym: sum(symbols[j] for j in range(len(b)) if b[j] == 1) for o_sym, b in zip(original_kernel.syms, bary_verts)}) for poly in original_kernel.fn]
-                kernels = [type(original_kernel)(immersed(f, new_kernel_fn, o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
-                new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
-
-            # grp = face_dofs.g1
-            # if grp.size() == 2:
-            #     # grp = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1]),
-            #     #                                     Permutation([2, 1, 0, 3]), Permutation([0, 2, 3, 1]), Permutation([2, 3, 0, 1]), Permutation([3, 0, 1, 2])])
-            #     grp = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1]),
-            #                                         Permutation([3, 1, 2, 0]), Permutation([1, 2, 0, 3]), Permutation([1, 3, 0, 2]), Permutation([1, 0, 2, 3])])
-            #     breakpoint()
-            # else:
-            #     grp = tet_faces*grp
+            new_dofs = immerse_and_generate_on_interior_face(cell, face_dofs)
             dofs += [DOFGenerator(new_dofs, S1, S1)]
             interior_deg = deg - 3
 
