@@ -70,9 +70,6 @@ bdm_params3d = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 4))]
 def test_convergence3d(col, k, deg, conv_rate):
     assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 3, k, deg)
-    # print(elem)
-    # print(elem2)
-    # breakpoint()
 
     scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]

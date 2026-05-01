@@ -83,7 +83,11 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
                 raise ValueError("Failed to find permutation")
 
             perm_list += [Permutation(perm)]
-        perm_group = PermutationSetRepresentation(perm_list)
+        perm_group = sp.combinatorics.PermutationGroup(perm_list)
+        if perm_group.order() != len(perm_list):
+            perm_group = PermutationSetRepresentation(perm_list)
+        else:
+            perm_group = GroupRepresentation(perm_group)
         if return_idx:
             result[perm_group] = [base]
         else:
@@ -265,7 +269,8 @@ def lagrange_facet_fns(cell, deg, interior=False, vector=False):
         g2 = S1
     elif not vector:
         # This is probably not strictly right - true for ND and RT nodes on the face they are associated with
-        g2 = S2
+        # g2 = S2
+        g2 = cell.group
     else:
         g2 = cell.group
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg)
