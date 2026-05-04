@@ -58,7 +58,7 @@ def test_convergence(col, k, deg, conv_rate):
     assert all([c > conv_rate for c in conv2])
 
 
-cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
+cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 6))]
 nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
 rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
 dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 4))] + [(1, 3, deg, deg + 0.8) for deg in list(range(0, 3))]
@@ -107,9 +107,7 @@ def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """
     # Create mesh and define function space
-    # m = UnitTetrahedronMesh()
-    from firedrake.utility_meshes import TwoTetMesh
-    m = TwoTetMesh()
+    m = UnitTetrahedronMesh()
     x = SpatialCoordinate(m)
     elem = periodic_table(0, 3, 0, deg)
     V = FunctionSpace(m, elem.to_ufl())

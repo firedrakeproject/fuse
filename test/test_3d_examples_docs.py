@@ -78,11 +78,12 @@ def construct_tet_cg4(cell=None, perm=True):
 
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
-    xs = [DOF(DeltaPairing(), PointKernel((-0.333534405313151, -0.1925661786915493)))]
+    # xs = [DOF(DeltaPairing(), PointKernel((-0.333534405313151, -0.1925661786915493)))]
+    xs = [DOF(DeltaPairing(), PointKernel((0.333534405313151, -0.1925661786915493)))]
     # xs = [DOF(DeltaPairing(), PointKernel((0, 2*np.sqrt(3)/9)))]
-    new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
-    dg1_face = ElementTriple(face, (P1, CellL2, "C0"),
-                             DOFGenerator(xs, new_C3, S1), perm)
+    # new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
+    dg1_face = ElementTriple(face, (P1, CellL2, C0),
+                             DOFGenerator(xs, C3, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0, 0)))]
     int_dof = DOFGenerator(xs, S1, S1)

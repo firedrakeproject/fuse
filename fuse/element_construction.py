@@ -147,7 +147,7 @@ def lagrange_barycentric_basis(dim, verts, deg):
     return fns, grps, symbols
 
 
-def proxy_field_bfs(cell, deg, rot=False):
+def proxy_field_bfs(cell, rot=False):
     symbols = []
     coords = []
     for i in range(cell.dimension + 1):
@@ -165,7 +165,9 @@ def proxy_field_bfs(cell, deg, rot=False):
     if cell.dimension == 2:
         grp = [diff_C3]
     else:
-        grp = [tet_edges]
+        bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
+        # grp = [tet_edges]
+        grp = [S1, S1, S1, S1, S1, S1]
     if rot:
         if cell.dimension == 2:
             perp = lambda x: np.array([[0, -1], [1, 0]]) @ x
@@ -193,6 +195,7 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
         new_kernel_fn = [poly.subs({o_sym: sum(symbols[j] for j in range(len(b)) if b[j] == 1) for o_sym, b in zip(original_kernel.syms, bary_verts)}) for poly in original_kernel.fn]
         kernels = [type(original_kernel)(immersed(f, new_kernel_fn, o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
         new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
+    print(len(kernels)*4)
     return new_dofs
 
 
@@ -205,12 +208,18 @@ def vector_basis_fns(cell, deg, rot=False):
     """
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-    pf_basis_funcs, pf_grps, symbols = proxy_field_bfs(cell, deg, rot)
+    # for e in cell.edges():
+    #     bary_verts = np.rint(np.array(cell.cartesian_to_barycentric([cell.get_node(v, return_coords=True) for v in e.ordered_vertices()]))).astype(np.int64)
+    #     print(bary_verts)
+    # breakpoint()
+
+    pf_basis_funcs, pf_grps, symbols = proxy_field_bfs(cell, rot)
     basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(edge.dimension, edge.ordered_vertex_coords(), deg - 1)
     dofs = []
     if cell.dimension == 3 and rot:
         basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(face.dimension, face.ordered_vertex_coords(), deg - 1)
     for pf_bf, pf_grp in zip(pf_basis_funcs, pf_grps):
+        print(pf_bf, pf_grp)
         for bf, grp in zip(basis_funcs, groups):
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
             if grp.size() != 1:
@@ -230,9 +239,13 @@ def vector_basis_fns(cell, deg, rot=False):
             face_dofs = face_dofs[-1]
             new_dofs = immerse_and_generate_on_interior_face(cell, face_dofs)
             dofs += [DOFGenerator(new_dofs, S1, S1)]
-            interior_deg = deg - 3
+        interior_deg = deg - 3
 
+    # if interior_deg > 0:
+    #     breakpoint()
+    # interior_deg = interior_deg + 1 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
+
     for bf, grp in zip(basis_funcs, groups):
         v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
         v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
@@ -255,6 +268,11 @@ def vector_basis_fns(cell, deg, rot=False):
                 dofs += [DOFGenerator(xs, grp, S1)]
             else:
                 dofs += [DOFGenerator(xs, S2*grp, S1)]
+    # print("num dofs")
+    # for dof in dofs:
+    #     print(dof.g1)
+    #     print(dof.g1.size()*len(dof.x))
+
     return dofs
 
 
@@ -565,7 +583,10 @@ def construct_tet_bdmN(deg):
     vec_Pd = PolynomialSpace(deg, set_shape=True)
 
     bdm = ElementTriple(cell, (vec_Pd, CellHDiv, C0), face_dofs + center_dofs)
+    print("FUSE", len(bdm.generate()))
+    print("True", (1/2)*(deg + 1)*(deg + 2)*(deg + 3))
     assert len(bdm.generate()) == (1/2)*(deg + 1)*(deg + 2)*(deg + 3)
+
     return bdm
 
 

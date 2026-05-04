@@ -1213,6 +1213,7 @@ def test_quartic_poisson_solve(elem):
     r = 0
     m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     x = SpatialCoordinate(m)
+
     V = FunctionSpace(m, elem.to_ufl())
 
     # Define variational problem
