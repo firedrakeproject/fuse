@@ -599,8 +599,7 @@ def test_project_3d(elem_gen, elem_code, deg):
     assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [
-                                                              (create_dg1_tet, "DG", 1, 0.8),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(create_dg1_tet, "DG", 1, 0.8),
                                                               (create_cg1_tet, "CG", 1, 1.8),
                                                               (create_cg2_tet, "CG", 2, 2.8),
                                                               (create_cg3_tet, "CG", 3, 3.8),
@@ -616,7 +615,7 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (lambda cell: periodic_table(1, 3, 1, 1), "N2curl", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8),
                                                               (construct_tet_bdm2_non_bary, "BDM", 2, 2.8)
-                                                            ])
+                                                              ])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)

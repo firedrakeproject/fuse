@@ -243,7 +243,7 @@ def vector_basis_fns(cell, deg, rot=False):
 
     # if interior_deg > 0:
     #     breakpoint()
-    # interior_deg = interior_deg + 1 
+    # interior_deg = interior_deg + 1
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
 
     for bf, grp in zip(basis_funcs, groups):
