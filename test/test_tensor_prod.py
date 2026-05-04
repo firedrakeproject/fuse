@@ -223,22 +223,26 @@ def test_trace_galerkin_projection():
 
 
 def test_hdiv():
+    from fuse.tensor_products import HDiv
     np.set_printoptions(linewidth=90, precision=4, suppress=True)
     m = UnitIntervalMesh(2)
     mesh = ExtrudedMesh(m, 2)
-    # CG_1 = FiniteElement("CG", "interval", 1)
-    # DG_0 = FiniteElement("DG", "interval", 0)
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
-    p1p0 = tensor_product(cg1, dg0).to_ufl()
+    p1p0 = HDiv(tensor_product(cg1, dg0))
     # P1P0 = TensorProductElement(CG_1, DG_0)
-    RT_horiz = HDivElement(p1p0)
+    # RT_horiz = HDivElement(p1p0.to_ufl(), transform=hdiv_transform(p1p0))
+    RT_horiz = p1p0.to_ufl()
     # RT_horiz = HDivElement(P1P0)
-    p0p1 = tensor_product(dg0, cg1).to_ufl()
+    p0p1 = HDiv(tensor_product(dg0, cg1))
     # P0P1 = TensorProductElement(DG_0, CG_1)
-    RT_vert = HDivElement(p0p1)
+    RT_vert = p0p1.to_ufl()
     # RT_vert = HDivElement(P0P1)
-    elt = RT_horiz + RT_vert
+    elt = RT_horiz 
+    # + RT_vert
+    # + RT_vert
     # mesh = UnitSquareMesh(1, 1, quadrilateral=True)
     V = FunctionSpace(mesh, elt)
     u = TrialFunction(V)
@@ -260,3 +264,30 @@ def test_hdiv():
     #     print(ent)
     #     for comp in arr:
     #         print(comp[0], comp[1])
+
+
+def test_transforms():
+    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    rev_edge = edge.orient(edge.group.members()[1])
+    from fuse.tensor_products import hcurl_transform, hdiv_transform
+    cg1 = construct_cg1()
+    rev_cg1 = construct_cg1(rev_edge)
+    dg0 = construct_dg0_integral()
+    rev_dg0 = construct_dg0_integral(rev_edge)
+    import gem
+    v = gem.Literal(5)
+    # print("HCurl")
+    # print(hcurl_transform(tensor_product(dg0, cg1))(v))
+    # print(hcurl_transform(tensor_product(rev_dg0, cg1))(v))
+    # print(hcurl_transform(tensor_product(cg1, dg0))(v))
+    # print(hcurl_transform(tensor_product(cg1, rev_dg0))(v))
+    # print(hcurl_transform(tensor_product(dg0, rev_cg1))(v))
+    # print(hcurl_transform(tensor_product(rev_cg1, dg0))(v))
+    print("HDiv")
+    print(hdiv_transform(tensor_product(dg0, cg1))(v))
+    print(hdiv_transform(tensor_product(rev_dg0, cg1))(v))
+    print(hdiv_transform(tensor_product(cg1, dg0))(v))
+    print(hdiv_transform(tensor_product(cg1, rev_dg0))(v))
+    print(hdiv_transform(tensor_product(dg0, rev_cg1))(v))
+    print(hdiv_transform(tensor_product(rev_cg1, dg0))(v))
+    breakpoint()

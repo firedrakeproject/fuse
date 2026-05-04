@@ -31,8 +31,9 @@ def construct_dg1():
     return dg1
 
 
-def construct_dg0_integral(cell=None):
-    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+def construct_dg0_integral(edge=None):
+    if not edge:
+        edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     xs = [DOF(L2Pairing(), VectorKernel(0.5))]
     dg0 = ElementTriple(edge, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
     return dg0
@@ -105,9 +106,11 @@ def test_dg_examples():
         assert any(np.isclose(val, dof.eval(test_func)) for val in dof_vals)
 
 
-def construct_cg1():
+def construct_cg1(edge=None):
+
     # [test_cg1 0]
-    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    if not edge:
+        edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     vert = edge.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
