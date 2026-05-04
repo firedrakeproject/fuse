@@ -17,12 +17,6 @@ def symmetric_tensor_product(A, B):
     return TensorProductTriple(A, B, symmetric=True)
 
 
-def hcurl_transform(tensor_element):
-    gem_transformer, mat_transformer = select_fuse_hcurl_transformer(tensor_element)
-    tensor_element.add_mat_transformer(mat_transformer, TrHCurl)
-    return gem_transformer
-
-
 class TensorProductTriple(ElementTriple):
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
@@ -203,6 +197,18 @@ class HDiv(TensorProductTriple):
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected form degree combination!"
+
+
+class HCurl(TensorProductTriple):
+
+    def __init__(self, tensor_element):
+        self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
+        self.trace = TrHCurl
+        super(HDiv, self).__init__(tensor_element.A, tensor_element.B, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
+        self.spaces[1] = TrHCurl
+
+    def to_ufl(self):
+        return HCurlElement(super(HDiv, self).to_ufl(), self.gem_transformer)
 
     def select_fuse_hcurl_transformer(element):
         import gem
