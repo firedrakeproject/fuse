@@ -3,8 +3,24 @@ import numpy as np
 from fuse import *
 from firedrake import *
 from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
-from test_convert_to_fiat import create_cg2
+from test_convert_to_fiat import create_cg2, create_dg0
 # from test_convert_to_fiat import create_cg1
+
+
+def create_cg3_interval(cell=None):
+    if cell is None:
+        cell = line()
+    deg = 3
+    if cell.dim() > 1:
+        raise NotImplementedError("This method is for cg3 on edges, please use construct_cg3 for triangles")
+    vert_dg = create_dg0(cell.vertices()[0])
+    xs = [immerse(cell, vert_dg, TrH1)]
+    interior = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), )))]
+
+    Pk = PolynomialSpace(deg)
+    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+                                                DOFGenerator(interior, S2, S1)])
+    return cg
 
 
 def helmholtz_solve(mesh, V):
@@ -63,15 +79,18 @@ def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
     assert np.allclose(res1, res2)
 
 
-def test_helmholtz():
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
+                                                                         (create_cg2, "CG", 2, 3.8),
+                                                                         (create_cg3_interval, "CG", 3, 4.8)])
+def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     vals = range(3, 6)
     res = []
     for r in vals:
         m = UnitIntervalMesh(2**r)
         mesh = ExtrudedMesh(m, 2**r)
 
-        A = construct_cg1()
-        B = construct_cg1()
+        A = elem_gen()
+        B = elem_gen()
         elem = tensor_product(A, B)
 
         U = FunctionSpace(mesh, elem.to_ufl())
@@ -80,7 +99,7 @@ def test_helmholtz():
     res = np.array(res)
     conv = np.log2(res[:-1] / res[1:])
     print("convergence order:", conv)
-    assert (np.array(conv) > 1.8).all()
+    assert (np.array(conv) > conv_rate).all()
 
 
 def test_on_quad_mesh():
@@ -99,24 +118,34 @@ def test_on_quad_mesh():
 
 
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
-                                                                         (create_cg2, "CG", 2, 3.8)])
+                                                                         (create_cg2, "CG", 2, 3.8),
+                                                                         (create_cg3_interval, "CG", 3, 4.8)])
 def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     quadrilateral = True
     vals = range(3, 6)
     res_fuse = []
+    res_fire = []
     for r in vals:
         mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
 
         A = elem_gen()
         B = elem_gen()
-        elem = tensor_product(A, B).flatten()
+        elem = tensor_product(A, B, matrices=False).flatten()
         U = FunctionSpace(mesh, elem.to_ufl())
         res_fuse += [helmholtz_solve(mesh, U)]
+        U = FunctionSpace(mesh, elem_code, deg)
+        res_fire += [helmholtz_solve(mesh, U)]
 
     print("Fuse l2 error norms:", res_fuse)
     res = np.array(res_fuse)
     conv = np.log2(res[:-1] / res[1:])
     print("Fuse convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
+
+    print("FIAT l2 error norms:", res_fire)
+    res = np.array(res_fire)
+    conv = np.log2(res[:-1] / res[1:])
+    print("Fiat convergence order:", conv)
     assert (np.array(conv) > conv_rate).all()
 
 
@@ -197,16 +226,16 @@ def test_hdiv():
     np.set_printoptions(linewidth=90, precision=4, suppress=True)
     m = UnitIntervalMesh(2)
     mesh = ExtrudedMesh(m, 2)
-    CG_1 = FiniteElement("CG", "interval", 1)
-    DG_0 = FiniteElement("DG", "interval", 0)
+    # CG_1 = FiniteElement("CG", "interval", 1)
+    # DG_0 = FiniteElement("DG", "interval", 0)
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
     p1p0 = tensor_product(cg1, dg0).to_ufl()
-    P1P0 = TensorProductElement(CG_1, DG_0)
+    # P1P0 = TensorProductElement(CG_1, DG_0)
     RT_horiz = HDivElement(p1p0)
     # RT_horiz = HDivElement(P1P0)
     p0p1 = tensor_product(dg0, cg1).to_ufl()
-    P0P1 = TensorProductElement(DG_0, CG_1)
+    # P0P1 = TensorProductElement(DG_0, CG_1)
     RT_vert = HDivElement(p0p1)
     # RT_vert = HDivElement(P0P1)
     elt = RT_horiz + RT_vert

@@ -986,9 +986,6 @@ class TensorProductPoint():
                 self.entities[d] = [self]
             else:
                 self.entities[d] = [TensorProductPoint(e_a, e_b) for e_a in self.A.d_entities(d[0], True) for e_b in self.B.d_entities(d[1], True)]
-        
-
-
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()

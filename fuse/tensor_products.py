@@ -4,15 +4,21 @@ import numpy as np
 from finat.ufl import TensorProductElement, FuseElement
 
 
-def tensor_product(A, B):
+def tensor_product(A, B, matrices=True):
     if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
         raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B)
+    return TensorProductTriple(A, B, matrices=matrices)
+
+
+def symmetric_tensor_product(A, B):
+    if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
+        raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
+    return TensorProductTriple(A, B, symmetric=True)
 
 
 class TensorProductTriple(ElementTriple):
 
-    def __init__(self, A, B, flat=False):
+    def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
         self.A = A
         self.B = B
         self.spaces = []
@@ -21,12 +27,14 @@ class TensorProductTriple(ElementTriple):
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
         self.cell = TensorProductPoint(A.cell, B.cell)
+        self.symmetric = symmetric
         self.flat = flat
-        self.apply_matrices = False
-        self.setup_matrices()
         if self.flat:
             self.unflat_cell = self.cell
             self.cell = self.cell.flatten()
+        self.apply_matrices = matrices
+        if self.apply_matrices:
+            self.setup_matrices()
 
     def sub_elements(self):
         return [self.A, self.B]
@@ -105,7 +113,7 @@ class TensorProductTriple(ElementTriple):
         return TensorProductElement(*ufl_sub_elements, cell=self.cell.to_ufl())
 
     def flatten(self):
-        return TensorProductTriple(self.A, self.B, flat=True)
+        return TensorProductTriple(self.A, self.B, flat=True, symmetric=self.symmetric, matrices=self.apply_matrices)
 
     def unflatten(self):
-        return TensorProductTriple(self.A, self.B, flat=False)
+        return TensorProductTriple(self.A, self.B, flat=False, symmetric=self.symmetric, matrices=self.apply_matrices)

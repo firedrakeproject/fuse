@@ -30,7 +30,8 @@ def compute_form_degree(cell, spaces):
     elif str(spaces[1]) == "HDiv":
         return 1
     elif str(spaces[1]) == "HCurl":
-        return 2    
+        return 2
+
 
 class ElementTriple():
     """
