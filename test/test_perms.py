@@ -47,7 +47,24 @@ def test_basic_perms(cell):
 
 @pytest.mark.parametrize("cell", [tri])
 def test_nd_perms(cell):
-    ned = construct_nd(cell)
+    deg = 1
+    edge = cell.edges(get_class=True)[0]
+    x = sp.Symbol("x")
+    y = sp.Symbol("y")
+
+    xs = [DOF(L2Pairing(), VectorKernel(edge.basis_vectors()[0]))]
+    dofs = DOFGenerator(xs, S1, S2)
+    int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+
+    xs = [immerse(cell, int_ned, TrHCurl)]
+    tri_dofs = DOFGenerator(xs, C3, S3)
+
+    M = sp.Matrix([[y, -x]])
+    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    Pk = PolynomialSpace(deg - 1)
+    nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
+
+    ned = ElementTriple(cell, (nd, CellHCurl, C0), [tri_dofs])
     ned.to_fiat()
     for i, mat in ned.matrices[2][0].items():
         print(i)
