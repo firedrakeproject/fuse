@@ -3,7 +3,6 @@ from test_convert_to_fiat import create_cg1, create_dg1, create_cg2
 from test_2d_examples_docs import construct_cg3
 import pytest
 import numpy as np
-import sympy as sp
 
 vert = Point(0)
 edge = Point(1, [Point(0), Point(0)], vertex_num=2)

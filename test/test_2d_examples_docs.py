@@ -1,6 +1,7 @@
 from fuse import *
 import sympy as sp
 import numpy as np
+import pytest
 
 np.set_printoptions(legacy="1.25")
 
@@ -28,6 +29,33 @@ def construct_dg1():
     dg1 = ElementTriple(edge, (P1, CellL2, C0), DOFGenerator(xs, S2, S1))
     # [test_dg1_int 1]
     return dg1
+
+
+def construct_dg0_integral(edge=None):
+    if not edge:
+        edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    xs = [DOF(L2Pairing(), VectorKernel(0.5))]
+    dg0 = ElementTriple(edge, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    return dg0
+
+
+def construct_dg1_integral(cell=None):
+    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    x = sp.Symbol("x")
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dg1 = ElementTriple(edge, (P1, CellL2, C0), DOFGenerator(xs, S2, S1))
+    return dg1
+
+
+def construct_dg2_integral(cell=None):
+    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    x = sp.Symbol("x")
+    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
+    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
+
+    dofs = [DOFGenerator(xs, S2, S1), DOFGenerator(centre, S1, S1)]
+    dg2 = ElementTriple(edge, (PolynomialSpace(2), CellL2, C0), dofs)
+    return dg2
 
 
 def plot_dg1():
@@ -78,9 +106,11 @@ def test_dg_examples():
         assert any(np.isclose(val, dof.eval(test_func)) for val in dof_vals)
 
 
-def construct_cg1():
+def construct_cg1(edge=None):
+
     # [test_cg1 0]
-    edge = Point(1, [Point(0), Point(0)], vertex_num=2)
+    if not edge:
+        edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     vert = edge.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
@@ -390,6 +420,15 @@ def test_rt_example():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
     rt.to_fiat()
+
+
+@pytest.mark.parametrize(["triple", "expected"], [(construct_dg1_integral(), 1),
+                                                  (construct_cg1(), 0),
+                                                  (construct_rt(), 1),
+                                                  (construct_dg1_tri(), 2)])
+def test_form_degree(triple, expected):
+    from fuse.triples import compute_form_degree
+    assert compute_form_degree(triple.cell, triple.spaces) == expected
 
 
 def construct_hermite():

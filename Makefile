@@ -26,6 +26,12 @@ tests:
 	@echo "    Running all tests"
 	@FIREDRAKE_USE_FUSE=1 python3 -m coverage run -p -m pytest -rx test
 
+mini_tests:
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_2d_examples_docs.py
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_convert_to_fiat.py::test_1d
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_orientations.py::test_surface_vec_rt
+	@FIREDRAKE_USE_FUSE=1 python3 -m pytest test/test_convert_to_fiat.py::test_projection_convergence_3d\[construct_tet_ned-N1curl-1-0.8\]
+
 coverage:
 	@python3 -m coverage combine
 	@python3 -m coverage report -m 
