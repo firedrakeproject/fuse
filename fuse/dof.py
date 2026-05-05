@@ -35,7 +35,7 @@ class DeltaPairing(Pairing):
         return v(*kernel.pt)
 
     def tabulate(self):
-        return 1
+        return np.eye(self.entity.dim)
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -80,8 +80,8 @@ class L2Pairing(Pairing):
         if self.orientation:
             new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-            return basis_change
-        return np.eye(bvs.shape[0])
+            return (1/self.entity.volume())*basis_change
+        return (1/self.entity.volume())*np.eye(bvs.shape[0])
 
     def add_entity(self, entity):
         res = L2Pairing()
@@ -423,13 +423,7 @@ class DOF():
     def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        dim = self.cell_defined_on.get_spatial_dimension()
-        if dim > 0:
-            bvs = np.array(self.cell_defined_on.basis_vectors())
-            new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
-            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-        else:
-            basis_change = np.eye(dim)
+        basis_change = self.pairing.tabulate()
 
         if self.immersed and (isinstance(self.kernel, VectorKernel) or isinstance(self.kernel, BarycentricPolynomialKernel) or isinstance(self.kernel, PolynomialKernel)):
             def immersed(pt):

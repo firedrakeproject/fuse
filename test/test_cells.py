@@ -7,7 +7,7 @@ from FIAT.reference_element import default_simplex, ufc_simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
-@pytest.fixture(scope='module', params=[0, 1, 2])
+@pytest.fixture(scope='module', params=[0, 1, 2, 3])
 def C(request):
     dim = request.param
     if dim == 0:
@@ -16,6 +16,8 @@ def C(request):
         return Point(1, [Point(0), Point(0)], vertex_num=2)
     elif dim == 2:
         return polygon(3)
+    elif dim == 3:
+        return make_tetrahedron()
 
 
 def test_vertices(C):

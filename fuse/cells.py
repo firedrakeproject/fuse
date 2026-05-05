@@ -839,6 +839,34 @@ class Point():
         pts, wts = Q.get_points(), Q.get_weights()
         return pts, wts
 
+    def volume(self):
+        vertices = np.asarray(self.ordered_vertex_coords())
+        if self.get_spatial_dimension() == 0:
+            return 1
+        elif self.get_spatial_dimension() == 1:
+            return abs(vertices[1] - vertices[0])[0]
+        elif self.get_spatial_dimension() == 2:
+            x = vertices[:, 0]
+            y = vertices[:, 1]
+            return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+        elif self.get_spatial_dimension() == 3:
+            vertices = np.asarray(vertices)
+            V = 0.0
+            for face in self.d_entities(2):
+                pts = np.array([self.get_node(v, return_coords=True) for v in face.ordered_vertices()])
+                c = pts.mean(axis=0)
+
+                n = np.zeros(3)
+                for i in range(len(pts)):
+                    v0 = pts[i]
+                    v1 = pts[(i + 1) % len(pts)]
+                    n += np.cross(v0, v1)
+                V += np.dot(c, n)
+            V = abs(V) / 3.0
+            return V
+        else:
+            raise NotImplementedError("Dimension not accounted for")
+
     def cartesian_to_barycentric(self, pts):
         verts = np.array(self.ordered_vertex_coords())
         v_0 = self.ordered_vertex_coords()[0]
