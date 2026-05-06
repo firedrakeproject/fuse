@@ -554,27 +554,22 @@ def construct_tet_ned3(tet=None, both=False):
     Pd = PolynomialSpace(deg - 1)
     nd_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
-    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
+    s_0 = sp.Symbol("s_0")
+    s_1 = sp.Symbol("s_1")
+    s_2 = sp.Symbol("s_2")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_1, symbols=(s_0, s_1)))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(2*s_0*s_1, symbols=(s_0, s_1)))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1, TrHCurl)], tet_edges, S1)
 
-    phi_0 = [-1/6 - (np.sqrt(3)/6)*y, (-np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
+    v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
+    v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
+    v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
+    # xs = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_0)*s_2/2, symbols=(s_0, s_1, s_2)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_1)*s_2/2, symbols=(s_0, s_1, s_2)))]
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S3, S3))
 
-    # phi_1 = [-1/6 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6) + (np.sqrt(3)/6)*x]
-    # phi_2 = [1/3 - (np.sqrt(3)/6)*y, (np.sqrt(3)/6)*x]
-    xs = [DOF(L2Pairing(), PolynomialKernel(phi_0, symbols=(x, y)))]
-    face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, C3, S1))
-    # phi0 = [1/3 - (1/2)*x + y/(2*np.sqrt(3)), sp.Poly(0, (x, y))]
-    # xs = [DOF(L2Pairing(), PolynomialKernel(phi0, symbols=(x, y), shape=2))]
-    # if both:
-    #     phi1 = [sp.Poly(0, (x, y)), 1/3 - (1/2)*x + y/(2*np.sqrt(3))]
-    #     xs += [DOF(L2Pairing(), PolynomialKernel(phi1, symbols=(x, y), shape=2))]
-    # if both:
-    #     face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, C3, S3))
-    # else:
-    #     face_vec = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs, S3, S3))
     face_dofs = DOFGenerator([immerse(tet, face_vec, TrH1)], tet_faces, S1)
 
     xs = [DOF(L2Pairing(), VectorKernel([1, 0, 0])),
@@ -583,6 +578,7 @@ def construct_tet_ned3(tet=None, both=False):
     int_dofs = DOFGenerator(xs, S1, S1)
 
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs, int_dofs])
+    assert len(ned.generate()) == (1/2)*deg*(deg + 2)*(deg + 3)
     return ned
 
 

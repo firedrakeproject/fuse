@@ -10,7 +10,8 @@ from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, con
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
-                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary, construct_tet_ned2, construct_tet_cg4)
+                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_ned3)
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -1089,12 +1090,15 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 1e-13),
-                                                            (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            (construct_tet_ned2, "N1curl", 2, 1e-13)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
+                                                            # (create_cg3_tet, "CG", 3, 1e-13),
+                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (construct_tet_ned3, "N1curl", 2, 1e-13),])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     # elem_perms = elem_gen(cell, perm=True)

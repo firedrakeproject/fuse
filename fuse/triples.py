@@ -459,6 +459,8 @@ class ElementTriple():
                                 # sub_mat = np.kron((~g).matrix_form(), basis_change)
                             # else:
                             #     raise NotImplementedError("Unconsidered permuation case")
+                            if len(ent_dofs_ids) > 3:
+                                breakpoint()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
 
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
