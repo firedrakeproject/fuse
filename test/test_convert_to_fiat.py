@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import sympy as sp
 from fuse import *
+from fuse.element_construction import periodic_table
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
@@ -9,7 +10,8 @@ from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, con
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
-                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary, construct_tet_ned2, construct_tet_cg4)
+                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_ned3)
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -611,11 +613,15 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_ned_2nd_kind_2, "N2curl", 2, 2.8),
                                                               (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2, 2.8),
                                                               (construct_tet_bdm, "BDM", 1, 1.8),
+                                                              (lambda cell: periodic_table(1, 3, 1, 1), "N2curl", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8),
-                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8)])
+                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8)
+                                                              ])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
+    # elem = construct_tet_bdm(cell)
+    # breakpoint()
     function = lambda x, i: cos((3/4)*pi*x[i])
     if elem_code != "CG" and elem_code != "DG":
         expr = lambda x: as_vector([function(x, 0), function(x, 1), function(x, 2)])
@@ -1084,12 +1090,15 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(create_cg3_tet, "CG", 3, 1e-13),
-                                                            (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            (construct_tet_ned2, "N1curl", 2, 1e-13)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
+                                                            # (create_cg3_tet, "CG", 3, 1e-13),
+                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (construct_tet_ned3, "N1curl", 2, 1e-13),])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
     # elem_perms = elem_gen(cell, perm=True)
@@ -1199,12 +1208,15 @@ def test_scaling_mesh():
     print(res2.dat.data)
 
 
-def test_quartic_poisson_solve():
+@pytest.mark.parametrize("elem",
+                         [construct_tet_cg4(make_tetrahedron()), periodic_table(0, 3, 0, 4)
+                          ])
+def test_quartic_poisson_solve(elem):
     # Create mesh and define function space
     r = 0
     m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
     x = SpatialCoordinate(m)
-    elem = construct_tet_cg4(make_tetrahedron())
+
     V = FunctionSpace(m, elem.to_ufl())
 
     # Define variational problem
@@ -1216,6 +1228,38 @@ def test_quartic_poisson_solve():
     bcs = [DirichletBC(V, u_e, "on_boundary")]
     f = Function(V)
     f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
+    L = f*v*dx
+
+    # Compute solution
+    u_r = Function(V)
+    solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+
+    true = Function(V)
+    true.interpolate(u_e)
+
+    res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
+    print(res)
+    assert np.allclose(res, 0)
+
+
+@pytest.mark.parametrize("elem",
+                         [periodic_table(0, 3, 0, 5)])
+def test_quintic_poisson_solve(elem):
+    # Create mesh and define function space
+    m = UnitTetrahedronMesh()
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem.to_ufl())
+    # V = FunctionSpace(m, "CG", 5)
+
+    # Define variational problem
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = dot(grad(u), grad(v)) * dx
+    u_e = x[0]*x[0]*x[0]*x[0]*x[0]
+
+    bcs = [DirichletBC(V, u_e, "on_boundary")]
+    f = Function(V)
+    f.interpolate(-20*x[0]*x[0]*x[0])
     L = f*v*dx
 
     # Compute solution

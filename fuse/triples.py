@@ -351,6 +351,7 @@ class ElementTriple():
         cell_dict = entity_associations[cell_dim][0]
         pure_perm = True
         sub_pure_perm = True
+        num_dofs = {}
 
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
@@ -358,6 +359,7 @@ class ElementTriple():
             sub_dict = entity_associations[sub_dim][d.cell_defined_on.id - min_ids[sub_dim]]
             for dim in set([sub_dim, cell_dim]):
                 dof_gen = str(d.generation[dim])
+                num_dofs[dof_gen] = (dim, d.generation[dim].g1.size())
 
                 if not len(d.generation[dim].g2.members()) == 1:
                     if dim == cell_dim:
@@ -374,6 +376,7 @@ class ElementTriple():
                     cell_dict[dof_gen] += [d]
                 elif dim == cell_dim and d.immersed:
                     cell_dict[dof_gen] = [d]
+
         return entity_associations, pure_perm, sub_pure_perm
 
     def _initialise_entity_dicts(self, dofs):
@@ -409,6 +412,9 @@ class ElementTriple():
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
         # for each entity, look up generation on that entity and permute the
         # dof mapping according to the generation
+        if self.cell.dimension == 3:
+            for i in range(len(self.cell.d_entities(2))):
+                print(sum([len(v) for v in entity_associations[2][i].values()]))
         for dim in range(self.cell.dim() + 1):
             ents = self.cell.d_entities(dim)
             for e in ents:
@@ -424,6 +430,7 @@ class ElementTriple():
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
+                        # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
@@ -442,25 +449,38 @@ class ElementTriple():
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
                                 # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                 #     value_change = -1*value_change
-                                sub_mat = np.kron((~g).matrix_form(), value_change)
+                                # sub_mat1 = cosets[(~g).array_form].matrix_form()
+                                # sub_mat1 = (~g).matrix_form()
+                                sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                                sub_mat = np.kron(sub_mat2, value_change)
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
                                 # case for transforms where the basis vector is already included in the dof
                                 # sub_mat = np.kron((~g).matrix_form(), basis_change)
                             # else:
                             #     raise NotImplementedError("Unconsidered permuation case")
+                            if len(ent_dofs_ids) > 3:
+                                breakpoint()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
 
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
-                            sub_mat = (~g).matrix_form()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # sub_mat = (~g).matrix_form()
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            # sub_mat = cosets[(~g).array_form].matrix_form()
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
-                            # case for dofs defined on the cell and not immersed
-                            sub_mat = (~g).matrix_form()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # case for dofs defined on the cell and not immersed - doesn't actually matter for facet agreement
+                            # sub_mat = (~g).matrix_form()
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            try:
+                                # sub_mat = cosets[(~g).array_form].matrix_form()
+                                oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
+                            except ValueError:
+                                # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         else:
                             # TODO what if an orientation is not in G1
                             warnings.warn("FUSE: orientation case not covered")
