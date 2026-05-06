@@ -35,7 +35,7 @@ class DeltaPairing(Pairing):
         return v(*kernel.pt)
 
     def tabulate(self):
-        return np.eye(self.entity.dim)
+        return np.eye(self.entity.dim())
 
     def add_entity(self, entity):
         res = DeltaPairing()
