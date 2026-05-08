@@ -435,7 +435,6 @@ class DOF():
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
-
                 J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
                 # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
                 # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
@@ -448,8 +447,12 @@ class DOF():
             # if self.pairing.orientation is not None and 
             # self.pairing.orientation.numeric_rep() == 1:
             #     breakpoint()
+            # print(self)
+            # print(self.cell_defined_on.cartesian_to_barycentric(Qpts))
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
+            # print(bary_pts)
+            # print(basis_change)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)

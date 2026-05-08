@@ -94,6 +94,7 @@ class ElementTriple():
             self.apply_matrices = False
         else:
             self.apply_matrices = True
+        self.apply_matrices = True
         self.entity_perms = entity_perms
         return matrices, reversed_matrices
 
@@ -412,9 +413,6 @@ class ElementTriple():
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
         # for each entity, look up generation on that entity and permute the
         # dof mapping according to the generation
-        if self.cell.dimension == 3:
-            for i in range(len(self.cell.d_entities(2))):
-                print(sum([len(v) for v in entity_associations[2][i].values()]))
         for dim in range(self.cell.dim() + 1):
             ents = self.cell.d_entities(dim)
             for e in ents:
@@ -427,7 +425,7 @@ class ElementTriple():
                         ent_dofs = entity_associations[dim][e_id][dof_gen]
                         ent_dofs_ids = np.array([self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs], dtype=int)
                         # (dof_gen, ent_dofs)
-                        total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
+                        total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if self.dof_id_to_fiat_id[ed.id] not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
                         cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)

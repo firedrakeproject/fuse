@@ -64,10 +64,12 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
         if len(group) < len(list(itertools.permutations(range(len(verts))))):
             # need to ensure the base is chosen to be invariant under S2
             # S2 reflects the 0th and 1th barycentric components (on a triangle)
+            # Pick generators that lie on axis of symmetry
             base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
         else:
             # if the group generates all permutations this may not matter... or at least the choice is different TODO
-            base = group[0]
+            # choose the generators nearest to the fixed vertex
+            base = sorted(group, key=lambda i: bary[i][2])[-1]
         lam_base = bary[base]
 
         perm_list = []

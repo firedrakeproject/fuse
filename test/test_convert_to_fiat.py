@@ -11,7 +11,7 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
                                    construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
-                                   construct_tet_ned2, construct_tet_cg4, construct_tet_ned3, construct_tet_cg5)
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_ned3, construct_tet_cg6)
 from test_polynomial_space import flatten
 from element_examples import CR_n
 import os
@@ -1090,17 +1090,15 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
-                                                            # (create_cg3_tet, "CG", 3, 1e-13),
-                                                            (construct_tet_cg5, "CG", 5, 1e-13),
-                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 0, 5), "CG", 5, 1e-13),
-                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
-                                                            # (construct_tet_ned3, "N1curl", 2, 1e-13),])
-                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13)
+                                                            (create_cg3_tet, "CG", 3, 1e-13),
+                                                            (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
+                                                            (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (construct_tet_ned3, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
@@ -1248,33 +1246,33 @@ def test_scaling_mesh():
 #     assert np.allclose(res, 0)
 
 
-# @pytest.mark.parametrize("elem",
-#                          [periodic_table(0, 3, 0, 5)])
-# def test_quintic_poisson_solve(elem):
-#     # Create mesh and define function space
-#     m = UnitTetrahedronMesh()
-#     x = SpatialCoordinate(m)
-#     V = FunctionSpace(m, elem.to_ufl())
-#     # V = FunctionSpace(m, "CG", 5)
+@pytest.mark.parametrize("elem",
+                         [periodic_table(0, 3, 0, 5)])
+def test_quintic_poisson_solve(elem):
+    # Create mesh and define function space
+    m = UnitCubeMesh()
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem.to_ufl())
+    # V = FunctionSpace(m, "CG", 5)
 
-#     # Define variational problem
-#     u = TrialFunction(V)
-#     v = TestFunction(V)
-#     a = dot(grad(u), grad(v)) * dx
-#     u_e = x[0]*x[0]*x[0]*x[0]*x[0]
+    # Define variational problem
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = dot(grad(u), grad(v)) * dx
+    u_e = x[0]*x[0]*x[0]*x[0]*x[0]
 
-#     bcs = [DirichletBC(V, u_e, "on_boundary")]
-#     f = Function(V)
-#     f.interpolate(-20*x[0]*x[0]*x[0])
-#     L = f*v*dx
+    bcs = [DirichletBC(V, u_e, "on_boundary")]
+    f = Function(V)
+    f.interpolate(-20*x[0]*x[0]*x[0])
+    L = f*v*dx
 
-#     # Compute solution
-#     u_r = Function(V)
-#     solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
+    # Compute solution
+    u_r = Function(V)
+    solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
 
-#     true = Function(V)
-#     true.interpolate(u_e)
+    true = Function(V)
+    true.interpolate(u_e)
 
-#     res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
-#     print(res)
-#     assert np.allclose(res, 0)
+    res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
+    print(res)
+    assert np.allclose(res, 0)

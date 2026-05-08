@@ -110,6 +110,13 @@ class GroupMemberRep(object):
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
             mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
+            if self.perm.size == 3:
+                cosets = self.group.cosets_by_submember(group)
+                members = [cosets[m.array_form].numeric_rep() for m in group.members()]
+                permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
+                mat1 = perm_list_to_matrix(members, permuted_members)
+                if not np.allclose(mat1, mat):
+                    breakpoint()
         elif group.size() < self.group.size():
             cosets = self.group.cosets_by_submember(group)
             members = [cosets[m.array_form].numeric_rep() for m in group.members()]

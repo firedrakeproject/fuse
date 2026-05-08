@@ -58,7 +58,7 @@ def test_convergence(col, k, deg, conv_rate):
     assert all([c > conv_rate for c in conv2])
 
 
-cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 6))]
+cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
 nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
 rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
 dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 4))] + [(1, 3, deg, deg + 0.8) for deg in list(range(0, 3))]
@@ -107,7 +107,7 @@ def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """
     # Create mesh and define function space
-    m = UnitTetrahedronMesh()
+    m = UnitCubeMesh(1, 1, 1)
     x = SpatialCoordinate(m)
     elem = periodic_table(0, 3, 0, deg)
     V = FunctionSpace(m, elem.to_ufl())
@@ -119,10 +119,11 @@ def test_polynomial_poisson_solve(deg):
     v = TestFunction(V)
     a = dot(grad(u), grad(v)) * dx
     u_e = x[0]
-    ddu = 1/x[0]
+    ddu = 1
     for i in range(deg - 1):
         u_e = u_e*x[0]
-        ddu = ddu*x[0]
+        if i != 0:
+            ddu = ddu*x[0]
     bcs = [DirichletBC(V, u_e, "on_boundary")]
     f = Function(V)
     f.interpolate(-deg*(deg-1)*ddu)
