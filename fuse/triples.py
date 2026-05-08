@@ -430,7 +430,7 @@ class ElementTriple():
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if ed.id not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
-                        # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
+                        cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
@@ -443,10 +443,18 @@ class ElementTriple():
                             elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:
                                 # equivalently g1 trivial
                                 sub_mat = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                            # elif len(ent_dofs_ids) == basis_change.shape[0]*
                             else:
                                 # len(dof_gen_class[dim].g2.members()) == 2:
                                 # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                # if len(value_change) > 1:
+                                #     breakpoint()
+                                #     value_change = np.sum(value_change[0])
+                                # if g.perm.is_odd:
+                                #     value_change = -1
+                                # else: 
+                                #     value_change = 1
                                 # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                 #     value_change = -1*value_change
                                 # sub_mat1 = cosets[(~g).array_form].matrix_form()
@@ -459,8 +467,8 @@ class ElementTriple():
                                 # sub_mat = np.kron((~g).matrix_form(), basis_change)
                             # else:
                             #     raise NotImplementedError("Unconsidered permuation case")
-                            if len(ent_dofs_ids) > 3:
-                                breakpoint()
+                            # if len(ent_dofs_ids) > 3:
+                            #     breakpoint()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
 
                         elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):

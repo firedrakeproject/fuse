@@ -31,16 +31,8 @@ def barycentric_coords(p, verts):
 def from_barycentric(lmbda, verts):
     return np.dot(lmbda, verts)
 
-
-def all_permutations():
-    return list(itertools.permutations(range(4)))  # 24 permutations
-
-
 def points_close(p, q, tol=1e-6):
     return np.linalg.norm(p - q) < tol
-
-
-# ---------- main grouping ----------
 
 def find_permutation(lam_i, lam_j, tol=1e-6):
     """
@@ -56,7 +48,6 @@ def find_permutation(lam_i, lam_j, tol=1e-6):
             if Permutation(p).is_even:
                 return p
     return perms[0]
-    return None
 
 
 def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
@@ -70,7 +61,13 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
     result = {}
 
     for group in raw_groups:
-        base = group[0]
+        if len(group) < len(list(itertools.permutations(range(len(verts))))):
+            # need to ensure the base is chosen to be invariant under S2
+            # S2 reflects the 0th and 1th barycentric components (on a triangle)
+            base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
+        else:
+            # if the group generates all permutations this may not matter... or at least the choice is different TODO
+            base = group[0]
         lam_base = bary[base]
 
         perm_list = []
@@ -322,7 +319,6 @@ def lagrange_facet_pts(cell, deg):
     get_pt = lambda alpha: np.dot(_recursive(cell.dimension, deg, alpha, _decode_family("lgl")), np.array(cell.vertices(return_coords=True)))
     interior_coords = [tuple(pt) for pt in list(map(get_pt, multiindex_equal(cell.dimension + 1, deg, 1)))]
     coords_grps = convert_to_generation(interior_coords, cell.ordered_vertex_coords())
-
     int_dofs = []
     for grp in coords_grps.keys():
         dofs = [DOF(DeltaPairing(), PointKernel(c)) for c in coords_grps[grp]]
@@ -359,6 +355,7 @@ def construct_tri_cgN(deg):
 
 
 def construct_tet_cgN(deg):
+    print(deg)
     cell = make_tetrahedron()
     vert = cell.vertices()[0]
     edge = cell.edges()[0]

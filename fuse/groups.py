@@ -106,14 +106,14 @@ class GroupMemberRep(object):
             return np.array([1])
         if group.size() == self.group.size():
             members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(self*m).numeric_rep() for m in group.members()]
+            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
             mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         elif group.size() < self.group.size():
             cosets = self.group.cosets_by_submember(group)
             members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            permuted_members = [cosets[(self*m).array_form].numeric_rep() for m in group.members()]
+            permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         else:
             raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
@@ -469,6 +469,8 @@ A3 = GroupRepresentation(AlternatingGroup(3))
 basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
 diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
 new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
+new_S3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([1, 2, 0]), Permutation([2, 0, 1]),
+                                       Permutation([0, 2, 1]), Permutation([2, 1, 0]), Permutation([1, 0, 2])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
 tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
