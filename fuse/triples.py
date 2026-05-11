@@ -561,7 +561,7 @@ class ElementTriple():
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:
-                    perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()]
+                    perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
 

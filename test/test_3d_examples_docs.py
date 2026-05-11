@@ -159,6 +159,45 @@ def construct_tet_cg6(cell=None, perm=True):
                         [cgverts, cgedges, cgfaces1, int_dof, int_dof2], perm)
     assert len(cg.generate()) == (deg + 1)*(deg + 2)*(deg + 3)/6
     cg.to_fiat()
+    count = 0
+    
+    for f in cg.matrices[2].keys():
+        dof_ids =[d.id for d in cg.generate()[46+6*count:52+6*count]]
+        idxing = np.ix_([cg.dof_id_to_fiat_id[did] for did in dof_ids],[cg.dof_id_to_fiat_id[did] for did in dof_ids])
+        print(idxing)
+        # breakpoint()
+        if f == 0:
+            print("3")
+            print(cg.matrices[2][f][3][idxing])
+            print("4")
+            print(cg.matrices[2][f][4][idxing])
+            print("0")
+            print(cg.matrices[2][f][0][idxing])
+        old_3 = cg.matrices[2][f][3][idxing].copy()
+        old_0 = cg.matrices[2][f][0][idxing].copy()
+        old_4 = cg.matrices[2][f][4][idxing].copy()
+        oldrev_3 = cg.reversed_matrices[2][f][3][idxing].copy()
+        oldrev_0 = cg.reversed_matrices[2][f][0][idxing].copy()
+        oldrev_4 = cg.reversed_matrices[2][f][4][idxing].copy()
+        cg.matrices[2][f][3][idxing] = old_0
+        cg.matrices[2][f][0][idxing] = old_3
+        cg.matrices[2][f][4][idxing] = old_4
+        cg.reversed_matrices[2][f][3][idxing] = oldrev_0
+        cg.reversed_matrices[2][f][0][idxing] = oldrev_3
+        cg.reversed_matrices[2][f][4][idxing] = oldrev_4
+        if f == 0:
+            print("3")
+            print(cg.matrices[2][f][3][idxing])
+            print("4")
+            print(cg.matrices[2][f][4][idxing])
+            print("0")
+            print(cg.matrices[2][f][0][idxing])
+        count += 1
+
+    mats = cg.matrices.copy()
+    cg.matrices = cg.reversed_matrices.copy()
+    cg.reversed_matrices = mats
+    breakpoint()
     return cg
 
 def plot_tet_cg3():
@@ -626,12 +665,15 @@ def construct_tet_ned3_old(tet=None, both=False):
     v_2 = np.array(face.get_node(face.ordered_vertices()[2], return_coords=True))
 
     # xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_0)*s_1/2, symbols=(s_0, s_1, s_2)))]
-    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_1)*(s_1)/2, symbols=(s_0, s_1, s_2)))]
+    # xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_1)*(s_1)/2, symbols=(s_0, s_1, s_2)))]ß
+    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_1 - v_0)*(s_0)/2, symbols=(s_0, s_1, s_2)))]
+    # xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_2 - v_0)*(s_2)/2, symbols=(s_0, s_1, s_2)))]
     # face_vec1 = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs1, C3, S3))
     # face_vec2 = ElementTriple(face, (P1, CellHCurl, C0), DOFGenerator(xs2, C3, S3))
 
     # face_dofs = DOFGenerator([immerse(tet, face_vec1, TrH1), immerse(tet, face_vec2, TrH1)], tet_faces, S1)
     # xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_1 - v_0)*s_0/2, symbols=(s_0, s_1, s_2)))]
+    
     face_vec1 = ElementTriple(face, (P1, CellH1, C0), DOFGenerator(xs1, S3, S3))
     face_dofs = DOFGenerator([immerse(tet, face_vec1, TrH1)], tet_faces, S1)
 
@@ -642,6 +684,18 @@ def construct_tet_ned3_old(tet=None, both=False):
 
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs, int_dofs])
     assert len(ned.generate()) == (1/2)*deg*(deg + 2)*(deg + 3)
+    ned.to_fiat()
+    for f in ned.matrices[2].keys():
+        old_3 = ned.matrices[2][f][3].copy()
+        oldrev_3 = ned.reversed_matrices[2][f][3].copy()
+        ned.matrices[2][f][3] = ned.matrices[2][f][0].copy()
+        ned.matrices[2][f][0] = old_3
+        ned.reversed_matrices[2][f][3] = ned.reversed_matrices[2][f][0].copy()
+        ned.reversed_matrices[2][f][0] = oldrev_3
+
+    mats = ned.matrices.copy()
+    ned.matrices = ned.reversed_matrices.copy()
+    ned.reversed_matrices = mats
     return ned
 
 def construct_tet_ned3(tet=None, both=False):
