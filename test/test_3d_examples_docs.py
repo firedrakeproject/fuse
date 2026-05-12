@@ -206,7 +206,6 @@ def construct_tet_cg6(cell=None, perm=True):
     # mats = cg.matrices.copy()
     # cg.matrices = cg.reversed_matrices.copy()
     # cg.reversed_matrices = mats
-    breakpoint()
     return cg
 
 
