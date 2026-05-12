@@ -104,7 +104,20 @@ class GroupMemberRep(object):
         if group.size() == 1:
             # Trivial case
             return np.array([1])
-        if group.size() == self.group.size():
+        if group.size() == 6 and self.group.size() == 6:
+            # horrible hack for S3
+            members = [m.numeric_rep() for m in group.members()]
+            if (~self).numeric_rep() == 0:
+                idx = members.index(3)
+                permuted_members = [((m)*(~(self.group.members()[idx]))).numeric_rep() for m in group.members()]
+            elif (~self).numeric_rep() == 3:
+                permuted_members = [((m)*(~(self.group.members()[0]))).numeric_rep() for m in group.members()]
+            elif (~self).numeric_rep() == 4:
+                permuted_members = [((m)*(self)).numeric_rep() for m in group.members()]
+            else:
+                permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
+            mat = perm_list_to_matrix(members, permuted_members)
+        elif group.size() == self.group.size():
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)

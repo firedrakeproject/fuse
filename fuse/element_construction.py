@@ -31,8 +31,10 @@ def barycentric_coords(p, verts):
 def from_barycentric(lmbda, verts):
     return np.dot(lmbda, verts)
 
+
 def points_close(p, q, tol=1e-6):
     return np.linalg.norm(p - q) < tol
+
 
 def find_permutation(lam_i, lam_j, tol=1e-6):
     """
@@ -69,7 +71,10 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
         else:
             # if the group generates all permutations this may not matter... or at least the choice is different TODO
             # choose the generators nearest to the fixed vertex
-            base = sorted(group, key=lambda i: bary[i][2])[-1]
+            if len(bary[0]) > 2:
+                base = sorted(group, key=lambda i: bary[i][2])[-1]
+            else:
+                base = group[0]
         lam_base = bary[base]
 
         perm_list = []

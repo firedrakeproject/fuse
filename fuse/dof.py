@@ -444,7 +444,7 @@ class DOF():
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            # if self.pairing.orientation is not None and 
+            # if self.pairing.orientation is not None and
             # self.pairing.orientation.numeric_rep() == 1:
             #     breakpoint()
             # print(self)

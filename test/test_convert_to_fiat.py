@@ -11,7 +11,7 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
                                    construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
-                                   construct_tet_ned2, construct_tet_cg4, construct_tet_ned3, construct_tet_cg6)
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_cg6)
 from test_3d_examples_docs import construct_tet_ned3_old
 from test_polynomial_space import flatten
 from element_examples import CR_n
@@ -1031,8 +1031,7 @@ def evaluate_pt_dict(pt_dict, fn):
     return result
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    (construct_tet_rt, "RT", 1),
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_ned, "N1curl", 1),
                                                     (construct_tet_ned2, "N1curl", 2),
@@ -1070,13 +1069,14 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
-            if len(elem.generate()) == 84:
-                print_range = slice(46,52)
-            elif len(elem.generate()) ==  45:
-                print_range = slice(18,24)
-            dof_ids =[d.id for d in elem.generate()[print_range]]
-            idxing = np.ix_([elem.dof_id_to_fiat_id[did] for did in dof_ids],[elem.dof_id_to_fiat_id[did] for did in dof_ids])
-            print(elem.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
+            # if len(elem.generate()) == 84:
+            #     print_range = slice(46,52)
+            # elif len(elem.generate()) == 45:
+            #     print_range = slice(18,32)
+            # dof_ids =[d.id for d in elem.generate()[print_range]]
+            # idxing = np.ix_([elem.dof_id_to_fiat_id[did] for did in dof_ids],[elem.dof_id_to_fiat_id[did] for did in dof_ids])
+            # print(idxing)
+            # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20, 21, 22, 23], [18, 19, 20, 21, 22, 23])])
             res2 = assemble(interpolate(vec(mesh), V2))
             if elem_code == "CG":
@@ -1100,19 +1100,18 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             for i in range(res3.dat.data.shape[0]):
                 assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
     assert len(error_gs) == 0
-    breakpoint()
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
-                                                            (construct_tet_cg6, "CG", 6, 1e-13),
-                                                            # (create_cg3_tet, "CG", 3, 1e-13),
-                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
-                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
-                                                            # (construct_tet_ned3_old, "N1curl", 2, 1e-13),
+
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
+                                                            (create_cg3_tet, "CG", 3, 1e-13),
+                                                            (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
+                                                            (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
@@ -1143,13 +1142,13 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
             print(g)
             print(mesh.entity_orientations)
             if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-                if len(elem1.generate()) == 84:
-                    print_range = slice(46,52)
-                elif len(elem1.generate()) ==  45:
-                    print_range = slice(18,24)
-                dof_ids =[d.id for d in elem1.generate()[print_range]]
-                idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids],[elem1.dof_id_to_fiat_id[did] for did in dof_ids])
-                print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
+                # if len(elem1.generate()) == 84:
+                #     print_range = slice(46,52)
+                # elif len(elem1.generate()) ==  45:
+                #     print_range = slice(18,24)
+                # dof_ids =[d.id for d in elem1.generate()[print_range]]
+                # idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids],[elem1.dof_id_to_fiat_id[did] for did in dof_ids])
+                # print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
                 # if elem_code != "RT" and elem_code != "N1curl":
                 #     V = FunctionSpace(mesh, ufl_elem_perms)
 
