@@ -590,7 +590,7 @@ def construct_tet_bdmN(deg):
     print("FUSE", len(bdm.generate()))
     print("True", (1/2)*(deg + 1)*(deg + 2)*(deg + 3))
     assert len(bdm.generate()) == (1/2)*(deg + 1)*(deg + 2)*(deg + 3)
-
+    bdm.to_fiat()
     return bdm
 
 
