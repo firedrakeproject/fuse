@@ -1087,6 +1087,7 @@ class TensorProductPoint():
 
 
 class FlattenedPoint(Point, TensorProductPoint):
+    d_entities_by_total_d = Point.d_entities
 
     def __init__(self, A, B):
         self.A = A
@@ -1103,11 +1104,22 @@ class FlattenedPoint(Point, TensorProductPoint):
         # TODO this should check if it actually is a hypercube
         fiat = CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return fiat
+    
+    def d_entities(self, d, get_class=True):
+        if isinstance(d, tuple):
+            if not get_class:
+                return [p.id for p in self.all_subpoints[d]]
+            return self.all_subpoints[d]
+        return self.d_entities_by_total_d(d, get_class)
+
 
     def construct_fuse_rep(self):
         sub_cells = [self.A, self.B]
         dims = (self.A.dimension, self.B.dimension)
+        if sum(dims) > 2:
+            raise NotImplementedError("Flattening 3D tensor products not yet implemented")
 
+        self.all_subpoints = {(a_d, b_d): [] for a_d in range(self.A.dimension + 1) for b_d in range(self.B.dimension + 1)}
         points = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
         attachments = {cell: {i: [] for i in range(max(dims) + 1)} for cell in sub_cells}
 
@@ -1124,6 +1136,7 @@ class FlattenedPoint(Point, TensorProductPoint):
         # prod_points[1] = prod_points[2]
         # prod_points[2] = temp
         point_cls = [Point(0) for i in range(len(prod_points))]
+        self.all_subpoints[(0,0)] = point_cls
         edges = []
 
         # generate edges of tensor product result
@@ -1145,6 +1158,8 @@ class FlattenedPoint(Point, TensorProductPoint):
                     b_edge = [att for att in attachments[sub_cells[i]][1] if att.point == b[i]][0]
                     edge_cls1[(a, b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
                                                   Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
+                    edge_tuple_dim = tuple(int((sub_cells[i].local_id(a[i]), sub_cells[i].local_id(b[i])) in list(sub_cells[i]._topology[1].values())) for i in range(len(sub_cells)))
+                    self.all_subpoints[edge_tuple_dim] += [edge_cls1[(a, b)]]
         edge_cls2 = []
         # hasse level 2
         for i in range(len(sub_cells)):
@@ -1157,6 +1172,7 @@ class FlattenedPoint(Point, TensorProductPoint):
                     else:
                         attach = a_edge.attachment + (x,)
                     edge_cls2.append(Edge(edge_cls1[(a, b)], attach, a_edge.o))
+        self.all_subpoints[(1, 1)] = [self]
         return edge_cls2
 
     def flatten(self):

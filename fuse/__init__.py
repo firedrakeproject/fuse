@@ -4,7 +4,7 @@ from fuse.groups import S1, S2, S3, D4, Z3, Z4, C3, C4, S4, A4, diff_C3, tet_edg
 from fuse.dof import DeltaPairing, DOF, L2Pairing, FuseFunction, PointKernel, VectorKernel, BarycentricPolynomialKernel, PolynomialKernel, ComponentKernel
 from fuse.triples import ElementTriple, DOFGenerator, immerse
 from fuse.traces import TrH1, TrGrad, TrHess, TrHCurl, TrHDiv
-from fuse.tensor_products import tensor_product
+from fuse.tensor_products import tensor_product, symmetric_tensor_product
 
 from fuse.spaces.element_sobolev_spaces import CellH1, CellL2, CellHDiv, CellHCurl, CellH2
 from fuse.spaces.polynomial_spaces import P0, P1, P2, P3, Q2, PolynomialSpace

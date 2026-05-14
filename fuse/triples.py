@@ -395,20 +395,21 @@ class ElementTriple():
                     cell_dict[dof_gen] = [d]
         return entity_associations, pure_perm, sub_pure_perm
 
-    def _initialise_entity_dicts(self, dofs):
+    def _initialise_entity_dicts(self, dofs, tensor=False):
         # min_ids = self.cell.get_starter_ids()
         dof_id_mat = np.eye(len(dofs))
         oriented_mats_by_entity = {}
         flat_by_entity = {}
-        if isinstance(self.cell, TensorProductPoint):
-            dims = [(a_d, b_d) for a_d in range(self.cell.A.dimension + 1) for b_d in range(self.cell.B.dimension + 1)]
+        cell = self.cell
+        if tensor:
+            dims = [(a_d, b_d) for a_d in range(cell.A.dimension + 1) for b_d in range(cell.B.dimension + 1)]
         else:
-            dims = [i for i in range(self.cell.dimension + 1)]
+            dims = [i for i in range(cell.dimension + 1)]
         for dim in dims:
             oriented_mats_by_entity[dim] = {}
             flat_by_entity[dim] = {}
 
-            ents = self.cell.d_entities(dim)
+            ents = cell.d_entities(dim)
             for e_id, e in enumerate(ents):
                 # old_e_id = e.id - min_ids[dim]
                 members = e.group.members()
@@ -556,12 +557,15 @@ class ElementTriple():
     def reverse_dof_perms(self, matrices):
         # min_ids = self.cell.get_starter_ids()
         reversed_mats = {}
+        cell = self.cellcell = self.cell
+        # if isinstance(cell, TensorProductPoint)and cell.flat:
+        #     cell = self.unflat_cell
         for dim in matrices.keys():
             reversed_mats[dim] = {}
-            ents = self.cell.d_entities(dim)
+            ents = cell.d_entities(dim)
             for e in ents:
                 # old_e_id = e.id - min_ids[dim]
-                e_id = self.cell.d_entities(e.dim(), get_class=False).index(e.id)
+                e_id = cell.d_entities(e.dim(), get_class=False).index(e.id)
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:

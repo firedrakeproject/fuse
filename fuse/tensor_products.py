@@ -48,20 +48,21 @@ class TensorProductTriple(ElementTriple):
     def setup_matrices(self):
         if self.A.cell.dimension > 1 or self.B.cell.dimension > 1:
             raise NotImplementedError("Combining of matrices not implemented in 3D")
-        if self.cell.flat:
-            raise NotImplementedError("Matrices for flattened cells not yet implemented")
+        if self.cell.flat and not self.symmetric:
+            raise NotImplementedError("Matrices for flattened cells that are not symmetric not supported")
         self.A.to_ufl()
         self.B.to_ufl()
-        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate())
+        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate(), tensor=True)
         if self.flat:
-            top = self.unflat_cell.to_fiat().get_topology()
+            cell = self.unflat_cell
         else:
-            top = self.cell.to_fiat().get_topology()
+            cell = self.cell
+        top = cell.to_fiat().get_topology()
         for dim in top.keys():
             a_ents = self.A.cell.get_topology()[dim[0]].keys()
             b_ents = self.B.cell.get_topology()[dim[1]].keys()
             ents = [(a, b) for a in a_ents for b in b_ents]
-            comp_os = self.cell.component_orientations()
+            comp_os = cell.component_orientations()
             for e, (a, b) in enumerate(ents):
                 ent_dofs = self.entity_dofs[dim][(a, b)]
                 if len(ent_dofs) >= 1:
@@ -84,6 +85,18 @@ class TensorProductTriple(ElementTriple):
                         sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
         # from collections import defaultdict
         # from FIAT.reference_element import tuple_sum
+        if self.cell.flat:
+            # This makes potentially dangerous assumptions about ordering
+            oriented_mats_by_entity_unflat, flat_by_entity_unflat = self._initialise_entity_dicts(self.generate())
+            for dim in oriented_mats_by_entity.keys():
+                total_dim = sum(dim)
+                new_points = self.cell.d_entities(dim, get_class=False)
+                min_ids = self.cell.get_starter_ids()
+                new_ps = [np - min_ids[total_dim] for np in new_points]
+                for i, p in enumerate(new_ps):
+                    oriented_mats_by_entity_unflat[total_dim][p] = oriented_mats_by_entity[dim][i]
+            oriented_mats_by_entity = oriented_mats_by_entity_unflat
+
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
 

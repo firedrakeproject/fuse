@@ -130,7 +130,7 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
 
         A = elem_gen()
         B = elem_gen()
-        elem = tensor_product(A, B, matrices=False).flatten()
+        elem = symmetric_tensor_product(A, B).flatten()
         U = FunctionSpace(mesh, elem.to_ufl())
         res_fuse += [helmholtz_solve(mesh, U)]
         U = FunctionSpace(mesh, elem_code, deg)
@@ -181,6 +181,13 @@ def test_cg1_dg0():
     B = construct_dg1_integral()
     non_sym1 = tensor_product(A, B)
     print(non_sym1)
+    breakpoint()
+
+def test_symmetric_matrices():
+    A = create_cg3_interval()
+    B = create_cg3_interval()
+    from fuse.tensor_products import symmetric_tensor_product
+    tp = symmetric_tensor_product(A, B)
     breakpoint()
 
 
