@@ -205,11 +205,11 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
         kernels = [type(original_kernel)(immersed(f, new_kernel_fn(o), o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
         # opposite_vert = [i for i in range(len(f.ordered_vertices()) + 1) if all([np.allclose(bary_verts[j, i], 0) for j in range(len(bary_verts))])][0]
         # print(opposite_vert)
-        # for o in face_dofs.g1.add_cell(f).members():
-        #     print(o, subs_dict(o))
-        # print(kernels[0])
+        for o in face_dofs.g1.add_cell(f).members():
+            print(o, subs_dict(o))
+        print(kernels[0])
         new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
-    # breakpoint()
+    breakpoint()
     return new_dofs
 
 
@@ -222,27 +222,36 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
     """
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
+    facet_cell = edge
+    if cell.dimension == 3 and rot:
+        facet_cell == face
     dofs = []
     if not interior_only:
         pf_basis_funcs, pf_grps, symbols = proxy_field_bfs(cell, rot)
-        basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(edge.dimension, edge.ordered_vertex_coords(), deg - 1)
-
-        if cell.dimension == 3 and rot:
-            basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(face.dimension, face.ordered_vertex_coords(), deg - 1)
+        basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
         for pf_bf, pf_grp in zip(pf_basis_funcs, pf_grps):
             for bf, grp in zip(basis_funcs, groups):
+                print("bf grp", grp)
+                print(pf_bf, pf_grp)
+                print(bf)
+                
                 xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
                 if grp.size() != 1:
-                    if cell.dimension == 3 and grp.size() == 2:
+                    if cell.dimension == 3 and grp.size() == 2 and rot:
                         dofs += [DOFGenerator(xs, pf_grp*tet_C2, S1)]
+                    elif cell.dimension == 3:
+                        subs_dict = lambda o: {o_sym: p_sym for o_sym, p_sym in zip(lg_symbols, o.permute(lg_symbols))}
+                        new_bf = lambda o: bf.as_expr().xreplace(subs_dict(o))
+                        for o in grp.add_cell(facet_cell).members():
+                            print(o, new_bf(o))
+                            xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
+                            dofs += [DOFGenerator(xs1, pf_grp, S1)]
                     else:
                         dofs += [DOFGenerator(xs, pf_grp*grp, S1)]
                 else:
                     dofs += [DOFGenerator(xs, pf_grp, S1)]
-
     interior_deg = deg - 2
-    dofs1 = dofs
-    dofs = []
+
     if cell.dimension == 3 and interior_deg >= 0 and not rot:
         if not interior_only:
             face = cell.d_entities(2)[0]
@@ -252,8 +261,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 dofs += [DOFGenerator(new_dofs, S1, S1)]
         interior_deg = deg - 3
 
-    dofs2 = dofs
-    dofs = []
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
     for bf, grp in zip(basis_funcs, groups):
         v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
@@ -266,15 +273,15 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
             if grp.size() == 2 and not rot:
                 grp = tet_C2
             print(grp)
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_3- v_0)/2, symbols=symbols))]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_2)/2, symbols=symbols))]
             dofs += [DOFGenerator(xs, grp, S1)]
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_3 - v_1)/2, symbols=symbols))]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_1)/2, symbols=symbols))]
             dofs += [DOFGenerator(xs, grp, S1)]
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_3 - v_2)/2, symbols=symbols))]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_3)/2, symbols=symbols))]
             dofs += [DOFGenerator(xs, grp, S1)]
             # breakpoint()
         else:
-            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_2 - v_0)/2, symbols=symbols))]
+            xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_2)/2, symbols=symbols))]
             if grp.size() > 3:
                 dofs += [DOFGenerator(xs, grp, S1)]
                 xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*(v_0 - v_1)/2, symbols=symbols))]
@@ -282,10 +289,7 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
             else:
                 dofs += [DOFGenerator(xs, S2*grp, S1)]
 
-    print("edge part", len(ElementTriple(cell, (P1, CellH1, CellL2), dofs1).generate()))
-    print("face part", len(ElementTriple(cell, (P1, CellH1, CellL2), dofs2).generate()))
-    print("vol part", len(ElementTriple(cell, (P1, CellH1, CellL2), dofs).generate()))
-    return dofs1 + dofs2 + dofs
+    return dofs
 
 
 def lagrange_facet_fns(cell, deg, interior=False, vector=False):
