@@ -550,9 +550,9 @@ class FuseFunction():
     def __call__(self, *x, sym=False):
         if self.symbols:
             if self.attach_func and not sym:
-                res = eq.xreplace({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
             else:
-                res = eq.xreplace({symb: val for (symb, val) in zip(self.symbols, x)})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, x)})
             if res.free_symbols == set():
                 array = np.array(res).astype(np.float64)
                 return array
