@@ -62,6 +62,7 @@ class ElementTriple():
         self.spaces = tuple(cell_spaces)
         self.DOFGenerator = dof_gen
         self.flat = False
+        self.symmetric = True
 
         self.ref_el = None
 
@@ -585,6 +586,10 @@ class ElementTriple():
         assert str(self.spaces[1]) == str(other.spaces[1])
 
         spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], max([self.spaces[2], other.spaces[2]]))
+
+        from fuse.tensor_products import TensorProductTriple
+        if isinstance(other, TensorProductTriple):
+            return other + self
 
         return ElementTriple(self.cell, spaces, self.DOFGenerator + other.DOFGenerator)
 

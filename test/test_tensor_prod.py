@@ -34,6 +34,8 @@ def helmholtz_solve(mesh, V):
     u = Function(V)
     solve(a == L, u)
     f.interpolate(cos(x*pi*2)*cos(y*pi*2))
+    print("res", u.dat.data)
+    print("true", f.dat.data)
     return sqrt(assemble(dot(u - f, u - f) * dx))
 
 
@@ -117,6 +119,20 @@ def test_on_quad_mesh():
     mass_solve(U)
 
 
+def test_cg3():
+    r = 1
+    mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True)
+    res_fuse = []
+    A = create_cg3_interval()
+    B = create_cg3_interval()
+    elem = symmetric_tensor_product(A, B, matrices=False).flatten()
+    U = FunctionSpace(mesh, elem.to_ufl())
+    res_fuse += [helmholtz_solve(mesh, U)]
+    elem = symmetric_tensor_product(A, B).flatten()
+    U = FunctionSpace(mesh, elem.to_ufl())
+    res_fuse += [helmholtz_solve(mesh, U)]
+    breakpoint()
+
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
                                                                          (create_cg2, "CG", 2, 3.8),
                                                                          (create_cg3_interval, "CG", 3, 4.8)])
@@ -165,8 +181,12 @@ def test_flattening(A, B, res):
 def test_cg1_dg0():
     A = construct_cg1()
     B = construct_dg1_integral()
-    non_sym = tensor_product(A, B)
-    # non_sym2 = tensor_product(B, A).flatten()
+    non_sym1 = tensor_product(A, B).flatten()
+    non_sym2 = tensor_product(B, A).flatten()
+    combined = non_sym1 + non_sym2
+    combined.symmetric = True
+    combined.to_ufl()
+    breakpoint()
     # from finat.element_factory import convert
     # non_sym, _ = convert(non_sym.to_ufl(), shift_axes=0)
     # non_sym2, _ = convert(non_sym2.to_ufl(), shift_axes=0)

@@ -1,6 +1,7 @@
 from fuse.triples import ElementTriple, compute_form_degree
 from fuse.traces import TrHCurl, TrHDiv
 from fuse.cells import TensorProductPoint
+from fuse.enriched import EnrichedElement
 import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
 
@@ -11,10 +12,10 @@ def tensor_product(A, B, matrices=True):
     return TensorProductTriple(A, B, matrices=matrices)
 
 
-def symmetric_tensor_product(A, B):
+def symmetric_tensor_product(A, B, matrices=True):
     if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
         raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B, symmetric=True)
+    return TensorProductTriple(A, B, matrices=matrices, symmetric=True)
 
 
 class TensorProductTriple(ElementTriple):
@@ -37,6 +38,8 @@ class TensorProductTriple(ElementTriple):
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
+        
+        self.pure_perm = not matrices
 
     @property
     def sub_elements(self):
@@ -83,6 +86,7 @@ class TensorProductTriple(ElementTriple):
                             combined_sub_mat = np.kron(a_sub_mat, b_sub_mat)
                         new_o = comp_os[dim][o]
                         sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
+                        # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
         # from collections import defaultdict
         # from FIAT.reference_element import tuple_sum
         if self.cell.flat:
@@ -131,6 +135,13 @@ class TensorProductTriple(ElementTriple):
             return FuseElement(self, self.cell.to_ufl())
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return TensorProductElement(*ufl_sub_elements, cell=self.cell.to_ufl(), triple=self)
+
+    def __add__(self, other):
+        # assert self.cell == other.cell
+        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert str(self.spaces[1]) == str(other.spaces[1])
+
+        return EnrichedElement(self, other, symmetric = self.symmetric and other.symmetric, matrices = self.apply_matrices or other.apply_matrices)
 
     def flatten(self):
         return TensorProductTriple(self.A, self.B, flat=True, symmetric=self.symmetric, matrices=self.apply_matrices)
