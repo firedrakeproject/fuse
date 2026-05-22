@@ -102,7 +102,7 @@ def test_convergence3d(col, k, deg, conv_rate):
 
 
 @pytest.mark.parametrize("deg",
-                         [n for n in range(3, 6)])
+                         [n for n in range(3, 7)])
 def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """

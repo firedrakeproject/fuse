@@ -1270,7 +1270,7 @@ def test_scaling_mesh():
                          [periodic_table(0, 3, 0, 5)])
 def test_quintic_poisson_solve(elem):
     # Create mesh and define function space
-    m = UnitCubeMesh()
+    m = UnitCubeMesh(1, 1, 1)
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem.to_ufl())
     # V = FunctionSpace(m, "CG", 5)
