@@ -93,7 +93,7 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
             perm_group = PermutationSetRepresentation(perm_list)
         else:
             perm_group = GroupRepresentation(perm_group)
-        if len(perm_list) == 6 and perm_list[0].size == 3:
+        if len(perm_list) == 6 and perm_list[0].size == 3 and perm_list[0].is_Identity:
             # TODO make this less horrible
             perm_group = S3
         if return_idx:
@@ -264,13 +264,20 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
         basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
         for pf_bf, pf_grp, facet_sym in zip(pf_basis_funcs, pf_grps, facet_syms):
             for bf, grp in zip(basis_funcs, groups):
-                xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
+                grp = grp.add_cell(facet_cell)
+                # xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
                 subs_dict = lambda o: {o_sym: p_sym for o_sym, p_sym in zip(o.permute(lg_symbols), facet_sym)}
                 new_bf = lambda o: bf.as_expr().xreplace(subs_dict(o))
-                for o in grp.add_cell(facet_cell).members():
-                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
-                    dofs += [DOFGenerator(xs1, pf_grp, S1)]
-                    counter += (pf_grp).size()
+                if grp.size() == 2 and cell.dimension == 2:
+                    iden = grp.identity
+                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(iden), symbols=symbols))]
+                    dofs += [DOFGenerator(xs1, grp*pf_grp, S1)]
+                    counter += (pf_grp*grp).size()
+                else:
+                    for o in grp.members():
+                        xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
+                        dofs += [DOFGenerator(xs1, pf_grp, S1)]
+                        counter += (pf_grp).size()
                 # if grp.size() != 1:
                     
                 #     # if cell.dimension == 3 and grp.size() == 2 and rot:
@@ -310,19 +317,26 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
         v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
         v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
         vector_basis = [(v_0 - v_2)/2, (v_0 - v_1)/2]
-        if cell.dimension == 3:
+        if cell.dimension == 2:
+            vgrps = [S2]
+        elif cell.dimension == 3:
             v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
             vector_basis += [(v_0 - v_3)/2]
+            vgrps = [S1, S1, S1]
     else:
         vector_basis = bary_tangents(cell)
+        vgrps = [S1 for _ in vector_basis]
+        if cell.dimension == 2:
+            vector_basis = [vector_basis[0]]
+            vgrps = [S2]
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
     for bf, grp in zip(basis_funcs, groups):
-        for vec_bf in vector_basis:
-            if grp.size() == 2 and not rot:
+        for vec_bf, vgrp in zip(vector_basis, vgrps):
+            if grp.size() == 2 and not rot and cell.dimension == 3:
                 grp = tet_C2
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*vec_bf, symbols=symbols))]
-            dofs += [DOFGenerator(xs, grp, S1)]
-            counter += (grp).size()
+            dofs += [DOFGenerator(xs, vgrp*grp, S1)]
+            counter += (vgrp*grp).size()
     print("interior dofs:", counter)
     print("end cell", cell)
     return dofs
