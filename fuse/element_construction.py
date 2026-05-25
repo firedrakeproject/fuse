@@ -87,11 +87,15 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
                 raise ValueError("Failed to find permutation")
 
             perm_list += [Permutation(perm)]
+        
         perm_group = sp.combinatorics.PermutationGroup(perm_list)
         if perm_group.order() != len(perm_list):
             perm_group = PermutationSetRepresentation(perm_list)
         else:
             perm_group = GroupRepresentation(perm_group)
+        if len(perm_list) == 6 and perm_list[0].size == 3:
+            # TODO make this less horrible
+            perm_group = S3
         if return_idx:
             result[perm_group] = [base]
         else:
@@ -164,14 +168,12 @@ def bary_tangents(cell):
     dl = []
     for l in ls:
         dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
+    # These edges are chosen such that they agree with the generators and groups from 
+    # lagrange barycentric basis
     if cell.dimension == 2:
         edges = [(2, 1), (2, 0)]
-        # breakpoint()
-        # tans = [sp.Matrix([sp.Determinant(sp.BlockMatrix([[dl[i],dl[j]]]))]) for (i, j) in edges]
     elif cell.dimension == 3:
-        # edges = [(1, 2), (0, 2), (2, 3)]
         edges = [(1, 3), (0, 3), (2, 3)]
-        # tans = [sp.Matrix(dl[i].cross(dl[j])) for (i, j) in edges]
     tans = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
     return tans
 
@@ -239,7 +241,6 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
 
         kernels = [type(original_kernel)(immersed(f, new_kernel_fn(o), o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
         new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
-    # breakpoint()
     return new_dofs
 
 
