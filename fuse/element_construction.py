@@ -169,7 +169,8 @@ def bary_tangents(cell):
         # breakpoint()
         # tans = [sp.Matrix([sp.Determinant(sp.BlockMatrix([[dl[i],dl[j]]]))]) for (i, j) in edges]
     elif cell.dimension == 3:
-        edges = [(1, 2), (0, 2), (2, 3)]
+        # edges = [(1, 2), (0, 2), (2, 3)]
+        edges = [(1, 3), (0, 3), (2, 3)]
         # tans = [sp.Matrix(dl[i].cross(dl[j])) for (i, j) in edges]
     tans = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
     return tans
@@ -237,13 +238,6 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
                 assert all([comp.free_symbols <= set(face_coords) for comp in immersed_poly])
 
         kernels = [type(original_kernel)(immersed(f, new_kernel_fn(o), o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
-        # opposite_vert = [i for i in range(len(f.ordered_vertices()) + 1) if all([np.allclose(bary_verts[j, i], 0) for j in range(len(bary_verts))])][0]
-        # print(opposite_vert)
-        # for o in face_dofs.g1.add_cell(f).members():
-        #     print(o, subs_dict(o))
-        # for k in kernels:
-        #     print(k)
-        # print(kernels[0])
         new_dofs += [DOF(face_dofs.x[0].pairing, kernel) for kernel in kernels]
     # breakpoint()
     return new_dofs
