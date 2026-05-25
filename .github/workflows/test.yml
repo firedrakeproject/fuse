@@ -2,26 +2,12 @@ name: Run tests
 # I stole this from the main firedrake repo
 
 on:
-    workflow_call:
-      inputs:
-        trigger:
-            description: Whether the workflow was triggered by a PR or push ('pr' or 'push')
-            type: string
-            required: true
-        source_ref:
-            description: The input Git ref to checkout
-            type: string
-            required: true
 #   # Run on pushes to main
-#   push:
-#     branches:
-#       - main
+    push:
+        branches:
+        - main
 #   # And all pull requests
-#   #   cd /opt/firedrake/
-#   #   git fetch
-#   #   git checkout indiamai/fuse-closures-with-pyop3
-#   #   git pull
-#   pull_request:
+    pull_request:
 
 concurrency:
   # Cancel running jobs if new commits are pushed
@@ -87,7 +73,6 @@ jobs:
       - uses: actions/checkout@v5
         with:
           path: fuse-repo
-          ref: ${{ inputs.source_ref }}
     
       - name: Install checked out fuse
         run: |
