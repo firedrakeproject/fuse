@@ -87,7 +87,7 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
                 raise ValueError("Failed to find permutation")
 
             perm_list += [Permutation(perm)]
-        
+
         perm_group = sp.combinatorics.PermutationGroup(perm_list)
         if perm_group.order() != len(perm_list):
             perm_group = PermutationSetRepresentation(perm_list)
@@ -154,6 +154,7 @@ def lagrange_barycentric_basis(dim, verts, deg):
     fns = [const(new_mul[idx])*math.prod(s**i for s, i in zip(symbols, new_mul[idx])) for idxs in coords_grps.values() for idx in idxs]
     return fns, grps, symbols
 
+
 def bary_tangents(cell):
     symbols = []
     coords = []
@@ -168,7 +169,7 @@ def bary_tangents(cell):
     dl = []
     for l in ls:
         dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
-    # These edges are chosen such that they agree with the generators and groups from 
+    # These edges are chosen such that they agree with the generators and groups from
     # lagrange barycentric basis
     if cell.dimension == 2:
         edges = [(2, 1), (2, 0)]
@@ -176,6 +177,7 @@ def bary_tangents(cell):
         edges = [(1, 3), (0, 3), (2, 3)]
     tans = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
     return tans
+
 
 def proxy_field_bfs(cell, rot=False):
     symbols = []
@@ -236,7 +238,7 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
             # Check all immersed kernels only contain the bary coords of their face and vanish on the edges
             immersed_poly = immersed(f, new_kernel_fn(o), o)
             for i in range(3):
-                assert(np.allclose([comp.as_expr().xreplace({face_coords[i]: 0}) for comp in immersed_poly], 0))
+                assert (np.allclose([comp.as_expr().xreplace({face_coords[i]: 0}) for comp in immersed_poly], 0))
                 assert all([comp.free_symbols <= set(face_coords) for comp in immersed_poly])
 
         kernels = [type(original_kernel)(immersed(f, new_kernel_fn(o), o), symbols=symbols) for o in face_dofs.g1.add_cell(f).members()]
@@ -258,14 +260,13 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
     if cell.dimension == 3 and rot:
         facet_cell = face
     dofs = []
-    counter =  0
+    counter = 0
     if not interior_only:
         pf_basis_funcs, pf_grps, symbols, facet_syms = proxy_field_bfs(cell, rot)
         basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
         for pf_bf, pf_grp, facet_sym in zip(pf_basis_funcs, pf_grps, facet_syms):
             for bf, grp in zip(basis_funcs, groups):
                 grp = grp.add_cell(facet_cell)
-                # xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*bf, symbols=symbols))]
                 subs_dict = lambda o: {o_sym: p_sym for o_sym, p_sym in zip(o.permute(lg_symbols), facet_sym)}
                 new_bf = lambda o: bf.as_expr().xreplace(subs_dict(o))
                 if grp.size() == 2 and cell.dimension == 2:
@@ -278,24 +279,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                         xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
                         dofs += [DOFGenerator(xs1, pf_grp, S1)]
                         counter += (pf_grp).size()
-                # if grp.size() != 1:
-                    
-                #     # if cell.dimension == 3 and grp.size() == 2 and rot:
-                #     #     dofs += [DOFGenerator(xs, pf_grp*tet_C2, S1)]
-                #     #     counter += (pf_grp*tet_C2).size()
-                #     # elif cell.dimension == 3:
-                #     #     subs_dict = lambda o: {o_sym: p_sym for o_sym, p_sym in zip(lg_symbols, o.permute(lg_symbols))}
-                #     #     new_bf = lambda o: bf.as_expr().xreplace(subs_dict(o))
-                #     #     for o in grp.add_cell(facet_cell).members():
-                #     #         xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
-                #     #         dofs += [DOFGenerator(xs1, pf_grp, S1)]
-                #     #         counter += (pf_grp).size()
-                #     # else:
-                #     #     dofs += [DOFGenerator(xs, pf_grp*grp, S1)]
-                #     #     counter += (pf_grp*grp).size()
-                # else:
-                #     dofs += [DOFGenerator(xs, pf_grp, S1)]
-                #     counter += (pf_grp).size()
     print("facet dofs: ", counter)
     counter = 0
     interior_deg = deg - 2
@@ -312,7 +295,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
         print("interior facet dofs:", counter)
         counter = 0
 
-    
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
     if rot:
         v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
@@ -325,7 +307,7 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
     else:
         vector_basis = bary_tangents(cell)
     vgrps = [S1 for _ in vector_basis]
-        
+
     for bf, grp in zip(basis_funcs, groups):
         tempvgrps = vgrps
         if cell.dimension == 2 and grp.size()*2 <= cell.group.size():
@@ -348,7 +330,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols))]
                 dofs += [DOFGenerator(xs1, grp, S1)]
                 counter += (grp).size()
-            # counter += (vgrp*grp).size()
     print("interior dofs:", counter)
     print("end cell", cell)
     return dofs
