@@ -1031,8 +1031,7 @@ def evaluate_pt_dict(pt_dict, fn):
     return result
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    (construct_tet_rt, "RT", 1),
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (create_cg3_tet, "CG", 3),
                                                     (construct_tet_ned, "N1curl", 1),
@@ -1055,7 +1054,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             return x[1]
         return as_vector([x[1], 1, 1])
 
-    from firedrake.utility_meshes import OneTetMesh, TwoTetMesh
+    from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
              sp.combinatorics.Permutation([0, 3, 1, 2]),
