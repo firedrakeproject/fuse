@@ -233,7 +233,6 @@ def immerse_and_generate_on_interior_face(cell, face_dofs):
         subs_dict = lambda o: {o_sym: sum(symbols[j] for j in range(len(b)) if b[j] == 1) for o_sym, b in zip(o.permute(temp_syms), bary_verts)}
         new_kernel_fn = lambda o: [poly.as_expr().xreplace(subs_dict(o)) for poly in original_fn_subbed]
         face_coords = [sum(symbols[j] for j in range(len(b)) if b[j] == 1) for b in bary_verts]
-        # print(face_coords)
         for o in face_dofs.g1.add_cell(f).members():
             # Check all immersed kernels only contain the bary coords of their face and vanish on the edges
             immersed_poly = immersed(f, new_kernel_fn(o), o)
@@ -307,28 +306,27 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
     else:
         vector_basis = bary_tangents(cell)
     vgrps = [S1 for _ in vector_basis]
-
+    g2 = S1
     for bf, grp in zip(basis_funcs, groups):
         tempvgrps = vgrps
         if cell.dimension == 2 and grp.size()*2 <= cell.group.size():
             tempvgrps = [S2]
         for vec_bf, vgrp in zip(vector_basis, tempvgrps):
+
+            if grp.size()*vgrp.size() < cell.group.size():
+                g2 = cell.group
             # if grp.size() == 2 and not rot and cell.dimension == 3:
             #     grp = tet_C2
-            # if (vgrp.size()*grp.size()) != (vgrp*grp).size():
-            #     breakpoint()
-            # xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*bf*vec_bf, symbols=symbols))]
-            # dofs += [DOFGenerator(xs, vgrp*grp, S1)]
             vgrp = vgrp.add_cell(cell)
             grp = grp.add_cell(cell)
             if grp.size()*vgrp.size() <= cell.group.size():
                 iden = grp.identity
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols))]
-                dofs += [DOFGenerator(xs1, grp*vgrp, S1)]
+                dofs += [DOFGenerator(xs1, grp*vgrp, g2)]
                 counter += (vgrp*grp).size()
             else:
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols))]
-                dofs += [DOFGenerator(xs1, grp, S1)]
+                dofs += [DOFGenerator(xs1, grp, g2)]
                 counter += (grp).size()
     print("interior dofs:", counter)
     print("end cell", cell)

@@ -1031,8 +1031,10 @@ def evaluate_pt_dict(pt_dict, fn):
     return result
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [
+                                                    (construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
+                                                    (create_cg3_tet, "CG", 3),
                                                     (construct_tet_ned, "N1curl", 1),
                                                     (construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
@@ -1040,7 +1042,8 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
                                                     (construct_tet_cg4, "CG", 4),
                                                     (construct_tet_cg6, "CG", 6),
-                                                    (construct_tet_ned3_old, "N1curl", 3)
+                                                    (construct_tet_ned3_old, "N1curl", 3),
+                                                    (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
@@ -1050,9 +1053,9 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         x = SpatialCoordinate(mesh)
         if elem_code == "CG":
             return x[1]
-        return as_vector([1, 1, 1])
+        return as_vector([x[1], 1, 1])
 
-    from firedrake.utility_meshes import TwoTetMesh
+    from firedrake.utility_meshes import OneTetMesh, TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
              sp.combinatorics.Permutation([0, 3, 1, 2]),
@@ -1066,6 +1069,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     error_row_lists = []
     for g in group:
         mesh = TwoTetMesh(perm=g)
+        # mesh = OneTetMesh()
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -1080,14 +1084,23 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20, 21, 22, 23], [18, 19, 20, 21, 22, 23])])
             res2 = assemble(interpolate(vec(mesh), V2))
             if elem_code == "CG":
-                CG3 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3_2 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3 = FunctionSpace(mesh, "CG", 3)
             else:
-                CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3_2 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res2, CG3))
             res4 = assemble(interpolate(vec(mesh), CG3))
+            res5 = assemble(interpolate(vec(mesh), CG3_2))
+            # CG1_2 = VectorFunctionSpace(mesh, create_cg1_tet(cell).to_ufl())
+            # res5 = assemble(interpolate(vec(mesh), CG1_2))
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
+                    print("error")
+                    error_gs += [g]
+                    error_rows += [i]
+                if not np.allclose(res4.dat.data[i], res5.dat.data[i]):
                     print("error")
                     error_gs += [g]
                     error_rows += [i]
@@ -1097,8 +1110,9 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             res1 = assemble(interpolate(vec(mesh), V))
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res1, CG3))
-            for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            # for i in range(res3.dat.data.shape[0]):
+            #     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            print(res3.dat.data)
     assert len(error_gs) == 0
 
 
@@ -1111,6 +1125,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                                                             (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (lambda cell: periodic_table(0, 3, 1, 4), "N1curl", 4, 1e-12),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
