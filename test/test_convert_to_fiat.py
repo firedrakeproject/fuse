@@ -1052,6 +1052,8 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
         x = SpatialCoordinate(mesh)
         if elem_code == "CG":
             return x[1]
+        if deg == 1:
+            return as_vector([1, 1, 1])
         return as_vector([x[1], 1, 1])
 
     from firedrake.utility_meshes import TwoTetMesh
