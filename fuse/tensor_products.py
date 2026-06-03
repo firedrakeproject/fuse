@@ -99,7 +99,17 @@ class TensorProductTriple(ElementTriple):
                 new_ps = [np - min_ids[total_dim] for np in new_points]
                 for i, p in enumerate(new_ps):
                     oriented_mats_by_entity_unflat[total_dim][p] = oriented_mats_by_entity[dim][i]
+            # if 1 in oriented_mats_by_entity_unflat.keys():
+            #     zero = oriented_mats_by_entity_unflat[1][0].copy()
+            #     one = oriented_mats_by_entity_unflat[1][1].copy()
+            #     two = oriented_mats_by_entity_unflat[1][2].copy()
+            #     three = oriented_mats_by_entity_unflat[1][3].copy()
+            #     oriented_mats_by_entity_unflat[1][0] = zero
+            #     oriented_mats_by_entity_unflat[1][1] = two
+            #     oriented_mats_by_entity_unflat[1][2] = three
+            #     oriented_mats_by_entity_unflat[1][3] = one
             oriented_mats_by_entity = oriented_mats_by_entity_unflat
+            # breakpoint()
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
