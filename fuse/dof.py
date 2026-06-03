@@ -377,7 +377,10 @@ class DOF():
         self.immersed = immersed
         self.cell_defined_on = entity
         self.attachment = attachment
-        self.target_space = target_space
+        if not self.immersed:
+            self.target_space = TrH1(self.cell_defined_on)
+        else:
+            self.target_space = target_space
         self.g = g
         self.id = None
         self.sub_id = sub_id
