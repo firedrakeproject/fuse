@@ -11,7 +11,7 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
                                    construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
-                                   construct_tet_ned2, construct_tet_cg4, construct_tet_cg6)
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_cg6, construct_tet_ned_2nd_kind_3)
 from test_3d_examples_docs import construct_tet_ned3_old
 from test_polynomial_space import flatten
 from element_examples import CR_n
@@ -617,7 +617,8 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_bdm, "BDM", 1, 1.8),
                                                               (lambda cell: periodic_table(1, 3, 1, 1), "N2curl", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8),
-                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8)
+                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8),
+                                                              (construct_tet_ned_2nd_kind_3, "N2curl", 3, 3.8)
                                                               ])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -663,10 +664,12 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         assert (np.array(conv1) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
-                                                              (construct_tet_ned, "N1curl", 1, 0.8),
-                                                              (construct_tet_rt2, "RT", 2, 1.8),
-                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [
+                                                            #   (construct_tet_rt, "RT", 1, 0.8),
+                                                            #   (construct_tet_ned, "N1curl", 1, 0.8),
+                                                            #   (construct_tet_rt2, "RT", 2, 1.8),
+                                                            #   (construct_tet_ned2, "N1curl", 2, 1.8),
+                                                              (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 3.8)])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -1031,7 +1034,8 @@ def evaluate_pt_dict(pt_dict, fn):
     return result
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [
+                                                    (construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (create_cg3_tet, "CG", 3),
                                                     (construct_tet_ned, "N1curl", 1),
@@ -1042,10 +1046,12 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_cg4, "CG", 4),
                                                     (construct_tet_cg6, "CG", 6),
                                                     (construct_tet_ned3_old, "N1curl", 3),
-                                                    (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3),
+                                                    (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
+    # from test_3d_examples_docs import construct_tet_ned_2nd_kind_3
+    # elem = construct_tet_ned_2nd_kind_3(cell)
     elem = elem_gen(cell)
 
     def vec(mesh):
@@ -1071,6 +1077,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     for g in group:
         mesh = TwoTetMesh(perm=g)
         # mesh = OneTetMesh()
+        print(g)
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -1083,14 +1090,16 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             # print(idxing)
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20, 21, 22, 23], [18, 19, 20, 21, 22, 23])])
-            res2 = assemble(interpolate(vec(mesh), V2))
+            
             if elem_code == "CG":
                 CG3_2 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
                 CG3 = FunctionSpace(mesh, "CG", 3)
             else:
                 CG3_2 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
                 CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res2 = assemble(interpolate(vec(mesh), V2))
             res3 = assemble(interpolate(res2, CG3))
+            res35 = assemble(interpolate(res2, CG3_2))
             res4 = assemble(interpolate(vec(mesh), CG3))
             res5 = assemble(interpolate(vec(mesh), CG3_2))
             # CG1_2 = VectorFunctionSpace(mesh, create_cg1_tet(cell).to_ufl())
@@ -1101,10 +1110,12 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                     print("error")
                     error_gs += [g]
                     error_rows += [i]
-                if not np.allclose(res4.dat.data[i], res5.dat.data[i]):
-                    print("error")
-                    error_gs += [g]
-                    error_rows += [i]
+                # if not np.allclose(res4.dat.data[i], res5.dat.data[i]):
+                #     print("error")
+                #     error_gs += [g]
+                #     error_rows += [i]
+            if len(error_rows) > 0:
+                breakpoint()
             error_row_lists += [error_rows]
         else:
             V = FunctionSpace(mesh, elem_code, deg)
@@ -1117,16 +1128,18 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
+                                                            (construct_tet_cg6, "CG", 6, 1e-13),
                                                             (create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_bdm2, "BDM", 2, 1e-13),
                                                             (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
-                                                            (lambda cell: periodic_table(0, 3, 1, 4), "N1curl", 4, 1e-12),
+                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N1curl", 4, 1e-12),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):

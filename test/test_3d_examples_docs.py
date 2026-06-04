@@ -613,6 +613,43 @@ def construct_tet_ned_2nd_kind_2(tet=None, both=False):
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs])
     return ned
 
+def construct_tet_ned_2nd_kind_3(tet=None):
+    if tet is None:
+        tet = make_tetrahedron()
+    deg = 3
+    edge = tet.edges()[0]
+    face = tet.d_entities(2, get_class=True)[0]
+    vec_Pd = PolynomialSpace(deg, set_shape=True)
+    nd_space = vec_Pd
+
+    s_0 = sp.Symbol("s_0")
+    s_1 = sp.Symbol("s_1")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_1**3, symbols=(s_0, s_1)))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(3.0*s_0*s_1**2, symbols=(s_0, s_1)))]
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S2, S2)]
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+    edge_dofs = DOFGenerator([immerse(tet, int_ned1, TrHCurl)], tet_edges, S1)
+
+    s_1 = sp.Symbol("s_1")
+    s_2 = sp.Symbol("s_2")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([(np.sqrt(3)/6)*s_0*s_1 + (np.sqrt(3)/3)*s_1**2,-0.5*s_0*s_1], symbols=(s_0, s_1, s_2)))]
+    xs2 = [DOF(L2Pairing(), BarycentricPolynomialKernel([-0.5*s_0*s_1*s_2, (np.sqrt(3)/2)*s_0*s_1*s_2], symbols=(s_0, s_1, s_2)))]
+    face_vec = ElementTriple(face, (P1, CellHCurl, C0), [DOFGenerator(xs2, S2, S3), DOFGenerator(xs, S3, S1)])
+
+    face_dofs = DOFGenerator([immerse(tet, face_vec, TrH1)], tet_faces, S1)
+    s_3 = sp.Symbol("s_3")
+    vecs = [[-0.25*s_0 - 0.25*s_1, 0.25*s_1 - 0.25*s_3, -0.25*s_0 - 0.25*s_3],
+            [-0.25*s_2 - 0.25*s_3, 0.25*s_1 + 0.25*s_3, -0.25*s_1 - 0.25*s_2],
+            [-0.25*s_0 - 0.25*s_1, 0.25*s_0 + 0.25*s_2,  0.25*s_1 + 0.25*s_2],
+            [ 0.25*s_2 + 0.25*s_3, 0.25*s_0 + 0.25*s_2, -0.25*s_0 - 0.25*s_3]]
+    interiors = []
+    for v in vecs:
+        xs =  [DOF(L2Pairing(), BarycentricPolynomialKernel(v, symbols=(s_0, s_1, s_2, s_3)))]
+        interiors += [DOFGenerator(xs, S1, S1)]
+
+    ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs] + interiors)
+    return ned
+
 
 def construct_tet_ned_2nd_kind_2_non_bary(tet=None, both=False):
     if tet is None:

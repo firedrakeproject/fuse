@@ -315,8 +315,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
 
             if grp.size()*vgrp.size() < cell.group.size():
                 g2 = cell.group
-            # if grp.size() == 2 and not rot and cell.dimension == 3:
-            #     grp = tet_C2
             vgrp = vgrp.add_cell(cell)
             grp = grp.add_cell(cell)
             if grp.size()*vgrp.size() <= cell.group.size():
