@@ -203,13 +203,6 @@ def test_cg1_dg0():
     print(non_sym1)
     breakpoint()
 
-def test_symmetric_matrices():
-    A = create_cg3_interval()
-    B = create_cg3_interval()
-    from fuse.tensor_products import symmetric_tensor_product
-    tp = symmetric_tensor_product(A, B)
-    breakpoint()
-
 
 def test_trace_galerkin_projection():
     mesh = UnitSquareMesh(10, 10, quadrilateral=True)
