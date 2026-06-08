@@ -463,8 +463,9 @@ class ElementTriple():
                                     # sub_mat = cosets[(~g).array_form].matrix_form()
                                     sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                                     sub_mat = np.kron(sub_mat2, value_change)
-                                except ValueError:
+                                except AssertionError:
                                     # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                    warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
                                     sub_mat = np.eye(len(ent_dofs_ids))
 
                                 # sub_mat = (~g).matrix_form()
@@ -495,6 +496,7 @@ class ElementTriple():
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                             except ValueError:
                                 # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         else:
                             # TODO what if an orientation is not in G1
