@@ -623,8 +623,6 @@ def test_project_3d(elem_gen, elem_code, deg):
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    # elem = construct_tet_bdm(cell)
-    # breakpoint()
     function = lambda x, i: cos((3/4)*pi*x[i])
     if elem_code != "CG" and elem_code != "DG":
         expr = lambda x: as_vector([function(x, 0), function(x, 1), function(x, 2)])
