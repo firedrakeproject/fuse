@@ -108,10 +108,11 @@ class GroupMemberRep(object):
             # horrible hack for S3
             members = [m.numeric_rep() for m in group.members()]
             if (~self).numeric_rep() == 0:
-                idx = members.index(3)
-                permuted_members = [((m)*(~(self.group.members()[idx]))).numeric_rep() for m in group.members()]
+                idx = members.index(4)
+                permuted_members = [((m)*((group.members()[idx]))).numeric_rep() for m in group.members()]
             elif (~self).numeric_rep() == 3:
-                permuted_members = [((m)*(~(self.group.members()[0]))).numeric_rep() for m in group.members()]
+                idx = members.index(0)
+                permuted_members = [((m)*((group.members()[idx]))).numeric_rep() for m in group.members()]
             elif (~self).numeric_rep() == 4:
                 permuted_members = [((m)*(self)).numeric_rep() for m in group.members()]
             else:
