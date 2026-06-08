@@ -662,11 +662,10 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
         assert (np.array(conv1) > conv_rate).all()
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [
-                                                            #   (construct_tet_rt, "RT", 1, 0.8),
-                                                            #   (construct_tet_ned, "N1curl", 1, 0.8),
-                                                            #   (construct_tet_rt2, "RT", 2, 1.8),
-                                                            #   (construct_tet_ned2, "N1curl", 2, 1.8),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
+                                                              (construct_tet_ned, "N1curl", 1, 0.8),
+                                                              (construct_tet_rt2, "RT", 2, 1.8),
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8),
                                                               (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 3.8)])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
@@ -1032,8 +1031,7 @@ def evaluate_pt_dict(pt_dict, fn):
     return result
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    (construct_tet_rt, "RT", 1),
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (create_cg3_tet, "CG", 3),
                                                     (construct_tet_ned, "N1curl", 1),
@@ -1088,18 +1086,18 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             # print(idxing)
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20, 21, 22, 23], [18, 19, 20, 21, 22, 23])])
-            
+
             if elem_code == "CG":
-                CG3_2 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                # CG3_2 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
                 CG3 = FunctionSpace(mesh, "CG", 3)
             else:
-                CG3_2 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                # CG3_2 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
                 CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res2 = assemble(interpolate(vec(mesh), V2))
             res3 = assemble(interpolate(res2, CG3))
-            res35 = assemble(interpolate(res2, CG3_2))
+            # res35 = assemble(interpolate(res2, CG3_2))
             res4 = assemble(interpolate(vec(mesh), CG3))
-            res5 = assemble(interpolate(vec(mesh), CG3_2))
+            # res5 = assemble(interpolate(vec(mesh), CG3_2))
             # CG1_2 = VectorFunctionSpace(mesh, create_cg1_tet(cell).to_ufl())
             # res5 = assemble(interpolate(vec(mesh), CG1_2))
             error_rows = []
@@ -1126,8 +1124,7 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
-                                                            (construct_tet_cg6, "CG", 6, 1e-13),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
                                                             (create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
@@ -1160,8 +1157,7 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
              sp.combinatorics.Permutation([0, 3, 1, 2]),
              sp.combinatorics.Permutation([0, 1, 3, 2]),
              sp.combinatorics.Permutation([0, 3, 2, 1]),
-             sp.combinatorics.Permutation([0, 2, 1, 3])
-             ]
+             sp.combinatorics.Permutation([0, 2, 1, 3])]
 
     for elem in [ufl_elem1]:
         for g in group:
@@ -1170,12 +1166,12 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
             print(mesh.entity_orientations)
             if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
                 # if len(elem1.generate()) == 84:
-                #     print_range = slice(46,52)
+                #     print_range = slice(46, 52)
                 # elif len(elem1.generate()) ==  45:
                 #     print_range = slice(18,24)
                 # dof_ids =[d.id for d in elem1.generate()[print_range]]
-                # idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids],[elem1.dof_id_to_fiat_id[did] for did in dof_ids])
-                # print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
+                # idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids], [elem1.dof_id_to_fiat_id[did] for did in dof_ids])
+                # print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_(list(range(37, 43)), list(range(37,43)))])
                 # if elem_code != "RT" and elem_code != "N1curl":
                 #     V = FunctionSpace(mesh, ufl_elem_perms)
 
@@ -1188,12 +1184,11 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
                 res = project(V2, mesh, expr(mesh))
                 print(res)
                 errors += [res]
-                # assert res < max_err
             else:
                 V = FunctionSpace(mesh, elem_code, deg)
                 res = project(V, mesh, expr(mesh))
+                errors += [res]
                 print(res)
-                # assert res < max_err
     assert all([res < max_err for res in errors])
 
 

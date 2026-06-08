@@ -132,10 +132,13 @@ class GroupMemberRep(object):
             #     if not np.allclose(mat1, mat):
             #         breakpoint()
         elif group.size() < self.group.size():
-            cosets = self.group.cosets_by_submember(group)
-            members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
+            members = [m.numeric_rep() for m in group.members()]
+            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
+            # cosets = self.group.cosets_by_submember(group)
+            # members = [cosets[m.array_form].numeric_rep() for m in group.members()]
+            # permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
+            # mat = perm_list_to_matrix(members, permuted_members)
         else:
             raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
         return mat

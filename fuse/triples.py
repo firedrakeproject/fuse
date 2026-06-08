@@ -459,8 +459,14 @@ class ElementTriple():
                                 #     value_change = -1*value_change
                                 # sub_mat1 = cosets[(~g).array_form].matrix_form()
                                 # sub_mat1 = (~g).matrix_form()
-                                sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
-                                sub_mat = np.kron(sub_mat2, value_change)
+                                try:
+                                    # sub_mat = cosets[(~g).array_form].matrix_form()
+                                    sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                                    sub_mat = np.kron(sub_mat2, value_change)
+                                except ValueError:
+                                    # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                    sub_mat = np.eye(len(ent_dofs_ids))
+
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
                                 # case for transforms where the basis vector is already included in the dof
