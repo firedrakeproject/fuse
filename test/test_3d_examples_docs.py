@@ -124,7 +124,8 @@ def construct_tet_cg6(cell=None, perm=True):
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
     # xs = [DOF(DeltaPairing(), PointKernel((-0.3919 * 0.8516, -0.226 * 0.8516)))]
 
-    xs = [DOF(DeltaPairing(), PointKernel((0.656043230571497, -0.37876673577048625)))]
+    # xs = [DOF(DeltaPairing(), PointKernel((0.656043230571497, -0.37876673577048625)))]
+    xs = [DOF(DeltaPairing(), PointKernel((0, 0.7575334715409713)))]
     # xs1 = [DOF(DeltaPairing(), PointKernel((-0.23578311807038468, -0.36380923030819223)))]
     xs1 = [DOF(DeltaPairing(), PointKernel((0.23578311807038468, -0.36380923030819223)))]
     # xs1 = [DOF(DeltaPairing(), PointKernel((-0.3926918344886, -0.0202164966524)))]
@@ -155,57 +156,6 @@ def construct_tet_cg6(cell=None, perm=True):
     cg = ElementTriple(tetra, (P, CellH1, "C0"), [cgverts, cgedges, cgfaces1, int_dof, int_dof2], perm)
     assert len(cg.generate()) == (deg + 1)*(deg + 2)*(deg + 3)/6
     cg.to_fiat()
-    # count = 0
-
-    # for f in cg.matrices[2].keys():
-    #     dof_ids =[d.id for d in cg.generate()[46+6*count:52+6*count]]
-    #     idxing = np.ix_([cg.dof_id_to_fiat_id[did] for did in dof_ids],[cg.dof_id_to_fiat_id[did] for did in dof_ids])
-    #     print(idxing)
-    #     # breakpoint()
-    #     if f == 0:
-    #         print("1")
-    #         print(cg.matrices[2][f][1][idxing])
-    #         print("2")
-    #         print(cg.matrices[2][f][2][idxing])
-    #         print("5")
-    #         print(cg.matrices[2][f][5][idxing])
-    #     old_1 = cg.matrices[2][f][1][idxing].copy()
-    #     old_2 = cg.matrices[2][f][2][idxing].copy()
-    #     old_5 = cg.matrices[2][f][5][idxing].copy()
-    #     old_3 = cg.matrices[2][f][3][idxing].copy()
-    #     old_0 = cg.matrices[2][f][0][idxing].copy()
-    #     old_4 = cg.matrices[2][f][4][idxing].copy()
-    #     oldrev_1 = cg.reversed_matrices[2][f][1][idxing].copy()
-    #     oldrev_2 = cg.reversed_matrices[2][f][2][idxing].copy()
-    #     oldrev_5 = cg.reversed_matrices[2][f][5][idxing].copy()
-    #     oldrev_3 = cg.reversed_matrices[2][f][3][idxing].copy()
-    #     oldrev_0 = cg.reversed_matrices[2][f][0][idxing].copy()
-    #     oldrev_4 = cg.reversed_matrices[2][f][4][idxing].copy()
-    #     cg.matrices[2][f][1][idxing] = oldrev_1
-    #     cg.matrices[2][f][2][idxing] = oldrev_2
-    #     cg.matrices[2][f][5][idxing] = oldrev_5
-    #     cg.matrices[2][f][3][idxing] = oldrev_0
-    #     cg.matrices[2][f][0][idxing] = oldrev_3
-    #     cg.matrices[2][f][4][idxing] = oldrev_4
-    #     cg.reversed_matrices[2][f][1][idxing] = old_1
-    #     cg.reversed_matrices[2][f][2][idxing] = old_2
-    #     cg.reversed_matrices[2][f][5][idxing] = old_5
-    #     cg.reversed_matrices[2][f][3][idxing] = old_0
-    #     cg.reversed_matrices[2][f][0][idxing] = old_3
-    #     cg.reversed_matrices[2][f][4][idxing] = old_4
-    #     if f == 0:
-    #         breakpoint()
-    #         print("1")
-    #         print(cg.matrices[2][f][1][idxing])
-    #         print("2")
-    #         print(cg.matrices[2][f][2][idxing])
-    #         print("5")
-    #         print(cg.matrices[2][f][5][idxing])
-    #     count += 1
-
-    # mats = cg.matrices.copy()
-    # cg.matrices = cg.reversed_matrices.copy()
-    # cg.reversed_matrices = mats
     return cg
 
 
