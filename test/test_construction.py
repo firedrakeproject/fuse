@@ -63,7 +63,7 @@ nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
 rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
 dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 4))] + [(1, 3, deg, deg + 0.8) for deg in list(range(0, 3))]
 nd2_params3d = [(1, 1, deg, deg + 0.8) for deg in list(range(1, 5))]
-bdm_params3d = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 4))]
+bdm_params3d = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 5))]
 
 
 @pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + nd_params3d + rt_params3d + dg_params3d + nd2_params3d + bdm_params3d)
@@ -102,7 +102,7 @@ def test_convergence3d(col, k, deg, conv_rate):
 
 
 @pytest.mark.parametrize("deg",
-                         [n for n in range(3, 6)])
+                         [n for n in range(3, 7)])
 def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """

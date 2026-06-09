@@ -377,7 +377,10 @@ class DOF():
         self.immersed = immersed
         self.cell_defined_on = entity
         self.attachment = attachment
-        self.target_space = target_space
+        if not self.immersed:
+            self.target_space = TrH1(self.cell_defined_on)
+        else:
+            self.target_space = target_space
         self.g = g
         self.id = None
         self.sub_id = sub_id
@@ -550,9 +553,9 @@ class FuseFunction():
     def __call__(self, *x, sym=False):
         if self.symbols:
             if self.attach_func and not sym:
-                res = self.eq.subs({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
             else:
-                res = self.eq.subs({symb: val for (symb, val) in zip(self.symbols, x)})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, x)})
             if res.free_symbols == set():
                 array = np.array(res).astype(np.float64)
                 return array

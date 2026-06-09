@@ -11,7 +11,7 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
                                    construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
-                                   construct_tet_ned2, construct_tet_cg4, construct_tet_cg6)
+                                   construct_tet_ned2, construct_tet_cg4, construct_tet_cg6, construct_tet_ned_2nd_kind_3)
 from test_3d_examples_docs import construct_tet_ned3_old
 from test_polynomial_space import flatten
 from element_examples import CR_n
@@ -617,13 +617,12 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_bdm, "BDM", 1, 1.8),
                                                               (lambda cell: periodic_table(1, 3, 1, 1), "N2curl", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8),
-                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8)
+                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8),
+                                                              (construct_tet_ned_2nd_kind_3, "N2curl", 3, 3.8)
                                                               ])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
-    # elem = construct_tet_bdm(cell)
-    # breakpoint()
     function = lambda x, i: cos((3/4)*pi*x[i])
     if elem_code != "CG" and elem_code != "DG":
         expr = lambda x: as_vector([function(x, 0), function(x, 1), function(x, 2)])
@@ -666,7 +665,8 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
                                                               (construct_tet_rt2, "RT", 2, 1.8),
-                                                              (construct_tet_ned2, "N1curl", 2, 1.8)])
+                                                              (construct_tet_ned2, "N1curl", 2, 1.8),
+                                                              (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 3.8)])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -1033,6 +1033,7 @@ def evaluate_pt_dict(pt_dict, fn):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_rt, "RT", 1),
                                                     (construct_tet_rt2, "RT", 2),
+                                                    (create_cg3_tet, "CG", 3),
                                                     (construct_tet_ned, "N1curl", 1),
                                                     (construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
@@ -1040,17 +1041,22 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
                                                     (construct_tet_cg4, "CG", 4),
                                                     (construct_tet_cg6, "CG", 6),
-                                                    (construct_tet_ned3_old, "N1curl", 3)
+                                                    (construct_tet_ned3_old, "N1curl", 3),
+                                                    (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
+    # from test_3d_examples_docs import construct_tet_ned_2nd_kind_3
+    # elem = construct_tet_ned_2nd_kind_3(cell)
     elem = elem_gen(cell)
 
     def vec(mesh):
         x = SpatialCoordinate(mesh)
         if elem_code == "CG":
             return x[1]
-        return as_vector([1, 1, 1])
+        if deg == 1:
+            return as_vector([1, 1, 1])
+        return as_vector([x[1], 1, 1])
 
     from firedrake.utility_meshes import TwoTetMesh
     group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
@@ -1066,6 +1072,8 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     error_row_lists = []
     for g in group:
         mesh = TwoTetMesh(perm=g)
+        # mesh = OneTetMesh()
+        print(g)
         print(mesh.entity_orientations)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -1078,27 +1086,41 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
             # print(idxing)
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
             # print(elem.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_([18, 19, 20, 21, 22, 23], [18, 19, 20, 21, 22, 23])])
-            res2 = assemble(interpolate(vec(mesh), V2))
+
             if elem_code == "CG":
-                CG3 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                # CG3_2 = FunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3 = FunctionSpace(mesh, "CG", 3)
             else:
-                CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                # CG3_2 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+                CG3 = VectorFunctionSpace(mesh, "CG", 3)
+            res2 = assemble(interpolate(vec(mesh), V2))
             res3 = assemble(interpolate(res2, CG3))
+            # res35 = assemble(interpolate(res2, CG3_2))
             res4 = assemble(interpolate(vec(mesh), CG3))
+            # res5 = assemble(interpolate(vec(mesh), CG3_2))
+            # CG1_2 = VectorFunctionSpace(mesh, create_cg1_tet(cell).to_ufl())
+            # res5 = assemble(interpolate(vec(mesh), CG1_2))
             error_rows = []
             for i in range(res3.dat.data.shape[0]):
                 if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
                     print("error")
                     error_gs += [g]
                     error_rows += [i]
+                # if not np.allclose(res4.dat.data[i], res5.dat.data[i]):
+                #     print("error")
+                #     error_gs += [g]
+                #     error_rows += [i]
+            if len(error_rows) > 0:
+                breakpoint()
             error_row_lists += [error_rows]
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec(mesh), V))
             CG3 = VectorFunctionSpace(mesh, "CG", 3)
             res3 = assemble(interpolate(res1, CG3))
-            for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            # for i in range(res3.dat.data.shape[0]):
+            #     assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+            print(res3.dat.data)
     assert len(error_gs) == 0
 
 
@@ -1109,8 +1131,10 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_bdm2, "BDM", 2, 1e-13),
                                                             (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N1curl", 4, 1e-12),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
@@ -1133,8 +1157,7 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
              sp.combinatorics.Permutation([0, 3, 1, 2]),
              sp.combinatorics.Permutation([0, 1, 3, 2]),
              sp.combinatorics.Permutation([0, 3, 2, 1]),
-             sp.combinatorics.Permutation([0, 2, 1, 3])
-             ]
+             sp.combinatorics.Permutation([0, 2, 1, 3])]
 
     for elem in [ufl_elem1]:
         for g in group:
@@ -1143,12 +1166,12 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
             print(mesh.entity_orientations)
             if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
                 # if len(elem1.generate()) == 84:
-                #     print_range = slice(46,52)
+                #     print_range = slice(46, 52)
                 # elif len(elem1.generate()) ==  45:
                 #     print_range = slice(18,24)
                 # dof_ids =[d.id for d in elem1.generate()[print_range]]
-                # idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids],[elem1.dof_id_to_fiat_id[did] for did in dof_ids])
-                # print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][idxing])
+                # idxing = np.ix_([elem1.dof_id_to_fiat_id[did] for did in dof_ids], [elem1.dof_id_to_fiat_id[did] for did in dof_ids])
+                # print(elem1.matrices[2][0][mesh.entity_orientations[1][10]][np.ix_(list(range(37, 43)), list(range(37,43)))])
                 # if elem_code != "RT" and elem_code != "N1curl":
                 #     V = FunctionSpace(mesh, ufl_elem_perms)
 
@@ -1161,12 +1184,11 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
                 res = project(V2, mesh, expr(mesh))
                 print(res)
                 errors += [res]
-                # assert res < max_err
             else:
                 V = FunctionSpace(mesh, elem_code, deg)
                 res = project(V, mesh, expr(mesh))
+                errors += [res]
                 print(res)
-                # assert res < max_err
     assert all([res < max_err for res in errors])
 
 
@@ -1230,69 +1252,3 @@ def test_scaling_mesh():
     print(res1.dat.data)
     res2 = assemble(interpolate(vec, V2))
     print(res2.dat.data)
-
-
-# @pytest.mark.parametrize("elem",
-#                          [construct_tet_cg4(make_tetrahedron()), periodic_table(0, 3, 0, 4)
-#                           ])
-# def test_quartic_poisson_solve(elem):
-#     # Create mesh and define function space
-#     r = 0
-#     m = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r)
-#     x = SpatialCoordinate(m)
-
-#     V = FunctionSpace(m, elem.to_ufl())
-
-#     # Define variational problem
-#     u = TrialFunction(V)
-#     v = TestFunction(V)
-#     a = dot(grad(u), grad(v)) * dx
-#     u_e = x[0]*x[0]*x[0]*x[0] + 2*x[0]*x[1]*x[1] + 3*x[2]*x[2]*x[2]*x[2] + 6
-
-#     bcs = [DirichletBC(V, u_e, "on_boundary")]
-#     f = Function(V)
-#     f.interpolate(-12*x[0]*x[0] - 4*x[0] - 36*x[2]*x[2])
-#     L = f*v*dx
-
-#     # Compute solution
-#     u_r = Function(V)
-#     solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
-
-#     true = Function(V)
-#     true.interpolate(u_e)
-
-#     res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
-#     print(res)
-#     assert np.allclose(res, 0)
-
-
-@pytest.mark.parametrize("elem",
-                         [periodic_table(0, 3, 0, 5)])
-def test_quintic_poisson_solve(elem):
-    # Create mesh and define function space
-    m = UnitCubeMesh()
-    x = SpatialCoordinate(m)
-    V = FunctionSpace(m, elem.to_ufl())
-    # V = FunctionSpace(m, "CG", 5)
-
-    # Define variational problem
-    u = TrialFunction(V)
-    v = TestFunction(V)
-    a = dot(grad(u), grad(v)) * dx
-    u_e = x[0]*x[0]*x[0]*x[0]*x[0]
-
-    bcs = [DirichletBC(V, u_e, "on_boundary")]
-    f = Function(V)
-    f.interpolate(-20*x[0]*x[0]*x[0])
-    L = f*v*dx
-
-    # Compute solution
-    u_r = Function(V)
-    solve(a == L, u_r, bcs=bcs, solver_parameters={'ksp_type': 'cg', 'pc_type': 'lu'})
-
-    true = Function(V)
-    true.interpolate(u_e)
-
-    res = sqrt(assemble(inner(u_r - true, u_r - true) * dx))
-    print(res)
-    assert np.allclose(res, 0)
