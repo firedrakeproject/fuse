@@ -65,8 +65,8 @@ class GroupMemberRep(object):
         return val, val_list
 
     def numeric_rep(self):
-        identity = self.group.identity.perm.array_form
-        m_array = self.perm.array_form
+        identity = self.group.identity.vertex_order_form
+        m_array = self.vertex_order_form
         return orientation_value(identity, m_array)
 
     def __eq__(self, x):
@@ -96,6 +96,10 @@ class GroupMemberRep(object):
     def array_form(self):
         return tuple(self.perm.array_form)
 
+    @property
+    def vertex_order_form(self):
+        return (~self.perm).array_form
+
     def matrix_form(self):
         mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         return mat
@@ -107,53 +111,26 @@ class GroupMemberRep(object):
         if group.size() == 6 and self.group.size() == 6:
             # horrible hack for S3
             members = [m.numeric_rep() for m in group.members()]
-            if (~self).numeric_rep() == 5:
-                idx = members.index(2)
-                print(0, group.members()[idx].numeric_rep())
-                permuted_members = [((m)*((~group.members()[idx]))).numeric_rep() for m in group.members()]
-            elif (~self).numeric_rep() == 2:
-                idx = members.index(5)
-                print(3, group.members()[idx].numeric_rep())
-                permuted_members = [((m)*((~group.members()[idx]))).numeric_rep() for m in group.members()]
-            # elif (~self).numeric_rep() == 4:
-            #     print(4, self.numeric_rep())
-            #     permuted_members = [((m)*(self)).numeric_rep() for m in group.members()]
-            # else:
             permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
+            if (~self).numeric_rep() == 2 or (~self).numeric_rep() == 5:
+                n = self.group.get_member_by_val(5 if (~self).numeric_rep() == 2 else 2)
+                permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.group.size():
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
-            mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
             if self.perm.size == 3:
-                
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-               
                 if (~self).numeric_rep() == 2 or (~self).numeric_rep() == 5:
-                    print((~self).numeric_rep())
-                    print(permuted_members)
-                    # permuted_members = [cosets[(m*(self)).array_form].numeric_rep() for m in group.members()]
-                    permuted_members = [4, 3, 0] if (~self).numeric_rep() == 2 else [3, 0, 4]
-                    print(permuted_members)
-                    # idx = _permuted_members.index(5)
-                    # print(2, _perms[idx].numeric_rep())
-                    # permuted_members = [cosets[(((m*_perms[idx]).array_form))].numeric_rep() for m in group.members()]
-                # elif :
-                #     permuted_members = [cosets[(m*(self)).array_form].numeric_rep() for m in group.members()]
-                    # idx = _permuted_members.index(2)
-                    # print(5, _perms[idx].numeric_rep())
-                    # permuted_members = [cosets[((_perms[idx].array_form))].numeric_rep() for m in group.members()]
+                    n = self.group.get_member_by_val(5 if (~self).numeric_rep() == 2 else 2)
+                    permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
-                if (~self).numeric_rep() == 2 or (~self).numeric_rep() == 5:
-                    print(mat)
-                # _permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-                # _perms = [m*(~self) for m in group.members()]
-                # if not np.allclose(mat1, mat):
-                #     breakpoint()
+            else:
+                mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         elif group.size() < self.group.size():
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
