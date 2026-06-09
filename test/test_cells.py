@@ -88,6 +88,31 @@ def test_permute_entities():
     #     oriented.plot(ax = ax, filename=f"test_cell{i}.png")
     #     oriented.hasse_diagram(filename=f"test_hasse{i}.png")
 
+def numeric_rep_cell_order(m, cell):
+    order = [v - cell.get_starter_ids()[0] for v in cell.ordered_vertices()]
+    # For polygon(3), this should be [1, 2, 0] up to object ids.
+    # Convert object ids/classes to positions as needed.
+    p = m.perm
+
+    # Conjugate p into the cell's ordered-vertex basis.
+    # q maps local ordered positions, rather than abstract vertex labels.
+    r = Permutation(order)
+    q = r * p * ~r
+    from fuse.utils import orientation_value
+    return orientation_value([0, 1, 2], q.array_form)
+
+def test_perms_cell():
+    cell = polygon(3)
+    s3 = S3.add_cell(cell)
+    base_order = [v - cell.get_starter_ids()[0] for v in cell.ordered_vertices()]
+    from fuse.utils import orientation_value
+    for m in s3.members():
+        print(
+        "numeric", m.numeric_rep(),
+        "perm", m.perm.array_form,
+        "matrix\n", m.transform_matrix,
+        )
+    breakpoint()
 
 def test_oriented_verts():
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
@@ -333,3 +358,274 @@ def test_tet_groups():
                 print()
             print([s.array_form for s in sub_group])
             print([s.array_form for s in flip_group])
+
+import itertools
+import numpy as np
+
+def affine_from_vertices(old_vertices, new_vertices):
+    """
+    Return A, b such that A @ old_vertices[i] + b == new_vertices[i].
+    old_vertices/new_vertices are lists or arrays of shape (3, 2).
+    """
+    old_vertices = np.asarray(old_vertices, dtype=float)
+    new_vertices = np.asarray(new_vertices, dtype=float)
+
+    # Use vertex 0 as origin.
+    X = np.column_stack([
+        old_vertices[1] - old_vertices[0],
+        old_vertices[2] - old_vertices[0],
+    ])
+    Y = np.column_stack([
+        new_vertices[1] - new_vertices[0],
+        new_vertices[2] - new_vertices[0],
+    ])
+
+    A = Y @ np.linalg.inv(X)
+    b = new_vertices[0] - A @ old_vertices[0]
+    return A, b
+
+
+def fiat_orientation_matrices(vertices):
+    """
+    vertices must be the exact ordered vertex coordinate list passed to FIAT.
+    Returns {orientation_number: (perm_tuple, A, b)}.
+    """
+    vertices = np.asarray(vertices, dtype=float)
+    out = {}
+
+    for o, perm in enumerate(sorted(itertools.permutations(range(3)))):
+        # FIAT-style orientation tuple: new ordered vertices.
+        new_vertices = vertices[list(perm)]
+        A, b = affine_from_vertices(vertices, new_vertices)
+        out[o] = (perm, A, b)
+
+    return out
+def key(m):
+    return tuple(m.perm.array_form)
+
+index = {key(m): m for m in S3.add_cell(polygon(3)).members()}
+
+def find_member_by_matrix(A, atol=1e-10):
+    for m in S3.add_cell(polygon(3)).members():
+        if np.allclose(m.transform_matrix[:2, :2], A[:2, :2], atol=atol):
+            return m
+    raise ValueError("no matching member")
+
+
+def affine_from_vertices(old_vertices, new_vertices):
+    """
+    Return A, b such that
+
+        A @ old_vertices[i] + b == new_vertices[i]
+
+    for all simplex vertices i.
+
+    old_vertices and new_vertices should be arrays of shape (3, 2)
+    for a triangle.
+    """
+    old_vertices = np.asarray(old_vertices, dtype=float)
+    new_vertices = np.asarray(new_vertices, dtype=float)
+
+    X = np.column_stack((
+        old_vertices[1] - old_vertices[0],
+        old_vertices[2] - old_vertices[0],
+    ))
+    Y = np.column_stack((
+        new_vertices[1] - new_vertices[0],
+        new_vertices[2] - new_vertices[0],
+    ))
+
+    A = Y @ np.linalg.inv(X)
+    b = new_vertices[0] - A @ old_vertices[0]
+    return A, b
+
+
+def fiat_orientation_matrices(vertices):
+    """
+    Reconstruct FIAT simplex orientation matrices.
+
+    vertices must be the exact ordered vertex coordinate list that FUSE gives
+    to FIAT for this entity/cell.
+    """
+    vertices = np.asarray(vertices, dtype=float)
+    out = {}
+
+    for o, perm in enumerate(sorted(itertools.permutations(range(len(vertices))))):
+        new_vertices = vertices[list(perm)]
+        A, b = affine_from_vertices(vertices, new_vertices)
+        out[o] = {
+            "perm": perm,
+            "A": A,
+            "b": b,
+        }
+
+    return out
+
+
+def linear_part(M):
+    """
+    Extract the linear 2x2 block from a FUSE transform matrix.
+
+    Adjust this if your transform matrices are stored differently.
+    """
+    M = np.asarray(M, dtype=float)
+
+    if M.shape == (2, 2):
+        return M
+    if M.shape[0] >= 2 and M.shape[1] >= 2:
+        return M[:2, :2]
+
+    raise ValueError(f"Cannot extract linear part from shape {M.shape}")
+
+
+def translation_part(M):
+    """
+    Extract translation from a FUSE affine matrix if present.
+
+    Your printed matrices look like 3x2 or similar with zero translation;
+    this function is deliberately conservative. If translation is unavailable,
+    it returns None and comparisons use only the linear part.
+    """
+    M = np.asarray(M, dtype=float)
+
+    # Common homogeneous column-vector layout:
+    # [[a, b, tx],
+    #  [c, d, ty],
+    #  [0, 0, 1]]
+    if M.shape == (3, 3):
+        return M[:2, 2]
+
+    # Common row-vector-ish or augmented layout may need custom handling.
+    # Your printout looked like a 3x2 matrix:
+    # [[a, b],
+    #  [c, d],
+    #  [0, 0]]
+    # so there is no usable translation column here.
+    return None
+
+
+def member_from_linear_matrix(group, A, atol=1.0e-10):
+    """
+    Find the FUSE group member whose transform has linear part A.
+    """
+    matches = []
+    for m in group.members():
+        if np.allclose(linear_part(m.transform_matrix), A, atol=atol):
+            matches.append(m)
+
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected exactly one FUSE member matching A, found {len(matches)}"
+        )
+
+    return matches[0]
+
+
+def fiat_label_from_fuse_member(member, fiat_mats, atol=1.0e-10):
+    """
+    Find the FIAT orientation number whose reconstructed affine matrix matches
+    this FUSE member's transform matrix.
+    """
+    A_fuse = linear_part(member.transform_matrix)
+    b_fuse = translation_part(member.transform_matrix)
+
+    matches = []
+
+    for o, data in fiat_mats.items():
+        A_fiat = data["A"]
+        b_fiat = data["b"]
+
+        A_ok = np.allclose(A_fuse, A_fiat, atol=atol)
+
+        if b_fuse is None:
+            b_ok = True
+        else:
+            b_ok = np.allclose(b_fuse, b_fiat, atol=atol)
+
+        if A_ok and b_ok:
+            matches.append(o)
+
+    if len(matches) != 1:
+        raise ValueError(
+            "Expected exactly one FIAT orientation matching member "
+            f"{member.numeric_rep()} {member.perm.array_form}, "
+            f"found {matches}"
+        )
+
+    return matches[0]
+
+
+def print_symbolic_geometric_and_fiat_table(group, vertices, atol=1.0e-10):
+    """
+    Print symbolic, geometric, and FIAT-labelled behaviour.
+
+    vertices must be the exact ordered vertex coordinates passed to FIAT.
+    """
+    members = S3.add_cell(polygon(3)).members()
+    fiat_mats = fiat_orientation_matrices(vertices)
+
+    # Map FUSE member -> FIAT orientation label by comparing actual matrices.
+    fiat_label = {
+        tuple(m.perm.array_form): fiat_label_from_fuse_member(m, fiat_mats, atol=atol)
+        for m in members
+    }
+
+    print("FUSE numeric -> FIAT orientation label")
+    for m in members:
+        print(
+            f"{m.numeric_rep()} {m.perm.array_form} -> "
+            f"{fiat_label[tuple(m.perm.array_form)]}"
+        )
+    print()
+
+    for s in members:
+        print("self", s.numeric_rep(), s.perm.array_form)
+
+        symbolic = []
+        geom1 = []
+        geom2 = []
+        fiat_symbolic = []
+        fiat_geom1 = []
+        fiat_geom2 = []
+
+        A_s_inv = linear_part((~s).transform_matrix)
+
+        for m in members:
+            symbolic_member = (~s) * m
+
+            A_m = linear_part(m.transform_matrix)
+
+            # Two possible matrix composition orders.
+            # You already found symbolic == geom2, but keep both here.
+            geom1_member = member_from_linear_matrix(group, A_m @ A_s_inv, atol=atol)
+            geom2_member = member_from_linear_matrix(group, A_s_inv @ A_m, atol=atol)
+
+            symbolic.append(symbolic_member.numeric_rep())
+            geom1.append(geom1_member.numeric_rep())
+            geom2.append(geom2_member.numeric_rep())
+
+            fiat_symbolic.append(
+                fiat_label[tuple(symbolic_member.perm.array_form)]
+            )
+            fiat_geom1.append(
+                fiat_label[tuple(geom1_member.perm.array_form)]
+            )
+            fiat_geom2.append(
+                fiat_label[tuple(geom2_member.perm.array_form)]
+            )
+
+        print("symbolic numeric:", symbolic)
+        # print("geom1 numeric:   ", geom1)
+        print("geom2 numeric:   ", geom2)
+        print("FIAT symbolic:   ", fiat_symbolic)
+        # print("FIAT geom1:      ", fiat_geom1)
+        print("FIAT geom2:      ", fiat_geom2)
+        print()
+
+def test_temp():
+    # Replace this with the actual FUSE/FIAT vertex order.
+    cell =polygon(3)
+    vertices = cell.ordered_vertex_coords()
+    fiat = fiat_orientation_matrices(vertices)
+
+    print_symbolic_geometric_and_fiat_table(S3.add_cell(cell), vertices)

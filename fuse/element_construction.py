@@ -63,19 +63,19 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
     result = {}
 
     for group in raw_groups:
-        if len(group) < len(list(itertools.permutations(range(len(verts))))):
-            # need to ensure the base is chosen to be invariant under S2
-            # S2 reflects the 0th and 1st barycentric components (on a triangle)
-            # Pick generators that lie on axis of symmetry
-            # base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
-            base = [i for i in group if np.allclose(bary[i][1], bary[i][2])][0]
-        else:
-            # if the group generates all permutations this may not matter... or at least the choice is different TODO
-            # choose the generators nearest to the fixed vertex
-            if len(bary[0]) > 2:
-                base = sorted(group, key=lambda i: bary[i][0])[-1]
+        if len(bary[0]) > 2:
+            if len(group) < len(list(itertools.permutations(range(len(verts))))):
+                # need to ensure the base is chosen to be invariant under S2
+                # S2 reflects the 0th and 1st barycentric components (on a triangle)
+                # Pick generators that lie on axis of symmetry
+                # base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
+                base = [i for i in group if np.allclose(bary[i][1], bary[i][2])][0]
             else:
-                base = group[0]
+                # if the group generates all permutations this may not matter... or at least the choice is different TODO
+                # choose the generators nearest to the fixed vertex
+                base = sorted(group, key=lambda i: bary[i][0])[-1]
+        else:
+            base = group[0]
         lam_base = bary[base]
 
         perm_list = []
@@ -194,10 +194,11 @@ def proxy_field_bfs(cell, rot=False):
     dl = []
     for l in ls:
         dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
-    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(0, 1), (0, 2), (1, 2)]]
-    facet_syms = [[symbols[i] for i in facet] for facet in [(0, 1), (0, 2), (1, 2)]]
+    edges =  [ (0, 1), (1, 2), (0, 2)]
+    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in  edges]
+    facet_syms = [[symbols[i] for i in facet] for facet in edges]
     if cell.dimension == 2:
-        grp = [diff_C3]
+        grp = [C3]
     else:
         bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
         # grp = [tet_edges]
