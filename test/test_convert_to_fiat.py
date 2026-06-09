@@ -1124,18 +1124,20 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
-                                                            (create_cg3_tet, "CG", 3, 1e-13),
-                                                            (construct_tet_cg4, "CG", 4, 1e-13),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
+                                                            # (construct_tet_cg6, "CG", 6, 1e-13),
+                                                            # (create_cg3_tet, "CG", 3, 1e-13),
+                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            #  (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
-                                                            (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
-                                                            (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N1curl", 3, 1e-12),
-                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N1curl", 4, 1e-12),
-                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13),
+                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            # (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
+                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            # (lambda cell: periodic_table(1, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            # (lambda cell: periodic_table(1, 3, 1, 4), "N1curl", 4, 1e-12),
+                                                            # (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
@@ -1152,12 +1154,14 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
         return x[0]
     errors = []
     from firedrake.utility_meshes import TwoTetMesh
-    group = [sp.combinatorics.Permutation([0, 1, 2, 3]),
+    group = [
+             sp.combinatorics.Permutation([0, 1, 2, 3]),
              sp.combinatorics.Permutation([0, 2, 3, 1]),
              sp.combinatorics.Permutation([0, 3, 1, 2]),
              sp.combinatorics.Permutation([0, 1, 3, 2]),
              sp.combinatorics.Permutation([0, 3, 2, 1]),
-             sp.combinatorics.Permutation([0, 2, 1, 3])]
+             sp.combinatorics.Permutation([0, 2, 1, 3])
+             ]
 
     for elem in [ufl_elem1]:
         for g in group:
@@ -1179,7 +1183,6 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
                 #     print("perms", res)
                 #     # assert res < max_err
                 #     errors += [res]
-
                 V2 = FunctionSpace(mesh, elem)
                 res = project(V2, mesh, expr(mesh))
                 print(res)

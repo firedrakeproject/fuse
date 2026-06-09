@@ -78,14 +78,26 @@ def numpy_to_str_tuple(arr, scale=1):
     return f'({",".join(str_as)})'
 
 
+# def orientation_value(identity_arg, perm_arg):
+#     # copy arrays as they are modified in place
+#     identity = identity_arg.copy()
+#     perm = perm_arg.copy()
+
+#     val = 0
+#     for i in range(len(identity)):
+#         loc = perm.index(identity[i])
+#         perm.remove(identity[i])
+#         val += loc * math.factorial(len(identity) - i - 1)
+#     return val
+
 def orientation_value(identity_arg, perm_arg):
     # copy arrays as they are modified in place
     identity = identity_arg.copy()
     perm = perm_arg.copy()
 
     val = 0
-    for i in range(len(identity)):
-        loc = perm.index(identity[i])
-        perm.remove(identity[i])
-        val += loc * math.factorial(len(identity) - i - 1)
+    for i in range(len(perm)):
+        loc = identity.index(perm[i])
+        identity.remove(perm[i])
+        val += loc * math.factorial(len(perm) - i - 1)
     return val
