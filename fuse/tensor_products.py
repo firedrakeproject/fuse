@@ -97,6 +97,7 @@ class TensorProductTriple(ElementTriple):
                 new_points = self.cell.d_entities(dim, get_class=False)
                 min_ids = self.cell.get_starter_ids()
                 new_ps = [np - min_ids[total_dim] for np in new_points]
+                breakpoint()
                 for i, p in enumerate(new_ps):
                     oriented_mats_by_entity_unflat[total_dim][p] = oriented_mats_by_entity[dim][i]
             if 1 in oriented_mats_by_entity_unflat.keys():

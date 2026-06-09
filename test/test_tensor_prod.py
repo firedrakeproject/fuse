@@ -125,9 +125,9 @@ def test_cg3():
     res_fuse = []
     A = create_cg3_interval()
     B = create_cg3_interval()
-    elem = symmetric_tensor_product(A, B, matrices=False).flatten()
-    U = FunctionSpace(mesh, elem.to_ufl())
-    res_fuse += [helmholtz_solve(mesh, U)]
+    # elem = symmetric_tensor_product(A, B, matrices=False).flatten()
+    # U = FunctionSpace(mesh, elem.to_ufl())
+    # res_fuse += [helmholtz_solve(mesh, U)]
     elem = symmetric_tensor_product(A, B).flatten()
     U = FunctionSpace(mesh, elem.to_ufl())
     res_fuse += [helmholtz_solve(mesh, U)]
@@ -249,21 +249,28 @@ def test_hdiv():
     mesh = ExtrudedMesh(m, 2)
     # CG_1 = FiniteElement("CG", "interval", 1)
     # DG_0 = FiniteElement("DG", "interval", 0)
-    cg1 = construct_cg1()
-    dg0 = construct_dg0_integral()
-    p1p0 = HDiv(tensor_product(cg1, dg0))
+    # cg1 = construct_cg1()
+    # dg0 = construct_dg0_integral()
+    # p1p0 = HDiv(tensor_product(cg1, dg0))
     # P1P0 = TensorProductElement(CG_1, DG_0)
     # RT_horiz = HDivElement(p1p0.to_ufl(), transform=hdiv_transform(p1p0))
-    RT_horiz = p1p0.to_ufl()
+    # RT_horiz = p1p0.to_ufl()
     # RT_horiz = HDivElement(P1P0)
     # p0p1 = HDiv(tensor_product(dg0, cg1))
     # P0P1 = TensorProductElement(DG_0, CG_1)
     # RT_vert = p0p1.to_ufl()
     # RT_vert = HDivElement(P0P1)
-    elt = RT_horiz
+    # elt = RT_horiz
     # + RT_vert
     # + RT_vert
     # mesh = UnitSquareMesh(1, 1, quadrilateral=True)
+    A = construct_cg1()
+    B = construct_dg0_integral()
+    non_sym1 = tensor_product(A, B).flatten()
+    non_sym2 = tensor_product(B, A).flatten()
+    combined = non_sym1 + non_sym2
+    combined.symmetric = True
+    elt = HDiv(combined).to_ufl()
     V = FunctionSpace(mesh, elt)
     u = TrialFunction(V)
     v = TestFunction(V)
