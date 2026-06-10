@@ -318,3 +318,64 @@ def test_transforms():
     print(HDiv(tensor_product(dg0, rev_cg1))(v))
     print(HDiv(tensor_product(rev_cg1, dg0))(v))
     breakpoint()
+
+
+def test_sum_fac():
+    # In 2d we have O(N_q^2N_i^4) -> O(p^6)
+    # Sum factorisation gains 1 factor so we expect O(p^5)
+    # For CG3 p = 3 so it should be 3x faster 
+    mesh = ExtrudedMesh(UnitIntervalMesh(10), 10)
+    A = create_cg3_interval()
+    B = create_cg3_interval()
+    elem = tensor_product(A, B)
+    mesh2 = UnitSquareMesh(10, 10, quadrilateral=True)
+    C = create_cg3_interval()
+    D = create_cg3_interval()
+    elem2 = symmetric_tensor_product(C, D).flatten()
+    V = FunctionSpace(mesh, elem.to_ufl())
+    V1 = FunctionSpace(mesh, "CG", 3)
+    V2 = FunctionSpace(mesh2, elem2.to_ufl())
+    V3 = FunctionSpace(mesh2, "CG", 3)
+    Vs = [V, V1, V2, V3]
+    for V in Vs:
+        print(V)
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        a = dot(grad(u), grad(v))*dx  # Laplace operator
+        from tsfc import compile_form
+        kernel_vanilla, = compile_form(a, parameters={"mode": "vanilla"})
+        print("Local assembly FLOPs with vanilla mode is {0:.3g}".format(kernel_vanilla.flop_count))
+        kernel_spectral, = compile_form(a)
+        print("Local assembly FLOPs with spectral mode is {0:.3g}".format(kernel_spectral.flop_count))
+        assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3
+
+@pytest.mark.xfail(reason="3D tensor products not implemented")
+def test_sum_fac_3d():
+    # In 2d we have O(N_q^3N_i^6) -> O(p^9)
+    # Sum factorisation gains 2 factors so we expect O(p^7)
+    # For CG3 p = 3 so it should be 9x faster - seems that it is faster than this in regular firedrake
+    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, quadrilateral=True), 10)
+    A = create_cg3_interval()
+    B = create_cg3_interval()
+    C = create_cg3_interval()
+    elem = tensor_product(tensor_product(A, B).flatten(), C)
+    mesh2 = UnitSquareMesh(10, 10, quadrilateral=True)
+    C = create_cg3_interval()
+    D = create_cg3_interval()
+    elem2 = symmetric_tensor_product(C, D).flatten()
+    V = FunctionSpace(mesh, elem.to_ufl())
+    V1 = FunctionSpace(mesh, "CG", 3)
+    V2 = FunctionSpace(mesh2, elem2.to_ufl())
+    V3 = FunctionSpace(mesh2, "CG", 3)
+    Vs = [V, V1, V2, V3]
+    for V in Vs:
+        print(V)
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        a = dot(grad(u), grad(v))*dx  # Laplace operator
+        from tsfc import compile_form
+        kernel_vanilla, = compile_form(a, parameters={"mode": "vanilla"})
+        print("Local assembly FLOPs with vanilla mode is {0:.3g}".format(kernel_vanilla.flop_count))
+        kernel_spectral, = compile_form(a)
+        print("Local assembly FLOPs with spectral mode is {0:.3g}".format(kernel_spectral.flop_count))
+        assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3

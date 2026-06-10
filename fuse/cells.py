@@ -1131,8 +1131,8 @@ class FlattenedPoint(Point, TensorProductPoint):
                     for s in sub_ent:
                         attachments[cell][d].extend(s.connections)
 
-        prod_points = list(itertools.product(*reversed([points[cell][0] for cell in sub_cells])))
-        breakpoint()
+        # prod_points = list(itertools.product(*reversed([points[cell][0] for cell in sub_cells])))
+        prod_points = list(itertools.product(*[points[cell][0] for cell in sub_cells]))
         # temp = prod_points[1]
         # prod_points[1] = prod_points[2]
         # prod_points[2] = temp
