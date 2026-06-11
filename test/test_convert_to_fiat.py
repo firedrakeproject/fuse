@@ -1128,11 +1128,11 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
                                                             # (construct_tet_cg6, "CG", 6, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
                                                             # (create_cg3_tet, "CG", 3, 1e-13),
                                                             # (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
                                                             # (construct_tet_rt2, "RT", 2, 1e-13),
                                                             # (construct_tet_bdm2, "BDM", 2, 1e-13),
                                                             # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),

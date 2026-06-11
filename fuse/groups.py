@@ -112,8 +112,9 @@ class GroupMemberRep(object):
             # horrible hack for S3
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
-            if (~self).numeric_rep() == 2 or (~self).numeric_rep() == 5:
-                n = self.group.get_member_by_val(5 if (~self).numeric_rep() == 2 else 2)
+            mapping = {4: 4, 3: 0, 0: 3}
+            if (~self).numeric_rep() in mapping.keys():
+                n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
                 permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.group.size():
@@ -125,8 +126,10 @@ class GroupMemberRep(object):
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-                if (~self).numeric_rep() == 2 or (~self).numeric_rep() == 5:
-                    n = self.group.get_member_by_val(5 if (~self).numeric_rep() == 2 else 2)
+                mapping = {4: 3, 3: 4, 0: 0}
+                # mapping = {4: 4, 3: 0, 0: 3}
+                if (~self).numeric_rep() in mapping.keys():
+                    n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
                     permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
             else:

@@ -68,12 +68,13 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
                 # need to ensure the base is chosen to be invariant under S2
                 # S2 reflects the 0th and 1st barycentric components (on a triangle)
                 # Pick generators that lie on axis of symmetry
-                # base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
-                base = [i for i in group if np.allclose(bary[i][1], bary[i][2])][0]
+                base = [i for i in group if np.allclose(bary[i][0], bary[i][1])][0]
+                # base = [i for i in group if np.allclose(bary[i][1], bary[i][2])][0]
             else:
                 # if the group generates all permutations this may not matter... or at least the choice is different TODO
                 # choose the generators nearest to the fixed vertex
-                base = sorted(group, key=lambda i: bary[i][0])[-1]
+                base = sorted(group, key=lambda i: bary[i][2])[-1]
+                # base = sorted(group, key=lambda i: bary[i][0])[-1]
         else:
             base = group[0]
         lam_base = bary[base]
@@ -94,9 +95,9 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
             perm_group = PermutationSetRepresentation(perm_list)
         else:
             perm_group = GroupRepresentation(perm_group)
-        if len(perm_list) == 6 and perm_list[0].size == 3 and perm_list[0].is_Identity:
-            # TODO make this less horrible
-            perm_group = S3
+        # if len(perm_list) == 6 and perm_list[0].size == 3 and perm_list[0].is_Identity:
+        #     # TODO make this less horrible
+        #     perm_group = S3
         if return_idx:
             result[perm_group] = [base]
         else:
@@ -194,7 +195,7 @@ def proxy_field_bfs(cell, rot=False):
     dl = []
     for l in ls:
         dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
-    edges =  [ (0, 1), (1, 2), (0, 2)]
+    edges =  [(0, 1), (1, 2), (0, 2)]
     bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in  edges]
     facet_syms = [[symbols[i] for i in facet] for facet in edges]
     if cell.dimension == 2:
