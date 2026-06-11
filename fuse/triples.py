@@ -56,7 +56,6 @@ class ElementTriple():
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
-        degree = self.spaces[0].degree() + 1
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
@@ -75,7 +74,7 @@ class ElementTriple():
                 if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
                     self.dof_id_to_fiat_id[dofs[i].id] = counter
                     entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
-                    nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
+                    nodes.append(dofs[i].convert_to_fiat(self.ref_el, self.degree, value_shape))
                     counter += 1
         self.nodes = nodes
         # for i in range(4):
@@ -123,9 +122,9 @@ class ElementTriple():
     def num_dofs(self):
         return sum([dof_gen.num_dofs() for dof_gen in self.DOFGenerator])
 
+    @property
     def degree(self):
-        # TODO this isn't really correct
-        return self.spaces[0].degree()
+        return self.spaces[0].degree() + 1
 
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
@@ -163,7 +162,7 @@ class ElementTriple():
         form_degree = 1 if self.spaces[0].set_shape else 0
         degree = self.spaces[0].degree()
         # sanity check that the dofs span the space
-        original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        original_V, original_basis = self.compute_dense_matrix()
         if self.pure_perm:
             dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
         else:
@@ -259,11 +258,14 @@ class ElementTriple():
         else:
             raise ValueError("Plotting not supported in this dimension")
 
-    def compute_dense_matrix(self, ref_el, entity_ids, nodes, poly_set):
-        dual = DualSet(nodes, ref_el, entity_ids)
-
-        old_coeffs = poly_set.get_coeffs()
-        dualmat = dual.to_riesz(poly_set)
+    def compute_dense_matrix(self, g=None):
+        if g is not None:
+            nodes = [d(g).convert_to_fiat(self.ref_el, self.degree, self.get_value_shape())for d in self.generate()]
+        else:
+            nodes = self.nodes
+        dual = DualSet(nodes, self.ref_el, self.entity_ids)
+        old_coeffs = self.poly_set.get_coeffs()
+        dualmat = dual.to_riesz(self.poly_set)
 
         shp = dualmat.shape
         A = dualmat.reshape((shp[0], -1))
@@ -280,7 +282,7 @@ class ElementTriple():
 
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
         raise NotImplementedError("This should be deprecated")
-        degree = self.spaces[0].degree()
+        degree = self.spaces[0].degree
         min_ids = self.cell.get_starter_ids()
         nodes = [d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
         sub_ents = []
@@ -433,8 +435,6 @@ class ElementTriple():
                         # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
-                            # if DOFs on entity are not perms, get the matrix
-                            # only get this if they are defined on the current dimension
                             bvs = np.array(e.basis_vectors())
                             new_bvs = np.array(e.orient(~g).basis_vectors())
                             basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
@@ -443,39 +443,15 @@ class ElementTriple():
                             elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:
                                 # equivalently g1 trivial
                                 sub_mat = ent_dofs[0].target_space.manipulate_basis(basis_change)
-                            # elif len(ent_dofs_ids) == basis_change.shape[0]*
                             else:
-                                # len(dof_gen_class[dim].g2.members()) == 2:
-                                # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
-                                # if len(value_change) > 1:
-                                #     breakpoint()
-                                #     value_change = np.sum(value_change[0])
-                                # if g.perm.is_odd:
-                                #     value_change = -1
-                                # else:
-                                #     value_change = 1
-                                # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
-                                #     value_change = -1*value_change
-                                # sub_mat1 = cosets[(~g).array_form].matrix_form()
-                                # sub_mat1 = (~g).matrix_form()
                                 try:
-                                    # sub_mat = cosets[(~g).array_form].matrix_form()
                                     sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                                     sub_mat = np.kron(sub_mat2, value_change)
                                 except AssertionError:
                                     # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
                                     warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
                                     sub_mat = np.eye(len(ent_dofs_ids))
-
-                                # sub_mat = (~g).matrix_form()
-                            # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
-                                # case for transforms where the basis vector is already included in the dof
-                                # sub_mat = np.kron((~g).matrix_form(), basis_change)
-                            # else:
-                            #     raise NotImplementedError("Unconsidered permuation case")
-                            # if len(ent_dofs_ids) > 3:
-                            #     breakpoint()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
 
                         # g.perm.is_Identity or needs to be removed for S3 hack
@@ -483,16 +459,12 @@ class ElementTriple():
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
-                            # sub_mat = (~g).matrix_form()
                             sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
-                            # sub_mat = cosets[(~g).array_form].matrix_form()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
                             # case for dofs defined on the cell and not immersed - doesn't actually matter for facet agreement
-                            # sub_mat = (~g).matrix_form()
                             sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
                             try:
-                                # sub_mat = cosets[(~g).array_form].matrix_form()
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                             except ValueError:
                                 # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
@@ -501,6 +473,8 @@ class ElementTriple():
                         else:
                             # TODO what if an orientation is not in G1
                             warnings.warn("FUSE: orientation case not covered")
+                            if dim != self.cell.dim():
+                                raise NotImplementedError("FUSE: orientation case not covered")
                             # sub_mat = g.matrix_form()
                             # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                             # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
@@ -583,6 +557,33 @@ class ElementTriple():
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
 
+    def make_transform_fn(self):
+        # transform functions on the whole cell are the identity as there is no matching across cell
+        # return lambda g: np.eye(len(self.generate()))
+        for dof_gen in self.DOFGenerator:
+            dofs = dof_gen.ls
+            cell = dofs[0].cell
+            def transform_fn(g):
+                bvs = np.array(cell.basis_vectors())
+                new_bvs = np.array(cell.orient(~g).basis_vectors())
+                basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
+                if len(dofs) == basis_change.shape[0]:
+                    sub_mat = basis_change
+                elif len(self.g2.members()) == 2 and len(dofs) == 1:
+                    # equivalently g1 trivial
+                    sub_mat = dofs[0].target_space.manipulate_basis(basis_change)
+                else:
+                    value_change = dofs[0].target_space.manipulate_basis(basis_change)
+                    try:
+                        sub_mat2 = (~g).matrix_form_subgroup(self.g1)
+                        sub_mat = np.kron(sub_mat2, value_change)
+                    except AssertionError:
+                        # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                        warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
+                        sub_mat = np.eye(len(dofs))
+                return sub_mat, self.compute_dense_matrix()
+        return transform_fn
+
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
         return o_dict
@@ -652,6 +653,32 @@ class DOFGenerator():
             dim = entity.dim()
             entity_ids[dim][entity.id - min_ids[dim]].append(i)
         return entity_ids
+
+    def make_transform_fn(self):
+        # transform functions on the whole cell are the identity as there is no matching across cell
+        # return lambda g: np.eye(len(self.generate()))
+        dofs = self.ls
+        cell = dofs[0].cell
+        def transform_fn(g):
+            bvs = np.array(cell.basis_vectors())
+            new_bvs = np.array(cell.orient(~g).basis_vectors())
+            basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
+            if len(dofs) == basis_change.shape[0]:
+                sub_mat = basis_change
+            elif len(self.g2.members()) == 2 and len(dofs) == 1:
+                # equivalently g1 trivial
+                sub_mat = dofs[0].target_space.manipulate_basis(basis_change)
+            else:
+                value_change = dofs[0].target_space.manipulate_basis(basis_change)
+                try:
+                    sub_mat2 = (~g).matrix_form_subgroup(self.g1)
+                    sub_mat = np.kron(sub_mat2, value_change)
+                except AssertionError:
+                    # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                    warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
+                    sub_mat = np.eye(len(dofs))
+            return sub_mat
+        return transform_fn
 
     def __repr__(self):
         repr_str = "DOFGen("

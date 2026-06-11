@@ -479,11 +479,11 @@ class DOF():
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        # if self.cell_defined_on.dimension >= 2:
-        #     print(self)
-        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        #     for key, val in pt_dict.items():
-        #         print(np.array(key), ":", np.array([v[0] for v in val]))
+        if self.cell_defined_on.dimension >= 1:
+            print(self)
+            np.set_printoptions(linewidth=90, precision=4, suppress=True)
+            for key, val in pt_dict.items():
+                print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict
 
     def __repr__(self, fn="v"):

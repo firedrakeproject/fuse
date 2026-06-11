@@ -223,3 +223,20 @@ def test_generate_quadrature():
         print("fuse", d.to_quadrature(degree, (2,)))
 
     elem.to_fiat()
+
+def test_automate_fn():
+    # elem = construct_nd()
+    elem = construct_rt()
+    edge = elem.cell.edges()[0]
+    elem.to_fiat()
+    dof_gen = elem.DOFGenerator[0].x[0].triple.DOFGenerator[0]
+    transform_fn = dof_gen.make_transform_fn()
+    def make_mat(g):
+        original_V, original_basis = elem.compute_dense_matrix()
+        transformed_V, transformed_basis = elem.compute_dense_matrix(g)
+        return np.matmul(transformed_basis, original_V.T)
+    for g in elem.cell.group.members():
+        print(g, g.numeric_rep())
+        print(make_mat(g))
+    
+    breakpoint()
