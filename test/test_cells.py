@@ -112,7 +112,6 @@ def test_perms_cell():
         "perm", m.perm.array_form,
         "matrix\n", m.transform_matrix,
         )
-    breakpoint()
 
 def test_oriented_verts():
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
