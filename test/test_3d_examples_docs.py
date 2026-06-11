@@ -126,8 +126,8 @@ def construct_tet_cg6(cell=None, perm=True):
 
     xs = [DOF(DeltaPairing(), PointKernel((0.656043230571497, -0.37876673577048625)))]
     # xs = [DOF(DeltaPairing(), PointKernel((0, 0.7575334715409713)))]
-    # xs1 = [DOF(DeltaPairing(), PointKernel((-0.23578311807038468, -0.36380923030819223)))]
-    xs1 = [DOF(DeltaPairing(), PointKernel((0.23578311807038468, -0.36380923030819223)))]
+    xs1 = [DOF(DeltaPairing(), PointKernel((-0.23578311807038468, -0.36380923030819223)))]
+    # xs1 = [DOF(DeltaPairing(), PointKernel((0.23578311807038468, -0.36380923030819223)))]
     # xs1 = [DOF(DeltaPairing(), PointKernel((-0.3926918344886, -0.0202164966524)))]
     xs2 = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     # v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))

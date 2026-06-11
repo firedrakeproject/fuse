@@ -494,7 +494,10 @@ A4 = GroupRepresentation(AlternatingGroup(4))
 A3 = GroupRepresentation(AlternatingGroup(3))
 
 basis_S2 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([0, 2, 1])])
-diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
+# diff_C3 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
+# diff_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([0, 1, 2]), Permutation([2, 0, 1])], name="diff_C")  # this group is used for facet dofs
+diff_C3 = PermutationSetRepresentation([ Permutation([0, 1, 2]), Permutation([2, 0, 1]), Permutation([1, 2, 0])], name="diff_C")  # this group is used for facet dofs
+
 new_C3 = PermutationSetRepresentation([Permutation([1, 2, 0]), Permutation([2, 0, 1]), Permutation([0, 1, 2])], name="n_C")  # this group is used for facet dofs
 new_S3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([1, 2, 0]), Permutation([2, 0, 1]),
                                        Permutation([0, 2, 1]), Permutation([2, 1, 0]), Permutation([1, 0, 2])])

@@ -726,10 +726,12 @@ def test_linear_vec(elem_gen, elem_code, deg):
                 for i in range(res3.dat.data.shape[0]):
                     if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
                         error_rows += [i]
-                cnl = CG3.cell_node_list
-                for cell in cnl:
-                    print([i in error_rows for i in cell])
-                failed = True
+                # cnl = CG3.cell_node_list
+                # for c in cnl:
+                #     print([i in error_rows for i in c])
+                # failed = True
+            if len(error_rows) > 0:
+                breakpoint()
         else:
             V = FunctionSpace(mesh, elem_code, deg)
             res1 = assemble(interpolate(vec, V))
@@ -1032,18 +1034,18 @@ def evaluate_pt_dict(pt_dict, fn):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    # (construct_tet_rt, "RT", 1),
-                                                    # (construct_tet_rt2, "RT", 2),
-                                                    # (create_cg3_tet, "CG", 3),
-                                                    # (construct_tet_ned, "N1curl", 1),
-                                                    # (construct_tet_ned2, "N1curl", 2),
-                                                    # (construct_tet_bdm2, "BDM", 2),
-                                                    # (construct_tet_ned_2nd_kind_2, "N2curl", 2),
-                                                    # (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
-                                                    # (construct_tet_cg4, "CG", 4),
-                                                    # (construct_tet_cg6, "CG", 6),
-                                                    # (construct_tet_ned3_old, "N1curl", 3),
-                                                    # (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
+                                                    (construct_tet_rt, "RT", 1),
+                                                    (construct_tet_rt2, "RT", 2),
+                                                    (create_cg3_tet, "CG", 3),
+                                                    (construct_tet_ned, "N1curl", 1),
+                                                    (construct_tet_ned2, "N1curl", 2),
+                                                    (construct_tet_bdm2, "BDM", 2),
+                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2),
+                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
+                                                    (construct_tet_cg4, "CG", 4),
+                                                    (construct_tet_cg6, "CG", 6),
+                                                    (construct_tet_ned3_old, "N1curl", 3),
+                                                    (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
                                                     (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
@@ -1127,20 +1129,20 @@ def test_vec_two_tet(elem_gen, elem_code, deg):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
-                                                            # (construct_tet_cg6, "CG", 6, 1e-13),
-                                                            # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
-                                                            # (create_cg3_tet, "CG", 3, 1e-13),
-                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
+                                                            (construct_tet_cg6, "CG", 6, 1e-13),
+                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (create_cg3_tet, "CG", 3, 1e-13),
+                                                            (construct_tet_cg4, "CG", 4, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
                                                             (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
-                                                            # (construct_tet_rt2, "RT", 2, 1e-13),
-                                                            # (construct_tet_bdm2, "BDM", 2, 1e-13),
-                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
-                                                            # (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
-                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            # (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
-                                                            # (lambda cell: periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
-                                                            # (construct_tet_ned3_old, "N1curl", 2, 1e-13),
+                                                            (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
+                                                            (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
+                                                            (construct_tet_ned2, "N1curl", 2, 1e-13),
+                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
+                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
+                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13),
                                                             ])
 def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     cell = make_tetrahedron()
@@ -1158,9 +1160,9 @@ def test_const_two_tet(elem_gen, elem_code, deg, max_err):
     errors = []
     from firedrake.utility_meshes import TwoTetMesh
     group = [
-            #  sp.combinatorics.Permutation([0, 1, 2, 3]),
-            #  sp.combinatorics.Permutation([0, 2, 3, 1]),
-            #  sp.combinatorics.Permutation([0, 3, 1, 2]),
+             sp.combinatorics.Permutation([0, 1, 2, 3]),
+             sp.combinatorics.Permutation([0, 2, 3, 1]),
+             sp.combinatorics.Permutation([0, 3, 1, 2]),
              sp.combinatorics.Permutation([0, 1, 3, 2]),
              sp.combinatorics.Permutation([0, 3, 2, 1]),
              sp.combinatorics.Permutation([0, 2, 1, 3])
