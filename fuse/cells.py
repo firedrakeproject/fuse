@@ -478,7 +478,7 @@ class Point():
             # if self.oriented:
             #     connections = self.permute_entities(self.oriented, dim - 1)
             # if self.dimension == 2:
-            #     connections = [connections[-1]] + connections[:-1]
+            #     connections = [connections[1], connections[0], connections[2]]
             #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
             #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:

@@ -123,9 +123,10 @@ class ElementTriple():
     def num_dofs(self):
         return sum([dof_gen.num_dofs() for dof_gen in self.DOFGenerator])
 
+    @property
     def degree(self):
         # TODO this isn't really correct
-        return self.spaces[0].degree()
+        return self.spaces[0].degree() + 1
 
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
@@ -275,6 +276,7 @@ class ElementTriple():
             try:
                 new_coeffs_flat = scipy.linalg.solve(V, B, transposed=True)
             except (scipy.linalg.LinAlgWarning, scipy.linalg.LinAlgError):
+                print(np.linalg.matrix_rank(V))
                 raise np.linalg.LinAlgError("Singular Vandermonde matrix")
         return A, new_coeffs_flat
 
@@ -571,14 +573,16 @@ class ElementTriple():
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:
-                    if dim == 2:
-                        # if m.numeric_rep() == 0:
-                        #     breakpoint()
-                        # horrible hack for s3 continued
-                        inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
-                        perms_copy[m.numeric_rep()] = inv_mat
-                    else:
-                        perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
+                    inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    perms_copy[m.numeric_rep()] = inv_mat
+                    # if dim == 2:
+                    #     # if m.numeric_rep() == 0:
+                    #     #     breakpoint()
+                    #     # horrible hack for s3 continued
+                    #     inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    #     perms_copy[m.numeric_rep()] = inv_mat
+                    # else:
+                    #     perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
                     # perms_copy[m.numeric_rep()] = inv_mat
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
