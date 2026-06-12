@@ -193,8 +193,8 @@ def proxy_field_bfs(cell, rot=False):
     dl = []
     for l in ls:
         dl += [sp.Matrix([sp.diff(l, x) for x in coords])]
-    edges =  [(0, 1), (1, 2), (0, 2)]
-    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in  edges]
+    edges = [(0, 1), (1, 2), (0, 2)]
+    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
     facet_syms = [[symbols[i] for i in facet] for facet in edges]
     if cell.dimension == 2:
         grp = [C3]

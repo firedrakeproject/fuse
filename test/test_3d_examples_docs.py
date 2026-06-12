@@ -370,49 +370,6 @@ def construct_tet_bdm2(cell=None, perm=None):
     return bdm2
 
 
-def construct_tet_bdm2_non_bary(cell=None, perm=None):
-    if cell is None:
-        cell = make_tetrahedron()
-    face = cell.d_entities(2, get_class=True)[0]
-    deg = 2
-
-    space = PolynomialSpace(deg, set_shape=True)
-
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    symbols = (x, y)
-    v_0 = np.array(face.ordered_vertex_coords()[0])
-    bvs = np.array(face.basis_vectors(norm=False))
-    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y) - v_0))
-    ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
-    vertex_basis = ls[0]*(2*ls[0] - 1)
-    edge_basis = 4*ls[1]*ls[2]
-    xs = [DOF(L2Pairing(), PolynomialKernel(vertex_basis, symbols=symbols))]
-    xs1 = [DOF(L2Pairing(), PolynomialKernel(edge_basis, symbols=symbols))]
-    dofs = [DOFGenerator(xs, C3, S3), DOFGenerator(xs1, C3, S3)]
-    face_vec = ElementTriple(face, (space, CellHDiv, "C0"), dofs)
-    im_xs = [immerse(cell, face_vec, TrHDiv)]
-    faces = DOFGenerator(im_xs, tet_faces, S1)
-
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    z = sp.Symbol("z")
-
-    symbols = [x, y, z]
-    v_0 = cell.ordered_vertex_coords()[0]
-    bvs = np.array(cell.basis_vectors(norm=False))
-    res = np.matmul(np.linalg.inv(bvs.T), np.array((x, y, z) - v_0))
-    ls = (1 - sum(res),) + tuple(res[i] for i in range(len(res)))
-    dl = []
-    for l in ls:
-        dl += [sp.Matrix((sp.diff(l, x), sp.diff(l, y), sp.diff(l, z)))]
-    proxy_field_1_form = [sp.Matrix(ls[i]*dl[j] - ls[j]*dl[i]) for (i, j) in [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]]
-    xs = [DOF(L2Pairing(), PolynomialKernel([bf[0], bf[1], bf[2]], symbols=(x, y, z))) for bf in proxy_field_1_form]
-    interior = DOFGenerator([xs[0]], tet_edges, S1)
-    bdm2 = ElementTriple(cell, (space, CellHDiv, "C0"), [faces, interior])
-    return bdm2
-
-
 def construct_tet_ned(cell=None):
     deg = 1
     tet = make_tetrahedron()
@@ -676,26 +633,8 @@ def construct_tet_ned3_old(tet=None, both=False):
     ned = ElementTriple(tet, (nd_space, CellHCurl, C0), [edge_dofs, face_dofs, int_dofs])
     assert len(ned.generate()) == (1/2)*deg*(deg + 2)*(deg + 3)
     ned.to_fiat()
-    # count = 0
-    # for f in ned.matrices[2].keys():
-    #     dof_ids =[d.id for d in ned.generate()[18+6*count:24+6*count]]
-    #     idxing = np.ix_([ned.dof_id_to_fiat_id[did] for did in dof_ids],[ned.dof_id_to_fiat_id[did] for did in dof_ids])
-    #     old_1 = ned.matrices[2][f][1].copy()
-    #     old_5 = ned.matrices[2][f][5].copy()
-    #     old_2 = ned.matrices[2][f][2].copy()
-    #     old_0 = ned.matrices[2][f][0].copy()
-    #     old_3 = ned.matrices[2][f][3].copy()
-    #     old_4 = ned.matrices[2][f][4].copy()
-    #     oldrev_3 = ned.reversed_matrices[2][f][3].copy()
-    #     ned.matrices[2][f][3] = ned.reversed_matrices[2][f][0].copy()
-    #     ned.matrices[2][f][0] = oldrev_3
-    #     ned.matrices[2][f][4] = ned.reversed_matrices[2][f][4].copy()
-    #     ned.reversed_matrices[2][f][3] = old_0
-    #     ned.reversed_matrices[2][f][0] = old_3
-    #     ned.reversed_matrices[2][f][4] = old_4
-    #     count += 1
-    # breakpoint()
     return ned
+
 
 def test_plot_tet_ned2():
     nd = construct_tet_ned2()
