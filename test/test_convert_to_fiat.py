@@ -874,8 +874,7 @@ def test_basis_funcs_gen(form_num):
         V4 = FunctionSpace(mesh, "N1curl", 3)
     elif form_num == 2:
         elem = construct_tet_bdm2()
-        elem2 = construct_tet_bdm2_non_bary()
-        # elem2 = construct_tet_bdm()
+        elem2 = construct_tet_bdm()
         # elem = construct_tet_rt()
         # elem2 = construct_tet_rt3()
         proxy_field_2_form = [2*sp.Matrix(ls[i]*dl[j].cross(dl[k]) - ls[j]*dl[i].cross(dl[k]) + ls[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 1, 2]]]
