@@ -95,9 +95,7 @@ def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
             perm_group = PermutationSetRepresentation(perm_list)
         else:
             perm_group = GroupRepresentation(perm_group)
-        # if len(perm_list) == 6 and perm_list[0].size == 3 and perm_list[0].is_Identity:
-        #     # TODO make this less horrible
-        #     perm_group = S3
+
         if return_idx:
             result[perm_group] = [base]
         else:
@@ -203,8 +201,8 @@ def proxy_field_bfs(cell, rot=False):
     else:
         bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
         # grp = [tet_edges]
-        facet_syms = [[symbols[i] for i in facet] for facet in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
         grp = [S1, S1, S1, S1, S1, S1]
+        facet_syms = [[symbols[i] for i in facet] for facet in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
     if rot:
         if cell.dimension == 2:
             perp = lambda x: np.array([[0, -1], [1, 0]]) @ x
@@ -213,6 +211,7 @@ def proxy_field_bfs(cell, rot=False):
         else:
             bfs = [sp.Matrix(symbols[i]*dl[j].cross(dl[k]) + symbols[j]*dl[k].cross(dl[i]) + symbols[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
             grp = [S1, S1, S1, S1]
+            # grp = [tet_faces]
             facet_syms = [[symbols[i] for i in facet] for facet in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
 
     return bfs, grp, symbols, facet_syms

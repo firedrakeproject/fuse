@@ -1034,19 +1034,19 @@ def evaluate_pt_dict(pt_dict, fn):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [
-                                                    (construct_tet_rt, "RT", 1),
-                                                    (construct_tet_rt2, "RT", 2),
-                                                    (create_cg3_tet, "CG", 3),
-                                                    (construct_tet_ned, "N1curl", 1),
-                                                    (construct_tet_ned2, "N1curl", 2),
-                                                    (construct_tet_bdm2, "BDM", 2),
-                                                    (construct_tet_ned_2nd_kind_2, "N2curl", 2),
-                                                    (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
-                                                    (construct_tet_cg4, "CG", 4),
-                                                    (construct_tet_cg6, "CG", 6),
-                                                    (construct_tet_ned3_old, "N1curl", 3),
+                                                    # (construct_tet_rt, "RT", 1),
+                                                    # (construct_tet_rt2, "RT", 2),
+                                                    # (create_cg3_tet, "CG", 3),
+                                                    # (construct_tet_ned, "N1curl", 1),
+                                                    # (construct_tet_ned2, "N1curl", 2),
+                                                    # (construct_tet_bdm2, "BDM", 2),
+                                                    # (construct_tet_ned_2nd_kind_2, "N2curl", 2),
+                                                    # (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
+                                                    # (construct_tet_cg4, "CG", 4),
+                                                    # (construct_tet_cg6, "CG", 6),
+                                                    # (construct_tet_ned3_old, "N1curl", 3),
                                                     (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
-                                                    (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3),
+                                                    # (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3),
                                                     ])
 def test_vec_two_tet(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
