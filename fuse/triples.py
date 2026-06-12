@@ -573,14 +573,16 @@ class ElementTriple():
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:
-                    if dim == 2:
-                        # if m.numeric_rep() == 0:
-                        #     breakpoint()
-                        # horrible hack for s3 continued
-                        inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
-                        perms_copy[m.numeric_rep()] = inv_mat
-                    else:
-                        perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
+                    inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    perms_copy[m.numeric_rep()] = inv_mat
+                    # if dim == 2:
+                    #     # if m.numeric_rep() == 0:
+                    #     #     breakpoint()
+                    #     # horrible hack for s3 continued
+                    #     inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    #     perms_copy[m.numeric_rep()] = inv_mat
+                    # else:
+                    #     perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
                     # perms_copy[m.numeric_rep()] = inv_mat
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
