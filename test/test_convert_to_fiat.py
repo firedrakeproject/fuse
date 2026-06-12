@@ -10,7 +10,7 @@ from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, con
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
-                                   construct_tet_bdm, construct_tet_bdm2, construct_tet_bdm2_non_bary,
+                                   construct_tet_bdm, construct_tet_bdm2,
                                    construct_tet_ned2, construct_tet_cg4, construct_tet_cg6, construct_tet_ned_2nd_kind_3)
 from test_3d_examples_docs import construct_tet_ned3_old
 from test_polynomial_space import flatten
@@ -617,7 +617,6 @@ def test_project_3d(elem_gen, elem_code, deg):
                                                               (construct_tet_bdm, "BDM", 1, 1.8),
                                                               (lambda cell: periodic_table(1, 3, 1, 1), "N2curl", 1, 1.8),
                                                               (construct_tet_bdm2, "BDM", 2, 2.8),
-                                                              (construct_tet_bdm2_non_bary, "BDM", 2, 2.8),
                                                               (construct_tet_ned_2nd_kind_3, "N2curl", 3, 3.8)
                                                               ])
 def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
@@ -693,7 +692,6 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_rt2, "RT", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
-                                                    (construct_tet_bdm2_non_bary, "BDM", 2),
                                                     (construct_tet_ned_2nd_kind_2, "N2curl", 2),
                                                     (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2)])
 def test_linear_vec(elem_gen, elem_code, deg):
@@ -1040,7 +1038,6 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_ned, "N1curl", 1),
                                                     (construct_tet_ned2, "N1curl", 2),
                                                     (construct_tet_bdm2, "BDM", 2),
-                                                    (construct_tet_bdm2_non_bary, "BDM", 2),
                                                     (construct_tet_ned_2nd_kind_2, "N2curl", 2),
                                                     (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2),
                                                     (construct_tet_cg4, "CG", 4),
