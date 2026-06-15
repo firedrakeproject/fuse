@@ -72,7 +72,7 @@ class ElementTriple():
 
     def setup_ids_and_nodes(self):
         dofs = self.generate()
-        degree = self.spaces[0].degree() + 1
+        degree = self.degree
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
@@ -136,9 +136,10 @@ class ElementTriple():
     def num_dofs(self):
         return sum([dof_gen.num_dofs() for dof_gen in self.DOFGenerator])
 
+    @property
     def degree(self):
         # TODO this isn't really correct
-        return self.spaces[0].degree()
+        return self.spaces[0].degree() + 1
 
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},

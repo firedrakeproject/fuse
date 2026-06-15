@@ -8,18 +8,23 @@ class EnrichedElement(ElementTriple):
     Non-nodal representation of an enriched element. 
 
     In general, FUSE element triples should be represented nodally, 
-    however this may not be possible for all constructions 
+    however this may not be possible for all constructions.
+
+    In particulr, we need to preserve tensor product structure.
     """
 
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
+        from fuse.tensor_products import TensorProductTriple
+        if not isinstance(A, TensorProductTriple) or not isinstance(B, TensorProductTriple):
+            raise ValueError("EnrichedElement should only be used for Tensor product elements. Use + between triples for enrichment.")
         self.A = A
         self.B = B
         self.spaces = (A.spaces[0] + B.spaces[0], A.spaces[1], max([A.spaces[2], B.spaces[2]]))
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
-        # if A.cell != B.cell:
-        #     raise ValueError("Componenets of enriched element must be defined on the same cell")
+        if A.cell.flat != B.cell.flat:
+            raise ValueError("Tensor products must both be flat or both not flat for enrichment.")
         self.cell = A.cell
         self.symmetric = symmetric
         self.apply_matrices = matrices
@@ -40,45 +45,31 @@ class EnrichedElement(ElementTriple):
             raise NotImplementedError("Matrices for flattened cells that are not symmetric not supported")
         self.A.to_ufl()
         self.B.to_ufl()
-        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate(), tensor=True)
+        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate(), tensor=(not self.cell.flat))
         if self.cell.flat:
             cell = self.A.unflat_cell
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
         for dim in top.keys():
-            ents = top[dim].keys()
+            total_dim = sum(dim) if self.cell.flat else dim
+            ents = self.entity_dofs[total_dim].keys()
             comp_os = cell.component_orientations()
-            for e in ents:
-                ent_dofs = self.entity_dofs[dim][e]
+            for e_idx, e in enumerate(ents):
+                ent_dofs = self.entity_dofs[total_dim][e]
                 if len(ent_dofs) >= 1:
-                    sub_mat = oriented_mats_by_entity[dim][e]
-                    a_mat = self.A.matrices[dim][e]
-                    a_ent_ids = self.A.entity_ids[dim][e]
-                    b_mat = self.B.matrices[dim][e]
-                    b_ent_ids = self.B.entity_ids[dim][e]
+                    sub_mat = oriented_mats_by_entity[total_dim][e_idx]
+                    a_mat = self.A.matrices[total_dim][e_idx]
+                    a_ent_ids = self.A.entity_dofs[total_dim][e]
+                    b_mat = self.B.matrices[total_dim][e_idx]
+                    b_ent_ids = self.B.entity_dofs[total_dim][e]
 
-                    breakpoint()
                     for o in a_mat.keys():
                         a_sub_mat = a_mat[o][np.ix_(a_ent_ids, a_ent_ids)]
                         b_sub_mat = b_mat[o][np.ix_(b_ent_ids, b_ent_ids)]
                         combined_sub_mat = np.block([[a_sub_mat, np.zeros((a_sub_mat.shape[0], b_sub_mat.shape[1]))],
                                                     [np.zeros((b_sub_mat.shape[0], a_sub_mat.shape[1])), b_sub_mat]])
-                        new_o = comp_os[dim][o]
-                        sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
-        # from collections import defaultdict
-        # from FIAT.reference_element import tuple_sum
-        if self.cell.flat:
-            # This makes potentially dangerous assumptions about ordering
-            oriented_mats_by_entity_unflat, flat_by_entity_unflat = self._initialise_entity_dicts(self.generate())
-            for dim in oriented_mats_by_entity.keys():
-                total_dim = sum(dim)
-                new_points = self.cell.d_entities(dim, get_class=False)
-                min_ids = self.cell.get_starter_ids()
-                new_ps = [np - min_ids[total_dim] for np in new_points]
-                for i, p in enumerate(new_ps):
-                    oriented_mats_by_entity_unflat[total_dim][p] = oriented_mats_by_entity[dim][i]
-            oriented_mats_by_entity = oriented_mats_by_entity_unflat
+                        sub_mat[o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
@@ -96,4 +87,4 @@ class EnrichedElement(ElementTriple):
 
     def to_ufl(self):
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
-        return finat.ufl.EnrichedElement(*ufl_sub_elements)
+        return finat.ufl.EnrichedElement(*ufl_sub_elements, triple=self)

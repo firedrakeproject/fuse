@@ -131,7 +131,7 @@ def test_cg3():
     elem = symmetric_tensor_product(A, B).flatten()
     U = FunctionSpace(mesh, elem.to_ufl())
     res_fuse += [helmholtz_solve(mesh, U)]
-    breakpoint()
+    assert all(np.array(res_fuse) < 0.003)
 
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
                                                                          (create_cg2, "CG", 2, 3.8),
@@ -181,11 +181,41 @@ def test_flattening(A, B, res):
 def test_cg1_dg0():
     A = construct_cg1()
     B = construct_dg1_integral()
-    non_sym1 = tensor_product(A, B).flatten()
-    non_sym2 = tensor_product(B, A).flatten()
-    combined = non_sym1 + non_sym2
+    ab = tensor_product(A, B).flatten()
+    ba = tensor_product(B, A).flatten()
+    combined = ab + ba
     combined.symmetric = True
-    combined.to_ufl()
+    mesh1 = UnitSquareMesh(2, 2, quadrilateral=True)
+    V = FunctionSpace(mesh1, combined.to_ufl())
+    ab = tensor_product(A, B)
+    ba = tensor_product(B, A)
+    combined = ab + ba
+    m = UnitIntervalMesh(2)
+    mesh2 = ExtrudedMesh(m, 2)
+    V2 = FunctionSpace(mesh2, combined.to_ufl())
+    # CG_1 = FiniteElement("CG", "interval", 1)
+    # DG_1 = FiniteElement("DG", "interval", 1)
+    # dgcg = TensorProductElement(DG_1, CG_1)
+    # cgdg = TensorProductElement(CG_1, DG_1)
+    # combined = dgcg + cgdg
+    # V = FunctionSpace(mesh, combined)
+    Vs = [V2, V]
+    meshes = [mesh2, mesh1]
+    for V, mesh in zip(Vs, meshes):
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = Function(V)
+        x, y = SpatialCoordinate(mesh)
+        f.project((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
+        a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+        L = inner(f, v) * dx
+        u = Function(V)
+        solve(a == L, u)
+        f.project(cos(x*pi*2)*cos(y*pi*2))
+        print("res", u.dat.data)
+        print("true", f.dat.data)
+        res = sqrt(assemble(dot(u - f, u - f) * dx))
+        print(res)
     breakpoint()
     # from finat.element_factory import convert
     # non_sym, _ = convert(non_sym.to_ufl(), shift_axes=0)
@@ -267,8 +297,11 @@ def test_hdiv():
     A = construct_cg1()
     B = construct_dg0_integral()
     non_sym1 = tensor_product(A, B).flatten()
+    print(non_sym1.matrices[1])
+    # .flatten()
     non_sym2 = tensor_product(B, A).flatten()
     combined = non_sym1 + non_sym2
+    combined = combined
     combined.symmetric = True
     elt = HDiv(combined).to_ufl()
     V = FunctionSpace(mesh, elt)

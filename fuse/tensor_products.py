@@ -17,6 +17,19 @@ def symmetric_tensor_product(A, B, matrices=True):
         raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
     return TensorProductTriple(A, B, matrices=matrices, symmetric=True)
 
+def flatten_dictionary(tensor_dict):
+    counters = {}
+    flat_dict = {}
+    for dim in tensor_dict.keys():
+        total_dim = sum(dim)
+        if total_dim not in counters.keys():
+            counters[total_dim] = 0
+            flat_dict[total_dim] = {}
+        for i in range(len(tensor_dict[dim].keys())):
+            flat_dict[total_dim][i + counters[total_dim]] = tensor_dict[dim][i]
+        counters[total_dim] += len(tensor_dict[dim].keys())
+    return flat_dict
+
 
 class TensorProductTriple(ElementTriple):
 
@@ -34,6 +47,8 @@ class TensorProductTriple(ElementTriple):
         if self.flat:
             self.unflat_cell = self.cell
             self.cell = self.cell.flatten()
+        self.dofs = self.generate()
+
         self.mat_transformer = None
         self.apply_matrices = matrices
         if self.apply_matrices:
@@ -62,12 +77,13 @@ class TensorProductTriple(ElementTriple):
             cell = self.cell
         top = cell.to_fiat().get_topology()
         for dim in top.keys():
+            total_dim = sum(dim) if self.flat else dim
             a_ents = self.A.cell.get_topology()[dim[0]].keys()
             b_ents = self.B.cell.get_topology()[dim[1]].keys()
             ents = [(a, b) for a in a_ents for b in b_ents]
             comp_os = cell.component_orientations()
             for e, (a, b) in enumerate(ents):
-                ent_dofs = self.entity_dofs[dim][(a, b)]
+                ent_dofs = self.entity_dofs[total_dim][self.ent_mapping[dim][(a, b)]]
                 if len(ent_dofs) >= 1:
                     sub_mat = oriented_mats_by_entity[dim][e]
                     a_mat = self.A.matrices[dim[0]][a]
@@ -87,29 +103,9 @@ class TensorProductTriple(ElementTriple):
                         new_o = comp_os[dim][o]
                         sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                         # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
-        # from collections import defaultdict
-        # from FIAT.reference_element import tuple_sum
+
         if self.cell.flat:
-            # This makes potentially dangerous assumptions about ordering
-            oriented_mats_by_entity_unflat, flat_by_entity_unflat = self._initialise_entity_dicts(self.generate())
-            for dim in oriented_mats_by_entity.keys():
-                total_dim = sum(dim)
-                new_points = self.cell.d_entities(dim, get_class=False)
-                min_ids = self.cell.get_starter_ids()
-                new_ps = [np - min_ids[total_dim] for np in new_points]
-                for i, p in enumerate(new_ps):
-                    oriented_mats_by_entity_unflat[total_dim][p] = oriented_mats_by_entity[dim][i]
-            if 1 in oriented_mats_by_entity_unflat.keys():
-                zero = oriented_mats_by_entity_unflat[1][0].copy()
-                one = oriented_mats_by_entity_unflat[1][1].copy()
-                two = oriented_mats_by_entity_unflat[1][2].copy()
-                three = oriented_mats_by_entity_unflat[1][3].copy()
-                oriented_mats_by_entity_unflat[1][0] = two
-                oriented_mats_by_entity_unflat[1][1] = three
-                oriented_mats_by_entity_unflat[1][2] = zero
-                oriented_mats_by_entity_unflat[1][3] = one
-            oriented_mats_by_entity = oriented_mats_by_entity_unflat
-            # breakpoint()
+            oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
@@ -124,26 +120,38 @@ class TensorProductTriple(ElementTriple):
         else:
             top = self.cell.to_fiat().get_topology()
         self.entity_dofs = {}
+        self.ent_mapping = {}
         dofs = []
-        counter = 0
+        ent_counter = {}
+        dof_counter = 0
         for dim in top.keys():
+            total_dim = sum(dim) if self.flat else dim
             ents_A = a_ent_assocs[dim[0]].keys()
             ents_B = b_ent_assocs[dim[1]].keys()
-            self.entity_dofs[dim] = {(a_e, b_e): tuple() for a_e in ents_A for b_e in ents_B}
-            for a_e, b_e in self.entity_dofs[dim].keys():
+            if total_dim not in self.entity_dofs.keys():
+                self.entity_dofs[total_dim] = {}
+                ent_counter[total_dim] = 0
+            self.ent_mapping[dim] = {}
+            ent_list = []
+            for i, ent in enumerate([(a_e, b_e) for a_e in ents_A for b_e in ents_B]):
+                self.ent_mapping[dim][ent] = i + ent_counter[total_dim] if self.flat else ent
+                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = tuple()
+                ent_list += [ent]
+            for a_e, b_e in ent_list:
                 a_dofs = [d for dofs in a_ent_assocs[dim[0]][a_e].values() for d in dofs]
                 b_dofs = [d for dofs in b_ent_assocs[dim[1]][b_e].values() for d in dofs]
                 new_dofs = [(a, b) for a in a_dofs for b in b_dofs]
                 dofs += new_dofs
-                self.entity_dofs[dim][(a_e, b_e)] = [i + counter for i in range(len(new_dofs))]
-                counter += len(new_dofs)
-        self.dofs = dofs
+                self.entity_dofs[total_dim][self.ent_mapping[dim][(a_e, b_e)]] = [i + dof_counter for i in range(len(new_dofs))]
+                dof_counter += len(new_dofs)
+                ent_counter[total_dim] += 1
+
         return dofs
 
     def to_ufl(self):
+        ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         if self.flat:
             return FuseElement(self, self.cell.to_ufl())
-        ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return TensorProductElement(*ufl_sub_elements, cell=self.cell.to_ufl(), triple=self)
 
     def __add__(self, other):
