@@ -29,3 +29,17 @@ Each degree of freedom :math:`\mathcal{X}_i` can be represented in an integral f
 
 The classes documented on this page provide options for the kernel :math:`\kappa` and the pairing :math:`\langle \cdot, \cdot \rangle_{\mathcal{V}, E}`.
 
+Pairing Classes
+---------------
+
+- :class:`fuse.dof.DeltaPairing`: Point evaluation pairing.
+- :class:`fuse.dof.L2Pairing`: :math:`L^2` inner product pairing.
+
+Kernel Classes
+--------------
+
+- :class:`fuse.dof.PointKernel`: A kernel defined at a specific point.
+- :class:`fuse.dof.VectorKernel`: A vector-valued kernel.
+- :class:`fuse.dof.PolynomialKernel`: A kernel defined as a polynomial.
+- :class:`fuse.dof.BarycentricPolynomialKernel`: A kernel defined as a polynomial in barycentric coordinates.
+

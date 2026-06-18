@@ -8,6 +8,8 @@ Welcome to FUSE's documentation!
 .. toctree::
     :maxdepth: 1
 
+    about
+    install
     manual
     api
 

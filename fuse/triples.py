@@ -20,7 +20,9 @@ from functools import cache
 
 class ElementTriple():
     """
-    Class to represent the three core parts of the element
+    Class to represent the three core parts of the element, forming an
+    Expanded Triple (C, U, E), where C is the cell complex, U is a tuple
+    of spaces (V, W, WI), and E is the DOF generation description.
 
     :param: cell: CellComplex
     :param: spaces: Triple of spaces: (PolynomialSpace, SobolovSpace, InterpolationSpace)
@@ -599,6 +601,10 @@ class ElementTriple():
 
 
 class DOFGenerator():
+    """
+    Represents a DOF Triple (X, G1, G2), where X is a set of DOF generators,
+    G1 is the generator group, and G2 is the transformation group.
+    """
 
     def __init__(self, generator_funcs, gen_group, trans_group):
         # assert isinstance(G_1, Group)

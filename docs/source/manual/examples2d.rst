@@ -65,3 +65,13 @@ CG3 on triangle
    :end-before: [test_cg3 1]
 
 .. plot:: ../../test/test_2d_examples_docs.py plot_cg3
+
+Nedelec on triangle
+--------------------------
+.. literalinclude:: ../../../test/test_2d_examples_docs.py
+   :language: python3
+   :dedent:
+   :start-after: [test_nd 0]
+   :end-before: [test_nd 1]
+
+.. plot:: ../../test/test_2d_examples_docs.py plot_nd

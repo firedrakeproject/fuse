@@ -1,6 +1,12 @@
 Serialisation
 ==============
 
+FUSE supports serialising finite element definitions to JSON. This allows elements to be saved, shared, and dynamically loaded, facilitating interoperability between different software components.
+
+Key Classes
+-----------
+
+- :class:`fuse.serialisation.ElementSerialiser`: Provides methods for serialising and deserialising `ElementTriple` objects.
 
 Usage
 --------

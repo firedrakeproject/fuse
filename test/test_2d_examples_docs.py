@@ -157,6 +157,7 @@ def test_cg_examples():
 
 
 def construct_nd(tri=None):
+    # [test_nd 0]
     if tri is None:
         tri = polygon(3)
     deg = 1
@@ -178,7 +179,13 @@ def construct_nd(tri=None):
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
+    # [test_nd 1]
     return ned
+
+
+def plot_nd():
+    ned = construct_nd()
+    ned.plot()
 
 
 def construct_nd_2nd_kind(tri=None):
