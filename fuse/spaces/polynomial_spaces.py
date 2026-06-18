@@ -1,3 +1,9 @@
+"""Polynomial spaces module.
+
+This module defines polynomial spaces and constructed polynomial spaces
+used for finite element bases.
+"""
+
 from FIAT.polynomial_set import ONPolynomialSet
 from FIAT.quadrature_schemes import create_quadrature
 from FIAT.reference_element import cell_to_simplex
@@ -11,23 +17,35 @@ from functools import total_ordering
 
 @total_ordering
 class PolynomialSpace(object):
-    """
-    contains: the degree of the maximum degree Lagrange space that is spanned by this element. If this
-    element's polynomial space does not include the constant function, this function should
-    return -1.
+    """Polynomial space representation for finite element cells.
 
-    maxdegree: the degree of the minimum degree Lagrange space that spans this element.If this
-    element contains basis functions that are not in any Lagrange space, this property should
-    be None.
-
-    mindegree: the degree of the polynomial in the space with the lowest degree.
-
-    Note that on a simplex cells, the polynomial space of Lagrange space is a complete polynomial
-    space, but on other cells this is not true. For example, on quadrilateral cells, the degree 1
-    Lagrange space includes the degree 2 polynomial xy.
+    Attributes
+    ----------
+    maxdegree : int
+        The degree of the minimum degree Lagrange space that spans this space.
+    contains : int
+        The degree of the maximum degree Lagrange space that is spanned by this space.
+        If this space does not include the constant function, it is -1.
+    mindegree : int
+        The degree of the polynomial in the space with the lowest degree.
+    set_shape : bool
+        Whether the space is vector-valued (has shape equal to the cell dimension).
     """
 
     def __init__(self, maxdegree, contains=None, mindegree=0, set_shape=False):
+        """Initialize the PolynomialSpace.
+
+        Parameters
+        ----------
+        maxdegree : int
+            Maximum polynomial degree in the space.
+        contains : int, optional
+            Degree of the maximum Lagrange space spanned by this space.
+        mindegree : int, optional
+            Minimum polynomial degree in the space. Defaults to 0.
+        set_shape : bool, optional
+            If True, shape is set to the spatial dimension. Defaults to False.
+        """
         self.maxdegree = maxdegree
         self.mindegree = mindegree
 
@@ -41,12 +59,40 @@ class PolynomialSpace(object):
         self.set_shape = set_shape
 
     def complete(self):
+        """Check if the space is a complete polynomial space.
+
+        Returns
+        -------
+        bool
+            True if mindegree equals maxdegree, False otherwise.
+        """
         return self.mindegree == self.maxdegree
 
     def degree(self):
+        """Get the maximum degree of the space.
+
+        Returns
+        -------
+        int
+            The maximum polynomial degree.
+        """
         return self.maxdegree
 
     def to_ON_polynomial_set(self, ref_el, k=None):
+        """Convert the space to an orthonormal polynomial set on a reference element.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+        k : int, optional
+            Degree parameter. Defaults to None.
+
+        Returns
+        -------
+        FIAT.polynomial_set.ONPolynomialSet
+            The orthonormal polynomial set.
+        """
         # how does super/sub degrees work here
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
@@ -82,10 +128,21 @@ class PolynomialSpace(object):
         return res
 
     def __mul__(self, x):
-        """
+        """Multiply a Polynomial Space by a sympy object.
+
         When multiplying a Polynomial Space by a sympy object, you need to multiply with
         the sympy object on the right. This is due to Sympy's implementation of __mul__ not
         passing to this handler as it should.
+
+        Parameters
+        ----------
+        x : sympy.Symbol or sympy.Matrix
+            The symbol or matrix to multiply by.
+
+        Returns
+        -------
+        ConstructedPolynomialSpace
+            The constructed polynomial space representing the product.
         """
         if isinstance(x, sp.Symbol):
             return ConstructedPolynomialSpace([x], [self])
@@ -124,6 +181,20 @@ class PolynomialSpace(object):
         return hash((self.set_shape, self.mindegree, self.contains, self.maxdegree))
 
     def restrict(self, mindegree, maxdegree):
+        """Restrict the space to a specified degree range.
+
+        Parameters
+        ----------
+        mindegree : int
+            Minimum degree of the restricted space.
+        maxdegree : int
+            Maximum degree of the restricted space.
+
+        Returns
+        -------
+        PolynomialSpace
+            The restricted polynomial space.
+        """
         return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, set_shape=self.set_shape)
 
     def _to_dict(self):
@@ -137,14 +208,30 @@ class PolynomialSpace(object):
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):
-    """
+    """A polynomial space constructed from weighted components.
+
     Sub degree is inherited from the largest of the component spaces,
     super degree is unknown.
 
-    weights can either be 1 or a polynomial in x, where x in R^d
+    Parameters
+    ----------
+    weights : list of float, sympy.Expr, or sympy.Matrix
+        Weights applied to each component space. Weights can either be 1
+        or a polynomial in x, where x in R^d.
+    spaces : list of PolynomialSpace
+        The component polynomial spaces.
     """
-    def __init__(self, weights, spaces):
 
+    def __init__(self, weights, spaces):
+        """Initialize the ConstructedPolynomialSpace.
+
+        Parameters
+        ----------
+        weights : list of float, sympy.Expr, or sympy.Matrix
+            Weights applied to each component space.
+        spaces : list of PolynomialSpace
+            The component polynomial spaces.
+        """
         self.weights = weights
         self.spaces = spaces
 
@@ -160,6 +247,18 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         return "+".join([str(w) + "*" + str(x) for (w, x) in zip(self.weights, self.spaces)])
 
     def to_ON_polynomial_set(self, ref_el):
+        """Convert the space to an orthonormal polynomial set on a reference element.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+
+        Returns
+        -------
+        FIAT.polynomial_set.PolynomialSet
+            The constructed orthonormal polynomial set.
+        """
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         k = max([s.maxdegree for s in self.spaces])
@@ -223,7 +322,6 @@ class ConstructedPolynomialSpace(PolynomialSpace):
 
     def _from_dict(obj_dict):
         return ConstructedPolynomialSpace(obj_dict["weights"], obj_dict["spaces"])
-
 
 P0 = PolynomialSpace(0)
 P1 = PolynomialSpace(1)

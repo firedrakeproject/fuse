@@ -389,6 +389,13 @@ class Point():
         return fuse_groups.PermutationSetRepresentation(list(accepted_perms))
 
     def get_spatial_dimension(self):
+        """Get the spatial dimension of the product cell.
+
+        Returns
+        -------
+        int
+            The spatial dimension.
+        """
         return self.dimension
 
     def dim(self):
@@ -762,6 +769,19 @@ class Point():
             plt.cla()
 
     def plot3d(self, show=True, plain=False, ax=None, filename=None):
+        """Plot the cell in 3D.
+
+        Parameters
+        ----------
+        show : bool, optional
+            Whether to show the plot window. Defaults to True.
+        plain : bool, optional
+            If True, plot without text annotations. Defaults to False.
+        ax : matplotlib.axes.Axes, optional
+            Axes to plot on. Defaults to None.
+        filename : str, optional
+            Save the plot to filename if specified. Defaults to None.
+        """
         assert self.dimension == 3
         if ax is None:
             fig = plt.figure()
@@ -795,6 +815,20 @@ class Point():
             plt.cla()
 
     def attachment(self, source, dst):
+        """Find the mapping from the source entity to the destination entity.
+
+        Parameters
+        ----------
+        source : int
+            The source node ID in the cell graph.
+        dst : int
+            The destination node ID.
+
+        Returns
+        -------
+        callable
+            The mapping function.
+        """
         if source == dst:
             # return x
             return lambda *x: x
@@ -823,6 +857,20 @@ class Point():
         return lambda *x: fold_reduce(attachments[0], *x)
 
     def attachment_J(self, source, dst):
+        """Compute the Jacobian of the attachment mapping.
+
+        Parameters
+        ----------
+        source : int
+            The source node ID.
+        dst : int
+            The destination node ID.
+
+        Returns
+        -------
+        sympy.Matrix
+            The Jacobian matrix.
+        """
         attachment = self.attachment(source, dst)
         symbol_names = ["x", "y", "z"]
         symbols = []
@@ -834,12 +882,38 @@ class Point():
         return J
 
     def quadrature(self, degree):
+        """Create a quadrature rule on this cell.
+
+        Parameters
+        ----------
+        degree : int
+            The quadrature degree.
+
+        Returns
+        -------
+        pts : numpy.ndarray
+            Quadrature points.
+        wts : numpy.ndarray
+            Quadrature weights.
+        """
         fiat_el = self.to_fiat()
         Q = create_quadrature(fiat_el, degree)
         pts, wts = Q.get_points(), Q.get_weights()
         return pts, wts
 
     def cartesian_to_barycentric(self, pts):
+        """Convert a list of Cartesian coordinates to barycentric coordinates.
+
+        Parameters
+        ----------
+        pts : list of array_like
+            The Cartesian coordinates to convert.
+
+        Returns
+        -------
+        list of tuple
+            The corresponding barycentric coordinates.
+        """
         verts = np.array(self.ordered_vertex_coords())
         v_0 = self.ordered_vertex_coords()[0]
         bvs = np.array(self.basis_vectors(norm=False))
@@ -852,6 +926,18 @@ class Point():
         return bary_coords
 
     def cell_attachment(self, dst):
+        """Get the mapping from the top-level cell node to the destination entity.
+
+        Parameters
+        ----------
+        dst : int
+            The destination node ID.
+
+        Returns
+        -------
+        callable
+            The mapping function from the top-level cell.
+        """
         if not isinstance(dst, int):
             raise ValueError
         top_level_node = self.d_entities_ids(self.graph_dim())[0]
@@ -880,6 +966,20 @@ class Point():
         return copy.deepcopy(self)
 
     def to_fiat(self, name=None, renumber=False):
+        """Convert this cell to a FIAT reference element.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name of the FIAT cell. Defaults to None.
+        renumber : bool, optional
+            Whether to renumber the vertices in FIAT. Defaults to False.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The FIAT reference element.
+        """
         if len(self.vertices()) == self.dimension + 1:
             return CellComplexToFiatSimplex(self, name, renumber)
         if len(self.vertices()) == 2 ** self.dimension:
@@ -887,6 +987,18 @@ class Point():
         raise NotImplementedError("Custom shape elements/ First class quads are not yet supported")
 
     def to_ufl(self, name=None):
+        """Convert this cell to a UFL Cell.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name of the UFL cell. Defaults to None.
+
+        Returns
+        -------
+        CellComplexToUFL
+            The UFL cell representation.
+        """
         return CellComplexToUFL(self, name)
 
     def _to_dict(self):
@@ -914,11 +1026,34 @@ class Edge():
     """
 
     def __init__(self, point, attachment=None, o=None):
+        """Initialize the Edge.
+
+        Parameters
+        ----------
+        point : Point
+            The point being connected (lower level).
+        attachment : sympy.Expr or array_like, optional
+            The function describing how the point is attached. Defaults to None.
+        o : GroupMemberRep, optional
+            Orientation representation. Defaults to None.
+        """
         self.attachment = attachment
         self.point = point
         self.o = o
 
     def __call__(self, *x):
+        """Evaluate the edge attachment mapping.
+
+        Parameters
+        ----------
+        *x : tuple
+            Input coordinate values.
+
+        Returns
+        -------
+        tuple or float
+            Evaluated coordinate values.
+        """
         if self.o:
             x = self.o(x)
         if self.attachment:
@@ -932,12 +1067,32 @@ class Edge():
         return x
 
     def ordered_vertices(self, get_class=False):
+        """Get the ordered vertices of the connected point, taking orientation into account.
+
+        Parameters
+        ----------
+        get_class : bool, optional
+            If True, return vertex objects. Otherwise, return vertex IDs.
+            Defaults to False.
+
+        Returns
+        -------
+        list
+            The ordered list of vertices.
+        """
         verts = self.point.ordered_vertices(get_class)
         if self.o:
             verts = self.o.permute(verts)
         return verts
 
     def lower_dim(self):
+        """Get the dimension of the connected point.
+
+        Returns
+        -------
+        int
+            The dimension.
+        """
         return self.point.dim()
 
     def __repr__(self):
@@ -959,28 +1114,89 @@ class Edge():
 class TensorProductPoint():
 
     def __init__(self, A, B, flat=False):
+        """Initialize the TensorProductPoint.
+
+        Parameters
+        ----------
+        A : Point
+            First factor of the tensor product.
+        B : Point
+            Second factor of the tensor product.
+        flat : bool, optional
+            Whether to flatten the product cell. Defaults to False.
+        """
         self.A = A
         self.B = B
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = flat
 
     def ordered_vertices(self):
+        """Get the ordered vertices of the product cell.
+
+        Returns
+        -------
+        list
+            The ordered vertices.
+        """
         return self.A.ordered_vertices() + self.B.ordered_vertices()
 
     def get_spatial_dimension(self):
+        """Get the spatial dimension of the product cell.
+
+        Returns
+        -------
+        int
+            The spatial dimension.
+        """
         return self.dimension
 
     def get_sub_entities(self):
+        """Get the sub-entities of the product cell factors."""
         self.A.get_sub_entities()
         self.B.get_sub_entities()
 
     def dimension(self):
+        """Get the dimensions of the product factors.
+
+        Returns
+        -------
+        tuple
+            The dimensions of A and B.
+        """
         return tuple(self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
+        """Get d-dimensional entities of the product factors.
+
+        Parameters
+        ----------
+        d : int
+            Dimension of entities.
+        get_class : bool, optional
+            If True, return objects. Otherwise, return IDs. Defaults to True.
+
+        Returns
+        -------
+        list
+            The sub-entities of dimension d.
+        """
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
 
     def vertices(self, get_class=True, return_coords=False):
+        """Get the vertices of the product cell.
+
+        Parameters
+        ----------
+        get_class : bool, optional
+            Whether to return vertex class instances. Defaults to True.
+        return_coords : bool, optional
+            Whether to return coordinate arrays. Defaults to False.
+
+        Returns
+        -------
+        list
+            The vertices or their coordinates.
+        """
         # TODO maybe refactor with get_node
         verts = self.d_entities(0, get_class)
         if return_coords:
@@ -990,16 +1206,47 @@ class TensorProductPoint():
         return verts
 
     def to_ufl(self, name=None):
+        """Convert the product cell to a UFL Cell.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name of the cell. Defaults to None.
+
+        Returns
+        -------
+        ufl.Cell
+            The UFL cell.
+        """
         if self.flat:
             return CellComplexToUFL(self, "quadrilateral")
         return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
 
     def to_fiat(self, name=None):
+        """Convert the product cell to a FIAT reference element.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name of the reference element. Defaults to None.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The FIAT element.
+        """
         if self.flat:
             return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
+        """Flatten the tensor product cell.
+
+        Returns
+        -------
+        TensorProductPoint
+            The flattened tensor product cell.
+        """
         return TensorProductPoint(self.A, self.B, True)
 
 
@@ -1013,6 +1260,17 @@ class CellComplexToFiatSimplex(Simplex):
     """
 
     def __init__(self, cell, name=None, renumber=False):
+        """Initialize the CellComplexToFiatSimplex.
+
+        Parameters
+        ----------
+        cell : Point
+            The FUSE cell complex.
+        name : str, optional
+            Name of the reference element. Defaults to None.
+        renumber : bool, optional
+            Whether to renumber the vertices in FIAT. Defaults to False.
+        """
         self.fe_cell = cell
         if name is None:
             name = "FuseCell"
@@ -1028,6 +1286,13 @@ class CellComplexToFiatSimplex(Simplex):
         #     breakpoint()
 
     def cellname(self):
+        """Get the name of this reference element.
+
+        Returns
+        -------
+        str
+            The cell name.
+        """
         return self.name
 
     def construct_subelement(self, dimension, e_id=0, o=None):
@@ -1044,6 +1309,13 @@ class CellComplexToFiatSimplex(Simplex):
             return self.fe_cell.d_entities(dimension)[e_id].to_fiat(renumber=True)
 
     def get_facet_element(self):
+        """Get the facet element reference cell.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The reference element for the facets.
+        """
         dimension = self.get_spatial_dimension()
         return self.construct_subelement(dimension - 1)
 
@@ -1055,11 +1327,29 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
     :param: cell: a fuse tensor product cell complex
     """
     def __new__(cls, cell, name=None, *args, **kwargs):
+        """Create a new CellComplexToFiatTensorProduct cell.
+
+        Parameters
+        ----------
+        cell : TensorProductPoint
+            The FUSE product cell complex.
+        name : str, optional
+            Name of the cell.
+        """
         if not isinstance(cell, TensorProductPoint):
             return cell.to_fiat()
         return super(CellComplexToFiatTensorProduct, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, cell, name=None):
+        """Initialize the CellComplexToFiatTensorProduct.
+
+        Parameters
+        ----------
+        cell : TensorProductPoint
+            The FUSE product cell complex.
+        name : str, optional
+            Name of the cell.
+        """
         self.fe_cell = cell
         self.sub_cells = [cell.A.to_fiat(), cell.B.to_fiat()]
         if name is None:
@@ -1069,6 +1359,13 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
 
     def cellname(self):
+        """Get the name of this reference element.
+
+        Returns
+        -------
+        str
+            The cell name.
+        """
         return self.name
 
     def construct_subelement(self, dimension):
@@ -1080,10 +1377,24 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         return CellComplexToFiatTensorProduct(*[c.construct_subelement(d).fe_cell for c, d in zip(self.cells, dimension)])
 
     def get_facet_element(self):
+        """Get the facet element reference cell.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The reference element for the facets.
+        """
         dimension = self.get_spatial_dimension()
         return self.construct_subelement(dimension - 1)
 
     def flatten(self):
+        """Flatten the tensor product cell to a hypercube cell.
+
+        Returns
+        -------
+        CellComplexToFiatHypercube
+            The flattened hypercube.
+        """
         return CellComplexToFiatHypercube(self.fe_cell, self)
 
 
@@ -1096,11 +1407,27 @@ class CellComplexToFiatHypercube(Hypercube):
     """
 
     def __init__(self, cell, product):
+        """Initialize the CellComplexToFiatHypercube.
+
+        Parameters
+        ----------
+        cell : Point
+            The FUSE cell complex.
+        product : CellComplexToFiatTensorProduct
+            The tensor product to build from.
+        """
         self.fe_cell = cell
 # , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
+        """Get the name of this reference element.
+
+        Returns
+        -------
+        str
+            The cell name.
+        """
         return self.name
 
     def construct_subelement(self, dimension):
@@ -1118,10 +1445,24 @@ class CellComplexToFiatHypercube(Hypercube):
         return sub_element
 
     def get_facet_element(self):
+        """Get the facet element reference cell.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The reference element for the facets.
+        """
         dimension = self.get_spatial_dimension()
         return self.construct_subelement(dimension - 1)
 
     def get_dimension(self):
+        """Get the topological dimension of the cell.
+
+        Returns
+        -------
+        int
+            The dimension.
+        """
         return self.get_spatial_dimension()
 
 
@@ -1136,6 +1477,15 @@ class CellComplexToUFL(Cell):
     """
 
     def __init__(self, cell, name=None):
+        """Initialize the CellComplexToUFL.
+
+        Parameters
+        ----------
+        cell : Point
+            The FUSE cell complex.
+        name : str, optional
+            Name of the UFL cell.
+        """
         self.cell_complex = cell
 
         # TODO work out generic way around the naming issue
@@ -1165,6 +1515,13 @@ class CellComplexToUFL(Cell):
         super(CellComplexToUFL, self).__init__(name)
 
     def to_fiat(self):
+        """Convert the cell to a FIAT reference element.
+
+        Returns
+        -------
+        FIAT.reference_element.Cell
+            The FIAT reference cell.
+        """
         return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):

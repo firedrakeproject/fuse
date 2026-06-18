@@ -1,3 +1,9 @@
+"""Trace spaces module.
+
+This module defines trace spaces used to represent restrictions of function
+spaces to sub-entities of a cell complex.
+"""
+
 import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
@@ -5,17 +11,58 @@ from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
 
 
 class Trace():
+    """Base class for trace spaces on cell complexes.
+
+    Parameters
+    ----------
+    cell : Point
+        The domain (cell) on which the trace is defined.
+    """
 
     def __init__(self, cell):
+        """Initialize the Trace space.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         self.domain = cell
 
     def __call__(self, trace_entity):
+        """Evaluate the trace on a sub-entity.
+
+        Parameters
+        ----------
+        trace_entity : Point
+            The sub-entity to trace onto.
+        """
         raise NotImplementedError("Trace uninstanitated")
 
     def plot(self, ax, coord, trace_entity, **kwargs):
+        """Plot the degrees of freedom associated with the trace.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point of the DOF.
+        trace_entity : Point
+            The sub-entity of the trace.
+        """
         raise NotImplementedError("Trace uninstanitated")
 
     def tabulate(self, Qwts, trace_entity):
+        """Tabulate the trace basis on the entity.
+
+        Parameters
+        ----------
+        Qwts : array_like
+            Quadrature weights or points.
+        trace_entity : Point
+            The sub-entity.
+        """
         raise NotImplementedError("Tabulation uninstantiated")
 
     def _to_dict(self):
@@ -41,24 +88,100 @@ class Trace():
 
 
 class TrH1(Trace):
+    """H1 trace space representation."""
 
     def __init__(self, cell):
+        """Initialize the H1 trace.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         super(TrH1, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
+        """Apply H1 trace mapping.
+
+        Parameters
+        ----------
+        v : callable
+            The function to trace.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        callable
+            The traced function.
+        """
         return v
 
     def plot(self, ax, coord, trace_entity, **kwargs):
+        """Plot the degrees of freedom for H1 trace.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point of the DOF.
+        trace_entity : Point
+            The sub-entity.
+        """
         ax.scatter(*coord, **kwargs)
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
+        """Generate TikZ representation for the trace.
+
+        Parameters
+        ----------
+        coord : array_like
+            Coordinate point of the DOF.
+        trace_entity : Point
+            The sub-entity.
+        scale : float
+            Scale factor for TikZ.
+        color : str, optional
+            Color of the TikZ node. Defaults to "black".
+
+        Returns
+        -------
+        str
+            The TikZ command.
+        """
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
     def tabulate(self, Qpts, trace_entity):
+        """Tabulate the H1 trace on the entity.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            Quadrature points.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        numpy.ndarray
+            All ones representing H1 trace DOF scaling.
+        """
         return np.ones(len(Qpts))
-        # return Qwts
 
     def manipulate_basis(self, basis):
+        """Manipulate the basis for the H1 trace space.
+
+        Parameters
+        ----------
+        basis : numpy.ndarray
+            The input basis.
+
+        Returns
+        -------
+        numpy.ndarray
+            The manipulated basis.
+        """
         return np.array([1])
 
     def __repr__(self):
@@ -66,28 +189,71 @@ class TrH1(Trace):
 
 
 class TrHDiv(Trace):
+    """H(div) trace space representation (normal trace)."""
 
     def __init__(self, cell):
+        """Initialize the H(div) trace.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         super(TrHDiv, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
+        """Apply H(div) trace mapping (dot product with normal).
+
+        Parameters
+        ----------
+        v : callable
+            The vector-valued function.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        callable
+            The scalar-valued trace function (normal component).
+        """
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
-                # todo: might always be a float
                 return (result,)
             return tuple(result)
         return apply
 
     def plot(self, ax, coord, trace_entity, **kwargs):
-        # plot dofs of the type associated with this space
+        """Plot the normal vector DOF for H(div) trace.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point of the DOF.
+        trace_entity : Point
+            The sub-entity.
+        """
         vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
     def tabulate(self, Qwts, trace_entity):
-        # entityBasis = np.array(trace_entity.basis_vectors())
+        """Tabulate normal component on the entity.
+
+        Parameters
+        ----------
+        Qwts : array_like
+            Quadrature weights.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        numpy.ndarray
+            The normal vector components.
+        """
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        # basis = np.matmul(entityBasis, cellEntityBasis)
         basis = cellEntityBasis
         if trace_entity.dimension == 1:
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
@@ -98,6 +264,18 @@ class TrHDiv(Trace):
         return result
 
     def manipulate_basis(self, basis):
+        """Manipulate the basis vectors for normal component.
+
+        Parameters
+        ----------
+        basis : numpy.ndarray
+            The input basis.
+
+        Returns
+        -------
+        numpy.ndarray
+            The normal vector.
+        """
         if basis.shape == (1, 1):
             return basis
         elif basis.shape == (1, 2):
@@ -109,6 +287,24 @@ class TrHDiv(Trace):
         return result
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
+        """Generate TikZ representation for the H(div) normal vector DOF.
+
+        Parameters
+        ----------
+        coord : array_like
+            Coordinate point of the DOF.
+        trace_entity : Point
+            The sub-entity.
+        scale : float
+            Scale factor.
+        color : str, optional
+            Color. Defaults to "black".
+
+        Returns
+        -------
+        str
+            The TikZ draw command.
+        """
         vec = self.tabulate([], trace_entity).squeeze()
         end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
@@ -119,11 +315,33 @@ class TrHDiv(Trace):
 
 
 class TrHCurl(Trace):
+    """H(curl) trace space representation (tangential trace)."""
 
     def __init__(self, cell):
+        """Initialize the H(curl) trace.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         super(TrHCurl, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
+        """Apply H(curl) trace mapping (projection onto tangent).
+
+        Parameters
+        ----------
+        v : callable
+            The vector-valued function.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        callable
+            The tangent component function.
+        """
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
@@ -132,20 +350,72 @@ class TrHCurl(Trace):
         return apply
 
     def tabulate(self, Qwts, trace_entity):
-        # tangent = trace_entity.basis_vectors()
+        """Tabulate tangent component on the entity.
+
+        Parameters
+        ----------
+        Qwts : array_like
+            Quadrature weights.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        numpy.ndarray
+            The tangent vector.
+        """
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        # result = np.matmul(tangent, subEntityBasis)
         return subEntityBasis
-        # return result
 
     def manipulate_basis(self, basis):
+        """Extract tangent component from the basis.
+
+        Parameters
+        ----------
+        basis : numpy.ndarray
+            The input basis.
+
+        Returns
+        -------
+        numpy.ndarray
+            The tangent vector.
+        """
         return basis[0]
 
     def plot(self, ax, coord, trace_entity, **kwargs):
+        """Plot the tangential vector DOF for H(curl) trace.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        """
         vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
+        """Generate TikZ representation for the H(curl) tangent vector DOF.
+
+        Parameters
+        ----------
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        scale : float
+            Scale factor.
+        color : str, optional
+            Color. Defaults to "black".
+
+        Returns
+        -------
+        str
+            The TikZ draw command.
+        """
         vec = self.tabulate([], trace_entity).squeeze()
         end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
@@ -156,12 +426,33 @@ class TrHCurl(Trace):
 
 
 class TrGrad(Trace):
+    """Gradient trace space representation."""
 
     def __init__(self, cell):
+        """Initialize the gradient trace.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         super(TrGrad, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
-        # Compute grad v and then dot with tangent rotated according to the group member
+        """Apply gradient trace mapping.
+
+        Parameters
+        ----------
+        v : callable
+            The function.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        callable
+            The gradient trace function.
+        """
         raise NotImplementedError("Gradient immersions are under development")
         g = None
         tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
@@ -180,10 +471,39 @@ class TrGrad(Trace):
         return apply
 
     def plot(self, ax, coord, trace_entity, **kwargs):
+        """Plot the gradient trace DOF (represented as a circle).
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        """
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
+        """Generate TikZ representation for gradient trace DOF.
+
+        Parameters
+        ----------
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        scale : float
+            Scale factor.
+        color : str, optional
+            Color. Defaults to "black".
+
+        Returns
+        -------
+        str
+            The TikZ draw command.
+        """
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
 
     def __repr__(self):
@@ -191,11 +511,33 @@ class TrGrad(Trace):
 
 
 class TrHess(Trace):
+    """Hessian trace space representation."""
 
     def __init__(self, cell):
+        """Initialize the Hessian trace.
+
+        Parameters
+        ----------
+        cell : Point
+            The domain cell.
+        """
         super(TrHess, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
+        """Apply Hessian trace mapping.
+
+        Parameters
+        ----------
+        v : callable
+            The function.
+        trace_entity : Point
+            The sub-entity.
+
+        Returns
+        -------
+        callable
+            The Hessian trace function.
+        """
         raise NotImplementedError("Hessian trace needs reviewing")
         g = None
         b0, b1 = self.domain.basis_vectors()
@@ -215,10 +557,39 @@ class TrHess(Trace):
         return apply
 
     def plot(self, ax, coord, trace_entity, **kwargs):
+        """Plot Hessian trace DOF (represented as a circle).
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            The matplotlib axis.
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        """
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
+        """Generate TikZ representation for Hessian trace DOF.
+
+        Parameters
+        ----------
+        coord : array_like
+            Coordinate point.
+        trace_entity : Point
+            The sub-entity.
+        scale : float
+            Scale factor.
+        color : str, optional
+            Color. Defaults to "black".
+
+        Returns
+        -------
+        str
+            The TikZ draw command.
+        """
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (6pt) node[anchor = south] {{}};"
 
     def __repr__(self):

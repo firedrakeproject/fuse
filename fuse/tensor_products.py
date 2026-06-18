@@ -61,6 +61,17 @@ class TensorProductTriple(ElementTriple):
     """
 
     def __init__(self, A, B, flat=False):
+        """Initialize a TensorProductTriple.
+
+        Parameters
+        ----------
+        A : ElementTriple
+            The first component element triple.
+        B : ElementTriple
+            The second component element triple.
+        flat : bool, default False
+            Whether the resulting tensor product element should be flattened.
+        """
         self.A = A
         self.B = B
         self.spaces = []
@@ -83,6 +94,7 @@ class TensorProductTriple(ElementTriple):
         return [self.A, self.B]
 
     def __repr__(self):
+        """Return the string representation of the TensorProductTriple."""
         return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
 
     def setup_matrices(self):

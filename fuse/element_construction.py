@@ -1,3 +1,10 @@
+"""Element construction module.
+
+This module provides functions for constructing finite element triples
+(such as Lagrange/CG, Nedelec, Raviart-Thomas, BDM, and DG elements) on
+triangles and tetrahedra.
+"""
+
 from fuse import *
 import math
 import numpy as np
@@ -9,9 +16,23 @@ from operator import mul
 
 
 def convert_to_generation(coords, verts, return_idx=False):
-    """Reduces a full list of cartesian coordinates to only those required for generation,
-       and divides them into groups
-       return idx argument returns generators as index into list. without this, the coordinate is returned"""
+    """Reduce coordinates to generators and divide them into symmetry groups.
+
+    Parameters
+    ----------
+    coords : list of array_like
+        The list of Cartesian coordinates.
+    verts : list of array_like
+        The vertices of the cell.
+    return_idx : bool, optional
+        If True, return indices of generators. Otherwise, return coordinates.
+        Defaults to False.
+
+    Returns
+    -------
+    dict
+        Group representations mapping to generators.
+    """
     n = len(coords)
     verts = np.array(verts)
     coords_grps = group_with_mappings(coords, verts, return_idx)
@@ -20,8 +41,19 @@ def convert_to_generation(coords, verts, return_idx=False):
 
 
 def barycentric_coords(p, verts):
-    """
-    Compute barycentric coordinates of point p wrt listed of verts
+    """Compute barycentric coordinates of a point.
+
+    Parameters
+    ----------
+    p : array_like
+        Point coordinates.
+    verts : array_like
+        Vertices coordinates of the cell simplex.
+
+    Returns
+    -------
+    numpy.ndarray
+        Barycentric coordinates of the point.
     """
     A = np.vstack((verts.T, np.ones(len(verts))))
     b = np.append(p, 1.0)
@@ -29,10 +61,40 @@ def barycentric_coords(p, verts):
 
 
 def from_barycentric(lmbda, verts):
+    """Convert barycentric coordinates to Cartesian coordinates.
+
+    Parameters
+    ----------
+    lmbda : array_like
+        Barycentric coordinates.
+    verts : array_like
+        Vertices coordinates.
+
+    Returns
+    -------
+    numpy.ndarray
+        Cartesian coordinates of the point.
+    """
     return np.dot(lmbda, verts)
 
 
 def points_close(p, q, tol=1e-6):
+    """Check if two points are close within a tolerance.
+
+    Parameters
+    ----------
+    p : array_like
+        First point.
+    q : array_like
+        Second point.
+    tol : float, optional
+        Tolerance. Defaults to 1e-6.
+
+    Returns
+    -------
+    bool
+        True if the distance is less than tol, False otherwise.
+    """
     return np.linalg.norm(p - q) < tol
 
 
@@ -53,6 +115,24 @@ def find_permutation(lam_i, lam_j, tol=1e-6):
 
 
 def group_with_mappings(points, verts, return_idx=False, tol=1e-6):
+    """Group points by symmetry orbits on a simplex.
+
+    Parameters
+    ----------
+    points : list of array_like
+        Points to group.
+    verts : array_like
+        Simplex vertices.
+    return_idx : bool, optional
+        Whether to return indices or coordinates. Defaults to False.
+    tol : float, optional
+        Numerical tolerance. Defaults to 1e-6.
+
+    Returns
+    -------
+    dict
+        Symmetry group representations mapping to orbits.
+    """
     points = [np.array(p) for p in points]
 
     # compute barycentric coordinates
@@ -130,6 +210,20 @@ def group_by_symmetry(points, verts, tol=1e-6):
 
 
 def multiindices(k, n):
+    """Generate multi-indices of length n that sum to k.
+
+    Parameters
+    ----------
+    k : int
+        The sum of the indices.
+    n : int
+        The length of the multi-index tuple.
+
+    Yields
+    ------
+    tuple of int
+        The multi-indices.
+    """
     if n == 1:
         yield (k,)
     else:
@@ -139,6 +233,26 @@ def multiindices(k, n):
 
 
 def lagrange_barycentric_basis(dim, verts, deg):
+    """Generate Lagrange basis polynomials in barycentric coordinates.
+
+    Parameters
+    ----------
+    dim : int
+        Dimension of the cell.
+    verts : array_like
+        Coordinates of the cell vertices.
+    deg : int
+        Degree of the polynomials.
+
+    Returns
+    -------
+    fns : list of sympy.Expr
+        Lagrange basis functions.
+    grps : list of GroupRepresentation
+        Symmetry groups.
+    symbols : list of sympy.Symbol
+        Sympy symbols representing the barycentric coordinates.
+    """
     symbols = []
     for i in range(dim + 1):
         symbols += [sp.Symbol(f"s_{i}")]
@@ -156,6 +270,18 @@ def lagrange_barycentric_basis(dim, verts, deg):
 
 
 def bary_tangents(cell):
+    """Compute tangent vectors in barycentric coordinates for the cell.
+
+    Parameters
+    ----------
+    cell : Point
+        The finite element cell.
+
+    Returns
+    -------
+    list of sympy.Matrix
+        The tangent vectors.
+    """
     symbols = []
     coords = []
     for i in range(cell.dimension + 1):
@@ -178,8 +304,29 @@ def bary_tangents(cell):
     tans = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
     return tans
 
-
 def proxy_field_bfs(cell, rot=False):
+    """Generate proxy field basis functions for Nedelec or Raviart-Thomas elements.
+
+    Parameters
+    ----------
+    cell : Point
+        The finite element cell.
+    rot : bool, optional
+        If True, construct rotated/normal basis functions (for Raviart-Thomas).
+        Otherwise, construct tangential basis functions (for Nedelec).
+        Defaults to False.
+
+    Returns
+    -------
+    bfs : list of sympy.Matrix
+        The proxy field basis functions.
+    grp : list of GroupRepresentation
+        Symmetry groups.
+    symbols : list of sympy.Symbol
+        Sympy symbols representing the barycentric coordinates.
+    facet_syms : list of list of sympy.Symbol
+        Sympy symbols representing the coordinates permuted to each facet.
+    """
     symbols = []
     coords = []
     for i in range(cell.dimension + 1):
@@ -215,9 +362,21 @@ def proxy_field_bfs(cell, rot=False):
             facet_syms = [[symbols[i] for i in facet] for facet in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
 
     return bfs, grp, symbols, facet_syms
-
-
 def immerse_and_generate_on_interior_face(cell, face_dofs):
+    """Immerse face degrees of freedom onto the interior of the cell.
+
+    Parameters
+    ----------
+    cell : Point
+        The finite element cell.
+    face_dofs : DOFGenerator
+        The face degrees of freedom generator to immerse.
+
+    Returns
+    -------
+    list of DOF
+        The immersed degrees of freedom.
+    """
     def immersed(face, pt, o):
         basis = np.array(face.orient(o).basis_vectors()).T
         basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
@@ -334,6 +493,24 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
 
 
 def lagrange_facet_fns(cell, deg, interior=False, vector=False):
+    """Generate Lagrange facet DOF moments.
+
+    Parameters
+    ----------
+    cell : Point
+        The finite element cell.
+    deg : int
+        Polynomial degree.
+    interior : bool, optional
+        Whether the DOFs are interior only. Defaults to False.
+    vector : bool, optional
+        Whether the DOFs are vector-valued. Defaults to False.
+
+    Returns
+    -------
+    list of DOFGenerator
+        The generated degrees of freedom.
+    """
     dofs = []
     if interior:
         g2 = S1
@@ -373,6 +550,20 @@ def lagrange_facet_fns(cell, deg, interior=False, vector=False):
 
 
 def lagrange_facet_pts(cell, deg):
+    """Generate Lagrange facet point evaluation DOFs.
+
+    Parameters
+    ----------
+    cell : Point
+        The finite element cell.
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    list of DOFGenerator
+        The generated degrees of freedom.
+    """
     from recursivenodes.nodes import _recursive, _decode_family
     from FIAT.reference_element import multiindex_equal
     get_pt = lambda alpha: np.dot(_recursive(cell.dimension, deg, alpha, _decode_family("lgl")), np.array(cell.vertices(return_coords=True)))
@@ -387,6 +578,18 @@ def lagrange_facet_pts(cell, deg):
 
 
 def construct_tri_cgN(deg):
+    """Construct continuous Lagrange element on a triangle cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed CG finite element.
+    """
     cell = polygon(3)
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -414,6 +617,18 @@ def construct_tri_cgN(deg):
 
 
 def construct_tet_cgN(deg):
+    """Construct continuous Lagrange element on a tetrahedron cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed CG finite element.
+    """
     print(deg)
     cell = make_tetrahedron()
     vert = cell.vertices()[0]
@@ -451,6 +666,18 @@ def construct_tet_cgN(deg):
 
 
 def construct_tri_ndN(deg):
+    """Construct Nedelec (first kind) element on a triangle cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Nedelec finite element.
+    """
     cell = polygon(3)
     edge = cell.edges()[0]
 
@@ -473,6 +700,18 @@ def construct_tri_ndN(deg):
 
 
 def construct_tet_ndN(deg):
+    """Construct Nedelec (first kind) element on a tetrahedron cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Nedelec finite element.
+    """
     cell = make_tetrahedron()
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
@@ -506,6 +745,18 @@ def construct_tet_ndN(deg):
 
 
 def construct_tri_ndN_2(deg):
+    """Construct Nedelec (second kind) element on a triangle cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Nedelec finite element.
+    """
     cell = polygon(3)
     edge = cell.edges()[0]
     verts = cell.vertices(return_coords=True)
@@ -527,6 +778,18 @@ def construct_tri_ndN_2(deg):
 
 
 def construct_tet_ndN_2(deg):
+    """Construct Nedelec (second kind) element on a tetrahedron cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Nedelec finite element.
+    """
     cell = make_tetrahedron()
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
@@ -555,6 +818,18 @@ def construct_tet_ndN_2(deg):
 
 
 def construct_tri_rtN(deg):
+    """Construct Raviart-Thomas element on a triangle cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Raviart-Thomas finite element.
+    """
     cell = polygon(3)
     edge = cell.edges()[0]
 
@@ -581,6 +856,18 @@ def construct_tri_rtN(deg):
 
 
 def construct_tet_rtN(deg):
+    """Construct Raviart-Thomas element on a tetrahedron cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed Raviart-Thomas finite element.
+    """
     cell = make_tetrahedron()
     face = cell.d_entities(2)[0]
 
@@ -606,6 +893,18 @@ def construct_tet_rtN(deg):
 
 
 def construct_tri_bdmN(deg):
+    """Construct Brezzi-Douglas-Marini element on a triangle cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed BDM finite element.
+    """
     cell = polygon(3)
     edge = cell.edges()[0]
 
@@ -624,6 +923,18 @@ def construct_tri_bdmN(deg):
 
 
 def construct_tet_bdmN(deg):
+    """Construct Brezzi-Douglas-Marini element on a tetrahedron cell.
+
+    Parameters
+    ----------
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed BDM finite element.
+    """
     cell = make_tetrahedron()
     face = cell.d_entities(2)[0]
 
@@ -647,12 +958,48 @@ def construct_tet_bdmN(deg):
 
 
 def construct_dgN(dim):
+    """Construct discontinuous Galerkin element generator for a given dimension.
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the cell.
+
+    Returns
+    -------
+    callable
+        Function to construct the DG element given a degree.
+    """
     def construct_dim_dgN(deg):
+        """Construct DG element of specified degree.
+
+        Parameters
+        ----------
+        deg : int
+            Polynomial degree.
+
+        Returns
+        -------
+        ElementTriple
+            The constructed DG finite element.
+        """
         return construct_dgNminus(dim)(deg + 1)
     return construct_dim_dgN
 
 
 def construct_dgNminus(dim):
+    """Construct DG-minus element generator for a given dimension.
+
+    Parameters
+    ----------
+    dim : int
+        The dimension of the cell.
+
+    Returns
+    -------
+    callable
+        Function to construct the DG-minus element given a degree.
+    """
     if dim == 2:
         cell = polygon(3)
         inc = 3
@@ -663,6 +1010,18 @@ def construct_dgNminus(dim):
         raise NotImplementedError(f"Cell of dimension {dim} not implemented for DG")
 
     def construct_dim_dgNminus(deg):
+        """Construct DG-minus element of specified degree.
+
+        Parameters
+        ----------
+        deg : int
+            Polynomial degree.
+
+        Returns
+        -------
+        ElementTriple
+            The constructed DG-minus finite element.
+        """
         Pk = PolynomialSpace(deg)
         int_dofs = lagrange_facet_pts(cell, deg + inc)
         dgN = ElementTriple(cell, (Pk, CellL2, C0), int_dofs)
@@ -705,4 +1064,22 @@ constructors = {
 
 
 def periodic_table(col, dim, k, deg):
+    """Retrieve and construct a finite element from the periodic table of elements.
+
+    Parameters
+    ----------
+    col : int
+        The column index in the table (element family).
+    dim : int
+        The cell dimension (2 or 3).
+    k : int
+        The form number.
+    deg : int
+        Polynomial degree.
+
+    Returns
+    -------
+    ElementTriple
+        The constructed finite element.
+    """
     return constructors[col][dim][k](deg)
