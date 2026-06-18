@@ -1,14 +1,24 @@
+"""Utility functions for the fuse package, including symbolic and matrix operations."""
+
 import numpy as np
 import sympy as sp
 import math
 
 
 def fold_reduce(func_list, *prev):
-    """
-    Right to left function comprehension
+    """Apply a list of functions from right to left (right-to-left function comprehension).
 
-    :param: func_list: list of functions
-    :param: prev: starting value(s)
+    Parameters
+    ----------
+    func_list : list of callable
+        The list of functions to apply sequentially.
+    *prev : tuple
+        The starting value(s) passed to the first function invocation.
+
+    Returns
+    -------
+    any
+        The final result after applying all functions.
     """
     for func in reversed(func_list):
         prev = func(*prev)
@@ -16,16 +26,22 @@ def fold_reduce(func_list, *prev):
 
 
 def sympy_to_numpy(array, symbols, values):
-    """
-    TODO: rename this function
-    Evaluate symbols at values, then convert to numpy if all have been replaced
+    """Evaluate symbols at values, then convert to a NumPy array if all have been replaced.
 
-    :param: array: sympy array
-    :param: symbols: array of symbols contained in the sympy exprs
-    :param: values: array of values to replace the symbols with.
+    Parameters
+    ----------
+    array : sympy.Matrix or sympy.Array
+        The SymPy expression array to substitute into.
+    symbols : list of sympy.Symbol
+        The list of symbols contained within the SymPy expressions.
+    values : list
+        The values to replace the symbols with.
 
-    Due to how sympy handles arrays, we need to squeeze if resulting array
-    is greater than 1 dimension to remove extra dimensions
+    Returns
+    -------
+    numpy.ndarray or sympy.Matrix
+        The evaluated array converted to NumPy float64 if all symbols are replaced,
+        otherwise the substituted SymPy matrix/array object.
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
 
@@ -44,9 +60,20 @@ def sympy_to_numpy(array, symbols, values):
 
 
 def tabulate_sympy(expr, pts):
-    # expr: sp matrix expression in x,y,z for components of R^d
-    # pts: n values in R^d
-    # returns: evaluation of expr at pts
+    """Evaluate a SymPy expression at multiple points.
+
+    Parameters
+    ----------
+    expr : sympy.Expr
+        SymPy matrix expression in x, y, z for components of R^d.
+    pts : list of array-like
+        The coordinates of n points in R^d.
+
+    Returns
+    -------
+    numpy.ndarray
+        The evaluation of the expression at the given points.
+    """
     res = np.array(pts)
     i = 0
     syms = ["x", "y", "z"]
@@ -62,6 +89,18 @@ def tabulate_sympy(expr, pts):
 
 
 def max_deg_sp_mat(sp_mat):
+    """Compute the maximum polynomial degree among all components of a SymPy matrix.
+
+    Parameters
+    ----------
+    sp_mat : iterable of sympy.Expr
+        The SymPy matrix or collection of expressions.
+
+    Returns
+    -------
+    int
+        The maximum degree among all polynomial components.
+    """
     degs = []
     for comp in sp_mat:
         # only compute degree if component is a polynomial
@@ -71,6 +110,20 @@ def max_deg_sp_mat(sp_mat):
 
 
 def numpy_to_str_tuple(arr, scale=1):
+    """Convert a NumPy array to a comma-separated string representation enclosed in parentheses.
+
+    Parameters
+    ----------
+    arr : array-like
+        The array of numerical values to convert.
+    scale : float, default 1
+        A multiplier applied to each element before conversion.
+
+    Returns
+    -------
+    str
+        The formatted string tuple representation (e.g., '(1.0,2.0)').
+    """
     str_as = []
     for a in arr:
         str_a = str(scale*a)
@@ -91,6 +144,20 @@ def numpy_to_str_tuple(arr, scale=1):
 #     return val
 
 def orientation_value(identity_arg, perm_arg):
+    """Compute the orientation value/index corresponding to a permutation relative to an identity array.
+
+    Parameters
+    ----------
+    identity_arg : list or array-like
+        The reference identity array/sequence.
+    perm_arg : list or array-like
+        The permuted sequence to compute the orientation value for.
+
+    Returns
+    -------
+    int
+        The calculated orientation value.
+    """
     # copy arrays as they are modified in place
     identity = identity_arg.copy()
     perm = perm_arg.copy()
