@@ -377,7 +377,7 @@ def test_1d(elem_gen, elem_code, deg):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitIntervalMesh(2 ** i)
+        mesh = UnitIntervalMesh(2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
@@ -405,7 +405,7 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
@@ -438,7 +438,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
@@ -508,7 +508,7 @@ def helmholtz_solve(V, mesh):
 
 def poisson_solve(r, elem, parameters={}, quadrilateral=False):
     # Create mesh and define function space
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem)
 
@@ -578,7 +578,7 @@ def project(U, mesh, func):
 def test_project(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitTriangleMesh()
+    mesh = UnitTriangleMesh(use_fuse=True)
 
     # U = FunctionSpace(mesh, elem_code, deg)
     # assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
@@ -592,7 +592,7 @@ def test_project_3d(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
-    mesh = UnitCubeMesh(3, 3, 3)
+    mesh = UnitCubeMesh(3, 3, 3, use_fuse=True)
 
     U = FunctionSpace(mesh, elem_code, deg)
     assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
@@ -632,7 +632,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
         x = SpatialCoordinate(mesh)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -672,7 +672,7 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     vec = as_vector([1, 1, 1])
     scale_range = range(0, 2)
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
         if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
             V2 = FunctionSpace(mesh, elem.to_ufl())
             res2 = assemble(interpolate(vec, V2))
@@ -698,7 +698,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
     i = 0
-    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
     x = SpatialCoordinate(mesh)
     candidate_vecs = [
         [1, 0, 0], [0, 0, 0],
@@ -744,7 +744,7 @@ def test_ned_2nd_kind_edges():
     elem = construct_tet_ned_2nd_kind_2()
     # elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh()
+    mesh = OneTetMesh(use_fuse=True)
     V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
     V3 = FunctionSpace(mesh, elem.to_ufl())
@@ -770,7 +770,7 @@ def test_ned_2nd_kind_faces():
     elem = construct_tet_ned_2nd_kind_2()
     elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh()
+    mesh = OneTetMesh(use_fuse=True)
     V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
     V3 = FunctionSpace(mesh, elem2.to_ufl())
@@ -854,7 +854,7 @@ def test_make_face_bary():
 @pytest.mark.parametrize("form_num", [1, 2])
 def test_basis_funcs_gen(form_num):
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh()
+    mesh = OneTetMesh(use_fuse=True)
     cell = make_tetrahedron()
     x, y, z = sp.Symbol("x"), sp.Symbol("y"), sp.Symbol("z")
     symbols = [x, y, z]
@@ -1067,7 +1067,7 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
     error_gs = []
     error_row_lists = []
     for g in group:
-        mesh = TwoTetMesh(perm=g)
+        mesh = TwoTetMesh(perm=g, use_fuse=True)
         print(g)
         print(mesh.entity_orientations)
         V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -1125,7 +1125,7 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
 
     for elem in [ufl_elem1]:
         for g in group:
-            mesh = TwoTetMesh(perm=g)
+            mesh = TwoTetMesh(perm=g, use_fuse=True)
             print(g)
             print(mesh.entity_orientations)
             if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
@@ -1147,7 +1147,7 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
 def test_3d_two_form(elem_gen, elem_code, deg):
 
     cell = make_tetrahedron()
-    mesh = UnitTetrahedronMesh()
+    mesh = UnitTetrahedronMesh(use_fuse=True)
     x = SpatialCoordinate(mesh)
 
     spaces = []
@@ -1180,8 +1180,8 @@ def test_3d_two_form(elem_gen, elem_code, deg):
 
 # TODO this is not a real test
 def test_scaling_mesh():
-    mesh1 = RectangleMesh(2, 1, 1, 1)
-    mesh2 = RectangleMesh(2, 1, 0.5, 1)
+    mesh1 = RectangleMesh(2, 1, 1, 1, use_fuse=True)
+    mesh2 = RectangleMesh(2, 1, 0.5, 1, use_fuse=True)
     vec = as_vector([1, 1])
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
 

@@ -29,13 +29,12 @@ bdm_params = [(1, 2, deg, deg + 0.8) for deg in list(range(1, 7))]
 
 @pytest.mark.parametrize("col,k,deg,conv_rate", cg_params + nd_params + rt_params + dg_params + nd2_params + bdm_params)
 def test_convergence(col, k, deg, conv_rate):
-    assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 2, k, deg)
     scale_range = range(3, 6)
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n)
+        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
@@ -49,12 +48,12 @@ def test_convergence(col, k, deg, conv_rate):
     diff_proj = np.array(diff_proj)
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
-    # assert all([c > conv_rate for c in conv1])
 
     print("interpolation l2 error norms:", diff_inte)
     diff_inte = np.array(diff_inte)
     conv2 = np.log2(diff_inte[:-1] / diff_inte[1:])
     print("convergence order:", conv2)
+    assert all([c > conv_rate for c in conv1])
     assert all([c > conv_rate for c in conv2])
 
 
@@ -75,7 +74,7 @@ def test_convergence3d(col, k, deg, conv_rate):
     diff_proj = [0 for i in scale_range]
     # diff_proj2 = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitCubeMesh(2**n, 2**n, 2**n)
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, use_fuse=True)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y, z = SpatialCoordinate(mesh)
@@ -107,7 +106,7 @@ def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """
     # Create mesh and define function space
-    m = UnitCubeMesh(1, 1, 1)
+    m = UnitCubeMesh(1, 1, 1, use_fuse=True)
     x = SpatialCoordinate(m)
     elem = periodic_table(0, 3, 0, deg)
     V = FunctionSpace(m, elem.to_ufl())

@@ -154,7 +154,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/indiamai/fuse_mesh_cell
     
       - name: Make cython
         run: |
@@ -175,7 +175,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/integrate_fuse
+          ref: refs/heads/indiamai/fuse_cell_change
         
       - name: Install checked out FIAT
         run: |

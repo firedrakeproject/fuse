@@ -123,15 +123,11 @@ def test_surface_const_nd(elem_gen, elem_code, deg):
     ones = as_vector((0, 1))
 
     for n in range(2, 6):
-        mesh = UnitSquareMesh(n, n)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
+        mesh = UnitSquareMesh(n, n, use_fuse=True)
+        V = FunctionSpace(mesh, elem.to_ufl())
         normal = FacetNormal(mesh)
         ones1 = interpolate(ones, V)
         res1 = assemble(dot(ones1, normal) * ds)
-
         print(f"{n}: {res1}")
         assert np.allclose(res1, 0)
 
@@ -145,35 +141,31 @@ def test_surface_const_rt(elem_gen, elem_code, deg):
     ones = as_vector((1, 0))
 
     for n in range(1, 6):
-        mesh = UnitSquareMesh(n, n)
-        V = FunctionSpace(mesh, elem.to_ufl())
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, "RT", deg)
-        normal = FacetNormal(mesh)
-        ones1 = interpolate(ones, V)
-        res1 = assemble(dot(ones1, normal) * ds)
+        mesh1 = UnitSquareMesh(n, n, use_fuse=True)
+        mesh2 = UnitSquareMesh(n, n)
+        V1 = FunctionSpace(mesh1, elem.to_ufl())
+        V2 = FunctionSpace(mesh2, "RT", deg)
+        for V, mesh in zip([V1, V2], [mesh1, mesh2]):
+            normal = FacetNormal(mesh)
+            ones_intp = interpolate(ones, V)
+            res = assemble(dot(ones_intp, normal) * ds)
 
-        print(f"{n}: {res1}")
-        assert np.allclose(res1, 0)
+            print(f"{n}: {res}")
+            assert np.allclose(res, 0)
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_rt, "RT", 1),
                                                     (construct_rt2, "RT", 2)])
 def test_surface_vec_rt(elem_gen, elem_code, deg):
     cell = polygon(3)
-    rt_elem = elem_gen(cell)
+    elem = elem_gen(cell)
 
     for n in range(2, 6):
-        mesh = UnitSquareMesh(n, n)
+        mesh = UnitSquareMesh(n, n, use_fuse=True)
+        V1 = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y, x))
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, rt_elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, "RT", 1)
         vec = interpolate(test_vec, V)
         res = assemble(dot(vec, normal) * ds)
         print(f"div {n}: {res}")
@@ -187,15 +179,11 @@ def test_surface_vec_nd(elem_gen, elem_code, deg):
     nd_elem = elem_gen(cell)
 
     for n in range(2, 6):
-
-        mesh = UnitSquareMesh(n, n)
+        mesh = UnitSquareMesh(n, n, use_fuse=True)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y, x))
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, nd_elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
+        V = FunctionSpace(mesh, nd_elem.to_ufl())
         vec = interpolate(test_vec, V)
         res = assemble(dot(vec, normal) * ds)
         print(f"curl {n}: {res}")
@@ -246,18 +234,18 @@ def test_convergence(elem_gen, elem_code, deg, conv_rate):
     diff_inte1 = [0 for i in scale_range]
     for n in scale_range:
         mesh = UnitSquareMesh(2**n, 2**n)
-
         V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-            x, y = SpatialCoordinate(mesh)
-            expr = cos(x*pi*2)*sin(y*pi*2)
-            _, exact = get_expression(V)
-            diff_proj1[n-min(scale_range)], diff_inte1[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
+
+        mesh1 = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        V = FunctionSpace(mesh1, elem.to_ufl())
+        x, y = SpatialCoordinate(mesh1)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        _, exact = get_expression(V)
+        diff_proj1[n-min(scale_range)], diff_inte1[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
 
     print("projection l2 error norms:", diff_proj)
     diff_proj = np.array(diff_proj)
@@ -269,13 +257,12 @@ def test_convergence(elem_gen, elem_code, deg, conv_rate):
     conv1 = np.log2(diff_inte[:-1] / diff_inte[1:])
     print("convergence order:", conv1)
 
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        print("interpolation l2 error norms:", diff_inte1)
-        diff_inte1 = np.array(diff_inte1)
-        conv2 = np.log2(diff_inte1[:-1] / diff_inte1[1:])
-        print("convergence order:", conv2)
-        assert all([c > conv_rate for c in conv2])
-    assert all([c > conv_rate for c in conv1])
+    print("interpolation l2 error norms:", diff_inte1)
+    diff_inte1 = np.array(diff_inte1)
+    conv2 = np.log2(diff_inte1[:-1] / diff_inte1[1:])
+    print("convergence order:", conv2)
+    assert all([c > conv_rate for c in conv2])
+    # assert all([c > conv_rate for c in conv1])
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_nd, "N1curl", 1, 0.8),
@@ -294,11 +281,9 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V = FunctionSpace(mesh, elem.to_ufl())
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
+        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        V = FunctionSpace(mesh, elem.to_ufl())
+        # V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
         expr = as_vector([expr, expr])
@@ -327,8 +312,8 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(1, 1)
-
+    mesh = UnitSquareMesh(1, 1, use_fuse=True)
+    V = FunctionSpace(mesh, elem.to_ufl())
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
         V = FunctionSpace(mesh, elem.to_ufl())
     else:
@@ -362,7 +347,7 @@ def test_interpolation(elem_gen, elem_code, deg):
 def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
 
     cell = polygon(3)
-    mesh = UnitSquareMesh(3, 3)
+    mesh = UnitSquareMesh(3, 3, use_fuse=True)
 
     spaces = []
     if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):

@@ -164,7 +164,7 @@ def test_ref_els(expect):
     print(expect)
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, "CG", 3)
         res1 = helmholtz_solve(mesh, V)
