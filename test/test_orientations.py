@@ -162,7 +162,7 @@ def test_surface_vec_rt(elem_gen, elem_code, deg):
 
     for n in range(2, 6):
         mesh = UnitSquareMesh(n, n, use_fuse=True)
-        V1 = FunctionSpace(mesh, elem.to_ufl())
+        V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y, x))

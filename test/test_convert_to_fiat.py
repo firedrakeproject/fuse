@@ -632,33 +632,27 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+        mesh_fuse = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+        mesh_ufc = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
         x = SpatialCoordinate(mesh)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V2 = FunctionSpace(mesh, elem.to_ufl())
-            V = FunctionSpace(mesh, elem_code, deg)
-            res2 = project(V2, mesh, expr(x))
-            diff[i - min(scale_range)] = res2
-            res1 = project(V, mesh, expr(x))
-            diff2[i - min(scale_range)] = res1
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-            res1 = project(V, mesh, expr(x))
-            diff2[i - min(scale_range)] = res1
+        V2 = FunctionSpace(mesh_fuse, elem.to_ufl())
+        V = FunctionSpace(mesh_ufc, elem_code, deg)
+        res2 = project(V2, mesh, expr(x))
+        diff[i - min(scale_range)] = res2
+        res1 = project(V, mesh, expr(x))
+        diff2[i - min(scale_range)] = res1
 
     print("firedrake l2 error norms:", diff2)
     diff2 = np.array(diff2)
     conv1 = np.log2(diff2[:-1] / diff2[1:])
     print("firedrake convergence order:", conv1)
 
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        print("fuse l2 error norms:", diff)
-        diff = np.array(diff)
-        conv2 = np.log2(diff[:-1] / diff[1:])
-        print("fuse convergence order:", conv2)
-        assert (np.array(conv2) > conv_rate).all()
-    else:
-        assert (np.array(conv1) > conv_rate).all()
+    print("fuse l2 error norms:", diff)
+    diff = np.array(diff)
+    conv2 = np.log2(diff[:-1] / diff[1:])
+    print("fuse convergence order:", conv2)
+    assert (np.array(conv2) > conv_rate).all()
+    assert (np.array(conv1) > conv_rate).all()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),
@@ -1147,18 +1141,18 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
 def test_3d_two_form(elem_gen, elem_code, deg):
 
     cell = make_tetrahedron()
-    mesh = UnitTetrahedronMesh(use_fuse=True)
-    x = SpatialCoordinate(mesh)
+    mesh_fuse = UnitTetrahedronMesh(use_fuse=True)
+    mesh_ufc = UnitTetrahedronMesh()
+    
 
     spaces = []
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        elem = elem_gen(cell)
-        elem2 = elem_gen(cell)
-        spaces += [("fuse", FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))]
-    else:
-        spaces += [("fiat", FunctionSpace(mesh, elem_code, deg), FunctionSpace(mesh, elem_code, deg))]
+    elem = elem_gen(cell)
+    elem2 = elem_gen(cell)
+    spaces += [("fuse", mesh_fuse, FunctionSpace(mesh_fuse, elem.to_ufl()), FunctionSpace(mesh_fuse, elem2.to_ufl()))]
+    spaces += [("fiat", mesh_ufc, FunctionSpace(mesh_ufc, elem_code, deg), FunctionSpace(mesh_ufc, elem_code, deg))]
 
-    for name, V, V2 in spaces:
+    for name, mesh, V, V2 in spaces:
+        x = SpatialCoordinate(mesh)
         v = TestFunction(V)
         u = TrialFunction(V2)
         if elem_code == "CG":
@@ -1183,14 +1177,9 @@ def test_scaling_mesh():
     mesh1 = RectangleMesh(2, 1, 1, 1, use_fuse=True)
     mesh2 = RectangleMesh(2, 1, 0.5, 1, use_fuse=True)
     vec = as_vector([1, 1])
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-
-        elem = construct_rt(polygon(3))
-        V1 = FunctionSpace(mesh1, elem.to_ufl())
-        V2 = FunctionSpace(mesh2, elem.to_ufl())
-    else:
-        V1 = FunctionSpace(mesh1, "RT", 1)
-        V2 = FunctionSpace(mesh2, "RT", 1)
+    elem = construct_rt(polygon(3))
+    V1 = FunctionSpace(mesh1, elem.to_ufl())
+    V2 = FunctionSpace(mesh2, elem.to_ufl())
 
     res1 = assemble(interpolate(vec, V1))
     print(res1.dat.data)
