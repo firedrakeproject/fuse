@@ -1143,7 +1143,6 @@ def test_3d_two_form(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     mesh_fuse = UnitTetrahedronMesh(use_fuse=True)
     mesh_ufc = UnitTetrahedronMesh()
-    
 
     spaces = []
     elem = elem_gen(cell)
