@@ -60,7 +60,6 @@ bdm_params3d = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 5))]
 
 @pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + nd_params3d + rt_params3d + dg_params3d + nd2_params3d + bdm_params3d)
 def test_convergence3d(col, k, deg, conv_rate):
-    assert bool(os.environ.get("FIREDRAKE_USE_FUSE", 0))
     elem = periodic_table(col, 3, k, deg)
 
     scale_range = range(2, 4)

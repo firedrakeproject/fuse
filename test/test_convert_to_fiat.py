@@ -377,12 +377,13 @@ def test_1d(elem_gen, elem_code, deg):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitIntervalMesh(2 ** i, use_fuse=True)
+        mesh = UnitIntervalMesh(2 ** i)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
         diff2[i-min(scale_range)] = res1
 
+        mesh = UnitIntervalMesh(2 ** i, use_fuse=True)
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
         diff[i-min(scale_range)] = res2
