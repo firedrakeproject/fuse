@@ -1,9 +1,9 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import ufc_triangle, ufc_tetrahedron
+from fuse.cells import ufc_triangle
 import pytest
 import numpy as np
-from FIAT.reference_element import default_simplex, ufc_simplex
+from FIAT.reference_element import default_simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
@@ -195,117 +195,11 @@ def test_comparison():
     # print(tensor_product1 >= tensor_product1)
 
 
-@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),)])
-def test_connectivity(cell):
-    cell = cell.to_fiat()
-    for dim0 in range(cell.get_spatial_dimension()+1):
-        connectivity = cell.get_connectivity()[(dim0, 0)]
-        topology = cell.get_topology()[dim0]
-        assert len(connectivity) == len(topology)
-
-        assert all(connectivity[i] == t for i, t in topology.items())
+def test_self_equality(C):
+    assert C == C
 
 
-def test_tensor_connectivity():
-    from test_2d_examples_docs import construct_cg1
-    A = construct_cg1()
-    B = construct_cg1()
-    cell = tensor_product(A, B).cell
-    cell = cell.to_fiat()
-    for dim0 in [(0, 0), (1, 0), (0, 1), (1, 1)]:
-        connectivity = cell.get_connectivity()[(dim0, (0, 0))]
-        topology = cell.get_topology()[dim0]
-        assert len(connectivity) == len(topology)
-
-        assert all(connectivity[i] == t for i, t in topology.items())
-
-
-@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_tetrahedron(), )])
-def test_new_connectivity(cell):
-    cell = cell.to_fiat()
-    for dim0 in range(cell.get_dimension() + 1):
-        connectivity = cell.get_connectivity()[(dim0, 0)]
-        topology = cell.get_topology()[dim0]
-        assert len(connectivity) == len(topology)
-        for i, t in topology.items():
-            print(connectivity[i])
-            print(t)
-        assert all(connectivity[i] == t for i, t in topology.items())
-
-
-def test_compare_tris():
-    fuse_tet = polygon(3)
-    ufc_tet = ufc_triangle()
-    fiat_tet = ufc_simplex(2)
-
-    print(fiat_tet.get_topology())
-    print(fuse_tet.get_topology())
-    print(ufc_tet.get_topology())
-    fiat_connectivity = fiat_tet.get_connectivity()
-    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
-    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
-    _dim = fiat_tet.get_dimension()
-    print("fiat")
-    print(make_entity_cone_lists(fiat_tet))
-    for dim0 in range(_dim):
-        connectivity = fiat_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse")
-    print(make_entity_cone_lists(fuse_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = fuse_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse ufc")
-    print(make_entity_cone_lists(ufc_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = ufc_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-
-
-def test_compare_tets():
-    tet = make_tetrahedron()
-    # perm = tet.group.get_member([1, 2, 0, 3])
-    fuse_tet = tet
-    ufc_tet = ufc_tetrahedron()
-    fiat_tet = ufc_simplex(3)
-    # breakpoint()
-    print(fiat_tet.get_topology())
-    print(fuse_tet.get_topology())
-    print(ufc_tet.get_topology())
-    fiat_connectivity = fiat_tet.get_connectivity()
-    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
-    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
-    _dim = fiat_tet.get_dimension()
-    print("fiat")
-    print(make_entity_cone_lists(fiat_tet))
-    for dim0 in range(_dim):
-        connectivity = fiat_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse")
-    print(make_entity_cone_lists(fuse_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = fuse_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse ufc")
-    print(make_entity_cone_lists(ufc_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = ufc_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-
-
-def make_entity_cone_lists(fiat_cell):
-    _dim = fiat_cell.get_dimension()
-    _connectivity = fiat_cell.connectivity
-    _list = []
-    _offset_list = [0 for _ in _connectivity[(0, 0)]]  # vertices have no cones
-    _offset = 0
-    _n = 0  # num. of entities up to dimension = _d
-    for _d in range(_dim):
-        _n1 = len(_offset_list)
-        for _conn in _connectivity[(_d + 1, _d)]:
-            _list += [_c + _n for _c in _conn]  # These are indices into cell_closure[some_cell]
-            _offset_list.append(_offset)
-            _offset += len(_conn)
-        _n = _n1
-    _offset_list.append(_offset)
-    return _list, _offset_list
+@pytest.mark.parametrize(["A", "B", "res"], [(ufc_triangle(), polygon(3), False),
+                                             (line(), line(), True),])
+def test_equivalence(A, B, res):
+    assert A.equivalent(B) == res

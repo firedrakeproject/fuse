@@ -1,9 +1,8 @@
 from fuse import *
-from test_convert_to_fiat import create_cg1, create_dg1, create_cg2
+from test_convert_to_fiat import create_cg1, create_dg1, create_cg2, construct_nd
 from test_2d_examples_docs import construct_cg3
 import pytest
 import numpy as np
-import sympy as sp
 
 vert = Point(0)
 edge = Point(1, [Point(0), Point(0)], vertex_num=2)
@@ -48,24 +47,7 @@ def test_basic_perms(cell):
 
 @pytest.mark.parametrize("cell", [tri])
 def test_nd_perms(cell):
-    deg = 1
-    edge = cell.edges(get_class=True)[0]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-
-    xs = [DOF(L2Pairing(), VectorKernel(edge.basis_vectors()[0]))]
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
-
-    xs = [immerse(cell, int_ned, TrHCurl)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
-
-    M = sp.Matrix([[y, -x]])
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
-    Pk = PolynomialSpace(deg - 1)
-    nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
-
-    ned = ElementTriple(cell, (nd, CellHCurl, C0), [tri_dofs])
+    ned = construct_nd(cell)
     ned.to_fiat()
     for i, mat in ned.matrices[2][0].items():
         print(i)

@@ -43,8 +43,6 @@ class TensorProductTriple(ElementTriple):
         if self.flat:
             return FuseElement(self, self.cell.flatten().to_ufl())
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements()]
-        # self.setup_matrices()
-        # breakpoint()
         return TensorProductElement(*ufl_sub_elements, cell=self.cell.to_ufl())
 
     def flatten(self):
