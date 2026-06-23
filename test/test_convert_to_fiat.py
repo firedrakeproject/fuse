@@ -631,29 +631,31 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     scale_range = range(1, 4)
 
     diff = [0 for i in scale_range]
-    diff2 = [0 for i in scale_range]
+    diff_ufc = [0 for i in scale_range]
     for i in scale_range:
         mesh_fuse = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
-        mesh_ufc = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
-        x = SpatialCoordinate(mesh)
-        V2 = FunctionSpace(mesh_fuse, elem.to_ufl())
-        V = FunctionSpace(mesh_ufc, elem_code, deg)
-        res2 = project(V2, mesh, expr(x))
-        diff[i - min(scale_range)] = res2
-        res1 = project(V, mesh, expr(x))
-        diff2[i - min(scale_range)] = res1
+        V = FunctionSpace(mesh_fuse, elem.to_ufl())
+        x = SpatialCoordinate(mesh_fuse)
+        res = project(V, mesh, expr(x))
+        diff[i - min(scale_range)] = res
 
-    print("firedrake l2 error norms:", diff2)
-    diff2 = np.array(diff2)
-    conv1 = np.log2(diff2[:-1] / diff2[1:])
-    print("firedrake convergence order:", conv1)
+        mesh_ufc = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i)
+        V = FunctionSpace(mesh_ufc, elem_code, deg)
+        x = SpatialCoordinate(mesh_ufc)
+        res = project(V, mesh, expr(x))
+        diff_ufc[i - min(scale_range)] = res
+
+    print("firedrake l2 error norms:", diff_ufc)
+    diff_ufc = np.array(diff_ufc)
+    conv_ufc = np.log2(diff_ufc[:-1] / diff_ufc[1:])
+    print("firedrake convergence order:", conv_ufc)
 
     print("fuse l2 error norms:", diff)
     diff = np.array(diff)
-    conv2 = np.log2(diff[:-1] / diff[1:])
-    print("fuse convergence order:", conv2)
-    assert (np.array(conv2) > conv_rate).all()
-    assert (np.array(conv1) > conv_rate).all()
+    conv_fuse = np.log2(diff[:-1] / diff[1:])
+    print("fuse convergence order:", conv_fuse)
+    assert (np.array(conv_fuse) > conv_rate).all()
+    assert (np.array(conv_ufc) > conv_rate).all()
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,conv_rate", [(construct_tet_rt, "RT", 1, 0.8),

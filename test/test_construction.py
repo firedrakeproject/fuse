@@ -46,7 +46,7 @@ def test_convergence(col, k, deg, conv_rate):
     print("interpolation l2 error norms:", diff_inte)
     diff_inte = np.array(diff_inte)
     conv = np.log2(diff_inte[:-1] / diff_inte[1:])
-    print("convergence order:", conv2)
+    print("convergence order:", conv)
     assert all([c > conv_rate for c in conv])
 
 
