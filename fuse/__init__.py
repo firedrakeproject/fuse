@@ -1,3 +1,9 @@
+"""FUSE: Finite Element Unified Space Construction.
+
+This package provides tools for representing and constructing finite element spaces
+on cell complexes using group representations, dual bases, and polynomial spaces.
+"""
+
 from fuse.cells import Point, Edge, polygon, make_tetrahedron, constructCellComplex
 from fuse.groups import S1, S2, S3, D4, Z3, Z4, tet_C2, C3, C4, S4, A4, tet_edges, tet_faces, sq_edges, GroupRepresentation, PermutationSetRepresentation, Permutation, get_cyc_group, get_sym_group
 from fuse.dof import DeltaPairing, DOF, L2Pairing, FuseFunction, PointKernel, VectorKernel, BarycentricPolynomialKernel, PolynomialKernel, ComponentKernel

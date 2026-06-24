@@ -30,6 +30,17 @@ def perm_list_to_matrix(identity, perm):
 
 
 class GroupMemberRep(object):
+    """Representation of a group member acting on a cell.
+
+    Parameters
+    ----------
+    perm : sympy.combinatorics.Permutation
+        The permutation of the vertices.
+    M : numpy.ndarray
+        The affine transformation matrix.
+    group : PermutationSetRepresentation or GroupRepresentation
+        The parent group.
+    """
 
     def __init__(self, perm, M, group):
         self.perm = perm
@@ -37,6 +48,18 @@ class GroupMemberRep(object):
         self.group = group
 
     def __call__(self, x):
+        """Apply the transformation to a point or coordinates.
+
+        Parameters
+        ----------
+        x : Point or array_like
+            The object to transform.
+
+        Returns
+        -------
+        tuple
+            The transformed coordinates.
+        """
         if isinstance(x, cells.Point):
             return x.orient(self)
         if isinstance(x, sp.Expr):
@@ -50,6 +73,18 @@ class GroupMemberRep(object):
         return tuple(sum)
 
     def permute(self, lst):
+        """Permute a list according to this group member's permutation.
+
+        Parameters
+        ----------
+        lst : list
+            The list to permute.
+
+        Returns
+        -------
+        list
+            The permuted list.
+        """
         n = len(lst)
         if n > self.perm.size:
             temp_perm = Permutation(self.perm, size=n)
@@ -57,6 +92,20 @@ class GroupMemberRep(object):
         return self.perm(lst)
 
     def compute_perm(self, base_val=None):
+        """Compute the numeric representation and permuted values list.
+
+        Parameters
+        ----------
+        base_val : int, optional
+            Offset to apply to permuted indices. Defaults to None.
+
+        Returns
+        -------
+        val : int
+            Numeric orientation representation.
+        val_list : list of int
+            List of permuted indices.
+        """
         if base_val:
             val_list = [x + base_val for x in self.array_form]
         else:
@@ -65,6 +114,13 @@ class GroupMemberRep(object):
         return val, val_list
 
     def numeric_rep(self):
+        """Compute a unique integer ID for this orientation/permutation.
+
+        Returns
+        -------
+        int
+            Numerical representation.
+        """
         identity = self.group.identity.vertex_order_form
         m_array = self.vertex_order_form
         return orientation_value(identity, m_array)
@@ -101,10 +157,29 @@ class GroupMemberRep(object):
         return (~self.perm).array_form
 
     def matrix_form(self):
+        """Get the permutation matrix representation.
+
+        Returns
+        -------
+        numpy.ndarray
+            Permutation matrix.
+        """
         mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         return mat
 
     def matrix_form_subgroup(self, group):
+        """Get the matrix representation relative to a subgroup.
+
+        Parameters
+        ----------
+        group : PermutationSetRepresentation
+            Subgroup representation.
+
+        Returns
+        -------
+        numpy.ndarray
+            Matrix representation.
+        """
         if group.size() == 1:
             # Trivial case
             return np.array([1])
@@ -147,6 +222,13 @@ class GroupMemberRep(object):
         return mat
 
     def lin_combination_form(self):
+        """Get the transformation matrix in terms of linear combinations of cell basis.
+
+        Returns
+        -------
+        numpy.ndarray
+            Matrix representation.
+        """
         if self.group.cell.dimension == 0:
             return [1]
         bvs = self.group.cell.basis_vectors()
@@ -156,14 +238,18 @@ class GroupMemberRep(object):
 
 
 class PermutationSetRepresentation():
-    """
-        A representation of a set of permutations (can be a full group) on a cell.
+    """A representation of a set of permutations (can be a full group) on a cell.
 
-        Args:
-            [permutations]: the list of permutations in the set
-            cell (optional): the cell the group is representing the operations on
-
+    Parameters
+    ----------
+    perm_list : list of sympy.combinatorics.Permutation
+        The list of permutations in the set.
+    cell : Point, optional
+        The cell the group is representing operations on. Defaults to None.
+    name : str, optional
+        The name of the permutation set. Defaults to None.
     """
+
     def __init__(self, perm_list, cell=None, name=None):
         assert len(perm_list) > 0
         self.perm_list = perm_list
@@ -198,9 +284,33 @@ class PermutationSetRepresentation():
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
     def add_cell(self, cell):
+        """Create a new PermutationSetRepresentation with a cell complex.
+
+        Parameters
+        ----------
+        cell : Point
+            The cell complex.
+
+        Returns
+        -------
+        PermutationSetRepresentation
+            The new permutation set representation.
+        """
         return PermutationSetRepresentation(self.perm_list, cell=cell, name=self.name)
 
     def conjugacy_class(self, g):
+        """Compute the conjugacy class of a group member.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group member.
+
+        Returns
+        -------
+        set of GroupMemberRep
+            The conjugacy class.
+        """
         conj_class = set()
         for x in self.members():
             res = ~x * g * x
@@ -208,6 +318,18 @@ class PermutationSetRepresentation():
         return conj_class
 
     def cosets(self, subset):
+        """Compute the cosets of a subgroup.
+
+        Parameters
+        ----------
+        subset : PermutationSetRepresentation
+            The subgroup.
+
+        Returns
+        -------
+        list of list of GroupMemberRep
+            The cosets of the subgroup.
+        """
         # Divides current group by given subset
         # can be modified to allow members of given subset not to exist in group self
         seen = self.members().copy()
@@ -226,6 +348,18 @@ class PermutationSetRepresentation():
         return cosets
 
     def cosets_by_submember(self, subset):
+        """Compute cosets mapping array forms to subgroup members.
+
+        Parameters
+        ----------
+        subset : PermutationSetRepresentation
+            The subgroup.
+
+        Returns
+        -------
+        dict
+            Coset mapping.
+        """
         cosets = self.cosets(subset)
         cosets_by_submember = {}
         for i, m in enumerate(subset.members()):
@@ -234,6 +368,18 @@ class PermutationSetRepresentation():
         return cosets_by_submember
 
     def members(self, perm=False):
+        """Get the members of the set.
+
+        Parameters
+        ----------
+        perm : bool, default False
+            Whether to return raw permutations (True) or GroupMemberReps (False).
+
+        Returns
+        -------
+        list
+            The list of members.
+        """
         if self.cell is None:
             raise ValueError("Group does not have a domain - members have not been calculated")
         if perm:
@@ -241,6 +387,20 @@ class PermutationSetRepresentation():
         return self._members
 
     def transform_between_perms(self, perm1, perm2):
+        """Compute group member mapping one permutation to another.
+
+        Parameters
+        ----------
+        perm1 : list or Permutation
+            First permutation.
+        perm2 : list or Permutation
+            Second permutation.
+
+        Returns
+        -------
+        GroupMemberRep
+            The transformation member.
+        """
         member_perms = self.members(perm=True)
         perm1 = Permutation.from_sequence(perm1)
         perm2 = Permutation.from_sequence(perm2)
@@ -249,6 +409,18 @@ class PermutationSetRepresentation():
         return self.get_member(~Permutation(perm1)) * self.get_member(Permutation(perm2))
 
     def get_member(self, perm):
+        """Get the GroupMemberRep for a given permutation.
+
+        Parameters
+        ----------
+        perm : Permutation or list
+            The permutation to look up.
+
+        Returns
+        -------
+        GroupMemberRep
+            The corresponding group member.
+        """
         if not isinstance(perm, Permutation):
             perm = Permutation.from_sequence(perm)
         for m in self.members():
@@ -257,6 +429,18 @@ class PermutationSetRepresentation():
         raise ValueError("Permutation not a member of group")
 
     def get_member_by_val(self, val):
+        """Get the GroupMemberRep matching a numeric orientation value.
+
+        Parameters
+        ----------
+        val : int
+            The numeric representation value.
+
+        Returns
+        -------
+        GroupMemberRep
+            The corresponding group member.
+        """
         for m in self.members():
             if m.numeric_rep() == val:
                 return m
@@ -281,6 +465,13 @@ class PermutationSetRepresentation():
         return res
 
     def size(self):
+        """Get the number of elements in the set.
+
+        Returns
+        -------
+        int
+            Size of set.
+        """
         return len(self.perm_list)
 
     def __mul__(self, other_group):
@@ -299,13 +490,16 @@ class PermutationSetRepresentation():
 
 
 class GroupRepresentation(PermutationSetRepresentation):
-    """
-    A representation of a group by its matrix operations.
+    """A representation of a group by its matrix operations.
 
-    Args:
-        base_group: the sympy group that is being represented
-        cell (optional): the cell the group is representing the operations on
-
+    Parameters
+    ----------
+    base_group : sympy.combinatorics.PermutationGroup
+        The sympy group that is being represented.
+    cell : Point, optional
+        The cell the group is representing operations on. Defaults to None.
+    name : str, optional
+        The name of the group. Defaults to None.
     """
 
     def __init__(self, base_group, cell=None, name=None):
@@ -351,14 +545,45 @@ class GroupRepresentation(PermutationSetRepresentation):
             self.cell = None
 
     def add_cell(self, cell):
+        """Create a new GroupRepresentation with a cell complex.
+
+        Parameters
+        ----------
+        cell : Point
+            The cell complex.
+
+        Returns
+        -------
+        GroupRepresentation
+            The new group representation.
+        """
         return GroupRepresentation(self.base_group, cell=cell, name=self.name)
 
     def size(self):
+        """Get the group order (number of members).
+
+        Returns
+        -------
+        int
+            Group order.
+        """
         if hasattr(self, "_members"):
             assert len(self._members) == self.base_group.order()
         return self.base_group.order()
 
     def members(self, perm=False):
+        """Get the group members.
+
+        Parameters
+        ----------
+        perm : bool, default False
+            Whether to return raw permutations (True) or GroupMemberReps (False).
+
+        Returns
+        -------
+        list
+            The list of members.
+        """
         if self.cell is None:
             raise ValueError("Group does not have a domain - members have not been calculated")
         if perm:
@@ -366,6 +591,20 @@ class GroupRepresentation(PermutationSetRepresentation):
         return self._members
 
     def transform_between_perms(self, perm1, perm2):
+        """Compute group member mapping one permutation to another.
+
+        Parameters
+        ----------
+        perm1 : list or Permutation
+            First permutation.
+        perm2 : list or Permutation
+            Second permutation.
+
+        Returns
+        -------
+        GroupMemberRep
+            The transformation member.
+        """
         member_perms = self.members(perm=True)
         perm1 = Permutation.from_sequence(perm1)
         perm2 = Permutation.from_sequence(perm2)
@@ -466,10 +705,34 @@ class GroupRepresentation(PermutationSetRepresentation):
 
 
 def get_sym_group(n):
+    """Get symmetric group Sn representation.
+
+    Parameters
+    ----------
+    n : int
+        Number of elements.
+
+    Returns
+    -------
+    GroupRepresentation
+        The symmetric group.
+    """
     return GroupRepresentation(SymmetricGroup(n))
 
 
 def get_cyc_group(n):
+    """Get cyclic group Zn representation.
+
+    Parameters
+    ----------
+    n : int
+        Number of elements.
+
+    Returns
+    -------
+    GroupRepresentation
+        The cyclic group.
+    """
     return GroupRepresentation(CyclicGroup(n))
 
 

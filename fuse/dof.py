@@ -6,9 +6,7 @@ import sympy as sp
 
 
 class Pairing():
-    """
-    Akin to an inner product, the pairing combines a kernel and an input function
-    """
+    """Akin to an inner product, the pairing combines a kernel and an input function."""
 
     def __init__(self):
         self.entity = None
@@ -20,24 +18,54 @@ class Pairing():
 
 
 class DeltaPairing(Pairing):
-    """
-    The delta pairing allows the evaluation at a single points
-
-    Calling method:
-    :param: kernel: Normally a PointKernel
-    """
+    """The delta pairing allows the evaluation at a single point."""
 
     def __init__(self):
         super(DeltaPairing, self).__init__()
 
     def __call__(self, kernel, v, cell):
+        """Evaluate a function at the kernel's point.
+
+        Parameters
+        ----------
+        kernel : PointKernel
+            Normally a PointKernel specifying the point to evaluate at.
+        v : callable
+            The function to evaluate.
+        cell : Point
+            The containing cell complex.
+
+        Returns
+        -------
+        any
+            The evaluated function value.
+        """
         assert isinstance(kernel, PointKernel)
         return v(*kernel.pt)
 
     def tabulate(self):
+        """Get the tabulation factor.
+
+        Returns
+        -------
+        int
+            1.
+        """
         return 1
 
     def add_entity(self, entity):
+        """Create a new DeltaPairing bound to a specific cell/entity.
+
+        Parameters
+        ----------
+        entity : Point
+            The cell or entity to bind to.
+
+        Returns
+        -------
+        DeltaPairing
+            The bound DeltaPairing.
+        """
         res = DeltaPairing()
         res.entity = entity
         if self.orientation:
@@ -45,6 +73,18 @@ class DeltaPairing(Pairing):
         return res
 
     def permute(self, g):
+        """Apply a permutation/group action to the pairing.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action to apply.
+
+        Returns
+        -------
+        DeltaPairing
+            The permuted pairing.
+        """
         res = DeltaPairing()
         if self.entity:
             res.entity = self.entity
@@ -67,15 +107,39 @@ class DeltaPairing(Pairing):
 
 
 class L2Pairing(Pairing):
+    """Pairing representing an L2 inner product over an entity."""
 
     def __init__(self):
         super(L2Pairing, self).__init__()
 
     def __call__(self, kernel, v, cell):
+        """Compute the L2 inner product of a kernel and function via quadrature.
+
+        Parameters
+        ----------
+        kernel : BaseKernel
+            The kernel function.
+        v : callable
+            The target function.
+        cell : Point
+            The cell complex.
+
+        Returns
+        -------
+        float
+            The quadrature evaluation value.
+        """
         Qpts, Qwts = self.entity.quadrature(5)
         return sum([wt*np.dot(kernel(*pt), v(*pt)) for pt, wt in zip(Qpts, Qwts)])
 
     def tabulate(self):
+        """Get the change of basis matrix for entity tabulation under orientation.
+
+        Returns
+        -------
+        numpy.ndarray
+            The basis change matrix.
+        """
         bvs = np.array(self.entity.basis_vectors())
         if self.orientation:
             new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
@@ -84,6 +148,18 @@ class L2Pairing(Pairing):
         return np.eye(bvs.shape[0])
 
     def add_entity(self, entity):
+        """Create a new L2Pairing bound to a specific cell/entity.
+
+        Parameters
+        ----------
+        entity : Point
+            The cell or entity.
+
+        Returns
+        -------
+        L2Pairing
+            The bound L2Pairing.
+        """
         res = L2Pairing()
         res.entity = entity
         if self.orientation:
@@ -91,6 +167,18 @@ class L2Pairing(Pairing):
         return res
 
     def permute(self, g):
+        """Apply a permutation/group action to the L2 pairing.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        L2Pairing
+            The permuted pairing.
+        """
         if g.perm.is_Identity:
             return self
 
@@ -117,11 +205,19 @@ class L2Pairing(Pairing):
 
 
 class BaseKernel():
+    """Base class for functional kernels."""
 
     def __init__(self):
         self.attachment = False
 
     def permute(self, g):
+        """Permute the kernel under a group action.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+        """
         raise NotImplementedError("This method should be implemented by the subclass")
 
     def __repr__(self):
@@ -132,6 +228,13 @@ class BaseKernel():
 
 
 class PointKernel(BaseKernel):
+    """Kernel evaluating at a specific point coordinate.
+
+    Parameters
+    ----------
+    x : tuple
+        The point coordinates.
+    """
 
     def __init__(self, x):
         if not isinstance(x, tuple):
@@ -144,9 +247,33 @@ class PointKernel(BaseKernel):
         return ','.join(x)
 
     def degree(self, interpolant_degree):
+        """Get the polynomial degree of the kernel.
+
+        Parameters
+        ----------
+        interpolant_degree : int
+            The interpolant polynomial degree.
+
+        Returns
+        -------
+        int
+            The polynomial degree.
+        """
         return interpolant_degree
 
     def permute(self, g):
+        """Permute the point kernel.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        PointKernel
+            The permuted PointKernel.
+        """
         return PointKernel(g(self.pt))
 
     def __call__(self, *args):
@@ -167,6 +294,15 @@ class PointKernel(BaseKernel):
 
 
 class VectorKernel(BaseKernel):
+    """Kernel for vector-valued degrees of freedom.
+
+    Parameters
+    ----------
+    x : tuple or int
+        The vector component or coordinates.
+    g : GroupMemberRep, optional
+        Permutation/group mapping. Defaults to None.
+    """
 
     def __init__(self, x, g=None):
         self.pt = x
@@ -181,15 +317,65 @@ class VectorKernel(BaseKernel):
         return ','.join(x)
 
     def degree(self, interpolant_degree):
+        """Get the polynomial degree of the kernel.
+
+        Parameters
+        ----------
+        interpolant_degree : int
+            The interpolant polynomial degree.
+
+        Returns
+        -------
+        int
+            The polynomial degree.
+        """
         return interpolant_degree
 
     def permute(self, g):
+        """Permute the vector kernel under a group action.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        VectorKernel
+            The permuted VectorKernel.
+        """
         return VectorKernel(self.pt, g)
 
     def __call__(self, *args):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        """Evaluate the kernel at quadrature points.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            The quadrature points.
+        Qwts : array_like
+            The quadrature weights.
+        basis_change : numpy.ndarray
+            The basis change matrix.
+        immersed : callable
+            Immersion map.
+        dim : int
+            Dimension of the cell.
+        value_shape : tuple
+            Value shape of the space.
+
+        Returns
+        -------
+        pts : array_like
+            The quadrature points.
+        wts : numpy.ndarray
+            Evaluated weights.
+        comps : list
+            Components list.
+        """
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
         if not immersed:
@@ -208,6 +394,17 @@ class VectorKernel(BaseKernel):
 
 
 class BarycentricPolynomialKernel(BaseKernel):
+    """Kernel using barycentric polynomial functions.
+
+    Parameters
+    ----------
+    fn : sympy.Expr or list of sympy.Expr
+        The barycentric polynomial expression(s).
+    g : GroupMemberRep, optional
+        Permutation/group mapping. Defaults to None.
+    symbols : list of sympy.Symbol, optional
+        The symbols used in the expression.
+    """
 
     def __init__(self, fn, g=None, symbols=[]):
         if hasattr(fn, "__iter__") or isinstance(fn, sp.Matrix):
@@ -229,6 +426,18 @@ class BarycentricPolynomialKernel(BaseKernel):
         return str(self.fn)
 
     def degree(self, interpolant_degree):
+        """Get the polynomial degree of the kernel.
+
+        Parameters
+        ----------
+        interpolant_degree : int
+            The interpolant polynomial degree.
+
+        Returns
+        -------
+        int
+            The polynomial degree.
+        """
         if self.shape != 0:
             return max([self.fn[i].as_poly().total_degree() for i in range(self.shape)]) + interpolant_degree
         if len(self.fn.free_symbols) == 0:  # this should probably be removed
@@ -236,6 +445,18 @@ class BarycentricPolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() + interpolant_degree
 
     def permute(self, g):
+        """Permute the barycentric polynomial kernel under a group action.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        BarycentricPolynomialKernel
+            The permuted kernel.
+        """
         new_fn = self.fn
         return BarycentricPolynomialKernel(new_fn, g=g, symbols=self.syms)
 
@@ -247,6 +468,34 @@ class BarycentricPolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, bary_pts, Qwts, basis_change, immersed, dim, value_shape):
+        """Evaluate the kernel at quadrature points with barycentric coordinates.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            The quadrature points.
+        bary_pts : array_like
+            Barycentric coordinates of the quadrature points.
+        Qwts : array_like
+            The quadrature weights.
+        basis_change : numpy.ndarray
+            The basis change matrix.
+        immersed : callable
+            Immersion map.
+        dim : int
+            Dimension of the cell.
+        value_shape : tuple
+            Value shape of the space.
+
+        Returns
+        -------
+        pts : array_like
+            The quadrature points.
+        wts : numpy.ndarray
+            Evaluated weights.
+        comps : list
+            Components list.
+        """
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
@@ -271,6 +520,17 @@ class BarycentricPolynomialKernel(BaseKernel):
 
 
 class PolynomialKernel(BaseKernel):
+    """Kernel using polynomial functions.
+
+    Parameters
+    ----------
+    fn : sympy.Expr or list of sympy.Expr
+        The polynomial expression(s).
+    g : GroupMemberRep, optional
+        Permutation/group mapping. Defaults to None.
+    symbols : list of sympy.Symbol, optional
+        The symbols used in the expression.
+    """
 
     def __init__(self, fn, g=None, symbols=[]):
         if hasattr(fn, "__iter__"):
@@ -289,6 +549,18 @@ class PolynomialKernel(BaseKernel):
         return str(self.fn)
 
     def degree(self, interpolant_degree):
+        """Get the polynomial degree of the kernel.
+
+        Parameters
+        ----------
+        interpolant_degree : int
+            The interpolant polynomial degree.
+
+        Returns
+        -------
+        int
+            The polynomial degree.
+        """
         if self.shape != 0:
             return max([self.fn[i].as_poly().total_degree() for i in range(self.shape)]) + interpolant_degree
         if len(self.fn.free_symbols) == 0:  # this should probably be removed
@@ -296,7 +568,18 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() + interpolant_degree
 
     def permute(self, g):
-        # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
+        """Permute the polynomial kernel under a group action.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        PolynomialKernel
+            The permuted kernel.
+        """
         new_fn = self.fn
         return PolynomialKernel(new_fn, g=g, symbols=self.syms)
 
@@ -310,6 +593,32 @@ class PolynomialKernel(BaseKernel):
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        """Evaluate the kernel at quadrature points.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            The quadrature points.
+        Qwts : array_like
+            The quadrature weights.
+        basis_change : numpy.ndarray
+            The basis change matrix.
+        immersed : callable
+            Immersion map.
+        dim : int
+            Dimension of the cell.
+        value_shape : tuple
+            Value shape of the space.
+
+        Returns
+        -------
+        pts : array_like
+            The quadrature points.
+        wts : numpy.ndarray
+            Evaluated weights.
+        comps : list
+            Components list.
+        """
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
@@ -337,6 +646,13 @@ class PolynomialKernel(BaseKernel):
 
 
 class ComponentKernel(BaseKernel):
+    """Kernel targeting specific component indexes of a vector field.
+
+    Parameters
+    ----------
+    comp : list of int
+        The target component index list.
+    """
 
     def __init__(self, comp):
         self.comp = comp
@@ -346,15 +662,63 @@ class ComponentKernel(BaseKernel):
         return f"[{self.comp}]"
 
     def degree(self, interpolant_degree):
+        """Get the polynomial degree of the kernel.
+
+        Parameters
+        ----------
+        interpolant_degree : int
+            The interpolant polynomial degree.
+
+        Returns
+        -------
+        int
+            The polynomial degree.
+        """
         return interpolant_degree
 
     def permute(self, g):
+        """Permute the component kernel.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group action.
+
+        Returns
+        -------
+        ComponentKernel
+            self.
+        """
         return self
 
     def __call__(self, *args):
         return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
+        """Evaluate the component kernel at quadrature points.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            Quadrature points.
+        Qwts : array_like
+            Quadrature weights.
+        basis_change : numpy.ndarray
+            Basis change.
+        immersed : callable
+            Immersion map.
+        dim : int
+            Dimension.
+
+        Returns
+        -------
+        pts : array_like
+            Quadrature points.
+        wts : array_like
+            Quadrature weights.
+        comps : list
+            Target component indices list.
+        """
         return Qpts, Qwts, [[self.comp] for pt in Qpts]
         # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
 
@@ -370,6 +734,33 @@ class ComponentKernel(BaseKernel):
 
 
 class DOF():
+    """Degree of freedom combining a pairing, a kernel, and target domain context.
+
+    Parameters
+    ----------
+    pairing : Pairing
+        The pairing to use.
+    kernel : BaseKernel
+        The kernel to use.
+    entity : Point, optional
+        The sub-entity this DOF is defined on. Defaults to None.
+    attachment : callable, optional
+        Attachment function coordinate map. Defaults to None.
+    target_space : Trace, optional
+        Target trace space. Defaults to None.
+    g : GroupMemberRep, optional
+        Group mapping. Defaults to None.
+    immersed : bool, default False
+        Whether this DOF is immersed.
+    generation : dict, optional
+        Generation mapping dictionary. Defaults to None.
+    sub_id : int, optional
+        Sub-identifier for the generator. Defaults to None.
+    cell : Point, optional
+        The containing cell. Defaults to None.
+    entity_o : bool, default False
+        Entity orientation flag.
+    """
 
     def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, immersed=False, generation=None, sub_id=None, cell=None, entity_o=False):
         self.pairing = pairing
@@ -399,12 +790,55 @@ class DOF():
         return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
 
     def eval(self, fn, pullback=True):
+        """Evaluate the DOF functional on a function.
+
+        Parameters
+        ----------
+        fn : callable
+            The function to evaluate.
+        pullback : bool, default True
+            Whether to apply pullback / trace.
+
+        Returns
+        -------
+        any
+            The evaluated value.
+        """
         return self.pairing(self.kernel, fn, self.cell)
 
     def tabulate(self, Qpts):
+        """Tabulate the kernel basis values.
+
+        Parameters
+        ----------
+        Qpts : array_like
+            The tabulation points.
+
+        Returns
+        -------
+        numpy.ndarray
+            The tabulated values.
+        """
         return self.kernel.tabulate(Qpts)
 
     def add_context(self, dof_gen, cell, space, g, overall_id=None, generator_id=None):
+        """Add cell and space context details to the DOF.
+
+        Parameters
+        ----------
+        dof_gen : DOFGenerator
+            The generator of this DOF.
+        cell : Point
+            The cell complex context.
+        space : ElementSobolevSpace
+            The Sobolev space context.
+        g : GroupMemberRep
+            The group member.
+        overall_id : int, optional
+            The overall unique ID.
+        generator_id : int, optional
+            The generator-relative ID.
+        """
         # For some of these, we only want to store the first instance of each
         self.generation[cell.dim()] = dof_gen
         self.cell = cell
@@ -420,10 +854,40 @@ class DOF():
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
+        """Convert this DOF to a FIAT Functional.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+        interpolant_degree : int
+            The interpolant polynomial degree.
+        value_shape : tuple, optional
+            Value shape of the field.
+
+        Returns
+        -------
+        FIAT.functional.Functional
+            The corresponding FIAT Functional object.
+        """
         # TODO deriv dict needs implementing (currently {})
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
+        """Generate quadrature dictionary for FIAT.
+
+        Parameters
+        ----------
+        arg_degree : int
+            Interpolation degree.
+        value_shape : tuple
+            Value shape.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping points to lists of (weight, component) pairs.
+        """
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
         dim = self.cell_defined_on.get_spatial_dimension()
@@ -490,6 +954,26 @@ class DOF():
         return str(self.pairing).format(fn=fn, kernel=self.kernel)
 
     def immerse(self, entity, attachment, target_space, g, triple):
+        """Immerse this DOF in a larger target cell complex.
+
+        Parameters
+        ----------
+        entity : Point
+            The cell or entity to immerse into.
+        attachment : callable
+            Coordinate attachment mapping.
+        target_space : Trace
+            The target trace space.
+        g : GroupMemberRep
+            Group mapping.
+        triple : ElementTriple
+            The element triple context.
+
+        Returns
+        -------
+        ImmersedDOF
+            The immersed degree of freedom.
+        """
         new_generation = self.generation.copy()
         return ImmersedDOF(self.pairing, self.kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
 
@@ -506,7 +990,8 @@ class DOF():
 
 
 class ImmersedDOF(DOF):
-    # probably need to add a convert to fiat method here to capture derivatives from immersion
+    """Degree of freedom immersed in a larger cell context."""
+
     def __init__(self, pairing, kernel, entity=None, attachment=None, target_space=None, g=None, triple=None, generation=None, sub_id=None, cell=None, entity_o=False):
         self.immersed = True
         self.triple = triple
@@ -544,6 +1029,17 @@ class ImmersedDOF(DOF):
 
 
 class FuseFunction():
+    """Function representation in the FUSE element framework.
+
+    Parameters
+    ----------
+    eq : callable or sympy.Expr
+        The underlying mathematical expression.
+    attach_func : callable, optional
+        Coordinate mapping/attachment function. Defaults to None.
+    symbols : list of sympy.Symbol, optional
+        The symbols used in the expression.
+    """
 
     def __init__(self, eq, attach_func=None, symbols=None):
         self.eq = eq
@@ -568,6 +1064,18 @@ class FuseFunction():
             return self.eq(*x)
 
     def attach(self, attachment):
+        """Attach a coordinate mapping function.
+
+        Parameters
+        ----------
+        attachment : callable
+            Coordinate attachment mapping.
+
+        Returns
+        -------
+        FuseFunction
+            A new function with coordinate attachment.
+        """
         if not self.attach_func:
             return FuseFunction(self.eq, attach_func=attachment, symbols=self.symbols)
         else:

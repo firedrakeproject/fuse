@@ -18,6 +18,8 @@ from functools import cache
 
 
 class Arrow3D(FancyArrowPatch):
+    """3D Arrow artist for Matplotlib plotting."""
+
     def __init__(self, xs, ys, zs, *args, **kwargs):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
@@ -31,9 +33,19 @@ class Arrow3D(FancyArrowPatch):
 
 
 def topo_pos(G):
-    """
-    Helper function for hasse diagram visualisation
-    Offsets the nodes and displays in topological order
+    """Helper function for Hasse diagram visualization.
+
+    Offsets the nodes and displays them in topological order.
+
+    Parameters
+    ----------
+    G : networkx.DiGraph
+        The graph/Hasse diagram.
+
+    Returns
+    -------
+    dict
+        A dictionary of node coordinates mapping names to (x, y) coordinates.
     """
     pos_dict = {}
     for i, node_list in enumerate(nx.topological_generations(G)):
@@ -46,11 +58,36 @@ def topo_pos(G):
 
 
 def normalise(v):
+    """Normalize a vector.
+
+    Parameters
+    ----------
+    v : array_like
+        The input vector.
+
+    Returns
+    -------
+    numpy.ndarray
+        The normalized vector.
+    """
     norm = np.linalg.norm(v)
     return v / norm
 
 
 def make_arrow(ax, mid, edge, direction=1):
+    """Draw a 2D orientation arrow on a Matplotlib axis.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The matplotlib axis to draw on.
+    mid : float
+        The parameter value along the edge curve.
+    edge : callable
+        The coordinate parameterization of the edge.
+    direction : int, default 1
+        Arrow direction along the edge.
+    """
     delta = 0.0001 if direction >= 0 else -0.0001
     x, y = edge(mid)
     dir_x, dir_y = edge(mid + delta)
@@ -58,6 +95,19 @@ def make_arrow(ax, mid, edge, direction=1):
 
 
 def make_arrow_3d(ax, mid, edge, direction=1):
+    """Draw a 3D orientation arrow on a Matplotlib axis.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The matplotlib axis to draw on.
+    mid : float
+        The parameter value along the edge curve.
+    edge : callable
+        The coordinate parameterization of the edge.
+    direction : int, default 1
+        Arrow direction along the edge.
+    """
     delta = 0.0001 if direction >= 0 else -0.0001
     x, y, z = edge(mid)
     dir_x, dir_y, dir_z = edge(mid + delta)
@@ -66,20 +116,40 @@ def make_arrow_3d(ax, mid, edge, direction=1):
 
 
 def construct_attach_2d(a, b, c, d):
-    """
-    Compute polynomial attachment in x based on two points (a,b) and (c,d)
+    """Compute polynomial attachment in x based on two points (a,b) and (c,d).
 
-    :param: a,b,c,d: two points (a,b) and (c,d)
+    Parameters
+    ----------
+    a : float
+        x-coordinate of the first point.
+    b : float
+        y-coordinate of the first point.
+    c : float
+        x-coordinate of the second point.
+    d : float
+        y-coordinate of the second point.
+
+    Returns
+    -------
+    list of sympy.Expr
+        The parameterized attachment expressions.
     """
     x = sp.Symbol("x")
     return [((c-a)/2)*(x+1) + a, ((d-b)/2)*(x+1) + b]
 
 
 def construct_attach_3d(res):
-    """
-    Convert matrix of coefficients into a vector of polynomials in x and y
+    """Convert matrix of coefficients into a vector of polynomials in x and y.
 
-    :param: res: matrix of coefficients
+    Parameters
+    ----------
+    res : sympy.Matrix
+        Matrix of coefficients.
+
+    Returns
+    -------
+    sympy.Matrix
+        The vector of polynomials.
     """
     x = sp.Symbol("x")
     y = sp.Symbol("y")
@@ -88,11 +158,19 @@ def construct_attach_3d(res):
 
 
 def compute_scaled_verts(d, n):
-    """
-    Construct default cell vertices
+    """Construct default cell vertices.
 
-    :param: d: dimension of cell
-    :param: n: number of vertices
+    Parameters
+    ----------
+    d : int
+        Dimension of the cell.
+    n : int
+        Number of vertices.
+
+    Returns
+    -------
+    numpy.ndarray or tuple of numpy.ndarray
+        The scaled coordinates, and faces if dimension is 3.
     """
     if d == 2:
         source = np.array([-np.sqrt(3)/2, -1/2])
@@ -152,10 +230,17 @@ def compute_scaled_verts(d, n):
 
 
 def polygon(n):
-    """
-    Constructs the 2D default cell with n sides/vertices
+    """Construct a 2D polygon cell with n sides/vertices.
 
-    :param: n: number of vertices
+    Parameters
+    ----------
+    n : int
+        Number of vertices/sides.
+
+    Returns
+    -------
+    Point
+        The polygon cell complex.
     """
     vertices = []
     for i in range(n):
@@ -169,6 +254,13 @@ def polygon(n):
 
 
 def ufc_triangle():
+    """Construct a triangle cell matching Firedrake/UFC default orientation.
+
+    Returns
+    -------
+    Point
+        The triangle cell complex.
+    """
     vertices = []
     for i in range(3):
         vertices.append(Point(0))
@@ -182,8 +274,12 @@ def ufc_triangle():
 
 
 def ufc_quad():
-    """
-    Constructs the a quad cell that matches the firedrake default.
+    """Construct a quad cell matching Firedrake/UFC default orientation.
+
+    Returns
+    -------
+    Point
+        The quad cell complex.
     """
     vertices = []
     for i in range(4):
@@ -203,6 +299,13 @@ def ufc_quad():
 
 
 def make_tetrahedron():
+    """Construct a tetrahedron cell.
+
+    Returns
+    -------
+    Point
+        The tetrahedron cell complex.
+    """
     vertices = []
     for i in range(4):
         vertices.append(Point(0))
@@ -232,6 +335,13 @@ def make_tetrahedron():
 
 
 def ufc_tetrahedron():
+    """Construct a tetrahedron cell matching Firedrake/UFC default orientation.
+
+    Returns
+    -------
+    Point
+        The tetrahedron cell complex.
+    """
     vertices = []
     for i in range(4):
         vertices.append(Point(0))
@@ -266,24 +376,22 @@ def ufc_tetrahedron():
 
 
 class Point():
-    """
-    Cell complex representation of a finite element cell
+    """Cell complex representation of a finite element cell.
 
     Attributes
     ----------
-    d: :obj:`int`
-        dimension of the cell
-    edges: List
-        list of subcells of type:obj:`Edge` or :obj:`Point`
-    vertex_num: :obj:`int` (optional)
-        number of vertices
-    oriented: GroupMemberRep (optional)
-        Adds orientation to the cell
-    group: GroupRepresentation (optional)
-        Symmetry group of the cell
-    edge_orientations: dict
-        Dictionary of the orientations of the subcells {subcell_id: orientation}
-
+    dimension : int
+        Dimension of the cell.
+    connections : list of Edge
+        List of subcells of type Edge or Point.
+    vertex_num : int, optional
+        Number of vertices.
+    oriented : GroupMemberRep, optional
+        Adds orientation to the cell.
+    group : GroupRepresentation, optional
+        Symmetry group of the cell.
+    edge_orientations : dict
+        Dictionary of the orientations of the subcells {subcell_id: orientation}.
     """
 
     id_iter = itertools.count()
@@ -319,12 +427,21 @@ class Point():
         self.group = self.group.add_cell(self)
 
     def compute_attachments(self, n, points, orientations=None):
-        """
-        Compute the attachment function between two nodes
+        """Compute the attachment function between two nodes.
 
-        :param: n: number of vertices
-        :param: points: List of Point objects
-        :param: orientations: (Optional) Orientation associated with the attachment
+        Parameters
+        ----------
+        n : int
+            Number of vertices.
+        points : list of Point
+            List of Point objects.
+        orientations : dict, optional
+            Orientation associated with the attachment. Defaults to None.
+
+        Returns
+        -------
+        list of Edge
+            The list of edges representing attachments.
         """
         if orientations is None:
             orientations = {}
@@ -366,10 +483,14 @@ class Point():
         return edges
 
     def compute_cell_group(self):
-        """
-        Systematically work out the symmetry group of the constructed cell.
+        """Systematically work out the symmetry group of the constructed cell.
 
         Assumes cell has side length of 2.
+
+        Returns
+        -------
+        PermutationSetRepresentation
+            Symmetry group.
         """
         verts = self.ordered_vertices()
         v_coords = [self.get_node(v, return_coords=True) for v in verts]

@@ -19,14 +19,21 @@ from functools import cache
 
 
 class ElementTriple():
-    """
-    Class to represent the three core parts of the element, forming an
-    Expanded Triple (C, U, E), where C is the cell complex, U is a tuple
+    """Represent the three core parts of the element.
+
+    Forming an Expanded Triple (C, U, E), where C is the cell complex, U is a tuple
     of spaces (V, W, WI), and E is the DOF generation description.
 
-    :param: cell: CellComplex
-    :param: spaces: Triple of spaces: (PolynomialSpace, SobolovSpace, InterpolationSpace)
-    :param: dof_gen: Generator Triple to generate the degrees of freedom.
+    Parameters
+    ----------
+    cell : Point
+        The cell complex.
+    spaces : tuple of Space
+        Triple of spaces: (PolynomialSpace, SobolevSpace, InterpolationSpace).
+    dof_gen : list of DOFGenerator or DOFGenerator
+        Generator Triple to generate the degrees of freedom.
+    perm : bool, default True
+        Whether permutation matrices should be computed.
     """
 
     def __init__(self, cell, spaces, dof_gen, perm=True):
@@ -57,6 +64,15 @@ class ElementTriple():
         self.perm = perm
 
     def setup_ids_and_nodes(self):
+        """Set up entities IDs and nodes for the element in FIAT.
+
+        Returns
+        -------
+        entity_ids : dict
+            A dictionary mapping topological dimensions to entity IDs.
+        nodes : list of Functional
+            A list of FIAT nodes corresponding to the DOFs.
+        """
         dofs = self.generate()
         degree = self.spaces[0].degree() + 1
         value_shape = self.get_value_shape()
@@ -85,6 +101,15 @@ class ElementTriple():
         return entity_ids, nodes
 
     def setup_matrices(self):
+        """Set up transformation/orientation matrices for the element entities.
+
+        Returns
+        -------
+        matrices : dict
+            A dictionary mapping entity dimensions and IDs to transformation matrices.
+        reversed_matrices : dict
+            A dictionary of reversed transformation matrices.
+        """
         # self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
@@ -108,6 +133,13 @@ class ElementTriple():
 
     @cache
     def generate(self):
+        """Generate and cache the degrees of freedom (DOFs) for the element.
+
+        Returns
+        -------
+        list of DOF
+            The list of generated degrees of freedom.
+        """
         if self.dofs is None:
             self.dofs = []
             id_counter = 0
@@ -123,6 +155,13 @@ class ElementTriple():
         yield self.DOFGenerator
 
     def num_dofs(self):
+        """Get the total number of degrees of freedom.
+
+        Returns
+        -------
+        int
+            The number of degrees of freedom.
+        """
         return sum([dof_gen.num_dofs() for dof_gen in self.DOFGenerator])
 
     @property
@@ -131,6 +170,22 @@ class ElementTriple():
         return self.spaces[0].degree() + 1
 
     def get_dof_info(self, dof, tikz=True):
+        """Get coordinate and color information for plotting/visualizing a DOF.
+
+        Parameters
+        ----------
+        dof : DOF
+            The degree of freedom to query.
+        tikz : bool, default True
+            Whether formatting for TikZ (True) or Matplotlib (False).
+
+        Returns
+        -------
+        center : array_like or list
+            The coordinate center of the entity the DOF is defined on.
+        color : str
+            The color code representing the entity dimension.
+        """
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
                    True: {0: "blue", 1: "red", 2: "green", 3: "black"}}
         if dof.cell_defined_on.dimension == 0:
@@ -145,6 +200,13 @@ class ElementTriple():
         return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
+        """Get the value shape of the element (e.g., scalar or vector).
+
+        Returns
+        -------
+        tuple of int
+            The value shape tuple.
+        """
         # TODO Shape should be specificed somewhere else probably
         if self.spaces[0].set_shape:
             return (self.cell.get_spatial_dimension(),)
@@ -152,6 +214,13 @@ class ElementTriple():
             return ()
 
     def to_ufl(self):
+        """Convert the element triple to its corresponding UFL representation.
+
+        Returns
+        -------
+        FuseElement
+            The UFL element representation.
+        """
         if self.ref_el is None:
             # set up for eventual conversion to FIAT if not already done
             self.ref_el = self.cell.to_fiat()
@@ -161,6 +230,13 @@ class ElementTriple():
         return FuseElement(self)
 
     def to_fiat(self):
+        """Convert the element triple to a FIAT CiarletElement representation.
+
+        Returns
+        -------
+        CiarletElement
+            The FIAT element.
+        """
         # call this to ensure set up is complete
         self.to_ufl()
         form_degree = 1 if self.spaces[0].set_shape else 0
@@ -177,6 +253,18 @@ class ElementTriple():
         """Generates tikz code for the element diagram
 
         Requires the \\usetikzlibrary{arrows.meta} library
+
+        Parameters
+        ----------
+        show : bool, default True
+            Whether to enclose in a tikzpicture environment.
+        scale : float, default 3
+            The spatial scaling factor.
+
+        Returns
+        -------
+        str
+            The generated TikZ commands joined by newlines.
         """
         tikz_commands = []
         if show:
@@ -202,8 +290,13 @@ class ElementTriple():
         return tikz_commands
 
     def plot(self, filename="temp.png"):
+        """Plot the element diagram using Matplotlib.
+
+        Parameters
+        ----------
+        filename : str, default "temp.png"
+            The filename to save the plot. If None, show interactively.
         """
-        Generates Matplotlib code for the element diagrams."""
         dofs = self.generate()
         identity = FuseFunction(lambda *x: x)
 
@@ -263,6 +356,26 @@ class ElementTriple():
             raise ValueError("Plotting not supported in this dimension")
 
     def compute_dense_matrix(self, ref_el, entity_ids, nodes, poly_set):
+        """Compute the Vandermonde matrix and coefficients for the element.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+        entity_ids : dict
+            The entity IDs mapping.
+        nodes : list of Functional
+            The nodes.
+        poly_set : FIAT.polynomial_set.ONPolynomialSet
+            The orthonormal polynomial set.
+
+        Returns
+        -------
+        A : numpy.ndarray
+            The Riesz representation evaluation matrix.
+        new_coeffs_flat : numpy.ndarray
+            The reconstructed polynomial coefficients.
+        """
         dual = DualSet(nodes, ref_el, entity_ids)
 
         old_coeffs = poly_set.get_coeffs()
@@ -283,6 +396,24 @@ class ElementTriple():
         return A, new_coeffs_flat
 
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+        """Compute dense transformation matrices for each entity.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+        entity_ids : dict
+            The entity IDs.
+        nodes : list of Functional
+            The nodes.
+        poly_set : FIAT.polynomial_set.ONPolynomialSet
+            The orthonormal polynomial set.
+
+        Returns
+        -------
+        dict
+            Dense matrices by dimension and entity ID.
+        """
         raise NotImplementedError("This should be deprecated")
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
@@ -332,6 +463,24 @@ class ElementTriple():
         return res_dict
 
     def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+        """Compute overall dense transformation matrices for the entire cell.
+
+        Parameters
+        ----------
+        ref_el : FIAT.reference_element.Cell
+            The reference element.
+        entity_ids : dict
+            The entity IDs.
+        nodes : list of Functional
+            The nodes.
+        poly_set : FIAT.polynomial_set.ONPolynomialSet
+            The orthonormal polynomial set.
+
+        Returns
+        -------
+        dict
+            Overall dense matrices by dimension and entity ID.
+        """
         raise NotImplementedError("this function should be unnecessary")
         min_ids = self.cell.get_starter_ids()
         dim = self.cell.dim()
@@ -565,6 +714,18 @@ class ElementTriple():
             num_ents += len(ents)
 
     def reverse_dof_perms(self, matrices):
+        """Compute the inverse of DOF permutation/transformation matrices.
+
+        Parameters
+        ----------
+        matrices : dict
+            The transformation matrices.
+
+        Returns
+        -------
+        dict
+            The inverted/reversed transformation matrices.
+        """
         min_ids = self.cell.get_starter_ids()
         reversed_mats = {}
         for dim in matrices.keys():
@@ -590,20 +751,56 @@ class ElementTriple():
         return reversed_mats
 
     def _to_dict(self):
+        """Convert the element triple to a dictionary representation.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the cell, spaces, and DOF generators.
+        """
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
         return o_dict
 
     def dict_id(self):
+        """Get the dictionary identifier for this class.
+
+        Returns
+        -------
+        str
+            The identifier string 'Triple'.
+        """
         return "Triple"
 
     def _from_dict(o_dict):
+        """Reconstruct the ElementTriple from a dictionary.
+
+        Parameters
+        ----------
+        o_dict : dict
+            Dictionary representing the object.
+
+        Returns
+        -------
+        ElementTriple
+            The reconstructed ElementTriple.
+        """
         return ElementTriple(o_dict["cell"], o_dict["spaces"], o_dict["dofs"])
 
 
 class DOFGenerator():
-    """
-    Represents a DOF Triple (X, G1, G2), where X is a set of DOF generators,
-    G1 is the generator group, and G2 is the transformation group.
+    """Represents a DOF Triple (X, G1, G2).
+
+    Where X is a set of DOF generators, G1 is the generator group, and G2
+    is the transformation group.
+
+    Parameters
+    ----------
+    generator_funcs : list of callable
+        The set of DOF generators.
+    gen_group : GroupRepresentation
+        The generator group.
+    trans_group : GroupRepresentation
+        The transformation group.
     """
 
     def __init__(self, generator_funcs, gen_group, trans_group):
@@ -621,15 +818,45 @@ class DOFGenerator():
         yield self.g2
 
     def add_cell(self, cell):
+        """Add cell complex context to the generator and transformation groups.
+
+        Parameters
+        ----------
+        cell : Point
+            The cell complex.
+        """
         self.g1 = self.g1.add_cell(cell)
         self.g2 = self.g2.add_cell(cell)
 
     def num_dofs(self):
+        """Get the number of degrees of freedom generated.
+
+        Returns
+        -------
+        int
+            The number of DOFs.
+        """
         if self.dof_numbers is None:
             raise ValueError("DOFs not generated yet")
         return self.dof_numbers
 
     def generate(self, cell, space, id_counter):
+        """Generate the concrete DOF list for a cell and space.
+
+        Parameters
+        ----------
+        cell : Point
+            The cell complex.
+        space : ElementSobolevSpace
+            The target Sobolev space.
+        id_counter : int
+            The starting overall DOF ID.
+
+        Returns
+        -------
+        list of DOF
+            The generated degrees of freedom.
+        """
         if self.ls is None:
             self.ls = []
             for l_g in self.x:
@@ -648,6 +875,13 @@ class DOFGenerator():
         return self.ls
 
     def make_entity_ids(self):
+        """Generate mapping from topological dimensions to entity IDs.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping dimensions to list of entity IDs.
+        """
         dofs = self.ls
         entity_ids = {}
         min_ids = dofs[0].cell.get_starter_ids()
@@ -682,6 +916,19 @@ class DOFGenerator():
 
 
 class ImmersedDOFs():
+    """Represent degrees of freedom immersed into a target cell.
+
+    Parameters
+    ----------
+    target_cell : Point
+        The target cell complex containing the immersed entity.
+    triple : ElementTriple
+        The element triple being immersed.
+    trace : Trace
+        The trace space to apply.
+    start_node : int, default 0
+        The starting node index in the target cell topology.
+    """
 
     def __init__(self, target_cell, triple, trace, start_node=0):
         self.target_cell = target_cell
@@ -691,6 +938,18 @@ class ImmersedDOFs():
         self.start_node = start_node
 
     def __call__(self, g):
+        """Apply group mapping to generate immersed DOFs.
+
+        Parameters
+        ----------
+        g : GroupMemberRep
+            The group member permutation.
+
+        Returns
+        -------
+        list of DOF
+            The list of immersed degrees of freedom.
+        """
         target_node, o = self.target_cell.permute_entities(g, self.C.dim())[self.start_node]
         if self.C.dim() > 0 and o != o.group.identity:
             raise ValueError("Not matching orientation - groups incorrect")
@@ -702,8 +961,8 @@ class ImmersedDOFs():
 
         for generated_dof in self.triple.generate():
             new_dof = generated_dof.immerse(self.target_cell.get_node(target_node),
-                                            oriented_attachment,
-                                            self.trace, g, self.triple)
+                                             oriented_attachment,
+                                             self.trace, g, self.triple)
             new_dofs.append(new_dof)
         return new_dofs
 
@@ -725,4 +984,22 @@ class ImmersedDOFs():
 
 
 def immerse(target_cell, triple, target_space, node=0):
+    """Immerse an element triple into a target cell.
+
+    Parameters
+    ----------
+    target_cell : Point
+        The target cell.
+    triple : ElementTriple
+        The element triple to immerse.
+    target_space : Trace
+        The target trace space.
+    node : int, default 0
+        The node index in the target cell topology.
+
+    Returns
+    -------
+    ImmersedDOFs
+        The immersed DOF representation.
+    """
     return ImmersedDOFs(target_cell, triple, target_space, node)
