@@ -1097,7 +1097,6 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
