@@ -344,7 +344,6 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     cell = polygon(3)
     mesh = UnitSquareMesh(3, 3, use_fuse=True)
 
-    spaces = []
     elem = elem_gen(cell)
     elem2 = elem_gen2(cell)
     V, V2 = (FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))
