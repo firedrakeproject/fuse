@@ -110,7 +110,10 @@ class ElementTriple():
             self.apply_matrices = False
         else:
             self.apply_matrices = True
+        self.apply_matrices = True
+
         self.entity_perms = entity_perms
+        self.entity_perms = None
         return matrices, reversed_matrices
 
     def __repr__(self):
@@ -290,6 +293,7 @@ class ElementTriple():
             try:
                 new_coeffs_flat = scipy.linalg.solve(V, B, transposed=True)
             except (scipy.linalg.LinAlgWarning, scipy.linalg.LinAlgError):
+                print(np.linalg.matrix_rank(V))
                 raise np.linalg.LinAlgError("Singular Vandermonde matrix")
         return A, new_coeffs_flat
 
@@ -368,6 +372,7 @@ class ElementTriple():
         cell_dict = entity_associations[cell_dim][0]
         pure_perm = True
         sub_pure_perm = True
+        num_dofs = {}
 
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
@@ -380,6 +385,7 @@ class ElementTriple():
                 dims = [sub_dim]
             for dim in dims:
                 dof_gen = str(d.generation[dim])
+                num_dofs[dof_gen] = (dim, d.generation[dim].g1.size())
 
                 if not len(d.generation[dim].g2.members()) == 1:
                     if dim == cell_dim:
@@ -395,6 +401,7 @@ class ElementTriple():
                     cell_dict[dof_gen] += [d]
                 elif dim == cell_dim and d.immersed:
                     cell_dict[dof_gen] = [d]
+
         return entity_associations, pure_perm, sub_pure_perm
 
     def _initialise_entity_dicts(self, dofs, tensor=False):
@@ -453,6 +460,7 @@ class ElementTriple():
                         total_ent_dof_ids += [self.dof_id_to_fiat_id[ed.id] for ed in ent_dofs if self.dof_id_to_fiat_id[ed.id] not in total_ent_dof_ids]
                         # dof_idx = [total_ent_dof_ids.index(id) for id in ent_dofs_ids]
                         dof_gen_class = ent_dofs[0].generation
+                        # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
                         if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
@@ -465,31 +473,61 @@ class ElementTriple():
                             elif len(dof_gen_class[dim].g2.members()) == 2 and len(ent_dofs_ids) == 1:
                                 # equivalently g1 trivial
                                 sub_mat = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                            # elif len(ent_dofs_ids) == basis_change.shape[0]*
                             else:
                                 # len(dof_gen_class[dim].g2.members()) == 2:
                                 # case where value change is a restriction of the full transformation of the basis
                                 value_change = ent_dofs[0].target_space.manipulate_basis(basis_change)
+                                # if len(value_change) > 1:
+                                #     breakpoint()
+                                #     value_change = np.sum(value_change[0])
+                                # if g.perm.is_odd:
+                                #     value_change = -1
+                                # else:
+                                #     value_change = 1
                                 # if g not in dof_gen_class[dim].g1.members() and value_change == 1:
                                 #     value_change = -1*value_change
-                                sub_mat = np.kron((~g).matrix_form(), value_change)
+                                # sub_mat1 = cosets[(~g).array_form].matrix_form()
+                                # sub_mat1 = (~g).matrix_form()
+                                try:
+                                    # sub_mat = cosets[(~g).array_form].matrix_form()
+                                    sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                                    sub_mat = np.kron(sub_mat2, value_change)
+                                except AssertionError:
+                                    # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                    warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
+                                    sub_mat = np.eye(len(ent_dofs_ids))
+
                                 # sub_mat = (~g).matrix_form()
                             # elif len(ent_dofs_ids) != 1:# more dofs than dimension of g?
                                 # case for transforms where the basis vector is already included in the dof
                                 # sub_mat = np.kron((~g).matrix_form(), basis_change)
                             # else:
                             #     raise NotImplementedError("Unconsidered permuation case")
+                            # if len(ent_dofs_ids) > 3:
+                            #     breakpoint()
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
 
-                        elif g.perm.is_Identity or (pure_perm and len(ent_dofs_ids) == 1):
+                        # g.perm.is_Identity or needs to be removed for S3 hack
+                        elif (pure_perm and len(ent_dofs_ids) == 1):
                             oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         elif dim < self.cell.dim():  # g in dof_gen_class[dim].g1.members() and
                             # Permutation of DOF on the entity they are defined on
-                            sub_mat = (~g).matrix_form()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # sub_mat = (~g).matrix_form()
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            # sub_mat = cosets[(~g).array_form].matrix_form()
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
                         elif len(dof_gen_class.keys()) == 1 and dim == self.cell.dim() and len(ent_dofs_ids) == len(self.cell.vertices()):
-                            # case for dofs defined on the cell and not immersed
-                            sub_mat = (~g).matrix_form()
-                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
+                            # case for dofs defined on the cell and not immersed - doesn't actually matter for facet agreement
+                            # sub_mat = (~g).matrix_form()
+                            sub_mat2 = (~g).matrix_form_subgroup(dof_gen_class[dim].g1)
+                            try:
+                                # sub_mat = cosets[(~g).array_form].matrix_form()
+                                oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat2.copy()
+                            except ValueError:
+                                # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
+                                warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
+                                oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
                         else:
                             # TODO what if an orientation is not in G1
                             warnings.warn("FUSE: orientation case not covered")
@@ -497,7 +535,6 @@ class ElementTriple():
                             # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
                             # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
                             pass
-
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
                             # Handle immersion - can only happen once so number of keys is max 2
                             dimensions = list(dof_gen_class.keys())
@@ -523,7 +560,6 @@ class ElementTriple():
                                 oriented_mats_by_entity[self.cell.dim()][0][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = expanded.copy()
                     if pure_perm and sub_pure_perm:
                         flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(oriented_mats_by_entity[dim][e_id][val][np.ix_(total_ent_dof_ids, total_ent_dof_ids)])
-
         # remove immersed DOFs from flat form
         oriented_mats_overall = oriented_mats_by_entity[dim][0]
         if pure_perm and sub_pure_perm:
@@ -531,6 +567,7 @@ class ElementTriple():
                 cell_dofs = entity_ids[dim][0]
                 flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])
             return oriented_mats_by_entity, flat_by_entity, True
+
         return oriented_mats_by_entity, None, False
 
     def orient_mat_perms(self):
@@ -571,7 +608,17 @@ class ElementTriple():
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:
-                    perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()]
+                    inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    perms_copy[m.numeric_rep()] = inv_mat
+                    # if dim == 2:
+                    #     # if m.numeric_rep() == 0:
+                    #     #     breakpoint()
+                    #     # horrible hack for s3 continued
+                    #     inv_mat = np.linalg.inv(matrices[dim][e_id][(m).numeric_rep()].copy())
+                    #     perms_copy[m.numeric_rep()] = inv_mat
+                    # else:
+                    #     perms_copy[m.numeric_rep()] = matrices[dim][e_id][(~m).numeric_rep()].copy()
+                    # perms_copy[m.numeric_rep()] = inv_mat
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
 

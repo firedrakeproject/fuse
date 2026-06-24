@@ -60,7 +60,7 @@ def mass_solve(U):
                           (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
                           (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
 def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
-    m = UnitIntervalMesh(2)
+    m = UnitIntervalMesh(2, use_fuse=True)
     mesh = ExtrudedMesh(m, 2)
 
     # manual method of creating tensor product elements
@@ -88,7 +88,7 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     vals = range(3, 6)
     res = []
     for r in vals:
-        m = UnitIntervalMesh(2**r)
+        m = UnitIntervalMesh(2**r, use_fuse=True)
         mesh = ExtrudedMesh(m, 2**r)
 
         A = elem_gen()
@@ -107,7 +107,7 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
     A = construct_cg1()
     B = construct_cg1()
     elem = tensor_product(A, B)
@@ -142,16 +142,16 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res_fuse = []
     res_fire = []
     for r in vals:
-        mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
-
+        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
         A = elem_gen()
         B = elem_gen()
         elem = symmetric_tensor_product(A, B).flatten()
-        U = FunctionSpace(mesh, elem.to_ufl())
-        res_fuse += [helmholtz_solve(mesh, U)]
-        U = FunctionSpace(mesh, elem_code, deg)
-        res_fire += [helmholtz_solve(mesh, U)]
+        U = FunctionSpace(mesh_fuse, elem.to_ufl())
+        res_fuse += [helmholtz_solve(mesh_fuse, U)]
 
+        mesh_ufc = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+        U = FunctionSpace(mesh_ufc, elem_code, deg)
+        res_fire += [helmholtz_solve(mesh_ufc, U)]
     print("Fuse l2 error norms:", res_fuse)
     res = np.array(res_fuse)
     conv = np.log2(res[:-1] / res[1:])
@@ -412,3 +412,9 @@ def test_sum_fac_3d():
         kernel_spectral, = compile_form(a)
         print("Local assembly FLOPs with spectral mode is {0:.3g}".format(kernel_spectral.flop_count))
         assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3
+=======
+    conv_ufc = np.log2(res[:-1] / res[1:])
+    print("convergence order:", conv_ufc)
+    assert (np.array(conv_fuse) > 1.8).all()
+    assert (np.array(conv_ufc) > 1.8).all()
+>>>>>>> main
