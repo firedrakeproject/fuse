@@ -113,7 +113,6 @@ def test_quad_mesh_helmholtz():
     res = np.array(res_fuse)
     conv_fuse = np.log2(res[:-1] / res[1:])
     print("convergence order:", conv_fuse)
-    
 
     print("l2 error norms:", res_fire)
     res = np.array(res_fire)

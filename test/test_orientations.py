@@ -314,10 +314,6 @@ def test_interpolation(elem_gen, elem_code, deg):
     elem = elem_gen(cell)
     mesh = UnitSquareMesh(1, 1, use_fuse=True)
     V = FunctionSpace(mesh, elem.to_ufl())
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        V = FunctionSpace(mesh, elem.to_ufl())
-    else:
-        V = FunctionSpace(mesh, elem_code, deg)
 
     expression, _ = get_expression(V)
     expect = project(expression, V)
@@ -350,23 +346,19 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     mesh = UnitSquareMesh(3, 3, use_fuse=True)
 
     spaces = []
-    if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-        elem = elem_gen(cell)
-        elem2 = elem_gen2(cell)
-        spaces += [("fuse", FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))]
-    else:
-        spaces += [("fiat", FunctionSpace(mesh, elem_code, deg), FunctionSpace(mesh, elem_code, deg2))]
+    elem = elem_gen(cell)
+    elem2 = elem_gen2(cell)
+    spaces += [("fuse", FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))]
 
-    for name, V, V2 in spaces:
-        v = TestFunction(V)
-        u = TrialFunction(V2)
-        exp, _ = get_expression(V)
-        f = assemble(interpolate(exp, V2))
+    v = TestFunction(V)
+    u = TrialFunction(V2)
+    exp, _ = get_expression(V)
+    f = assemble(interpolate(exp, V2))
 
-        a = inner(v, u) * dx
-        L = inner(f, v) * dx
+    a = inner(v, u) * dx
+    L = inner(f, v) * dx
 
-        solution = Function(V2)
-        solve(a == L, solution)
+    solution = Function(V2)
+    solve(a == L, solution)
 
-        assert norm(assemble(f - solution)) < 1e-14
+    assert norm(assemble(f - solution)) < 1e-14

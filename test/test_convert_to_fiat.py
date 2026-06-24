@@ -670,20 +670,12 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     scale_range = range(0, 2)
     for i in scale_range:
         mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V2 = FunctionSpace(mesh, elem.to_ufl())
-            res2 = assemble(interpolate(vec, V2))
-            CG3 = VectorFunctionSpace(mesh, "CG", 3)
-            res3 = assemble(interpolate(res2, CG3))
-            for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-            res1 = assemble(interpolate(vec, V))
-            CG3 = VectorFunctionSpace(mesh, "CG", 3)
-            res3 = assemble(interpolate(res1, CG3))
-            for i in range(res3.dat.data.shape[0]):
-                assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
+        V2 = FunctionSpace(mesh, elem.to_ufl())
+        res2 = assemble(interpolate(vec, V2))
+        CG3 = VectorFunctionSpace(mesh, "CG", 3)
+        res3 = assemble(interpolate(res2, CG3))
+        for i in range(res3.dat.data.shape[0]):
+            assert np.allclose(res3.dat.data[i], np.array([1, 1, 1]))
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_tet_ned2, "N1curl", 2),
@@ -705,35 +697,22 @@ def test_linear_vec(elem_gen, elem_code, deg):
         [x[2], 0, 0], [0, x[2], 0], [0, 0, x[2]],
         [x[0], x[1], 0], [x[1], x[0], 0], [x[1], 0, x[0]], [x[0], x[1], x[2]]
     ]
-    print(mesh.entity_orientations)
     failed = False
-    error_rows = []
     for v in candidate_vecs:
+        error_rows = []
         vec = as_vector(v)
-        if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-            V2 = FunctionSpace(mesh, elem.to_ufl())
-            res2 = assemble(interpolate(vec, V2))
-            CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
-            res3 = assemble(interpolate(res2, CG3))
-            res4 = assemble(interpolate(vec, CG3))
-            if not np.allclose(res3.dat.data, res4.dat.data):
-                print(vec)
-                for i in range(res3.dat.data.shape[0]):
-                    if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
-                        error_rows += [i]
-                # cnl = CG3.cell_node_list
-                # for c in cnl:
-                #     print([i in error_rows for i in c])
-                # failed = True
-            if len(error_rows) > 0:
-                breakpoint()
-        else:
-            V = FunctionSpace(mesh, elem_code, deg)
-            res1 = assemble(interpolate(vec, V))
-            CG3 = VectorFunctionSpace(mesh, "CG", 3)
-            res3 = assemble(interpolate(res1, CG3))
-            res4 = assemble(interpolate(vec, CG3))
-            assert np.allclose(res3.dat.data, res4.dat.data)
+        V = FunctionSpace(mesh, elem.to_ufl())
+        res2 = assemble(interpolate(vec, V))
+        CG3 = VectorFunctionSpace(mesh, create_cg3_tet(cell).to_ufl())
+        res3 = assemble(interpolate(res2, CG3))
+        res4 = assemble(interpolate(vec, CG3))
+        if not np.allclose(res3.dat.data, res4.dat.data):
+            print(vec)
+            for i in range(res3.dat.data.shape[0]):
+                if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
+                    error_rows += [i]
+        if len(error_rows) > 0:
+            failed=True
     assert not failed
 
 
@@ -1125,16 +1104,10 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
             mesh = TwoTetMesh(perm=g, use_fuse=True)
             print(g)
             print(mesh.entity_orientations)
-            if bool(os.environ.get("FIREDRAKE_USE_FUSE", 0)):
-                V2 = FunctionSpace(mesh, elem)
-                res = project(V2, mesh, expr(mesh))
-                print(res)
-                errors += [res]
-            else:
-                V = FunctionSpace(mesh, elem_code, deg)
-                res = project(V, mesh, expr(mesh))
-                errors += [res]
-                print(res)
+            V2 = FunctionSpace(mesh, elem)
+            res = project(V2, mesh, expr(mesh))
+            print(res)
+            errors += [res]
     assert all([res < max_err for res in errors])
 
 

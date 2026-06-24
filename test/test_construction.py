@@ -1,5 +1,4 @@
 import pytest
-import os
 import numpy as np
 from test_orientations import interpolate_vs_project, get_expression
 from test_convert_to_fiat import project as project_test
