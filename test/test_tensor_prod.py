@@ -37,7 +37,7 @@ def mass_solve(U):
 @pytest.mark.xfail(reason="tensor prod issues")
 @pytest.mark.parametrize("generator, code, deg", [(construct_cg1, "CG", 1), (construct_dg1, "DG", 1)])
 def test_tensor_product_ext_mesh(generator, code, deg):
-    m = UnitIntervalMesh(2)
+    m = UnitIntervalMesh(2, use_fuse=True)
     mesh = ExtrudedMesh(m, 2)
 
     # manual method of creating tensor product elements
@@ -61,7 +61,7 @@ def test_helmholtz():
     vals = range(3, 6)
     res = []
     for r in vals:
-        m = UnitIntervalMesh(2**r)
+        m = UnitIntervalMesh(2**r, use_fuse=True)
         mesh = ExtrudedMesh(m, 2**r)
 
         A = construct_cg1()
@@ -80,7 +80,7 @@ def test_helmholtz():
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
     A = construct_cg1()
     B = construct_cg1()
     elem = tensor_product(A, B)
@@ -98,24 +98,25 @@ def test_quad_mesh_helmholtz():
     res_fuse = []
     res_fire = []
     for r in vals:
-        mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
 
         A = construct_cg1()
         B = construct_cg1()
         elem = tensor_product(A, B).flatten()
-        U = FunctionSpace(mesh, elem.to_ufl())
-        res_fuse += [helmholtz_solve(mesh, U)]
+        U = FunctionSpace(mesh_fuse, elem.to_ufl())
+        res_fuse += [helmholtz_solve(mesh_fuse, U)]
 
-        U = FunctionSpace(mesh, "CG", 1)
-        res_fire += [helmholtz_solve(mesh, U)]
+        mesh_ufc = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+        U = FunctionSpace(mesh_ufc, "CG", 1)
+        res_fire += [helmholtz_solve(mesh_ufc, U)]
     print("l2 error norms:", res_fuse)
     res = np.array(res_fuse)
-    conv = np.log2(res[:-1] / res[1:])
-    print("convergence order:", conv)
-    assert (np.array(conv) > 1.8).all()
+    conv_fuse = np.log2(res[:-1] / res[1:])
+    print("convergence order:", conv_fuse)
 
     print("l2 error norms:", res_fire)
     res = np.array(res_fire)
-    conv = np.log2(res[:-1] / res[1:])
-    print("convergence order:", conv)
-    assert (np.array(conv) > 1.8).all()
+    conv_ufc = np.log2(res[:-1] / res[1:])
+    print("convergence order:", conv_ufc)
+    assert (np.array(conv_fuse) > 1.8).all()
+    assert (np.array(conv_ufc) > 1.8).all()
