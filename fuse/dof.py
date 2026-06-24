@@ -210,14 +210,14 @@ class VectorKernel(BaseKernel):
 class BarycentricPolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[]):
-        if hasattr(fn, "__iter__"):
+        if hasattr(fn, "__iter__") or isinstance(fn, sp.Matrix):
             # if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
             #     raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
             self.fn = [sp.Poly(fn[i], symbols) for i in range(len(fn))]
             self.shape = len(fn)
         else:
-            if len(symbols) != 0 and not sp.sympify(fn).as_poly():
-                raise ValueError("Function must be able to be interpreted as a sympy polynomial")
+            # if len(symbols) != 0 and not sp.sympify(fn).as_poly():
+            #     raise ValueError("Function must be able to be interpreted as a sympy polynomial")
             # self.fn = sp.sympify(fn)
             self.fn = sp.Poly(fn, symbols)
             self.shape = 0
@@ -377,7 +377,10 @@ class DOF():
         self.immersed = immersed
         self.cell_defined_on = entity
         self.attachment = attachment
-        self.target_space = target_space
+        if not self.immersed:
+            self.target_space = TrH1(self.cell_defined_on)
+        else:
+            self.target_space = target_space
         self.g = g
         self.id = None
         self.sub_id = sub_id
@@ -435,7 +438,6 @@ class DOF():
             def immersed(pt):
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
-
                 J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
                 # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
                 # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
@@ -445,8 +447,15 @@ class DOF():
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
+            # if self.pairing.orientation is not None and
+            # self.pairing.orientation.numeric_rep() == 1:
+            #     breakpoint()
+            # print(self)
+            # print(self.cell_defined_on.cartesian_to_barycentric(Qpts))
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
+            # print(bary_pts)
+            # print(basis_change)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
@@ -544,9 +553,9 @@ class FuseFunction():
     def __call__(self, *x, sym=False):
         if self.symbols:
             if self.attach_func and not sym:
-                res = self.eq.subs({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, self.attach_func(*x))})
             else:
-                res = self.eq.subs({symb: val for (symb, val) in zip(self.symbols, x)})
+                res = self.eq.xreplace({symb: val for (symb, val) in zip(self.symbols, x)})
             if res.free_symbols == set():
                 array = np.array(res).astype(np.float64)
                 return array
