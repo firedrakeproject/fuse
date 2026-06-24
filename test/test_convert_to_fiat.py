@@ -15,7 +15,6 @@ from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construc
 from test_3d_examples_docs import construct_tet_ned3_old
 from test_polynomial_space import flatten
 from element_examples import CR_n
-import os
 np.set_printoptions(linewidth=120, precision=4, suppress=True)
 
 
@@ -712,7 +711,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
                 if not np.allclose(res3.dat.data[i], res4.dat.data[i]):
                     error_rows += [i]
         if len(error_rows) > 0:
-            failed=True
+            failed = True
     assert not failed
 
 

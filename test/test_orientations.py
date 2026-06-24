@@ -6,7 +6,6 @@ import numpy as np
 import sympy as sp
 from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_nd2_2nd_kind, construct_bdm, construct_bdm2, construct_bdm2_bary, construct_bdm_bary
 from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
-import os
 
 np.set_printoptions(linewidth=90, precision=4, suppress=True)
 
@@ -348,7 +347,7 @@ def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
     spaces = []
     elem = elem_gen(cell)
     elem2 = elem_gen2(cell)
-    spaces += [("fuse", FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))]
+    V, V2 = (FunctionSpace(mesh, elem.to_ufl()), FunctionSpace(mesh, elem2.to_ufl()))
 
     v = TestFunction(V)
     u = TrialFunction(V2)
