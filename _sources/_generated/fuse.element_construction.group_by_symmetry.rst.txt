@@ -1,0 +1,6 @@
+fuse.element\_construction.group\_by\_symmetry
+==============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: group_by_symmetry

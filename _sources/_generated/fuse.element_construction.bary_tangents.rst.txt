@@ -1,0 +1,6 @@
+fuse.element\_construction.bary\_tangents
+=========================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: bary_tangents

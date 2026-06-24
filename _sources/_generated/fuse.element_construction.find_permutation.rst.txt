@@ -1,0 +1,6 @@
+fuse.element\_construction.find\_permutation
+============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: find_permutation

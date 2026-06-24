@@ -1,0 +1,6 @@
+fuse.element\_construction.construct\_tri\_ndN
+==============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: construct_tri_ndN

@@ -21,11 +21,19 @@ GroupMemberRep
       ~GroupMemberRep.compute_perm
       ~GroupMemberRep.lin_combination_form
       ~GroupMemberRep.matrix_form
+      ~GroupMemberRep.matrix_form_subgroup
       ~GroupMemberRep.numeric_rep
       ~GroupMemberRep.permute
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~GroupMemberRep.array_form
+      ~GroupMemberRep.vertex_order_form
    
    

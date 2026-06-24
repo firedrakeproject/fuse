@@ -1,0 +1,6 @@
+fuse.element\_construction.proxy\_field\_bfs
+============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: proxy_field_bfs

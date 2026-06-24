@@ -19,7 +19,6 @@ ElementTriple
    
       ~ElementTriple.__init__
       ~ElementTriple.compute_dense_matrix
-      ~ElementTriple.degree
       ~ElementTriple.dict_id
       ~ElementTriple.generate
       ~ElementTriple.get_dof_info
@@ -40,5 +39,11 @@ ElementTriple
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ElementTriple.degree
    
    

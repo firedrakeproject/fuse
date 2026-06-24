@@ -1,0 +1,6 @@
+fuse.element\_construction.construct\_tet\_cgN
+==============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: construct_tet_cgN

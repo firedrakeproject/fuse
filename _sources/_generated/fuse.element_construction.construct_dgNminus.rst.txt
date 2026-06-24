@@ -1,0 +1,6 @@
+fuse.element\_construction.construct\_dgNminus
+==============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: construct_dgNminus

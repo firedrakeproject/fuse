@@ -1,0 +1,6 @@
+fuse.element\_construction.lagrange\_barycentric\_basis
+=======================================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: lagrange_barycentric_basis

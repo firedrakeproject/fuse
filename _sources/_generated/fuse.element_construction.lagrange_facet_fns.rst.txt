@@ -1,0 +1,6 @@
+fuse.element\_construction.lagrange\_facet\_fns
+===============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: lagrange_facet_fns

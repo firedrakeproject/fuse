@@ -1,0 +1,6 @@
+fuse.element\_construction.convert\_to\_generation
+==================================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: convert_to_generation

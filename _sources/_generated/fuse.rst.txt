@@ -32,6 +32,7 @@ fuse
 
    cells
    dof
+   element_construction
    groups
    serialisation
    spaces

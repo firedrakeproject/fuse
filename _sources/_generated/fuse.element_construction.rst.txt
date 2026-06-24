@@ -1,0 +1,87 @@
+:tocdepth: 0
+
+element\_construction
+=====================
+
+.. automodule:: fuse.element_construction
+  
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        bary_tangents
+      
+        barycentric_coords
+      
+        construct_dgN
+      
+        construct_dgNminus
+      
+        construct_tet_bdmN
+      
+        construct_tet_cgN
+      
+        construct_tet_ndN
+      
+        construct_tet_ndN_2
+      
+        construct_tet_rtN
+      
+        construct_tri_bdmN
+      
+        construct_tri_cgN
+      
+        construct_tri_ndN
+      
+        construct_tri_ndN_2
+      
+        construct_tri_rtN
+      
+        convert_to_generation
+      
+        find_permutation
+      
+        from_barycentric
+      
+        group_by_symmetry
+      
+        group_with_mappings
+      
+        immerse_and_generate_on_interior_face
+      
+        lagrange_barycentric_basis
+      
+        lagrange_facet_fns
+      
+        lagrange_facet_pts
+      
+        multiindices
+      
+        periodic_table
+      
+        points_close
+      
+        proxy_field_bfs
+      
+        vector_basis_fns
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

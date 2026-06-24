@@ -19,7 +19,6 @@ TensorProductTriple
    
       ~TensorProductTriple.__init__
       ~TensorProductTriple.compute_dense_matrix
-      ~TensorProductTriple.degree
       ~TensorProductTriple.dict_id
       ~TensorProductTriple.flatten
       ~TensorProductTriple.generate
@@ -43,5 +42,11 @@ TensorProductTriple
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TensorProductTriple.degree
    
    

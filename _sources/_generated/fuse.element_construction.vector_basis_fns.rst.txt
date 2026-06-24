@@ -1,0 +1,6 @@
+fuse.element\_construction.vector\_basis\_fns
+=============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: vector_basis_fns

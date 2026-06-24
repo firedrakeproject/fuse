@@ -1,0 +1,6 @@
+fuse.element\_construction.construct\_tri\_bdmN
+===============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: construct_tri_bdmN

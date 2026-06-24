@@ -1,0 +1,6 @@
+fuse.element\_construction.group\_with\_mappings
+================================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: group_with_mappings

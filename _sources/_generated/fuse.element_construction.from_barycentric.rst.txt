@@ -1,0 +1,6 @@
+fuse.element\_construction.from\_barycentric
+============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: from_barycentric

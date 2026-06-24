@@ -1,0 +1,6 @@
+fuse.element\_construction.points\_close
+========================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: points_close
