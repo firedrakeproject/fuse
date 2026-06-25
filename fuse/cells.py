@@ -1003,7 +1003,13 @@ class TensorProductPoint():
                 self.entities[d] = [TensorProductPoint(e_a, e_b) for e_a in self.A.d_entities(d[0], True) for e_b in self.B.d_entities(d[1], True)]
 
     def ordered_vertices(self):
-        return self.A.ordered_vertices() + self.B.ordered_vertices()
+        return self.entities[0]
+        # return [(a, b) for a in self.A.vertices() for b in self.B.vertices()]
+    
+    def ordered_vertex_coords(self):
+        a_verts = self.A.vertices(return_coords=True)
+        b_verts = self.B.vertices(return_coords=True)
+        return [a + b for a in a_verts for b in b_verts]
 
     def component_orientations(self):
         from fuse.utils import orientation_value
