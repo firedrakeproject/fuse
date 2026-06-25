@@ -194,12 +194,11 @@ class VectorKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-
-        if not isinstance(self.pt, tuple):
+        if isinstance(self.pt, tuple) or isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
-            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), comps
-        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), comps
+            return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), comps
+        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change)) for wt in Qwts]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -421,9 +420,9 @@ class DOF():
             self.pairing = self.pairing.add_entity(cell)
         if self.target_space is None:
             self.target_space = space
-        if overall_id is not None:
+        if self.id is None and overall_id is not None:
             self.id = overall_id
-        if generator_id is not None:
+        if self.sub_id is None and generator_id is not None:
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):

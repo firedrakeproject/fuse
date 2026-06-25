@@ -70,9 +70,10 @@ class GroupMemberRep(object):
         a mapping is constructed on group creation"""
         identity = self.group.identity.vertex_order_form
         m_array = self.vertex_order_form
+        val = orientation_value(identity, m_array)
         if self.group.group_rep_numbering is not None:
             return self.group.group_rep_numbering[val]
-        return orientation_value(identity, m_array)
+        return val
 
     def __eq__(self, x):
         assert isinstance(x, GroupMemberRep)
