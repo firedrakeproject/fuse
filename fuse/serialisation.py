@@ -31,6 +31,7 @@ class ElementSerialiser():
                           "Edge": Edge,
                           "Triple": ElementTriple,
                           "Group": GroupRepresentation,
+                          "PermutationSet": PermutationSetRepresentation,
                           "SobolevSpace": ElementSobolevSpace,
                           "InterpolationSpace": InterpolationSpace,
                           "PolynomialSpace": PolynomialSpace,
@@ -40,8 +41,11 @@ class ElementSerialiser():
                           "DOFGen": DOFGenerator,
                           "Delta": DeltaPairing,
                           "L2Inner": L2Pairing,
+                          "BarycentricPolynomialKernel": BarycentricPolynomialKernel,
+                          "VectorKernel": VectorKernel,
                           "PolynomialKernel": PolynomialKernel,
                           "PointKernel": PointKernel,
+                          "ComponentKernel": ComponentKernel,
                           "Trace": Trace
                           }
 
@@ -65,6 +69,10 @@ class ElementSerialiser():
                 res_array[i] = dfs_res
             return res_array
 
+        # Some sympy objects are not hashable, so we must accept we may serialise them twice.
+        if isinstance(obj, sp.core.containers.Tuple) or isinstance(obj, sp.Expr) or isinstance(obj, sp.Matrix) or isinstance(obj, sp.Poly):
+            return "Sympy/" + sp.srepr(obj)
+
         if obj in self.seen_objs.keys():
             return self.seen_objs[obj]["id"]
 
@@ -74,9 +82,6 @@ class ElementSerialiser():
             obj_id = self.get_id(obj)
             self.store_obj(obj, obj.dict_id(), obj_id, obj_dict, path)
             return obj.dict_id() + "/" + str(obj_id)
-
-        if isinstance(obj, sp.core.containers.Tuple) or isinstance(obj, sp.Expr):
-            return "Sympy/" + sp.srepr(obj)
 
         return obj
 
