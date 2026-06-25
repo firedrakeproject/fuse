@@ -1104,14 +1104,13 @@ class FlattenedPoint(Point, TensorProductPoint):
         # TODO this should check if it actually is a hypercube
         fiat = CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return fiat
-    
+
     def d_entities(self, d, get_class=True):
         if isinstance(d, tuple):
             if not get_class:
                 return [p.id for p in self.all_subpoints[d]]
             return self.all_subpoints[d]
         return self.d_entities_by_total_d(d, get_class)
-
 
     def construct_fuse_rep(self):
         sub_cells = [self.A, self.B]
@@ -1137,7 +1136,7 @@ class FlattenedPoint(Point, TensorProductPoint):
         # prod_points[1] = prod_points[2]
         # prod_points[2] = temp
         point_cls = [Point(0) for i in range(len(prod_points))]
-        self.all_subpoints[(0,0)] = point_cls
+        self.all_subpoints[(0, 0)] = point_cls
         edges = []
 
         # generate edges of tensor product result

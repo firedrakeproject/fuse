@@ -133,6 +133,7 @@ def test_cg3():
     res_fuse += [helmholtz_solve(mesh, U)]
     assert all(np.array(res_fuse) < 0.003)
 
+
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
                                                                          (create_cg2, "CG", 2, 3.8),
                                                                          (create_cg3_interval, "CG", 3, 4.8)])
@@ -356,7 +357,7 @@ def test_transforms():
 def test_sum_fac():
     # In 2d we have O(N_q^2N_i^4) -> O(p^6)
     # Sum factorisation gains 1 factor so we expect O(p^5)
-    # For CG3 p = 3 so it should be 3x faster 
+    # For CG3 p = 3 so it should be 3x faster
     mesh = ExtrudedMesh(UnitIntervalMesh(10), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
@@ -381,6 +382,7 @@ def test_sum_fac():
         kernel_spectral, = compile_form(a)
         print("Local assembly FLOPs with spectral mode is {0:.3g}".format(kernel_spectral.flop_count))
         assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3
+
 
 @pytest.mark.xfail(reason="3D tensor products not implemented")
 def test_sum_fac_3d():
@@ -412,9 +414,3 @@ def test_sum_fac_3d():
         kernel_spectral, = compile_form(a)
         print("Local assembly FLOPs with spectral mode is {0:.3g}".format(kernel_spectral.flop_count))
         assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3
-=======
-    conv_ufc = np.log2(res[:-1] / res[1:])
-    print("convergence order:", conv_ufc)
-    assert (np.array(conv_fuse) > 1.8).all()
-    assert (np.array(conv_ufc) > 1.8).all()
->>>>>>> main

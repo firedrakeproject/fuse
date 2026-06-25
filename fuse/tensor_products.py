@@ -17,6 +17,7 @@ def symmetric_tensor_product(A, B, matrices=True):
         raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
     return TensorProductTriple(A, B, matrices=matrices, symmetric=True)
 
+
 def flatten_dictionary(tensor_dict):
     counters = {}
     flat_dict = {}
@@ -53,7 +54,7 @@ class TensorProductTriple(ElementTriple):
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
-        
+
         self.pure_perm = not matrices
 
     @property
@@ -159,7 +160,7 @@ class TensorProductTriple(ElementTriple):
         assert self.spaces[0].set_shape == other.spaces[0].set_shape
         assert str(self.spaces[1]) == str(other.spaces[1])
 
-        return EnrichedElement(self, other, symmetric = self.symmetric and other.symmetric, matrices = self.apply_matrices or other.apply_matrices)
+        return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric, matrices=self.apply_matrices or other.apply_matrices)
 
     def flatten(self):
         return TensorProductTriple(self.A, self.B, flat=True, symmetric=self.symmetric, matrices=self.apply_matrices)

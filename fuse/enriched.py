@@ -5,14 +5,13 @@ import finat.ufl
 
 class EnrichedElement(ElementTriple):
     """
-    Non-nodal representation of an enriched element. 
+    Non-nodal representation of an enriched element.
 
-    In general, FUSE element triples should be represented nodally, 
+    In general, FUSE element triples should be represented nodally,
     however this may not be possible for all constructions.
 
     In particulr, we need to preserve tensor product structure.
     """
-
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
         from fuse.tensor_products import TensorProductTriple
@@ -30,7 +29,7 @@ class EnrichedElement(ElementTriple):
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
-        
+
         self.pure_perm = not matrices
 
     @property
@@ -54,7 +53,7 @@ class EnrichedElement(ElementTriple):
         for dim in top.keys():
             total_dim = sum(dim) if self.cell.flat else dim
             ents = self.entity_dofs[total_dim].keys()
-            comp_os = cell.component_orientations()
+            # comp_os = cell.component_orientations()
             for e_idx, e in enumerate(ents):
                 ent_dofs = self.entity_dofs[total_dim][e]
                 if len(ent_dofs) >= 1:
