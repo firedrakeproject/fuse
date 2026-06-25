@@ -903,7 +903,7 @@ class Point():
         return "Cell"
 
     def _from_dict(o_dict):
-        return Point(o_dict["dim"], o_dict["edges"],  oriented=o_dict["oriented"], cell_id=o_dict["id"])
+        return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
 
 class Edge():

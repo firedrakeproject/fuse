@@ -63,7 +63,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/connorjward/pyop3-develop
+          ref: refs/heads/indiamai/fuse_mesh_cell
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config

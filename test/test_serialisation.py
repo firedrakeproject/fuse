@@ -61,6 +61,7 @@ def test_cg_examples():
             dof_val = d.eval(FuseFunction(lambda *x: x))
             assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
 
+
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
