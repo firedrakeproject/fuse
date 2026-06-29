@@ -178,6 +178,20 @@ def test_flattening(A, B, res):
         cell = tensor_cell.flatten()
         cell.construct_fuse_rep()
 
+@pytest.mark.parametrize(["A", "B", "C"], [(line(), line(), line()),])
+def test_creation(A, B, C):
+    tensor_cell_2d = TensorProductPoint(A, B)
+    tensor_cell_2d.to_ufl()
+    tensor_cell_2d.to_fiat()
+    flat_tensor_cell_2d = tensor_cell_2d.flatten()
+    # print(flat_tensor_cell_2d)
+    # print(tensor_cell_2d)
+    # tp = tensor_product(create_cg2(), create_cg2())
+    # tp.generate()
+    # tensor_cell_3d = TensorProductPoint(A, B, C)
+    # tensor_cell_3d.to_ufl()
+    # tensor_cell_3d.to_fiat()
+    # flat_tensor_cell_3d = tensor_cell_3d.flatten()
 
 def test_cg1_dg0():
     A = construct_cg1()
@@ -276,45 +290,44 @@ def test_trace_galerkin_projection():
 def test_hdiv():
     from fuse.tensor_products import HDiv
     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-    m = UnitIntervalMesh(2)
-    mesh = ExtrudedMesh(m, 2)
-    # CG_1 = FiniteElement("CG", "interval", 1)
-    # DG_0 = FiniteElement("DG", "interval", 0)
+    # m = UnitIntervalMesh(2)
+    # mesh = ExtrudedMesh(m, 2)
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
     # cg1 = construct_cg1()
     # dg0 = construct_dg0_integral()
     # p1p0 = HDiv(tensor_product(cg1, dg0))
-    # P1P0 = TensorProductElement(CG_1, DG_0)
+    P1P0 = TensorProductElement(CG_1, DG_0)
     # RT_horiz = HDivElement(p1p0.to_ufl(), transform=hdiv_transform(p1p0))
     # RT_horiz = p1p0.to_ufl()
-    # RT_horiz = HDivElement(P1P0)
+    RT_horiz = HDivElement(P1P0)
     # p0p1 = HDiv(tensor_product(dg0, cg1))
-    # P0P1 = TensorProductElement(DG_0, CG_1)
+    P0P1 = TensorProductElement(DG_0, CG_1)
     # RT_vert = p0p1.to_ufl()
-    # RT_vert = HDivElement(P0P1)
-    # elt = RT_horiz
+    RT_vert = HDivElement(P0P1)
+    elt = RT_horiz + RT_vert
     # + RT_vert
-    # + RT_vert
-    # mesh = UnitSquareMesh(1, 1, quadrilateral=True)
-    A = construct_cg1()
-    B = construct_dg0_integral()
-    non_sym1 = tensor_product(A, B).flatten()
-    print(non_sym1.matrices[1])
-    # .flatten()
-    non_sym2 = tensor_product(B, A).flatten()
-    combined = non_sym1 + non_sym2
-    combined = combined
-    combined.symmetric = True
-    elt = HDiv(combined).to_ufl()
-    V = FunctionSpace(mesh, elt)
+    mesh = UnitSquareMesh(1, 1, quadrilateral=True)
+    # A = construct_cg1()
+    # B = construct_dg0_integral()
+    # non_sym1 = tensor_product(A, B)
+    # # .flatten()
+    # non_sym2 = tensor_product(B, A)
+    # combined = HDiv(non_sym1) + HDiv(non_sym2)
+    # combined = combined
+    # combined.symmetric = True
+    # elt = combined.flatten().to_ufl()
+    # V = FunctionSpace(mesh, elt)
+    V = FunctionSpace(mesh, "RT", 1)
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
     x, y = SpatialCoordinate(mesh)
     # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
     f_vec = as_vector((2, 3))
-    f = project(f_vec, V)
+    # f = project(f_vec, V)
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
-    L = inner(f, v) * dx
+    L = inner(f_vec, v) * dx
     u = Function(V)
     solve(a == L, u)
     breakpoint()
@@ -384,17 +397,17 @@ def test_sum_fac():
         assert (kernel_vanilla.flop_count / kernel_spectral.flop_count) > 3
 
 
-@pytest.mark.xfail(reason="3D tensor products not implemented")
+# @pytest.mark.xfail(reason="3D tensor products not implemented")
 def test_sum_fac_3d():
     # In 2d we have O(N_q^3N_i^6) -> O(p^9)
     # Sum factorisation gains 2 factors so we expect O(p^7)
     # For CG3 p = 3 so it should be 9x faster - seems that it is faster than this in regular firedrake
-    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, quadrilateral=True), 10)
+    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
     C = create_cg3_interval()
-    elem = tensor_product(tensor_product(A, B).flatten(), C)
-    mesh2 = UnitSquareMesh(10, 10, quadrilateral=True)
+    elem = tensor_product(tensor_product(A, B), C)
+    mesh2 = UnitCubeMesh(10, 10, 10, quadrilateral=True, use_fuse=True)
     C = create_cg3_interval()
     D = create_cg3_interval()
     elem2 = symmetric_tensor_product(C, D).flatten()
