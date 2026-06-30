@@ -62,7 +62,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse_mesh_cell
+          ref: refs/heads/connorjward/pyop3
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config
@@ -116,7 +116,6 @@ jobs:
 
           : # Fix for petsc4py+slepc4py build
           echo 'setuptools<81' > constraints.txt
-          echo 'Cython<3.2.6' >> constraints.txt
           export PIP_CONSTRAINT=constraints.txt
 
           : # Install build dependencies
