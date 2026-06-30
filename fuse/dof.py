@@ -195,7 +195,7 @@ class VectorKernel(BaseKernel):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        
+
         if not immersed:
             return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), comps
         return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change)) for wt in Qwts]).astype(np.float64), comps

@@ -3,21 +3,21 @@ from fuse.traces import TrHCurl, TrHDiv
 from fuse.cells import TensorProductPoint
 from fuse.enriched import EnrichedElement
 import numpy as np
-from finat.ufl import TensorProductElement, FuseElement, HDivElement
+from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
 from itertools import product
 from functools import reduce
 
 
-def tensor_product(A, B, matrices=True):
-    if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
-        raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B, matrices=matrices)
+def tensor_product(*factors, matrices=True):
+    if not all(isinstance(f, ElementTriple) for f in factors):
+        raise ValueError("All components of Tensor Product need to be a Fuse Triple.")
+    return TensorProductTriple(*factors, matrices=matrices)
 
 
-def symmetric_tensor_product(A, B, matrices=True):
-    if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
-        raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B, matrices=matrices, symmetric=True)
+def symmetric_tensor_product(*factors, matrices=True):
+    if not all(isinstance(f, ElementTriple) for f in factors):
+        raise ValueError("All components of Tensor Product need to be a Fuse Triple.")
+    return TensorProductTriple(*factors, matrices=matrices, symmetric=True)
 
 
 def flatten_dictionary(tensor_dict):
@@ -66,7 +66,7 @@ class TensorProductTriple(ElementTriple):
         return f"TensorProd({','.join(['{}' for f in self.factors])})".format(*(repr(f) for f in self.factors))
 
     def _entity_associations(self, dofs, overall=True):
-       return self.entity_dofs, None, None
+        return self.entity_dofs, None, None
 
     def setup_matrices(self):
         if self.cell.flat and not self.symmetric:
@@ -79,29 +79,30 @@ class TensorProductTriple(ElementTriple):
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
-        for dim in top.keys():
-            total_dim = sum(dim) if self.flat else dim
-            f_ents = [f.cell.get_topology()[d].keys() for f, d in zip(self.factors, dim)]
-            ents = list(product(*(f_ents)))
-            comp_os = cell.component_orientations()
-            for e, sub_ents in enumerate(ents):
-                ent_dofs = [self.dof_ids[d] for dof_list in self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]].values() for d in dof_list]
-                if len(ent_dofs) >= 1:
-                    sub_mat = oriented_mats_by_entity[dim][e]
-                    mats = [f.matrices[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
-                    ent_ids = [f.entity_ids[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
-                    os = list(product(*([mat.keys() for mat in mats])))
-                    for o in os:
-                        sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]
-                        if self.mat_transformer is not None:
-                            o_classes = (f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o))
-                            combined_sub_mat = self.mat_transformer(*sub_mats, o_classes)
-                        else:
-                            combined_sub_mat = reduce(lambda acc, x: np.kron(acc, x), sub_mats)
-                        new_o = comp_os[dim][o]
-                        if new_o in sub_mat.keys():
-                            sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
-                        # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
+        if len(self.factors) == 2:
+            for dim in top.keys():
+                total_dim = sum(dim) if self.flat else dim
+                f_ents = [f.cell.get_topology()[d].keys() for f, d in zip(self.factors, dim)]
+                ents = list(product(*(f_ents)))
+                comp_os = cell.component_orientations()
+                for e, sub_ents in enumerate(ents):
+                    ent_dofs = [self.dof_ids[d] for dof_list in self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]].values() for d in dof_list]
+                    if len(ent_dofs) >= 1:
+                        sub_mat = oriented_mats_by_entity[dim][e]
+                        mats = [f.matrices[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                        ent_ids = [f.entity_ids[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                        os = list(product(*([mat.keys() for mat in mats])))
+                        for o in os:
+                            sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]
+                            if self.mat_transformer is not None:
+                                o_classes = (f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o))
+                                combined_sub_mat = self.mat_transformer(*sub_mats, o_classes)
+                            else:
+                                combined_sub_mat = reduce(lambda acc, x: np.kron(acc, x), sub_mats)
+                            new_o = comp_os[dim][o]
+                            if new_o in sub_mat.keys():
+                                sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
+                            # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
 
         if self.cell.flat:
             oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
@@ -242,10 +243,10 @@ class HDiv(TensorProductTriple):
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected form degree combination!"
-    
+
     def flatten(self):
         return HDiv(self.base_element.flatten())
-    
+
     def unflatten(self):
         return HDiv(self.base_element.unflatten())
 
@@ -255,11 +256,11 @@ class HCurl(TensorProductTriple):
     def __init__(self, tensor_element):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
-        super(HDiv, self).__init__(*factors, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
+        super(HDiv, self).__init__(*tensor_element.factors, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
         self.spaces = (self.spaces[0].to_vector(), TrHCurl, self.spaces[2])
 
     def to_ufl(self):
-        return WrapperElementBase(super(HCurl, self).to_ufl(), self.gem_transformer)
+        return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
 
     def select_fuse_hcurl_transformer(element):
         import gem
@@ -300,9 +301,9 @@ class HCurl(TensorProductTriple):
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected original mapping!"
-    
+
     def flatten(self):
         return HCurl(self.base_element.flatten())
-    
+
     def unflatten(self):
         return HCurl(self.base_element.unflatten())

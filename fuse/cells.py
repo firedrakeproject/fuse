@@ -10,12 +10,13 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
-from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value, _SYMBOLS, as_tuple
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
-from itertools import product, combinations
+from itertools import product
+from collections import defaultdict
 
 
 class Arrow3D(FancyArrowPatch):
@@ -1013,14 +1014,6 @@ class Edge():
         return Edge(o_dict["point"], o_dict["attachment"], o_dict["orientation"])
 
 
-def factor_list_comp(factors, range):
-    res = []
-    for f in factors:
-        res += [tuple()]
-        for f_d in range(f.dimension + 1):
-            res[-1] += f_d
-    breakpoint()
-
 class TensorProductPoint():
     id_iter = itertools.count()
 
@@ -1040,12 +1033,11 @@ class TensorProductPoint():
             if d == tuple(f.dimension for f in factors):
                 self.entities[d] = [self]
             else:
-                self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))
-]
+                self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
 
     def ordered_vertices(self):
         return self.entities[0]
-    
+
     def ordered_vertex_coords(self):
         return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
 
@@ -1054,8 +1046,6 @@ class TensorProductPoint():
         self.component_os_to_os = {}
         for dim in self.to_fiat().get_topology():
             self.component_os_to_os[dim] = {}
-            a_ent = self.A.d_entities(dim[0])[0]
-            b_ent = self.B.d_entities(dim[1])[0]
             ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
             verts = list(product(*(e.vertices() for e in ents)))
             ident = [i for i in range(len(verts))]
@@ -1150,7 +1140,7 @@ class FlattenedPoint(Point, TensorProductPoint):
         super().__init__(self.dimension, fuse_edges)
 
     def to_ufl(self, name=None):
-        return CellComplexToUFL(self, "quadrilateral")
+        return CellComplexToUFL(self, name=name)
 
     def to_fiat(self, name=None):
         # TODO this should check if it actually is a hypercube
@@ -1164,183 +1154,118 @@ class FlattenedPoint(Point, TensorProductPoint):
             return self.all_subpoints[d]
         return self.d_entities_by_total_d(d, get_class)
 
+    def tensor_attachment_expr(self, axis, factor_edge, parent_mask, child_mask):
+        """
+        Build the tensor-product attachment as a tuple of SymPy expressions.
+
+        Parameters
+        ----------
+        axis:
+            The factor in which the parent cell is being restricted to a facet.
+
+        factor_edge:
+            The Fuse Edge from the factor parent entity to the factor child entity.
+            Its `.attachment` is expected to be a SymPy expression or tuple of
+            SymPy expressions.
+
+        parent_mask:
+            Dimension tuple of the parent product entity.
+
+        child_mask:
+            Dimension tuple of the child product entity.
+
+        Example
+        -------
+        For parent mask (1, 1), child mask (0, 1), axis 0:
+
+            parent coords: (x, y)
+            attachment might be: (0, y) or (1, y)
+
+        For parent mask (1, 1, 1), child mask (1, 0, 1), axis 1:
+
+            parent coords: (x, y, z)
+            attachment might be: (x, 0, z) or (x, 1, z)
+        """
+        child_dim = sum(child_mask)
+        child_syms = _SYMBOLS[:child_dim]
+        result = tuple()
+        child_offset = 0
+
+        for i, (pdim, cdim) in enumerate(zip(parent_mask, child_mask)):
+            if i == axis:
+                local_expr = as_tuple(factor_edge.attachment)
+                # Substitute the child coordinates belonging to this factor.
+                local_child_syms = child_syms[child_offset:child_offset + cdim]
+                local_child_symbols = _SYMBOLS[:cdim]
+                subs = {old: new for old, new in zip(local_child_symbols, local_child_syms)}
+                mapped = tuple(sp.sympify(expr).subs(subs) for expr in local_expr)
+                for comp in mapped:
+                    result += comp
+                child_offset += cdim
+            else:
+                # Identity map on unchanged tensor factors.
+                result += tuple(child_syms[child_offset:child_offset + cdim])
+                child_offset += cdim
+        return result
+
     def construct_fuse_rep(self):
-        factors = tuple(self.factors)
-        n = len(factors)
-
-        if n not in (2, 3):
+        """
+        Construct a Fuse Point for the tensor product of two or three Fuse Point objects.
+        """
+        if len(self.factors) not in (2, 3):
             raise NotImplementedError("Only 2- and 3-factor tensor products are supported.")
+        top_dim = sum(f.dimension for f in self.factors)
+        # Cache all subentities of each factor by dimension.
+        factor_entities = [{d: tuple(f.d_entities(d, get_class=True)) for d in range(f.dimension + 1)}
+                           for f in self.factors]
+        masks_by_total_dim = defaultdict(list)
+        for mask in product(*(range(f.dimension + 1) for f in self.factors)):
+            masks_by_total_dim[sum(mask)].append(mask)
 
-        dims = tuple(f.dimension for f in factors)
+        product_points = {}
+        all_subpoints = {mask: []
+                         for mask in product(*(range(f.dimension + 1) for f in self.factors))}
 
-        def hamming(a, b):
-            return sum(x != y for x, y in zip(a, b))
-
-        def axis_mask(axis):
-            return tuple(1 if i == axis else 0 for i in range(n))
-
-        def face_mask(fixed_axis):
-            return tuple(0 if i == fixed_axis else 1 for i in range(n))
-
-        # Pre-create all possible tensor-product keys.
-        self.all_subpoints = {
-            key: []
-            for key in product(*(range(f.dimension + 1) for f in factors))
-        }
-
-        # Cache entities and attachment lookups per factor/dimension.
-        points = {cell: {} for cell in factors}
-        attachments = {cell: {} for cell in factors}
-        edge_topology = {}
-
-        for cell in factors:
-            edge_topology[cell] = set(cell._topology[1].values())
-            for d in range(cell.dimension + 1):
-                ents = list(cell.d_entities(d, get_class=True))
-                points[cell][d] = ents
-
-                # Map point -> attachment object, so we avoid repeated linear scans.
-                att_by_point = {}
-                for ent in ents:
-                    for att in ent.connections:
-                        att_by_point.setdefault(att.point, att)
-                attachments[cell][d] = att_by_point
-
-        # Vertex tuples of the product.
-        prod_points = list(product(*(points[cell][0] for cell in factors)))
-        point_index = {pt: i for i, pt in enumerate(prod_points)}
-
-        # Create vertex entities.
-        vertex_cls = [Point(0) for _ in prod_points]
-        vertex_by_tuple = dict(zip(prod_points, vertex_cls))
-        self.all_subpoints[(0,) * n] = vertex_cls
-
-        # Generate edges: tuples that differ in exactly one factor.
-        edge_by_pair = {}
-        edge_records = []
-
-        for a, b in combinations(prod_points, 2):
-            if hamming(a, b) != 1:
-                continue
-
-            axis = next(i for i, (x, y) in enumerate(zip(a, b)) if x != y)
-
-            # Ensure the corresponding factor edge exists in the source topology.
-            edge_key = (factors[axis].local_id(a[axis]), factors[axis].local_id(b[axis]))
-            if edge_key not in edge_topology[factors[axis]]:
-                continue
-
-            a_att = attachments[factors[axis]][1][a[axis]]
-            b_att = attachments[factors[axis]][1][b[axis]]
-            edge = Point(1,[Edge(vertex_by_tuple[a], a_att.attachment, a_att.o),
-                            Edge(vertex_by_tuple[b], b_att.attachment, b_att.o),])
-            edge_by_pair[frozenset((a, b))] = edge
-            edge_records.append((a, b, axis))
-            self.all_subpoints[axis_mask(axis)].append(edge)
-
-        # 2-factor products stop here.
-        if n == 2: 
-            self.all_subpoints[dims] = [self]
-            return list(edge_by_pair.values())
-
-        # 3-factor products: group boundary edges into faces generically.
-        # This does not hard-code a hexahedron-only representation; it just
-        # collects the 4 boundary edges for each face.
-        faces = []
-
-        for fixed_axis in range(3):
-            mask = face_mask(fixed_axis)
-
-            for fixed_vertex in points[factors[fixed_axis]][0]:
-                boundary_edges = [
-                    edge_by_pair[frozenset((a, b))]
-                    for a, b, _axis in edge_records
-                    if a[fixed_axis] == fixed_vertex and b[fixed_axis] == fixed_vertex
-                ]
-
-                if len(boundary_edges) != 4:
+        def codim_one_facets(product_entity, mask):
+            """
+            Yield (child_product_entity, axis, factor_edge) for each codim-1 facet.
+            product_entity is a tuple of factor subentities.
+            mask is the corresponding tuple of factor dimensions.
+            """
+            for axis, dim in enumerate(mask):
+                if dim == 0:
                     continue
+                factor_parent = product_entity[axis]
+                for factor_edge in factor_parent.connections:
+                    child_factor_entity = factor_edge.point
 
-                face = Point(2, boundary_edges)
-                faces.append(face)
-                self.all_subpoints[mask].append(face)
+                    child_entity = list(product_entity)
+                    child_entity[axis] = child_factor_entity
+                    child_entity = tuple(child_entity)
 
-        self.all_subpoints[dims] = [self]
-        return faces
+                    yield child_entity, axis, factor_edge
 
-    # def construct_fuse_rep(self):
-    #     dims = tuple(f.dimension for f in self.factors)
-    #     # if sum(dims) > 2:
-    #     #     raise NotImplementedError("Flattening 3D tensor products not yet implemented")
+        top_level_edges = []
+        for total_dim in range(top_dim + 1):
+            for mask in masks_by_total_dim[total_dim]:
+                for prod_ent in product(*(factor_entities[i][d] for i, d in enumerate(mask))):
+                    if total_dim == 0:
+                        product_point = Point(0)
+                    else:
+                        boundary = []
+                        for child_ent, axis, factor_edge in codim_one_facets(prod_ent, mask):
+                            child_point = product_points[child_ent]
+                            child_mask = tuple(e.dimension for e in child_ent)
+                            attach = self.tensor_attachment_expr(axis, factor_edge, mask, child_mask)
+                            boundary.append(Edge(child_point, attach, factor_edge.o))
+                        product_point = Point(total_dim, boundary)
 
-    #     self.all_subpoints = {sub_pt: [] for sub_pt in list(product(*(range(f.dimension + 1) for f in self.factors)))}
-    #     points = {cell: {i: [] for i in range(max(dims) + 1)} for cell in self.factors}
-    #     attachments = {cell: {i: [] for i in range(max(dims) + 1)} for cell in self.factors}
-
-    #     for d in range(max(dims) + 1):
-    #         for cell in self.factors:
-    #             if d <= cell.dimension:
-    #                 sub_ent = cell.d_entities(d, get_class=True)
-    #                 points[cell][d].extend(sub_ent)
-    #                 for s in sub_ent:
-    #                     attachments[cell][d].extend(s.connections)
-
-    #     prod_points = list(product(*[points[cell][0] for cell in self.factors]))
-
-    #     point_cls = [Point(0) for i in range(len(prod_points))]
-    #     self.all_subpoints[(0, 0)] = point_cls
-    #     edges = []
-
-    #     # generate edges of tensor product result
-    #     for a in prod_points:
-    #         for b in prod_points:
-    #             # of all combinations of point, take those where at least one changes and at least one is the same
-    #             if sum(x != y for x, y in zip(a, b)) == 1:
-    #                 # Exactly 1 point has changed, so these points are connected
-    #                 # ensure if they change, that edge exists in the existing topology
-    #                 if all([a[i] == b[i] or (self.factors[i].local_id(a[i]), self.factors[i].local_id(b[i])) in list(self.factors[i]._topology[1].values()) for i in range(len(self.factors))]):
-    #                     edges.append((a, b))
-    #     # hasse level 1
-    #     edge_cls1 = {e: None for e in edges}
-    #     for i in range(len(self.factors)):
-    #         for (a, b) in edges:
-    #             a_idx = prod_points.index(a)
-    #             b_idx = prod_points.index(b)
-    #             if a[i] != b[i]:
-    #                 a_edge = [att for att in attachments[self.factors[i]][1] if att.point == a[i]][0]
-    #                 b_edge = [att for att in attachments[self.factors[i]][1] if att.point == b[i]][0]
-    #                 edge_cls1[(a, b)] = Point(1, [Edge(point_cls[a_idx], a_edge.attachment, a_edge.o),
-    #                                               Edge(point_cls[b_idx], b_edge.attachment, b_edge.o)])
-    #                 edge_tuple_dim = tuple(int((self.factors[i].local_id(a[i]), self.factors[i].local_id(b[i])) in list(self.factors[i]._topology[1].values())) for i in range(len(self.factors)))
-    #                 self.all_subpoints[edge_tuple_dim] += [edge_cls1[(a, b)]]
-    #     edge_cls2 = []
-    #     # hasse level 2
-    #     for i in range(len(self.factors)):
-    #         for (a, b) in edges:
-    #             if a[i] == b[i]:
-    #                 syms = tuple()
-    #                 for sym_name in ["x", "y", "z"]:
-    #                     syms += (sp.Symbol(sym_name),)
-    #                 a_edge = [att for att in attachments[self.factors[i]][1] if att.point == a[i]][0]
-    #                 if i == 0:
-    #                     attach = (syms[i],) + a_edge.attachment
-    #                 else:
-    #                     attach = a_edge.attachment + (syms[i],)
-    #                 attach = syms[:i] + a_edge.attachment + syms[i:]
-    #                 edge_cls2.append(Edge(edge_cls1[(a, b)], attach, a_edge.o))
-        
-    #     if dims == (1, 1):
-    #         self.all_subpoints[dims] = [self]
-    #         return edge_cls2
-    #     # generate faces of tensor product result
-    #     prod_edges = list(product(edges, edges, edges, edges))
-    #     for a, b, c, d in prod_edges:
-    #         # of all combinations of point, take those where 2 change
-    #         if sum(x != y or x != y or x != z for w, x, y, z in zip(a, b, c, d)) == 2:
-    #             # ensure that edge exists in the existing topology
-    #             if all([a[i] == b[i] or (self.factors[i].local_id(a[i]), self.factors[i].local_id(b[i])) in list(self.factors[i]._topology[2].values()) for i in range(len(self.factors))]):
-    #                 faces.append((a, b, c, d))
-    #     breakpoint()
+                        if prod_ent == tuple(self.factors):
+                            top_level_edges = boundary
+                    product_points[prod_ent] = product_point
+                    all_subpoints[mask].append(product_point)
+        self.all_subpoints = all_subpoints
+        return top_level_edges
 
     def flatten(self):
         return self
@@ -1371,7 +1296,7 @@ class CellComplexToFiatSimplex(Simplex):
         #     breakpoint()
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension, e_id=0, o=None):
         """Constructs the reference element of a cell
@@ -1411,7 +1336,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         super(CellComplexToFiatTensorProduct, self).__init__(*fiat_factors)
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1443,7 +1368,7 @@ class CellComplexToFiatHypercube(Hypercube):
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1539,10 +1464,11 @@ def constructCellComplex(name):
         # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
     elif name == "hexahedron":
-        import warnings
-        warnings.warn("Hexahedron unimplemented in Fuse")
-        import ufl
-        return ufl.Cell(name)
+        # import warnings
+        # warnings.warn("Hexahedron unimplemented in Fuse")
+        # import ufl
+        # return ufl.Cell(name)
+        return TensorProductPoint(line(), line(), line()).flatten().to_ufl(name)
     elif "*" in name:
         components = [constructCellComplex(c.strip()).cell_complex for c in name.split("*")]
         return TensorProductPoint(*components).to_ufl(name)
