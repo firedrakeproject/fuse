@@ -90,6 +90,6 @@ class EnrichedElement(ElementTriple):
 
     def flatten(self):
         return EnrichedElement(self.A.flatten(), self.B.flatten(), flat=True, symmetric=self.symmetric, matrices=self.matrices)
-    
+
     def unflatten(self):
         return EnrichedElement(self.A.unflatten(), self.B.unflatten(), flat=False, symmetric=self.symmetric, matrices=self.matrices)

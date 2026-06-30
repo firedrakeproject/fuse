@@ -3,7 +3,7 @@ import numpy as np
 from fuse import *
 from firedrake import *
 from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
-from test_convert_to_fiat import create_cg2, create_dg0
+from test_convert_to_fiat import create_cg2, create_dg0, helmholtz_solve as helmholtz_solve2
 # from test_convert_to_fiat import create_cg1
 
 
@@ -104,6 +104,37 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv) > conv_rate).all()
 
 
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
+                                                                         (create_cg2, "CG", 2, 3.8),
+                                                                         (create_cg3_interval, "CG", 3, 4.8)])
+def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
+    vals = range(2, 4)
+    res = []
+    for r in vals:
+        # m = UnitIntervalMesh(2**r, use_fuse=True)
+        # m2 = ExtrudedMesh(m, 2**r)
+        # mesh = ExtrudedMesh(m2, 2**r)
+
+        # A = elem_gen()
+        # B = elem_gen()
+        # C = elem_gen()
+        # elem = tensor_product(A, B, C)
+
+        # U = FunctionSpace(mesh, elem.to_ufl())
+        # res += [helmholtz_solve(mesh, U)]
+
+        m = UnitIntervalMesh(2**r)
+        m2 = ExtrudedMesh(m, 2**r)
+        mesh_ufc = ExtrudedMesh(m2, 2**r)
+        U = FunctionSpace(mesh_ufc, elem_code, deg)
+        res += [helmholtz_solve(mesh_ufc, U)]
+    print("l2 error norms:", res)
+    res = np.array(res)
+    conv = np.log2(res[:-1] / res[1:])
+    print("convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
+
+
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
@@ -166,6 +197,38 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     assert (np.array(conv) > conv_rate).all()
 
 
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.7),
+                                                                         (create_cg2, "CG", 2, 3.8),
+                                                                         (create_cg3_interval, "CG", 3, 4.8)])
+def test_quad_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
+    vals = range(2, 4)
+    res_fuse = []
+    res_fire = []
+    for r in vals:
+        mesh_fuse = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r, hexahedral=True, use_fuse=True)
+        A = elem_gen()
+        B = elem_gen()
+        C = elem_gen()
+        elem = symmetric_tensor_product(A, B, C).flatten()
+        U = FunctionSpace(mesh_fuse, elem.to_ufl())
+        res_fuse += [helmholtz_solve2(U, mesh_fuse)]
+
+        mesh_ufc = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r, hexahedral=True)
+        U = FunctionSpace(mesh_ufc, elem_code, deg)
+        res_fire += [helmholtz_solve2(U, mesh_ufc)]
+    print("Fuse l2 error norms:", res_fuse)
+    res = np.array(res_fuse)
+    conv = np.log2(res[:-1] / res[1:])
+    print("Fuse convergence order:", conv)
+
+    print("FIAT l2 error norms:", res_fire)
+    res = np.array(res_fire)
+    conv = np.log2(res[:-1] / res[1:])
+    print("Fiat convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
+    assert (np.array(conv) > conv_rate).all()
+
+
 @pytest.mark.parametrize(["A", "B", "res"], [(Point(0), line(), False),
                                              (line(), line(), True),
                                              (polygon(3), line(), False),])
@@ -178,20 +241,20 @@ def test_flattening(A, B, res):
         cell = tensor_cell.flatten()
         cell.construct_fuse_rep()
 
+
 @pytest.mark.parametrize(["A", "B", "C"], [(line(), line(), line()),])
 def test_creation(A, B, C):
     tensor_cell_2d = TensorProductPoint(A, B)
     tensor_cell_2d.to_ufl()
     tensor_cell_2d.to_fiat()
     flat_tensor_cell_2d = tensor_cell_2d.flatten()
-    # print(flat_tensor_cell_2d)
-    # print(tensor_cell_2d)
-    # tp = tensor_product(create_cg2(), create_cg2())
-    # tp.generate()
-    # tensor_cell_3d = TensorProductPoint(A, B, C)
-    # tensor_cell_3d.to_ufl()
-    # tensor_cell_3d.to_fiat()
-    # flat_tensor_cell_3d = tensor_cell_3d.flatten()
+    print(flat_tensor_cell_2d)
+    tensor_cell_3d = TensorProductPoint(A, B, C)
+    tensor_cell_3d.to_ufl()
+    tensor_cell_3d.to_fiat()
+    flat_tensor_cell_3d = tensor_cell_3d.flatten()
+    print(flat_tensor_cell_3d)
+
 
 def test_cg1_dg0():
     A = construct_cg1()
@@ -288,7 +351,7 @@ def test_trace_galerkin_projection():
 
 
 def test_hdiv():
-    from fuse.tensor_products import HDiv
+    # from fuse.tensor_products import HDiv
     np.set_printoptions(linewidth=90, precision=4, suppress=True)
     # m = UnitIntervalMesh(2)
     # mesh = ExtrudedMesh(m, 2)
@@ -317,17 +380,17 @@ def test_hdiv():
     # combined = combined
     # combined.symmetric = True
     # elt = combined.flatten().to_ufl()
-    # V = FunctionSpace(mesh, elt)
-    V = FunctionSpace(mesh, "RT", 1)
+    V = FunctionSpace(mesh, elt)
+    # V = FunctionSpace(mesh, "RT", 1)
     u = TrialFunction(V)
     v = TestFunction(V)
     f = Function(V)
     x, y = SpatialCoordinate(mesh)
     # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
     f_vec = as_vector((2, 3))
-    # f = project(f_vec, V)
+    f = project(f_vec, V)
     a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
-    L = inner(f_vec, v) * dx
+    L = inner(f, v) * dx
     u = Function(V)
     solve(a == L, u)
     breakpoint()
@@ -402,15 +465,13 @@ def test_sum_fac_3d():
     # In 2d we have O(N_q^3N_i^6) -> O(p^9)
     # Sum factorisation gains 2 factors so we expect O(p^7)
     # For CG3 p = 3 so it should be 9x faster - seems that it is faster than this in regular firedrake
-    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True), 10)
+    mesh = ExtrudedMesh(ExtrudedMesh(UnitIntervalMesh(10), 10), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
     C = create_cg3_interval()
-    elem = tensor_product(tensor_product(A, B), C)
-    mesh2 = UnitCubeMesh(10, 10, 10, quadrilateral=True, use_fuse=True)
-    C = create_cg3_interval()
-    D = create_cg3_interval()
-    elem2 = symmetric_tensor_product(C, D).flatten()
+    elem = tensor_product(A, B, C)
+    mesh2 = UnitCubeMesh(10, 10, 10, hexahedral=True, use_fuse=True)
+    elem2 = symmetric_tensor_product(A, B, C).flatten()
     V = FunctionSpace(mesh, elem.to_ufl())
     V1 = FunctionSpace(mesh, "CG", 3)
     V2 = FunctionSpace(mesh2, elem2.to_ufl())

@@ -7,6 +7,8 @@ from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
 from FIAT.reference_element import ufc_cell
+from functools import cache
+from itertools import product
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -15,7 +17,6 @@ from finat.ufl import FuseElement
 import warnings
 import numpy as np
 import scipy
-from functools import cache
 
 
 def compute_form_degree(cell, spaces):
@@ -411,7 +412,7 @@ class ElementTriple():
         flat_by_entity = {}
         cell = self.cell
         if tensor:
-            dims = [(a_d, b_d) for a_d in range(cell.A.dimension + 1) for b_d in range(cell.B.dimension + 1)]
+            dims = list(product(*(range(f.dimension + 1) for f in cell.factors)))
         else:
             dims = [i for i in range(cell.dimension + 1)]
         for dim in dims:

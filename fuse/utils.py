@@ -2,6 +2,8 @@ import numpy as np
 import sympy as sp
 import math
 
+_SYMBOLS = tuple(sp.Symbol(s) for s in ("x", "y", "z"))
+
 
 def fold_reduce(func_list, *prev):
     """
@@ -49,7 +51,7 @@ def tabulate_sympy(expr, pts):
     # returns: evaluation of expr at pts
     res = np.zeros((pts.shape[0],) + (expr.shape[-1],))
     i = 0
-    syms = ["x", "y", "z"]
+    syms = _SYMBOLS
     for pt in pts:
         if not hasattr(pt, "__iter__"):
             pt = (pt,)
@@ -105,3 +107,11 @@ def orientation_value(identity_arg, perm_arg):
         identity.remove(perm[i])
         val += loc * math.factorial(len(perm) - i - 1)
     return val
+
+
+def as_tuple(expr):
+    if isinstance(expr, tuple):
+        return expr
+    if isinstance(expr, list):
+        return tuple(expr)
+    return (expr,)
