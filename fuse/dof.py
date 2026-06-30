@@ -260,14 +260,14 @@ class BarycentricPolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
-        o_dict = {"fn": self.fn}
+        o_dict = {"fn": self.fn, "syms": self.syms}
         return o_dict
 
     def dict_id(self):
         return "BarycentricPolynomialKernel"
 
     def _from_dict(obj_dict):
-        return BarycentricPolynomialKernel(obj_dict["fn"])
+        return BarycentricPolynomialKernel(obj_dict["fn"], symbols=obj_dict["syms"])
 
 
 class PolynomialKernel(BaseKernel):

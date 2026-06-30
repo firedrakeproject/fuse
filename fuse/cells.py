@@ -289,7 +289,7 @@ class Point():
     id_iter = itertools.count()
 
     def __init__(self, d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
-        if not cell_id:
+        if cell_id is None:
             cell_id = next(self.id_iter)
         self.id = cell_id
         self.dimension = d
@@ -299,7 +299,7 @@ class Point():
 
         if d == 0:
             assert (edges == [])
-        if vertex_num:
+        if vertex_num and vertex_num > 1:
             edges = self.compute_attachments(vertex_num, edges, edge_orientations)
 
         self.oriented = oriented
@@ -891,8 +891,10 @@ class Point():
 
     def _to_dict(self):
         # think this is probably missing stuff
+        # d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
         o_dict = {"dim": self.dimension,
                   "edges": [c for c in self.connections],
+                  "vertex_num": len(self.vertices()),
                   "oriented": self.oriented,
                   "id": self.id}
         return o_dict

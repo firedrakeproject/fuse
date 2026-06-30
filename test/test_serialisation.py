@@ -1,7 +1,9 @@
 from fuse import *
+from firedrake import *
 from fuse.serialisation import ElementSerialiser
 from test_convert_to_fiat import create_cg1
-# from test_2d_examples_docs import construct_nd
+from test_orientations import interpolate_vs_project, get_expression
+import pytest
 import numpy as np
 
 vert = Point(0)
@@ -60,13 +62,36 @@ def test_cg_examples():
             assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
 
 
-# def test_ned():
-#     cell = polygon(3)
-#     triple = construct_nd(cell)
-#     converter = ElementSerialiser()
-#     encoded = converter.encode(triple)
+cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
+nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
+rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
+dg_params = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 3))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+nd2_params = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 3))]
+bdm_params = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 3))]
 
-#     decoded = converter.decode(encoded)
-#     for d in decoded.generate():
-#         dof_val = d.eval(phi_2)
-#         assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_params + nd_params + rt_params + dg_params + nd2_params + bdm_params)
+def test_post_serialisation_convergence(col, k, deg, conv_rate):
+    "Tests that appropriate convergence is still achieved after serialisation."
+    elem = periodic_table(col, 2, k, deg)
+    converter = ElementSerialiser()
+    encoded = converter.encode(elem)
+    elem_decoded = converter.decode(encoded)
+    scale_range = range(3, 6)
+    diff_inte = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem_decoded.to_ufl())
+        x, y = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        if len(elem.get_value_shape()) > 0:
+            expr = as_vector([expr, expr])
+        _, exact = get_expression(V)
+        _, diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
+
+    print("interpolation l2 error norms:", diff_inte)
+    diff_inte = np.array(diff_inte)
+    conv = np.log2(diff_inte[:-1] / diff_inte[1:])
+    print("convergence order:", conv)
+    assert all([c > conv_rate for c in conv])
