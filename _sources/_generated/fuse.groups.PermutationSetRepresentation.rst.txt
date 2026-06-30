@@ -23,6 +23,7 @@ PermutationSetRepresentation
       ~PermutationSetRepresentation.conjugacy_class
       ~PermutationSetRepresentation.cosets
       ~PermutationSetRepresentation.cosets_by_submember
+      ~PermutationSetRepresentation.dict_id
       ~PermutationSetRepresentation.get_member
       ~PermutationSetRepresentation.get_member_by_val
       ~PermutationSetRepresentation.members
