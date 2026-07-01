@@ -52,16 +52,16 @@ class EnrichedElement(ElementTriple):
         top = cell.to_fiat().get_topology()
         for dim in top.keys():
             total_dim = sum(dim) if self.cell.flat else dim
-            ents = self.entity_dofs[total_dim].keys()
+            ents = self.entity_ids[total_dim].keys()
             # comp_os = cell.component_orientations()
             for e_idx, e in enumerate(ents):
-                ent_dofs = self.entity_dofs[total_dim][e]
+                ent_dofs = self.entity_ids[total_dim][e]
                 if len(ent_dofs) >= 1:
                     sub_mat = oriented_mats_by_entity[total_dim][e_idx]
                     a_mat = self.A.matrices[total_dim][e_idx]
-                    a_ent_ids = self.A.entity_dofs[total_dim][e]
+                    a_ent_ids = self.A.entity_ids[total_dim][e]
                     b_mat = self.B.matrices[total_dim][e_idx]
-                    b_ent_ids = self.B.entity_dofs[total_dim][e]
+                    b_ent_ids = self.B.entity_ids[total_dim][e]
 
                     for o in a_mat.keys():
                         a_sub_mat = a_mat[o][np.ix_(a_ent_ids, a_ent_ids)]
@@ -77,11 +77,11 @@ class EnrichedElement(ElementTriple):
         a_dofs = self.A.generate()
         b_dofs = self.B.generate()
         numAdofs = len(a_dofs)
-        self.entity_dofs = {}
-        for dim in self.A.entity_dofs.keys():
-            self.entity_dofs[dim] = {}
-            for ent in self.A.entity_dofs[dim]:
-                self.entity_dofs[dim][ent] = self.A.entity_dofs[dim][ent] + [b_dof + numAdofs for b_dof in self.B.entity_dofs[dim][ent]]
+        self.entity_ids = {}
+        for dim in self.A.entity_ids.keys():
+            self.entity_ids[dim] = {}
+            for ent in self.A.entity_ids[dim]:
+                self.entity_ids[dim][ent] = self.A.entity_ids[dim][ent] + [b_dof + numAdofs for b_dof in self.B.entity_ids[dim][ent]]
         return a_dofs + b_dofs
 
     def to_ufl(self):

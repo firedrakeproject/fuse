@@ -263,12 +263,12 @@ def test_cg1_dg0():
     ba = tensor_product(B, A).flatten()
     combined = ab + ba
     combined.symmetric = True
-    mesh1 = UnitSquareMesh(2, 2, quadrilateral=True)
+    mesh1 = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
     V = FunctionSpace(mesh1, combined.to_ufl())
     ab = tensor_product(A, B)
     ba = tensor_product(B, A)
     combined = ab + ba
-    m = UnitIntervalMesh(2)
+    m = UnitIntervalMesh(2, use_fuse=True)
     mesh2 = ExtrudedMesh(m, 2)
     V2 = FunctionSpace(mesh2, combined.to_ufl())
     # CG_1 = FiniteElement("CG", "interval", 1)
