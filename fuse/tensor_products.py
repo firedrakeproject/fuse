@@ -8,6 +8,7 @@ from itertools import product
 from functools import reduce
 from collections import defaultdict
 
+
 def tensor_product(*factors, matrices=True):
     if not all(isinstance(f, ElementTriple) for f in factors):
         raise ValueError("All components of Tensor Product need to be a Fuse Triple.")
@@ -197,7 +198,7 @@ class HDiv(TensorProductTriple):
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
-    
+
     def repr(self):
         return "HDiv(" + super(HDiv, self).repr() + ")"
 
@@ -217,9 +218,7 @@ class HDiv(TensorProductTriple):
             # y-aligned edges.
             cell = element.sub_elements[1].cell
             bv = cell.basis_vectors()[0][0]
-            original = lambda v: [gem.Product(gem.Literal(-1), v), gem.Zero()]
-            new = lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
-            return original, lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
         elif ks == (1, 0):
             # Make the scalar value the upward-pointing normal on the
             # x-aligned edges.

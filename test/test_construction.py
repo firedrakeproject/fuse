@@ -120,6 +120,7 @@ def test_polynomial_poisson_solve(deg):
     print(res)
     assert np.allclose(res, 0)
 
+
 def test_ned3():
     nd3_pt = periodic_table(1, 3, 1, 3)
     pt_gen = nd3_pt.DOFGenerator[1].x[0].triple.DOFGenerator[0].g1.members()
@@ -129,8 +130,8 @@ def test_ned3():
     mn_gen = nd3_mn.DOFGenerator[1].x[0].triple.DOFGenerator[0].g1.members()
     nd3_mn.to_fiat()
 
-    print([nd3_pt.dofs[i].id for i in range(24,30)])
-    print([nd3_mn.dofs[i].id for i in range(24,30)])
+    print([nd3_pt.dofs[i].id for i in range(24, 30)])
+    print([nd3_mn.dofs[i].id for i in range(24, 30)])
     # for i in range(24, 30):
     #     print(i)
     #     print(pt_gen[i - 24], nd3_pt.dofs[i])

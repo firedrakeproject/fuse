@@ -364,7 +364,7 @@ def test_hdiv():
     P1P0 = TensorProductElement(CG_1, DG_0)
     RT_horiz = HDivElement(P1P0)
     P0P1 = TensorProductElement(DG_0, CG_1)
-    
+
     RT_vert = HDivElement(P0P1)
     elt = RT_horiz + RT_vert
     elt2 = p1p0.to_ufl()
@@ -386,7 +386,7 @@ def test_hdiv():
         f = Function(V)
         x, y = SpatialCoordinate(mesh)
         # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
-        f_vec = as_vector((2,3))
+        f_vec = as_vector((2, 3))
         f = project(f_vec, V)
         a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
         L = inner(f, v) * dx
@@ -394,7 +394,6 @@ def test_hdiv():
         solve(a == L, u)
         print(u.dat.data)
     breakpoint()
-
 
 
 def test_transforms():

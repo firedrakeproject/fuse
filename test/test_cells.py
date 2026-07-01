@@ -1,6 +1,6 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import ufc_triangle
+from fuse.cells import ufc_triangle, ufc_simplex, ufc_tetrahedron
 import pytest
 import numpy as np
 from FIAT.reference_element import default_simplex
