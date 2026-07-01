@@ -35,7 +35,7 @@ class DeltaPairing(Pairing):
         return v(*kernel.pt)
 
     def tabulate(self):
-        return 1
+        return np.eye(self.entity.dim())
 
     def add_entity(self, entity):
         res = DeltaPairing()
@@ -80,8 +80,8 @@ class L2Pairing(Pairing):
         if self.orientation:
             new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
             basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-            return basis_change
-        return np.eye(bvs.shape[0])
+            return (1/self.entity.volume())*basis_change
+        return (1/self.entity.volume())*np.eye(bvs.shape[0])
 
     def add_entity(self, entity):
         res = L2Pairing()
@@ -190,11 +190,15 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
-        if isinstance(self.pt, int):
-            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        if len(value_shape) == 0:
+            comps = [[tuple()] for pt in Qpts]
+        else:
+            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+        if isinstance(self.pt, tuple) or isinstance(self.pt, int):
+            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
-            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+            return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), comps
+        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change)) for wt in Qwts]).astype(np.float64), comps
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -274,10 +278,14 @@ class PolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[]):
         if hasattr(fn, "__iter__"):
-            if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
-                raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
-            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(len(fn))]
-            self.shape = len(fn)
+            shape = len(fn)
+        else:
+            shape = 0
+        if len(symbols) != 0 and (shape != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(shape))) and not sp.sympify(fn).as_poly():
+            raise ValueError("Function argument or its components must be able to be interpreted as a sympy polynomial")
+        if shape != 0:
+            self.fn = [sp.sympify(fn[i]).as_poly() for i in range(shape)]
+            self.shape = shape
         else:
             self.fn = sp.sympify(fn)
             self.shape = 0
@@ -304,9 +312,7 @@ class PolynomialKernel(BaseKernel):
         if self.shape == 0:
             res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
         else:
-            res = []
-            for i in range(self.shape):
-                res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
+            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
         return res
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
@@ -426,13 +432,7 @@ class DOF():
     def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        dim = self.cell_defined_on.get_spatial_dimension()
-        if dim > 0:
-            bvs = np.array(self.cell_defined_on.basis_vectors())
-            new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
-            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-        else:
-            basis_change = np.eye(dim)
+        basis_change = self.pairing.tabulate()
 
         if self.immersed and (isinstance(self.kernel, VectorKernel) or isinstance(self.kernel, BarycentricPolynomialKernel) or isinstance(self.kernel, PolynomialKernel)):
             def immersed(pt):
@@ -461,20 +461,21 @@ class DOF():
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         if self.immersed:
-            # need to compute jacobian from attachment.
             pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
-            # J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
-            J_det = 1
+            J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
             if not np.allclose(J_det, 1):
                 raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
+            # if self.pairing.orientation:
+            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
+            # else:
             immersion = self.target_space.tabulate(pts, self.cell_defined_on)
+            # Special case - force evaluation on different orientation of entity for construction of matrix transforms
+            # if self.entity_o:
+            #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.entity_o))
             if isinstance(self.target_space, TrH1):
-                new_wts = wts
+                new_wts = wts * J_det
             else:
                 new_wts = np.outer(wts * J_det, immersion)
-                # shape is wrong for 2d face on tet
-            # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
-            #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
