@@ -22,6 +22,7 @@ dependencies = [
   "sympy",
   "sphinx",
   "matplotlib",
+  "recursivenodes",
 ]
 
 [project.urls]
@@ -34,9 +35,11 @@ docs = [
   "sphinx-bootstrap-theme",
   "sphinx_design",
   "sphinxcontrib-fulltoc",
+  "sphinx_remove_toctrees",
 ]
 dev = [
   "pytest",
+  "pytest-mock",
   "coverage",
   "flake8",
 ]

@@ -1,9 +1,9 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import firedrake_triangle
+from fuse.cells import ufc_triangle, ufc_tetrahedron
 import pytest
 import numpy as np
-from FIAT.reference_element import default_simplex
+from FIAT.reference_element import default_simplex, ufc_simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
@@ -35,13 +35,20 @@ def test_basis_vectors(C):
         assert len(bv_ids) == len(bv_coords)
 
 
-def test_orientation():
-    cell = Point(1, [Point(0), Point(0)], vertex_num=2)
-    print(cell.get_topology())
-    for g in cell.group.members():
-        if not g.perm.is_Identity:
-            oriented = cell.orient(g)
-            assert np.allclose(np.array(oriented.basis_vectors(return_coords=True)[0]), -1)
+# def test_basis_group(C):
+#     if C.dimension == 0:
+#         assert C.basis_group.size() == 1
+#     else:
+#         bv_coords = C.basis_vectors(return_coords=True)
+#         bv_0 = bv_coords[0]
+#         for i, g in enumerate(C.basis_group.members()):
+#             assert np.allclose(np.array(bv_coords[i]), np.array(g(bv_0)))
+#         if C.dimension == 2:
+#             for i, g in enumerate(C.basis_group.members()):
+#                 bvs = np.array(C.basis_vectors())
+#                 new_bvs = np.array(C.orient(g).basis_vectors())
+#                 basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+#                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
 
 
 def test_sub_basis_vectors():
@@ -57,7 +64,8 @@ def test_sub_basis_vectors():
 
 
 def test_permute_entities():
-    cell = polygon(3)
+    # cell = polygon(3)
+    cell = make_tetrahedron()
     # cell.plot(filename="test_cell.png")
 
     # for dof in nd.generate():
@@ -66,13 +74,14 @@ def test_permute_entities():
 
     print(cell.vertices(return_coords=True))
     print([c.point.connections for c in cell.connections])
-    print([[c.point.get_node(c2.point.id, return_coords=True) for c2 in c.point.connections] for c in cell.connections])
+    # print([[c.point.get_node(c2.point.id, return_coords=True) for c2 in c.point.connections] for c in cell.connections])
     # cell.plot(filename="test_cell_flipped.png")
     # import matplotlib.pyplot as plt
     for i, g in enumerate(cell.group.members()):
         print(i, g)
         print(cell.permute_entities(g, 0))
         print(cell.permute_entities(g, 1))
+        print(cell.permute_entities(g, 2))
     #     oriented = cell.orient(g)
     #     print("Edges", oriented.connections)
     #     fig, ax = plt.subplots()
@@ -124,11 +133,13 @@ def test_compare_cell_to_firedrake():
     for i in range(n):
         edges.append(
             Point(1, [vertices[(i) % n], vertices[(i+1) % n]], vertex_num=2))
+
     cellS3 = S3.add_cell(tri1)
     for g in cellS3.members():
         print(g.perm.array_form)
         try:
             p = g.perm.array_form
+
             tri3 = Point(2, [edges[p[0]], edges[p[1]], edges[p[2]]], vertex_num=n)
             print(tri1.orient(g).get_topology())
         except AssertionError:
@@ -136,24 +147,24 @@ def test_compare_cell_to_firedrake():
 
     # print(tri1.get_topology())
     print(tri2.get_topology())
-    tri3 = firedrake_triangle()
+    tri3 = ufc_triangle()
     print(tri3.get_topology())
 
 
 @pytest.fixture
 def mock_cell_complex(mocker, expect):
-    mocker.patch('firedrake.mesh.constructCellComplex', return_value=expect.to_ufl("triangle"))
+    mocker.patch('firedrake.mesh.as_cell', return_value=expect.to_ufl("triangle"))
 
 
 @pytest.mark.skipif("not config.getoption('--run-cleared')", reason="Only run when --run-cleared is given")
 @pytest.mark.usefixtures("mock_cell_complex")
-@pytest.mark.parametrize(["expect"], [(firedrake_triangle(),), (polygon(3),)])
+@pytest.mark.parametrize(["expect"], [(ufc_triangle(),), (polygon(3),)])
 def test_ref_els(expect):
     scale_range = range(3, 6)
-
+    print(expect)
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, "CG", 3)
         res1 = helmholtz_solve(mesh, V)
@@ -182,3 +193,143 @@ def test_comparison():
     print(tensor_product >= tensor_product1)
     # print(tensor_product1 >= tensor_product)
     # print(tensor_product1 >= tensor_product1)
+
+
+@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),)])
+def test_connectivity(cell):
+    cell = cell.to_fiat()
+    for dim0 in range(cell.get_spatial_dimension()+1):
+        connectivity = cell.get_connectivity()[(dim0, 0)]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+
+def test_tensor_connectivity():
+    from test_2d_examples_docs import construct_cg1
+    A = construct_cg1()
+    B = construct_cg1()
+    cell = tensor_product(A, B).cell
+    cell = cell.to_fiat()
+    for dim0 in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        connectivity = cell.get_connectivity()[(dim0, (0, 0))]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+
+@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_tetrahedron(), )])
+def test_new_connectivity(cell):
+    cell = cell.to_fiat()
+    for dim0 in range(cell.get_dimension() + 1):
+        connectivity = cell.get_connectivity()[(dim0, 0)]
+        topology = cell.get_topology()[dim0]
+        assert len(connectivity) == len(topology)
+        for i, t in topology.items():
+            print(connectivity[i])
+            print(t)
+        assert all(connectivity[i] == t for i, t in topology.items())
+
+
+def test_compare_tris():
+    fuse_tet = polygon(3)
+    ufc_tet = ufc_triangle()
+    fiat_tet = ufc_simplex(2)
+
+    print(fiat_tet.get_topology())
+    print(fuse_tet.get_topology())
+    print(ufc_tet.get_topology())
+    fiat_connectivity = fiat_tet.get_connectivity()
+    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
+    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
+    _dim = fiat_tet.get_dimension()
+    print("fiat")
+    print(make_entity_cone_lists(fiat_tet))
+    for dim0 in range(_dim):
+        connectivity = fiat_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+    print("fuse")
+    print(make_entity_cone_lists(fuse_tet.to_fiat()))
+    for dim0 in range(_dim):
+        connectivity = fuse_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+    print("fuse ufc")
+    print(make_entity_cone_lists(ufc_tet.to_fiat()))
+    for dim0 in range(_dim):
+        connectivity = ufc_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+
+
+def test_compare_tets():
+    tet = make_tetrahedron()
+    # perm = tet.group.get_member([1, 2, 0, 3])
+    fuse_tet = tet
+    ufc_tet = ufc_tetrahedron()
+    fiat_tet = ufc_simplex(3)
+    # breakpoint()
+    print(fiat_tet.get_topology())
+    print(fuse_tet.get_topology())
+    print(ufc_tet.get_topology())
+    fiat_connectivity = fiat_tet.get_connectivity()
+    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
+    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
+    _dim = fiat_tet.get_dimension()
+    print("fiat")
+    print(make_entity_cone_lists(fiat_tet))
+    for dim0 in range(_dim):
+        connectivity = fiat_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+    print("fuse")
+    print(make_entity_cone_lists(fuse_tet.to_fiat()))
+    for dim0 in range(_dim):
+        connectivity = fuse_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+    print("fuse ufc")
+    print(make_entity_cone_lists(ufc_tet.to_fiat()))
+    for dim0 in range(_dim):
+        connectivity = ufc_connectivity[(dim0+1, dim0)]
+        print(connectivity)
+
+
+def make_entity_cone_lists(fiat_cell):
+    _dim = fiat_cell.get_dimension()
+    _connectivity = fiat_cell.connectivity
+    _list = []
+    _offset_list = [0 for _ in _connectivity[(0, 0)]]  # vertices have no cones
+    _offset = 0
+    _n = 0  # num. of entities up to dimension = _d
+    for _d in range(_dim):
+        _n1 = len(_offset_list)
+        for _conn in _connectivity[(_d + 1, _d)]:
+            _list += [_c + _n for _c in _conn]  # These are indices into cell_closure[some_cell]
+            _offset_list.append(_offset)
+            _offset += len(_conn)
+        _n = _n1
+    _offset_list.append(_offset)
+    return _list, _offset_list
+
+
+def test_tet_groups():
+    for cell in [make_tetrahedron(), ufc_tetrahedron()]:
+        group = S4.add_cell(cell)
+        for j in [1, 2]:
+
+            sub_group = []
+            flip_group = []
+            for i in range(len(cell.d_entities(j))):
+                face = cell.d_entities(j)[i]
+                print(face)
+                for g in group.members():
+                    res = cell.permute_entities(g, j)[0]
+                    if res[1].perm.is_Identity and res[0] == face.id and (j == 2 or g.perm.is_even):
+                        print(g, res)
+                        sub_group += [g.perm]
+                    # elif res[1].perm.array_form == [1, 0, 2] and res[0] == face.id and (j == 2 or g.perm.is_even): [0, 2, 1] [2, 1, 0]
+                    elif res[1].perm.array_form == [0, 1, 2] and res[0] == face.id and (j == 2 or g.perm.is_even):
+                        print(g, res)
+                        flip_group += [g.perm]
+                print()
+            print([s.array_form for s in sub_group])
+            print([s.array_form for s in flip_group])

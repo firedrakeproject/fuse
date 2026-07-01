@@ -148,8 +148,10 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         self.weights = weights
         self.spaces = spaces
 
-        maxdegree = max([space.maxdegree for space in spaces])
-        mindegree = min([space.mindegree for space in spaces])
+        weight_degrees = [0 if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)) else max_deg_sp_mat(w) for w in self.weights]
+
+        maxdegree = max([space.maxdegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
+        mindegree = min([space.mindegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
         vec = any([s.set_shape for s in spaces])
 
         super(ConstructedPolynomialSpace, self).__init__(maxdegree, -1, mindegree, set_shape=vec)
@@ -204,8 +206,11 @@ class ConstructedPolynomialSpace(PolynomialSpace):
     __rmul__ = __mul__
 
     def __add__(self, x):
-        return ConstructedPolynomialSpace(self.weights.extend([1]),
-                                          self.spaces.extend(x))
+        w = self.weights.copy()
+        w.extend([1])
+        s = self.spaces.copy()
+        s.extend([x])
+        return ConstructedPolynomialSpace(w, s)
 
     def _to_dict(self):
         super_dict = super(ConstructedPolynomialSpace, self)._to_dict()

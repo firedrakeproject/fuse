@@ -29,6 +29,3 @@ Each degree of freedom :math:`\mathcal{X}_i` can be represented in an integral f
 
 The classes documented on this page provide options for the kernel :math:`\kappa` and the pairing :math:`\langle \cdot, \cdot \rangle_{\mathcal{V}, E}`.
 
-.. automodule:: fuse.dof
-   :members:
-   :show-inheritance:

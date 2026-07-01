@@ -1,17 +1,54 @@
-div.documentwrapper div.bodywrapper { margin-left: 350px;}
+/* div.documentwrapper div.bodywrapper { margin-left: 350px;}
 div.document div.sphinxsidebar { width: 40px; }
 
 div.sphinxsidebarwrapper div {
     overflow: auto;
 }
+*/
+/* div.col-md-3 div {
+    width: 400px;
+    overflow-wrap: anywhere;
+}  */
 
-div.bs-sidenav div {
-    overflow: auto;
-}
+/* @import url("bootstrap-sphinx.css"); */
+.bs-sidenav {
+    width: 250px;
+    overflow-wrap: anywhere;
+} 
 
+.bs-sidenav > a {
+    display: none;
+} 
+
+
+/* .localtoc > ul {
+    margin: 0;
+  }
+.localtoc > ul > li {
+list-style-type: none;
+} */
+/* .localtoc > ul > li > a {
+display: none;
+} 
+.toctree > a {
+    display: none;
+} */
+
+/*
 .bs-sidenav .nav > li > a {
     display: block;
-    /* color: #716b7a; */
     color: #672cbf;
     padding: 5px 20px;
-  }
+  } */
+
+/* 
+div.bodywrapper {
+    margin-left: 400px;
+}
+div.sphinxsidebar {
+    width: 400px;
+}
+div.sphinxsidebarwrapper{
+    overflow: auto;
+    width: 400px;
+} */

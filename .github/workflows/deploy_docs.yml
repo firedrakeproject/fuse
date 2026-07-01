@@ -14,7 +14,7 @@ jobs:
     # Run on the Github hosted runner
     runs-on: ubuntu-latest
     container:
-      image: firedrakeproject/firedrake-docdeps:latest
+      image: firedrakeproject/firedrake-vanilla-default:latest
       volumes:
         - ${{ github.workspace }}:/home/firedrake/output
     # Steps represent a sequence of tasks that will be executed as
@@ -23,13 +23,16 @@ jobs:
       - name: fix home
         run: echo "HOME=/root" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
+      - name: Install firedrake and dependencies, checkout fuse branches
+        run: |
+          chmod +x ./.github/workflows/setup_repos.sh
+          ./.github/workflows/setup_repos.sh
       - name: Install checkedout fuse
         run: |
           python3 -m pip install --break-system-packages -e '.[docs]'
       - name: Build docs
         run: |
-          cd docs
-          make html
+          make docs
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
