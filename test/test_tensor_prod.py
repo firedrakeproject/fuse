@@ -4,6 +4,7 @@ from fuse import *
 from firedrake import *
 from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
 from test_convert_to_fiat import create_cg2, create_dg0, helmholtz_solve as helmholtz_solve2
+from fuse.tensor_products import HDiv as HDiv_fuse
 # from test_convert_to_fiat import create_cg1
 
 
@@ -353,24 +354,21 @@ def test_trace_galerkin_projection():
 def test_hdiv():
     # from fuse.tensor_products import HDiv
     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-    # m = UnitIntervalMesh(2)
-    # mesh = ExtrudedMesh(m, 2)
+    m = UnitIntervalMesh(2)
+    mesh = ExtrudedMesh(m, 2)
     CG_1 = FiniteElement("CG", "interval", 1)
     DG_0 = FiniteElement("DG", "interval", 0)
-    # cg1 = construct_cg1()
-    # dg0 = construct_dg0_integral()
-    # p1p0 = HDiv(tensor_product(cg1, dg0))
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+    p1p0 = HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
     P1P0 = TensorProductElement(CG_1, DG_0)
-    # RT_horiz = HDivElement(p1p0.to_ufl(), transform=hdiv_transform(p1p0))
-    # RT_horiz = p1p0.to_ufl()
     RT_horiz = HDivElement(P1P0)
-    # p0p1 = HDiv(tensor_product(dg0, cg1))
     P0P1 = TensorProductElement(DG_0, CG_1)
-    # RT_vert = p0p1.to_ufl()
+    
     RT_vert = HDivElement(P0P1)
     elt = RT_horiz + RT_vert
-    # + RT_vert
-    mesh = UnitSquareMesh(1, 1, quadrilateral=True)
+    elt2 = p1p0.to_ufl()
+    mesh2 = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
     # A = construct_cg1()
     # B = construct_dg0_integral()
     # non_sym1 = tensor_product(A, B)
@@ -381,26 +379,22 @@ def test_hdiv():
     # combined.symmetric = True
     # elt = combined.flatten().to_ufl()
     V = FunctionSpace(mesh, elt)
-    # V = FunctionSpace(mesh, "RT", 1)
-    u = TrialFunction(V)
-    v = TestFunction(V)
-    f = Function(V)
-    x, y = SpatialCoordinate(mesh)
-    # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
-    f_vec = as_vector((2, 3))
-    f = project(f_vec, V)
-    a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
-    L = inner(f, v) * dx
-    u = Function(V)
-    solve(a == L, u)
+    V2 = FunctionSpace(mesh2, elt2)
+    for V, mesh in zip([V, V2], (mesh, mesh2)):
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = Function(V)
+        x, y = SpatialCoordinate(mesh)
+        # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
+        f_vec = as_vector((2,3))
+        f = project(f_vec, V)
+        a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+        L = inner(f, v) * dx
+        u = Function(V)
+        solve(a == L, u)
+        print(u.dat.data)
     breakpoint()
-    # f.interpolate(cos(x*pi*2)*cos(y*pi*2))
-    # V.finat_element.basis_evaluation(1, [(0, 0)])
-    # tabulation = V.finat_element.fiat_equivalent.tabulate(0, [(0, 0), (1, 0)])
-    # for ent, arr in tabulation.items():
-    #     print(ent)
-    #     for comp in arr:
-    #         print(comp[0], comp[1])
+
 
 
 def test_transforms():
@@ -427,7 +421,6 @@ def test_transforms():
     print(HDiv(tensor_product(cg1, rev_dg0))(v))
     print(HDiv(tensor_product(dg0, rev_cg1))(v))
     print(HDiv(tensor_product(rev_cg1, dg0))(v))
-    breakpoint()
 
 
 def test_sum_fac():

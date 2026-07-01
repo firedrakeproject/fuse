@@ -3,6 +3,7 @@ from fuse.utils import sympy_to_numpy
 from fuse.traces import TrH1
 import numpy as np
 import sympy as sp
+import numbers
 
 
 class Pairing():
@@ -194,7 +195,7 @@ class VectorKernel(BaseKernel):
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
-        if isinstance(self.pt, tuple) or isinstance(self.pt, int):
+        if isinstance(self.pt, tuple) or isinstance(self.pt, numbers.Number):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), comps
         if not immersed:
             return Qpts, np.array([wt*np.matmul(self.pt, basis_change) for wt in Qwts]).astype(np.float64), comps

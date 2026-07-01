@@ -6,7 +6,7 @@ import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
 from itertools import product
 from functools import reduce
-
+from collections import defaultdict
 
 def tensor_product(*factors, matrices=True):
     if not all(isinstance(f, ElementTriple) for f in factors):
@@ -66,7 +66,7 @@ class TensorProductTriple(ElementTriple):
         return f"TensorProd({','.join(['{}' for f in self.factors])})".format(*(repr(f) for f in self.factors))
 
     def _entity_associations(self, dofs, overall=True):
-        return self.entity_dofs, None, None
+        return self.entity_assocs, None, None
 
     def setup_matrices(self):
         if self.cell.flat and not self.symmetric:
@@ -86,7 +86,7 @@ class TensorProductTriple(ElementTriple):
                 ents = list(product(*(f_ents)))
                 comp_os = cell.component_orientations()
                 for e, sub_ents in enumerate(ents):
-                    ent_dofs = [self.dof_ids[d] for dof_list in self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]].values() for d in dof_list]
+                    ent_dofs = self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]]
                     if len(ent_dofs) >= 1:
                         sub_mat = oriented_mats_by_entity[dim][e]
                         mats = [f.matrices[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
@@ -117,33 +117,32 @@ class TensorProductTriple(ElementTriple):
             top = self.unflat_cell.to_fiat().get_topology()
         else:
             top = self.cell.to_fiat().get_topology()
-        self.entity_dofs = {}
+        self.entity_dofs = defaultdict(dict)
         self.ent_mapping = {}
-        self.entity_ids = {}
+        self.entity_assocs = defaultdict(dict)
         self.dof_ids = {}
         dofs = []
-        ent_counter = {}
+        ent_counter = defaultdict(lambda: 0)
         dof_counter = 0
         for dim in top.keys():
             total_dim = sum(dim) if self.flat else dim
             ents = [ent_assoc[d].keys() for ent_assoc, d in zip(ent_assocs, dim)]
-            if total_dim not in self.entity_dofs.keys():
-                self.entity_dofs[total_dim] = {}
-                ent_counter[total_dim] = 0
-                self.entity_ids[total_dim] = {}
+            # if total_dim not in self.entity_dofs.keys():
+            #     self.entity_dofs[total_dim] = {}
+            #     self.entity_assocs[total_dim] = {}
             self.ent_mapping[dim] = {}
             ent_list = []
             for i, ent in enumerate(list(product(*ents))):
                 self.ent_mapping[dim][ent] = i + ent_counter[total_dim] if self.flat else ent
-                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = tuple()
+                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = []
                 ent_list += [ent]
             for es in ent_list:
                 e_dofs = [[d for dofs in ent_assoc[d][e].values() for d in dofs] for ent_assoc, d, e in zip(ent_assocs, dim, es)]
                 new_dofs = list(product(*e_dofs))
                 dofs += new_dofs
                 dof_gens = "(" + "*".join([",".join(list(ent_assoc[d][e].keys())) for ent_assoc, d, e in zip(ent_assocs, dim, es)]) + ")"
-                self.entity_dofs[total_dim][self.ent_mapping[dim][es]] = {dof_gens: new_dofs}
-                self.entity_ids[total_dim][self.ent_mapping[dim][es]] = [i + dof_counter for i in range(len(new_dofs))]
+                self.entity_assocs[total_dim][self.ent_mapping[dim][es]] = {dof_gens: new_dofs}
+                self.entity_dofs[total_dim][self.ent_mapping[dim][es]] += [i + dof_counter for i in range(len(new_dofs))]
                 for d in new_dofs:
                     self.dof_ids[d] = dof_counter
                     dof_counter += 1
@@ -193,11 +192,14 @@ class HDiv(TensorProductTriple):
         self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
         self.trace = TrHDiv
-        super(HDiv, self).__init__(*tensor_element.factors, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
-        self.spaces = (self.spaces[0].to_vector(), TrHDiv, self.spaces[2])
+        super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
+        # self.spaces = (self.spaces[0], TrHDiv, self.spaces[2])
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
+    
+    def repr(self):
+        return "HDiv(" + super(HDiv, self).repr() + ")"
 
     def select_fuse_hdiv_transformer(self, element):
         # Assume: something x interval
@@ -214,14 +216,17 @@ class HDiv(TensorProductTriple):
             # Make the scalar value the right hand rule normal on the
             # y-aligned edges.
             cell = element.sub_elements[1].cell
-            bv = cell.basis_vectors()[0]
-            return lambda v: [gem.Product(gem.Literal(bv[0]), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            bv = cell.basis_vectors()[0][0]
+            original = lambda v: [gem.Product(gem.Literal(-1), v), gem.Zero()]
+            new = lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            return original, lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
         elif ks == (1, 0):
             # Make the scalar value the upward-pointing normal on the
             # x-aligned edges.
             cell = element.sub_elements[0].cell
             bv = cell.basis_vectors()[0][0]
-            return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
+            return lambda v: [gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
+            # return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
         # elif ks == (2, 0):
         #     # Same for 3D, so z-plane.
         #     return lambda v: [gem.Zero(), gem.Zero(), v]
@@ -257,10 +262,13 @@ class HCurl(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
         super(HDiv, self).__init__(*tensor_element.factors, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
-        self.spaces = (self.spaces[0].to_vector(), TrHCurl, self.spaces[2])
+        self.spaces = (self.spaces[0], TrHCurl, self.spaces[2])
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
+
+    def repr(self):
+        return "HCurl(" + super(HCurl, self).repr() + ")"
 
     def select_fuse_hcurl_transformer(element):
         import gem

@@ -160,7 +160,7 @@ class ElementTriple():
         return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
-        # TODO Shape should be specificed somewhere else probably
+        # TODO Shape should be specified somewhere else probably
         if self.spaces[0].set_shape:
             return (self.cell.get_spatial_dimension(),)
         else:
