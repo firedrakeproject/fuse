@@ -23,6 +23,10 @@ def create_cg3_interval(cell=None):
                                                 DOFGenerator(interior, S2, S1)])
     return cg
 
+def rt1_quad():
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+    return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
 
 def helmholtz_solve(mesh, V):
     u = TrialFunction(V)
@@ -102,6 +106,37 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res = np.array(res)
     conv = np.log2(res[:-1] / res[1:])
     print("convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
+
+def project_expr(mesh, U, expr):
+    x = SpatialCoordinate(mesh)
+    f = assemble(project(expr(x), U))
+    out = Function(U)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)
+    res = sqrt(assemble(dot(out - func, out - func) * dx))
+    return res
+
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(rt1_quad, "RT", 1, 0.8)])
+def test_project_vec_quad(elem_gen, elem_code, deg, conv_rate):
+    vals = range(3, 6)
+    function = lambda x, i: cos((3/4)*pi*x[i])
+    expr = lambda x: as_vector([function(x, 0), function(x, 1)])
+    res = []
+    res_ufc = []
+    for r in vals:
+        mesh_fuse = UnitSquareMesh(2**r, 2**r, use_fuse=True)
+        U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
+        res += [project_expr(mesh_fuse, U, expr)]
+
+    print("l2 error norms:", res)
+    res = np.array(res)
+    conv = np.log2(res[:-1] / res[1:])
+    print("convergence order:", conv)
+
     assert (np.array(conv) > conv_rate).all()
 
 
@@ -195,6 +230,38 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res = np.array(res_fire)
     conv = np.log2(res[:-1] / res[1:])
     print("Fiat convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
+
+
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.7),
+                                                                         (create_cg2, "CG", 2, 3.8),
+                                                                         (create_cg3_interval, "CG", 3, 4.8)])
+def test_ext_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
+    vals = range(2, 4)
+    res_fuse = []
+    res_fire = []
+    for r in vals:
+        mesh_fuse = ExtrudedMesh(UnitSquareMesh(2 ** r, 2 ** r, use_fuse=True), 2**r)
+        A = elem_gen()
+        B = elem_gen()
+        C = elem_gen()
+        elem = symmetric_tensor_product(A, B, C, matrices=False)
+        U = FunctionSpace(mesh_fuse, elem.to_ufl())
+        res_fuse += [helmholtz_solve2(U, mesh_fuse)]
+
+        mesh_ufc = ExtrudedMesh(UnitSquareMesh(2 ** r, 2 ** r), 2**r)
+        U = FunctionSpace(mesh_ufc, elem_code, deg)
+        res_fire += [helmholtz_solve2(U, mesh_ufc)]
+    print("Fuse l2 error norms:", res_fuse)
+    res = np.array(res_fuse)
+    conv = np.log2(res[:-1] / res[1:])
+    print("Fuse convergence order:", conv)
+
+    print("FIAT l2 error norms:", res_fire)
+    res = np.array(res_fire)
+    conv = np.log2(res[:-1] / res[1:])
+    print("Fiat convergence order:", conv)
+    assert (np.array(conv) > conv_rate).all()
     assert (np.array(conv) > conv_rate).all()
 
 
@@ -457,7 +524,7 @@ def test_sum_fac_3d():
     # In 2d we have O(N_q^3N_i^6) -> O(p^9)
     # Sum factorisation gains 2 factors so we expect O(p^7)
     # For CG3 p = 3 so it should be 9x faster - seems that it is faster than this in regular firedrake
-    mesh = ExtrudedMesh(ExtrudedMesh(UnitIntervalMesh(10), 10), 10)
+    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, use_fuse=True), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
     C = create_cg3_interval()
