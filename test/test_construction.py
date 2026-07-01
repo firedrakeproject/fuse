@@ -150,4 +150,3 @@ def test_ned3():
         print(o.numeric_rep())
         # print(permute_face(nd3_pt, o))
         # print(permute_face(nd3_mn, o))
-    breakpoint()
