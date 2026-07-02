@@ -39,7 +39,7 @@ def construct_dg0_integral(edge=None):
     return dg0
 
 
-def construct_dg1_integral(cell=None):
+def construct_dg1_integral():
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     x = sp.Symbol("x")
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]

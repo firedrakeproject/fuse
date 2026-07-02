@@ -10,7 +10,7 @@ class EnrichedElement(ElementTriple):
     In general, FUSE element triples should be represented nodally,
     however this may not be possible for all constructions.
 
-    In particulr, we need to preserve tensor product structure.
+    In particular, we need to preserve tensor product structure.
     """
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
@@ -87,3 +87,9 @@ class EnrichedElement(ElementTriple):
     def to_ufl(self):
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return finat.ufl.EnrichedElement(*ufl_sub_elements, triple=self)
+
+    def flatten(self):
+        return EnrichedElement(self.A.flatten(), self.B.flatten(), flat=True, symmetric=self.symmetric, matrices=self.matrices)
+
+    def unflatten(self):
+        return EnrichedElement(self.A.unflatten(), self.B.unflatten(), flat=False, symmetric=self.symmetric, matrices=self.matrices)

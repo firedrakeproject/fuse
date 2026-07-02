@@ -365,10 +365,10 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
-                                                    pytest.param(construct_dg0_integral, "DG", 0, marks=pytest.mark.xfail(reason='Passes locally, fails in CI, probably same as dg2')),
+                                                    (construct_dg0_integral, "DG", 0),
                                                     (construct_dg1_integral, "DG", 1),
                                                     (construct_dg2_integral, "DG", 2),
-                                                    pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
+                                                    (create_dg2, "DG", 2),
                                                     (create_cg2, "CG", 2)
                                                     ])
 def test_1d(elem_gen, elem_code, deg):
@@ -566,7 +566,7 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Issue with cell/mesh'))])
+                         [(create_cg1_quad_tensor,), (create_cg1_quad,)])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
@@ -899,10 +899,10 @@ def test_basis_funcs_gen(form_num):
     for v in basis_funcs[:1]:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
-        min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
-        max_id1 = max([v for e in elem.entity_ids[2].values() for v in e]) + 1
-        min_id2 = min([v for e in elem2.entity_ids[2].values() for v in e])
-        max_id2 = max([v for e in elem2.entity_ids[2].values() for v in e]) + 1
+        min_id1 = min([v for e in elem.entity_dofs[2].values() for v in e])
+        max_id1 = max([v for e in elem.entity_dofs[2].values() for v in e]) + 1
+        min_id2 = min([v for e in elem2.entity_dofs[2].values() for v in e])
+        max_id2 = max([v for e in elem2.entity_dofs[2].values() for v in e]) + 1
 
         res = assemble(interpolate(vec, V)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data

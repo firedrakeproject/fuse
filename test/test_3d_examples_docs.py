@@ -680,11 +680,11 @@ def test_tet_nd():
 def construct_V(elem):
     nodes = elem.nodes
     ref_el = elem.ref_el
-    entity_ids = elem.entity_ids
+    entity_dofs = elem.entity_dofs
     poly_set = elem.poly_set
     from FIAT.dual_set import DualSet
 
-    dual = DualSet(nodes, ref_el, entity_ids)
+    dual = DualSet(nodes, ref_el, entity_dofs)
 
     old_coeffs = poly_set.get_coeffs()
     dualmat = dual.to_riesz(poly_set)

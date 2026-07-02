@@ -7,6 +7,8 @@ from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
 from FIAT.reference_element import ufc_cell
+from functools import cache
+from itertools import product
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -15,7 +17,6 @@ from finat.ufl import FuseElement
 import warnings
 import numpy as np
 import scipy
-from functools import cache
 
 
 def compute_form_degree(cell, spaces):
@@ -76,11 +77,11 @@ class ElementTriple():
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
-        entity_ids = {}
+        entity_dofs = {}
         nodes = []
 
         for dim in sorted(top):
-            entity_ids[dim] = {i: [] for i in top[dim]}
+            entity_dofs[dim] = {i: [] for i in top[dim]}
 
         self.dof_id_to_fiat_id = {}
         entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
@@ -90,17 +91,17 @@ class ElementTriple():
             for i in range(len(dofs)):
                 if entity[1] == dofs[i].cell_defined_on.id - min_ids[dim]:
                     self.dof_id_to_fiat_id[dofs[i].id] = counter
-                    entity_ids[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
+                    entity_dofs[dim][dofs[i].cell_defined_on.id - min_ids[dim]].append(counter)
                     nodes.append(dofs[i].convert_to_fiat(self.ref_el, degree, value_shape))
                     counter += 1
         self.nodes = nodes
         # for i in range(4):
-        #     entity_ids[2][i] = [entity_ids[2][i][-1]] + entity_ids[2][i][:-1]
-        return entity_ids, nodes
+        #     entity_dofs[2][i] = [entity_dofs[2][i][-1]] + entity_dofs[2][i][:-1]
+        return entity_dofs, nodes
 
     def setup_matrices(self):
-        # self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
-        matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        # self.matrices_by_entity = self.make_entity_dense_matrices(self.ref_el, self.entity_dofs, self.nodes, self.poly_set)
+        matrices, entity_perms, pure_perm = self.make_dof_perms(self.ref_el, self.entity_dofs, self.nodes, self.poly_set)
         reversed_matrices = self.reverse_dof_perms(matrices)
         if self.perm:
             self.pure_perm = pure_perm
@@ -159,7 +160,7 @@ class ElementTriple():
         return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
-        # TODO Shape should be specificed somewhere else probably
+        # TODO Shape should be specified somewhere else probably
         if self.spaces[0].set_shape:
             return (self.cell.get_spatial_dimension(),)
         else:
@@ -170,7 +171,7 @@ class ElementTriple():
             # set up for eventual conversion to FIAT if not already done
             self.ref_el = self.cell.to_fiat()
             self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
-            self.entity_ids, self.nodes = self.setup_ids_and_nodes()
+            self.entity_dofs, self.nodes = self.setup_ids_and_nodes()
             self.matrices, self.reversed_matrices = self.setup_matrices()
         return FuseElement(self)
 
@@ -181,11 +182,11 @@ class ElementTriple():
         form_degree = compute_form_degree(self.cell, self.spaces)
         degree = self.spaces[0].degree()
         # sanity check that the dofs span the space
-        original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_ids, self.nodes, self.poly_set)
+        original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_dofs, self.nodes, self.poly_set)
         if self.pure_perm:
-            dual = DualSet(self.nodes, self.ref_el, self.entity_ids, self.entity_perms)
+            dual = DualSet(self.nodes, self.ref_el, self.entity_dofs, self.entity_perms)
         else:
-            dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
+            dual = DualSet(self.nodes, self.ref_el, self.entity_dofs)
         return CiarletElement(self.poly_set, dual, degree, form_degree)
 
     def to_tikz(self, show=True, scale=3):
@@ -277,8 +278,8 @@ class ElementTriple():
         else:
             raise ValueError("Plotting not supported in this dimension")
 
-    def compute_dense_matrix(self, ref_el, entity_ids, nodes, poly_set):
-        dual = DualSet(nodes, ref_el, entity_ids)
+    def compute_dense_matrix(self, ref_el, entity_dofs, nodes, poly_set):
+        dual = DualSet(nodes, ref_el, entity_dofs)
 
         old_coeffs = poly_set.get_coeffs()
         dualmat = dual.to_riesz(poly_set)
@@ -297,7 +298,7 @@ class ElementTriple():
                 raise np.linalg.LinAlgError("Singular Vandermonde matrix")
         return A, new_coeffs_flat
 
-    def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+    def make_entity_dense_matrices(self, ref_el, entity_dofs, nodes, poly_set):
         raise NotImplementedError("This should be deprecated")
         degree = self.spaces[0].degree()
         min_ids = self.cell.get_starter_ids()
@@ -314,7 +315,7 @@ class ElementTriple():
             # dof_ids = [self.dof_id_to_fiat_id[d.id] for d in self.generate() if d.cell_defined_on == e]
             dof_ids = [d.id for d in self.generate() if d.cell_defined_on == e]
             # res_dict[dim][e_id][0] = np.eye(len(dof_ids))
-            original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
+            original_V, original_basis = self.compute_dense_matrix(ref_el, entity_dofs, nodes, poly_set)
 
             for g in self.cell.group.members():
                 permuted_e, permuted_g = self.cell.permute_entities(g, dim)[e_id]
@@ -329,7 +330,7 @@ class ElementTriple():
                             # , entity_o=perm_g
                             new_nodes = [d(g, entity_o=perm_g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
                             # new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) if d.cell_defined_on == e else d.convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
-                            transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
+                            transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_dofs, new_nodes, poly_set)
                             return np.matmul(transformed_basis, original_V.T)
                         temp = make_mat(permuted_g)
                         # if dim == 1 and e_id == 0:
@@ -346,7 +347,7 @@ class ElementTriple():
                         res_dict[dim][e_id][val] = temp[np.ix_(dof_ids, dof_ids)]
         return res_dict
 
-    def make_overall_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):
+    def make_overall_dense_matrices(self, ref_el, entity_dofs, nodes, poly_set):
         raise NotImplementedError("this function should be unnecessary")
         min_ids = self.cell.get_starter_ids()
         dim = self.cell.dim()
@@ -354,14 +355,14 @@ class ElementTriple():
         e_id = e.id - min_ids[dim]
         res_dict = {dim: {e_id: {}}}
         degree = self.spaces[0].degree()
-        original_V, original_basis = self.compute_dense_matrix(ref_el, entity_ids, nodes, poly_set)
+        original_V, original_basis = self.compute_dense_matrix(ref_el, entity_dofs, nodes, poly_set)
         for g in self.cell.group.members():
             val = g.numeric_rep()
             if g.perm.is_Identity:
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
                 new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
-                transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
+                transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_dofs, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
 
@@ -411,7 +412,7 @@ class ElementTriple():
         flat_by_entity = {}
         cell = self.cell
         if tensor:
-            dims = [(a_d, b_d) for a_d in range(cell.A.dimension + 1) for b_d in range(cell.B.dimension + 1)]
+            dims = list(product(*(range(f.dimension + 1) for f in cell.factors)))
         else:
             dims = [i for i in range(cell.dimension + 1)]
         for dim in dims:
@@ -431,14 +432,14 @@ class ElementTriple():
                     flat_by_entity[dim][e_id][val] = []
         return oriented_mats_by_entity, flat_by_entity
 
-    def make_dof_perms(self, ref_el, entity_ids, nodes, poly_set):
+    def make_dof_perms(self, ref_el, entity_dofs, nodes, poly_set):
         dofs = self.generate()
         min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
         # if pure_perm is False:
         #    #TODO think about where this call goes
         #    return self.matrices_by_entity, None, pure_perm
-        #    return self.make_overall_dense_matrices(ref_el, entity_ids, nodes, poly_set), None, pure_perm
+        #    return self.make_overall_dense_matrices(ref_el, entity_dofs, nodes, poly_set), None, pure_perm
 
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs)
         # for each entity, look up generation on that entity and permute the
@@ -564,7 +565,7 @@ class ElementTriple():
         oriented_mats_overall = oriented_mats_by_entity[dim][0]
         if pure_perm and sub_pure_perm:
             for val, mat in oriented_mats_overall.items():
-                cell_dofs = entity_ids[dim][0]
+                cell_dofs = entity_dofs[dim][0]
                 flat_by_entity[dim][e_id][val] = perm_matrix_to_perm_array(mat[np.ix_(cell_dofs, cell_dofs)])
             return oriented_mats_by_entity, flat_by_entity, True
 
@@ -694,21 +695,21 @@ class DOFGenerator():
         self.dof_ids = [dof.id for dof in self.ls]
         return self.ls
 
-    def make_entity_ids(self):
+    def make_entity_dofs(self):
         dofs = self.ls
-        entity_ids = {}
+        entity_dofs = {}
         min_ids = dofs[0].cell.get_starter_ids()
 
         top = dofs[0].cell.get_topology()
 
         for dim in sorted(top):
-            entity_ids[dim] = {i: [] for i in top[dim]}
+            entity_dofs[dim] = {i: [] for i in top[dim]}
 
         for i in range(len(dofs)):
             entity = dofs[i].cell_defined_on
             dim = entity.dim()
-            entity_ids[dim][entity.id - min_ids[dim]].append(i)
-        return entity_ids
+            entity_dofs[dim][entity.id - min_ids[dim]].append(i)
+        return entity_dofs
 
     def __repr__(self):
         repr_str = "DOFGen("

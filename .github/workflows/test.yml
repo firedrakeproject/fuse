@@ -24,7 +24,7 @@ jobs:
         arch: [default]
     runs-on: [self-hosted, Linux]
     container:
-      image: ubuntu:25.10
+      image: ubuntu:latest
     env:
       OMPI_ALLOW_RUN_AS_ROOT: 1
       OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
@@ -180,6 +180,17 @@ jobs:
         run: |
           . venv/bin/activate
           python3 -m pip install --break-system-packages -e './fiat-repo'
+    
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/ufl
+          path: ufl-repo
+          ref: refs/heads/indiamai/hash_directional_sobolev
+        
+      - name: Install checked out UFL
+        run: |
+          . venv/bin/activate
+          python3 -m pip install --break-system-packages -e './ufl-repo'
 
       - name: Run tests
         run: |
