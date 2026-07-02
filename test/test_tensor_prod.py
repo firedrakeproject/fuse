@@ -23,10 +23,12 @@ def create_cg3_interval(cell=None):
                                                 DOFGenerator(interior, S2, S1)])
     return cg
 
+
 def rt1_quad():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
     return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
+
 
 def helmholtz_solve(mesh, V):
     u = TrialFunction(V)
@@ -108,6 +110,7 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     print("convergence order:", conv)
     assert (np.array(conv) > conv_rate).all()
 
+
 def project_expr(mesh, U, expr):
     x = SpatialCoordinate(mesh)
     f = assemble(project(expr(x), U))
@@ -120,13 +123,13 @@ def project_expr(mesh, U, expr):
     res = sqrt(assemble(dot(out - func, out - func) * dx))
     return res
 
+
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(rt1_quad, "RT", 1, 0.8)])
 def test_project_vec_quad(elem_gen, elem_code, deg, conv_rate):
     vals = range(3, 6)
     function = lambda x, i: cos((3/4)*pi*x[i])
     expr = lambda x: as_vector([function(x, 0), function(x, 1)])
     res = []
-    res_ufc = []
     for r in vals:
         mesh_fuse = UnitSquareMesh(2**r, 2**r, use_fuse=True)
         U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())

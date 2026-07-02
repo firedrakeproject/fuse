@@ -136,7 +136,7 @@ def test_ned3():
     #     print(i)
     #     print(pt_gen[i - 24], nd3_pt.dofs[i])
     #     print(mn_gen[i - 24], nd3_mn.dofs[i])
-    
+
     def permute_face(elem, o):
         dof_ids = [d.id for d in elem.dofs]
         transform_mat = elem.matrices[2][0][o.numeric_rep()]
