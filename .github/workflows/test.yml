@@ -24,7 +24,7 @@ jobs:
         arch: [default]
     runs-on: [self-hosted, Linux]
     container:
-      image: ubuntu:latest
+      image: ubuntu:25.10
     env:
       OMPI_ALLOW_RUN_AS_ROOT: 1
       OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
@@ -153,7 +153,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse_mesh_cell
+          ref: refs/heads/indiamai/fuse-remove-dat
     
       - name: Make cython
         run: |
@@ -174,7 +174,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse-remove-dat
+          ref: refs/heads/indiamai/fuse_cell_change
         
       - name: Install checked out FIAT
         run: |
