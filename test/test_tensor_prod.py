@@ -385,7 +385,7 @@ def test_cg1_dg0():
 
 
 def test_trace_galerkin_projection():
-    mesh = UnitSquareMesh(10, 10, quadrilateral=True)
+    mesh = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
 
     x, y = SpatialCoordinate(mesh)
     A = construct_cg1()
@@ -394,7 +394,7 @@ def test_trace_galerkin_projection():
     elem2 = tensor_product(B, A).flatten()
 
     # Define the Trace Space
-    T = FunctionSpace(mesh, elem.to_ufl() + elem2.to_ufl())
+    T = FunctionSpace(mesh, (elem + elem2).to_ufl())
 
     # Define trial and test functions
     lambdar = TrialFunction(T)
@@ -402,7 +402,7 @@ def test_trace_galerkin_projection():
 
     # Define right hand side function
 
-    V = FunctionSpace(mesh, "CG", 1)
+    V = FunctionSpace(mesh, tensor_product(A, construct_cg1()).flatten().to_ufl())
     f = Function(V)
     f.interpolate(cos(x*pi*2)*cos(y*pi*2))
 
@@ -431,7 +431,7 @@ def test_hdiv():
     DG_0 = FiniteElement("DG", "interval", 0)
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
-    p1p0 = HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
+    p1p0 = HDiv_fuse(tensor_product(cg1, dg0)) + HDiv_fuse(tensor_product(dg0, cg1))
     P1P0 = TensorProductElement(CG_1, DG_0)
     RT_horiz = HDivElement(P1P0)
     P0P1 = TensorProductElement(DG_0, CG_1)
@@ -439,7 +439,9 @@ def test_hdiv():
     RT_vert = HDivElement(P0P1)
     elt = RT_horiz + RT_vert
     elt2 = p1p0.to_ufl()
-    mesh2 = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
+    m = UnitIntervalMesh(2, use_fuse=True)
+    mesh2 = ExtrudedMesh(m, 2)
+    # mesh2 = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
     # A = construct_cg1()
     # B = construct_dg0_integral()
     # non_sym1 = tensor_product(A, B)
