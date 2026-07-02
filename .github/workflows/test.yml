@@ -153,7 +153,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse_mesh_cell
+          ref: refs/heads/indiamai/fuse-remove-dat
     
       - name: Make cython
         run: |
