@@ -899,10 +899,10 @@ def test_basis_funcs_gen(form_num):
     for v in basis_funcs[:1]:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
-        min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
-        max_id1 = max([v for e in elem.entity_ids[2].values() for v in e]) + 1
-        min_id2 = min([v for e in elem2.entity_ids[2].values() for v in e])
-        max_id2 = max([v for e in elem2.entity_ids[2].values() for v in e]) + 1
+        min_id1 = min([v for e in elem.entity_dofs[2].values() for v in e])
+        max_id1 = max([v for e in elem.entity_dofs[2].values() for v in e]) + 1
+        min_id2 = min([v for e in elem2.entity_dofs[2].values() for v in e])
+        max_id2 = max([v for e in elem2.entity_dofs[2].values() for v in e]) + 1
 
         res = assemble(interpolate(vec, V)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data

@@ -91,7 +91,7 @@ class TensorProductTriple(ElementTriple):
                     if len(ent_dofs) >= 1:
                         sub_mat = oriented_mats_by_entity[dim][e]
                         mats = [f.matrices[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
-                        ent_ids = [f.entity_ids[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                        ent_ids = [f.entity_dofs[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
                         os = list(product(*([mat.keys() for mat in mats])))
                         for o in os:
                             sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]

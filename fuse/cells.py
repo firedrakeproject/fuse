@@ -1056,8 +1056,10 @@ class TensorProductPoint():
                 o_val = orientation_value(ident, perm)
                 if sum(dim) == self.dimension and self.group.group_rep_numbering is not None:
                     o_val = self.group.group_rep_numbering[o_val]
-                if o_val in [m.numeric_rep() for m in self.group.members()]:
-                    self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
+                # if o_val in [m.numeric_rep() for m in self.group.members()]:
+                self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
+                # else:
+                #     breakpoint()
         return self.component_os_to_os
 
     def compute_cell_group(self):
