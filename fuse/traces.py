@@ -14,13 +14,13 @@ class Trace(metaclass=ABCMeta):
     def __init__(self, cell: Point):
         self.domain = cell
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         raise NotImplementedError("Trace uninstantiated")
 
-    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         raise NotImplementedError("Trace uninstantiated")
 
-    def tabulate(self, Qpts, trace_entity, g):
+    def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
 
     def _to_dict(self) -> dict[str, str]:
@@ -51,17 +51,21 @@ class TrH1(Trace):
     def __init__(self, cell):
         super(TrH1, self).__init__(cell)
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         return v
 
-    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         ax.scatter(*coord, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black") -> str:
+    def to_tikz(self, coord, trace_entity, scale, color="black") -> str:
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
-    def tabulate(self, Qpts, trace_entity, g):
-        return np.ones_like(Qpts)
+    def tabulate(self, Qpts, trace_entity):
+        return np.ones(len(Qpts))
+        # return Qwts
+
+    def manipulate_basis(self, basis):
+        return np.array([1])
 
     def __repr__(self):
         return "H1"
@@ -72,36 +76,51 @@ class TrHDiv(Trace):
     def __init__(self, cell):
         super(TrHDiv, self).__init__(cell)
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         def apply(*x):
-            result = np.dot(self.tabulate(None, trace_entity, g), np.array(v(*x)).squeeze())
+            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
                 # todo: might always be a float
                 return (result,)
             return tuple(result)
         return apply
 
-    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         # plot dofs of the type associated with this space
-        vec = self.tabulate([], trace_entity, g).squeeze()
+        vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
-    def tabulate(self, Qpts, trace_entity, g):
-        entityBasis = np.array(trace_entity.basis_vectors())
+    def tabulate(self, Qwts, trace_entity):
+        # entityBasis = np.array(trace_entity.basis_vectors())
         cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        basis = np.matmul(entityBasis, cellEntityBasis)
-
+        # basis = np.matmul(entityBasis, cellEntityBasis)
+        basis = cellEntityBasis
         if trace_entity.dimension == 1:
             result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
         elif trace_entity.dimension == 2:
             result = np.cross(basis[0], basis[1])
         else:
             raise ValueError("Immersion of HDiv edges not defined in 3D")
-
         return result
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
-        vec = self.tabulate([], trace_entity, g).squeeze()
+    def manipulate_basis(self, basis):
+        if basis.shape[-1] == 1:
+            return basis
+        elif basis.shape == (1, 2):
+            result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
+        elif basis.shape == (2, 2):
+            # Two dim cross product - pad with zeros and take z component of result
+            zeros_row = np.zeros((basis.shape[0], 1), dtype=basis.dtype)
+            basis = np.hstack([basis, zeros_row])
+            result = np.cross(basis[0], basis[1])[2]
+        elif basis.shape == (2, 3):
+            result = np.cross(basis[0], basis[1])
+        else:
+            raise ValueError("Immersion of HDiv edges not defined in 3D")
+        return result
+
+    def to_tikz(self, coord, trace_entity, scale, color="black"):
+        vec = self.tabulate([], trace_entity).squeeze()
         end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
         return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
@@ -115,26 +134,30 @@ class TrHCurl(Trace):
     def __init__(self, cell):
         super(TrHCurl, self).__init__(cell)
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         def apply(*x):
-            result = np.dot(self.tabulate(None, trace_entity, g), np.array(v(*x)).squeeze())
+            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
                 return (result,)
             return tuple(result)
         return apply
 
-    def tabulate(self, Qpts, trace_entity, g):
-        tangent = np.array(trace_entity.basis_vectors())
+    def tabulate(self, Qwts, trace_entity):
+        # tangent = trace_entity.basis_vectors()
         subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        result = np.matmul(tangent, subEntityBasis)
-        return result
+        # result = np.matmul(tangent, subEntityBasis)
+        return subEntityBasis
+        # return result
 
-    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
-        vec = self.tabulate([], trace_entity, g).squeeze()
+    def manipulate_basis(self, basis):
+        return basis[0]
+
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
+        vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
-        vec = self.tabulate([], trace_entity, g).squeeze()
+    def to_tikz(self, coord, trace_entity, scale, color="black"):
+        vec = self.tabulate([], trace_entity).squeeze()
         end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
         return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
@@ -148,8 +171,10 @@ class TrGrad(Trace):
     def __init__(self, cell):
         super(TrGrad, self).__init__(cell)
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         # Compute grad v and then dot with tangent rotated according to the group member
+        raise NotImplementedError("Gradient immersions are under development")
+        g = None
         tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
 
         def apply(*x):
@@ -165,11 +190,11 @@ class TrGrad(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
 
     def __repr__(self):
@@ -181,7 +206,9 @@ class TrHess(Trace):
     def __init__(self, cell):
         super(TrHess, self).__init__(cell)
 
-    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point, g: GroupMemberRep) -> Callable[..., tuple[Any]]:
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
+        raise NotImplementedError("Hessian trace needs reviewing")
+        g = None
         b0, b1 = self.domain.basis_vectors()
         tangent0 = np.array(g(b0))
         tangent1 = np.array(g(b1))
@@ -198,11 +225,11 @@ class TrHess(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, g: GroupMemberRep, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
 
-    def to_tikz(self, coord, trace_entity, g, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (6pt) node[anchor = south] {{}};"
 
     def __repr__(self):

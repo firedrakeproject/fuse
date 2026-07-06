@@ -12,7 +12,9 @@ from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
+from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
+from functools import cache
 
 
 class Arrow3D(FancyArrowPatch):
@@ -93,6 +95,7 @@ def compute_scaled_verts(d, n):
     :param: n: number of vertices
     """
     if d == 2:
+        source = np.array([-np.sqrt(3)/2, -1/2])
         source = np.array([0, 1])
         rot_coords = [source for i in range(0, n)]
 
@@ -223,7 +226,9 @@ def make_tetrahedron():
     face4 = Point(2, vertex_num=3, edges=[edges[1], edges[4], edges[5]], edge_orientations={0: [1, 0], 2: [1, 0]})
 
     tetra = Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
+
     return tetra
+    # .orient(tetra.group.members()[3])
 
 
 def ufc_tetrahedron():
@@ -254,7 +259,7 @@ def ufc_tetrahedron():
     face4 = Point(2, vertex_num=3, edges=[edges[3], edges[5], edges[1]], edge_orientations={0: [1, 0]})
 
     tet = Point(3, vertex_num=4, edges=[face2, face1, face3, face4])
-    # breakpoint()
+
     return tet
     # return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
     # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
@@ -284,7 +289,7 @@ class Point():
     id_iter = itertools.count()
 
     def __init__(self, d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
-        if not cell_id:
+        if cell_id is None:
             cell_id = next(self.id_iter)
         self.id = cell_id
         self.dimension = d
@@ -294,7 +299,7 @@ class Point():
 
         if d == 0:
             assert (edges == [])
-        if vertex_num:
+        if vertex_num and vertex_num > 1:
             edges = self.compute_attachments(vertex_num, edges, edge_orientations)
 
         self.oriented = oriented
@@ -421,19 +426,35 @@ class Point():
         vertices = self.ordered_vertices()
         relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
 
-        self.topology = {}
-        self.topology_unrelabelled = {}
+        self._topology = {}
+        self._topology_unrelabelled = {}
         for i in range(len(structure)):
             dimension = structure[i]
-            self.topology[i] = {}
-            self.topology_unrelabelled[i] = {}
+            self._topology[i] = {}
+            self._topology_unrelabelled[i] = {}
             for node in dimension:
-                self.topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
-                self.topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
-            self.topology_unrelabelled[i] = dict(sorted(self.topology_unrelabelled[i].items()))
+                self._topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
+                self._topology_unrelabelled[i][node - min_ids[i]] = tuple([vert - min_ids[0] for vert in self.get_node(node).ordered_vertices()])
+            self._topology_unrelabelled[i] = dict(sorted(self._topology_unrelabelled[i].items()))
         if renumber:
-            return self.topology
-        return self.topology_unrelabelled
+            return self._topology
+        return self._topology_unrelabelled
+
+    def get_renumbered_topology(self):
+        structure = [generation for generation in nx.topological_generations(self.graph())]
+        structure.reverse()
+
+        min_ids = [min(dimension) for dimension in structure]
+        vertices = self.ordered_vertices()
+        relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
+
+        self._topology = {}
+        for i in range(len(structure)):
+            dimension = structure[i]
+            self._topology[i] = {}
+            for node in dimension:
+                self._topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
+        return self._topology
 
     def get_sub_entities(self):
         min_ids = self.get_starter_ids()
@@ -442,6 +463,7 @@ class Point():
         return self.sub_entities
 
     def _subentity_traversal(self, sub_ents, min_ids):
+        # print(self, sub_ents)
         dim = self.get_spatial_dimension()
         self_id = self.id - min_ids[dim]
 
@@ -453,10 +475,13 @@ class Point():
                     sub_ents = self.get_node(p)._subentity_traversal(sub_ents, min_ids)
         if dim > 1:
             connections = [(c.point.id, c.point.group.identity) for c in self.connections]
-            if self.oriented:
-                connections = self.permute_entities(self.oriented, dim - 1)
+            # if self.oriented:
+            #     connections = self.permute_entities(self.oriented, dim - 1)
+            # if self.dimension == 2:
+            #     connections = [connections[1], connections[0], connections[2]]
+            #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
+            #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:
-                # p = e.point
                 p = self.get_node(e).orient(o)
                 p_dim = p.get_spatial_dimension()
                 p_id = p.id - min_ids[p_dim]
@@ -469,6 +494,7 @@ class Point():
 
         return sub_ents
 
+    @cache
     def get_starter_ids(self):
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
         structure.reverse()
@@ -518,6 +544,9 @@ class Point():
                 return self.oriented.permute(verts)
             return verts
 
+    def ordered_vertex_coords(self):
+        return [self.get_node(o, return_coords=True) for o in self.ordered_vertices()]
+
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
@@ -542,7 +571,7 @@ class Point():
         if return_coords:
             top_level_node = self.d_entities_ids(self.graph_dim())[0]
             if self.dimension == 0:
-                return [()]
+                return ()
             return self.attachment(top_level_node, node)()
         return self.G.nodes.data("point_class")[node]
 
@@ -613,15 +642,19 @@ class Point():
 
         return reordered_entities
 
-    def basis_vectors(self, return_coords=True, entity=None):
+    def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True):
         if not entity:
             entity = self
-        self_levels = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        self_levels = [generation for generation in nx.topological_generations(self.G)]
         vertices = entity.ordered_vertices()
         if self.dimension == 0:
             # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
-        top_level_node = self_levels[0][0]
+        if self.oriented:
+            # ordered_vertices() handles the orientation so we want to drop the orientation node
+            top_level_node = self_levels[1][0]
+        else:
+            top_level_node = self_levels[0][0]
         v_0 = vertices[0]
         if return_coords:
             v_0_coords = self.attachment(top_level_node, v_0)()
@@ -629,7 +662,10 @@ class Point():
         for v in vertices[1:]:
             if return_coords:
                 v_coords = self.attachment(top_level_node, v)()
-                sub = normalise(np.subtract(v_coords, v_0_coords))
+                if norm:
+                    sub = normalise(np.subtract(v_coords, v_0_coords))
+                else:
+                    sub = np.subtract(v_coords, v_0_coords)
                 if not hasattr(sub, "__iter__"):
                     basis_vecs.append((sub,))
                 else:
@@ -653,6 +689,27 @@ class Point():
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
         return tikz_commands
+
+    def generate_facet_parameterisation(self, facet_num):
+        raise NotImplementedError("Facet Parameterisation can be expressed using polynomials")
+        # facet = self.d_entities(self.dimension - 1)[facet_num]
+        facet = self.get_node(facet_num)
+        facet_dim = facet.dimension
+        if facet_dim != self.dimension - 1:
+            raise ValueError(f"Supplied node {facet_num} is not a facet")
+        if facet_dim > 1:
+            raise NotImplementedError("Facet parameterisation is not implemented for dimensions greater than 1")
+        verts = facet.vertices()
+        v_coords = np.array([self.get_node(v.id, return_coords=True) for v in verts])
+        stacked = np.c_[np.ones((self.dimension,)), v_coords[:, 0].reshape(self.dimension, 1)]
+        b = np.array([0, 1])
+        coeffs = np.linalg.solve(stacked, b)
+        symbol_names = ["x", "y", "z"]
+        symbols = [1] + [sp.Symbol(symbol_names[d]) for d in range(facet_dim)]
+        res = 0
+        for d in range(facet_dim + 1):
+            res += coeffs[d] * symbols[d]
+        return res, symbols[1:]
 
     def plot(self, show=True, plain=False, ax=None, filename=None):
         """ for now into 2 dimensional space """
@@ -765,6 +822,35 @@ class Point():
 
         return lambda *x: fold_reduce(attachments[0], *x)
 
+    def attachment_J(self, source, dst):
+        attachment = self.attachment(source, dst)
+        symbol_names = ["x", "y", "z"]
+        symbols = []
+        if self.dim_of_node(dst) == 0:
+            return 1
+        for i in range(self.dim_of_node(dst)):
+            symbols += [sp.Symbol(symbol_names[i])]
+        J = sp.Matrix(attachment(*symbols)).jacobian(sp.Matrix(symbols))
+        return J
+
+    def quadrature(self, degree):
+        fiat_el = self.to_fiat()
+        Q = create_quadrature(fiat_el, degree)
+        pts, wts = Q.get_points(), Q.get_weights()
+        return pts, wts
+
+    def cartesian_to_barycentric(self, pts):
+        verts = np.array(self.ordered_vertex_coords())
+        v_0 = self.ordered_vertex_coords()[0]
+        bvs = np.array(self.basis_vectors(norm=False))
+        bary_coords = []
+        for pt in pts:
+            res = np.matmul(np.linalg.inv(bvs.T), np.array(pt - v_0))
+            assert np.allclose(sum(bvs[i]*res[i] for i in range(len(bvs))), np.array(pt - v_0))
+            bary_coords += [(1 - sum(res),) + tuple(res[i] for i in range(len(res)))]
+            assert np.allclose(np.array(sum(bary_coords[-1][i]*verts[i] for i in range(len(verts)))), pt)
+        return bary_coords
+
     def cell_attachment(self, dst):
         if not isinstance(dst, int):
             raise ValueError
@@ -773,6 +859,10 @@ class Point():
 
     def orient(self, o):
         """ Orientation node is always labelled with -1 """
+        if o is None:
+            return self
+        if self.oriented:
+            o = self.oriented * o
         oriented_point = copy.deepcopy(self)
         top_level_node = oriented_point.d_entities_ids(
             oriented_point.dimension)[0]
@@ -801,8 +891,10 @@ class Point():
 
     def _to_dict(self):
         # think this is probably missing stuff
+        # d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
         o_dict = {"dim": self.dimension,
                   "edges": [c for c in self.connections],
+                  "vertex_num": len(self.vertices()),
                   "oriented": self.oriented,
                   "id": self.id}
         return o_dict
@@ -836,10 +928,7 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    if len(attach_comp.atoms(sp.Symbol)) == len(x):
-                        res.append(sympy_to_numpy(attach_comp, syms, x))
-                    else:
-                        res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
+                    res.append(sympy_to_numpy(attach_comp, syms, x))
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -877,13 +966,15 @@ class TensorProductPoint():
         self.dimension = self.A.dimension + self.B.dimension
         self.flat = flat
 
+    def ordered_vertices(self):
+        return self.A.ordered_vertices() + self.B.ordered_vertices()
+
     def get_spatial_dimension(self):
         return self.dimension
 
     def get_sub_entities(self):
         self.A.get_sub_entities()
         self.B.get_sub_entities()
-        breakpoint()
 
     def dimension(self):
         return tuple(self.A.dimension, self.B.dimension)
@@ -935,6 +1026,8 @@ class CellComplexToFiatSimplex(Simplex):
         shape = cell.get_shape()
         sub_ents = cell.get_sub_entities()
         super(CellComplexToFiatSimplex, self).__init__(shape, verts, topology, sub_ents)
+        # if len(verts) == 4:
+        #     breakpoint()
 
     def cellname(self):
         return self.name
@@ -1006,7 +1099,6 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
@@ -1077,7 +1169,7 @@ class CellComplexToUFL(Cell):
         return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
-        return super(CellComplexToUFL, self).__repr__()
+        return "FUSE_" + super(CellComplexToUFL, self).__repr__()
 
     def reconstruct(self, **kwargs):
         """Reconstruct this cell, overwriting properties by those in kwargs."""

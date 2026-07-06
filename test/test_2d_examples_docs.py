@@ -164,8 +164,7 @@ def construct_nd(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    # xs = [DOF(L2Pairing(), PointKernel(edge.basis_vectors()[0]))]
-    xs = [DOF(L2Pairing(), PolynomialKernel((1,)))]
+    xs = [DOF(L2Pairing(), VectorKernel(1))]
 
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
@@ -180,6 +179,153 @@ def construct_nd(tri=None):
 
     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
     return ned
+
+
+def construct_nd_2nd_kind(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 1
+    edge = tri.edges()[0]
+    x = sp.Symbol("x")
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_ned = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+
+    xs = [immerse(tri, int_ned, TrHCurl)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
+    return ned
+
+
+def construct_nd2_2nd_kind(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 2
+    edge = tri.edges()[0]
+
+    s_0 = sp.Symbol("s_0")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,)))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,)))]
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
+    int_ned = ElementTriple(edge, (PolynomialSpace(deg, set_shape=True), CellHCurl, C0), dofs)
+
+    xs = [immerse(tri, int_ned, TrHCurl)]
+    edge_dofs = DOFGenerator(xs, C3, S1)
+
+    s_1 = sp.Symbol("s_1")
+    s_2 = sp.Symbol("s_2")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1, s_2)))]
+    face_dofs = DOFGenerator(xs, C3, S1)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    ned = ElementTriple(tri, (nd, CellHCurl, C0), [edge_dofs, face_dofs])
+    return ned
+
+
+def construct_bdm(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 1
+    edge = tri.edges()[0]
+    x = sp.Symbol("x")
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+
+    xs = [immerse(tri, int_rt, TrHDiv)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
+    return rt
+
+
+def construct_bdm_bary(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 1
+    edge = tri.edges()[0]
+    s_0 = sp.Symbol("s_0")
+
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,)))]
+    dofs = DOFGenerator(xs, S2, S2)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+
+    xs = [immerse(tri, int_rt, TrHDiv)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    nd = PolynomialSpace(deg, set_shape=True)
+
+    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
+    return rt
+
+
+def construct_bdm2(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 2
+    edge = tri.edges()[0]
+    x = sp.Symbol("x")
+
+    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
+    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
+
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+
+    xs = [immerse(tri, int_rt, TrHDiv)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    s_1 = sp.Symbol("s_1")
+    s_0 = sp.Symbol("s_0")
+    phi_0 = [1 - s_1, s_0]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1)))]
+    interior = DOFGenerator(xs, C3, S1)
+
+    space = PolynomialSpace(deg, set_shape=True)
+
+    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    dofs = bdm2.generate()
+    return bdm2
+
+
+def construct_bdm2_bary(tri=None):
+    if tri is None:
+        tri = polygon(3)
+    deg = 2
+    edge = tri.edges()[0]
+
+    s_0 = sp.Symbol("s_0")
+    s_1 = sp.Symbol("s_1")
+    vertex_basis = s_0*(2*s_0 - 1)
+    edge_basis = 4*s_0*s_1
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=(s_0, s_1)))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=(s_0, s_1)))]
+
+    dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHDiv, C0), dofs)
+
+    xs = [immerse(tri, int_rt, TrHDiv)]
+    tri_dofs = DOFGenerator(xs, C3, S1)
+
+    s_1 = sp.Symbol("s_1")
+    s_0 = sp.Symbol("s_0")
+    phi_0 = [1 - s_1, s_0]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1)))]
+    interior = DOFGenerator(xs, C3, S1)
+
+    space = PolynomialSpace(deg, set_shape=True)
+
+    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    dofs = bdm2.generate()
+    return bdm2
 
 
 def test_nd_example():
@@ -215,7 +361,7 @@ def construct_rt(tri=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), PolynomialKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
 
     int_rt = ElementTriple(edge, (vec_Pd, CellHDiv, C0), dofs)
@@ -244,6 +390,7 @@ def test_rt_example():
     for dof in rt.generate():
         assert [np.allclose(1, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 1
         assert [np.allclose(0, dof.eval(basis_func).flatten()) for basis_func in basis_funcs].count(True) == 2
+    rt.to_fiat()
 
 
 def construct_hermite():
@@ -269,19 +416,19 @@ def construct_hermite():
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
     return her
 
-
-def test_hermite_example():
-    her = construct_hermite()
-
-    # TODO improve this test
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
-    ls = her.generate()
-    print("num dofs ", her.num_dofs())
-    for dof in ls:
-        print(dof)
-        print("dof eval", dof.eval(phi_0))
+# draft of hermite test, immersions need work
+# def test_hermite_example():
+#    her = construct_hermite()
+#
+#    # TODO improve this test
+#    x = sp.Symbol("x")
+#    y = sp.Symbol("y")
+#    phi_0 = FuseFunction(x**2 + 3*y**3 + 4*x*y, symbols=(x, y))
+#    ls = her.generate()
+#    print("num dofs ", her.num_dofs())
+#    for dof in ls:
+#        print(dof)
+#        print("dof eval", dof.eval(phi_0))
 
 
 def test_square_cg():

@@ -35,6 +35,22 @@ def test_basis_vectors(C):
         assert len(bv_ids) == len(bv_coords)
 
 
+# def test_basis_group(C):
+#     if C.dimension == 0:
+#         assert C.basis_group.size() == 1
+#     else:
+#         bv_coords = C.basis_vectors(return_coords=True)
+#         bv_0 = bv_coords[0]
+#         for i, g in enumerate(C.basis_group.members()):
+#             assert np.allclose(np.array(bv_coords[i]), np.array(g(bv_0)))
+#         if C.dimension == 2:
+#             for i, g in enumerate(C.basis_group.members()):
+#                 bvs = np.array(C.basis_vectors())
+#                 new_bvs = np.array(C.orient(g).basis_vectors())
+#                 basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
+#                 assert np.allclose(np.array(bv_coords[i]), np.array(np.matmul(basis_change, bv_0)))
+
+
 def test_sub_basis_vectors():
     cell = polygon(3)
 
@@ -148,7 +164,7 @@ def test_ref_els(expect):
     print(expect)
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
 
         V = FunctionSpace(mesh, "CG", 3)
         res1 = helmholtz_solve(mesh, V)
@@ -293,3 +309,27 @@ def make_entity_cone_lists(fiat_cell):
         _n = _n1
     _offset_list.append(_offset)
     return _list, _offset_list
+
+
+def test_tet_groups():
+    for cell in [make_tetrahedron(), ufc_tetrahedron()]:
+        group = S4.add_cell(cell)
+        for j in [1, 2]:
+
+            sub_group = []
+            flip_group = []
+            for i in range(len(cell.d_entities(j))):
+                face = cell.d_entities(j)[i]
+                print(face)
+                for g in group.members():
+                    res = cell.permute_entities(g, j)[0]
+                    if res[1].perm.is_Identity and res[0] == face.id and (j == 2 or g.perm.is_even):
+                        print(g, res)
+                        sub_group += [g.perm]
+                    # elif res[1].perm.array_form == [1, 0, 2] and res[0] == face.id and (j == 2 or g.perm.is_even): [0, 2, 1] [2, 1, 0]
+                    elif res[1].perm.array_form == [0, 1, 2] and res[0] == face.id and (j == 2 or g.perm.is_even):
+                        print(g, res)
+                        flip_group += [g.perm]
+                print()
+            print([s.array_form for s in sub_group])
+            print([s.array_form for s in flip_group])

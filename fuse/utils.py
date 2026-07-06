@@ -19,7 +19,8 @@ def fold_reduce(func_list: list[Callable[..., tuple[Any]]], *prev: Any) -> tuple
 
 def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> np.ndarray | float:
     """
-    Convert a sympy array to a numpy array.
+    TODO: rename this function
+    Evaluate symbols at values, then convert to numpy if all have been replaced
 
     :param: array: sympy array
     :param: symbols: array of symbols contained in the sympy exprs
@@ -29,13 +30,17 @@ def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> n
     is greater than 1 dimension to remove extra dimensions
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
-    nparray = np.array(substituted).astype(np.float64)
 
-    if len(nparray.shape) > 1:
-        return nparray.squeeze()
+    if len(array.atoms(sp.Symbol)) == len(values) and all(not isinstance(v, sp.Expr) for v in values):
+        nparray = np.array(substituted).astype(np.float64)
 
-    if len(nparray.shape) == 0:
-        return nparray.item()
+        if len(nparray.shape) > 1:
+            return nparray.squeeze()
+
+        if len(nparray.shape) == 0:
+            return nparray.item()
+    else:
+        nparray = substituted
 
     return nparray
 
@@ -82,8 +87,8 @@ def orientation_value(identity_arg: list[int], perm_arg: list[int]) -> int:
     perm = perm_arg.copy()
 
     val = 0
-    for i in range(len(identity)):
-        loc = perm.index(identity[i])
-        perm.remove(identity[i])
-        val += loc * math.factorial(len(identity) - i - 1)
+    for i in range(len(perm)):
+        loc = identity.index(perm[i])
+        identity.remove(perm[i])
+        val += loc * math.factorial(len(perm) - i - 1)
     return val
