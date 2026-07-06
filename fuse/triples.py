@@ -1,3 +1,5 @@
+"""Core element triple assembly and FIAT/UFL conversion utilities."""
+
 from fuse.cells import Point, TensorProductPoint, compare_topologies
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel

@@ -1,3 +1,5 @@
+"""Permutation-group representations and orientation utilities for cells."""
+
 import fuse.cells as cells
 from fuse.utils import orientation_value
 from sympy.combinatorics import PermutationGroup, Permutation
@@ -8,6 +10,18 @@ import sympy as sp
 
 
 def perm_matrix_to_perm_array(p_mat):
+    """Convert a permutation matrix into an array-form permutation.
+
+    Parameters
+    ----------
+    p_mat : array_like
+        A permutation matrix with one non-zero entry per row and column.
+
+    Returns
+    -------
+    list of int
+        The permutation in array form.
+    """
     summed = np.sum(p_mat, axis=0)
     if np.allclose(summed, np.zeros_like(summed)):
         return list(np.zeros_like(summed))
@@ -20,6 +34,20 @@ def perm_matrix_to_perm_array(p_mat):
 
 
 def perm_list_to_matrix(identity, perm):
+    """Convert a permutation in array form to its matrix representation.
+
+    Parameters
+    ----------
+    identity : list
+        The reference ordering of the elements.
+    perm : list
+        The permuted ordering of the same elements.
+
+    Returns
+    -------
+    numpy.ndarray
+        The permutation matrix mapping ``identity`` to ``perm``.
+    """
     assert set(identity) == set(perm)
     n = len(identity)
     res = np.zeros((n, n))

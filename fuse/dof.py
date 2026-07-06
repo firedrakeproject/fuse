@@ -1,3 +1,5 @@
+"""Pairings, kernels, and degree-of-freedom definitions for FUSE elements."""
+
 from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
 from fuse.traces import TrH1

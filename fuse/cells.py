@@ -1,3 +1,5 @@
+"""Cell complex construction, orientation, and visualisation utilities."""
+
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -1233,6 +1235,18 @@ class Edge():
 
 
 class TensorProductPoint():
+    """Tensor-product cell complex built from two lower-dimensional cells.
+
+    Parameters
+    ----------
+    A : Point
+        The first factor of the tensor product.
+    B : Point
+        The second factor of the tensor product.
+    flat : bool, optional
+        Whether the product should be treated as a flattened hypercube-style
+        cell. Defaults to ``False``.
+    """
 
     def __init__(self, A, B, flat=False):
         """Initialize the TensorProductPoint.
@@ -1660,6 +1674,21 @@ class CellComplexToUFL(Cell):
 
 
 def constructCellComplex(name):
+    """Construct a named reference cell complex.
+
+    Parameters
+    ----------
+    name : str
+        The cell name to construct. Supported values include ``"vertex"``,
+        ``"interval"``, ``"triangle"``, ``"quadrilateral"``,
+        ``"tetrahedron"``, ``"hexahedron"``, and tensor-product names of the
+        form ``"cell_a * cell_b"``.
+
+    Returns
+    -------
+    ufl.Cell or TensorProductCell
+        The corresponding UFL cell representation.
+    """
     if name == "vertex":
         return Point(0).to_ufl(name)
     elif name == "interval":
