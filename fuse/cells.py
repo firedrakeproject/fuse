@@ -403,6 +403,9 @@ class Point():
 
     def dim(self):
         return self.dimension
+    
+    def dimensions(self):
+        return [i for i in range(self.dimension + 1)]
 
     def get_shape(self):
         num_verts = len(self.vertices())
@@ -1028,12 +1031,10 @@ class TensorProductPoint():
         self.group = self.compute_cell_group()
         self.entities = {}
 
-        degree_tuples = list(product(*(range(f.dimension + 1) for f in factors)))
-        for d in degree_tuples:
-            if d == tuple(f.dimension for f in factors):
-                self.entities[d] = [self]
-            else:
-                self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
+        for d in self.dimensions()[:-1]:
+            self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
+        self.entities[self.dim()] = [self]
+                
 
     def ordered_vertices(self):
         return self.entities[0]
@@ -1096,15 +1097,17 @@ class TensorProductPoint():
         return self.to_fiat().sub_entities
 
     def dim(self):
-        return tuple(f.dimension for f in self.factors)
+        return self.dimensions()[-1]
+    
+    def dimensions(self):
+        return list(product(*(f.dimensions() for f in self.factors)))
 
     def d_entities(self, d, get_class=True):
         if isinstance(d, tuple):
             if get_class:
                 return self.entities[d]
             return [e.id for e in self.entities[d]]
-        raise NotImplementedError("not sure this is right")
-        # return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
+        raise NotImplementedError("Tensor Product point must be indexed by a tuple of dimensions")
 
     def vertices(self, get_class=True, return_coords=False):
         # TODO maybe refactor with get_node
@@ -1115,6 +1118,9 @@ class TensorProductPoint():
             return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
         # return [(a, b) for a in self.A.vertices() for b in self.B.vertices()]
         return list(product(*(f.vertices() for f in self.factors)))
+
+    def __repr__(self):
+        return "*".join([str(f) for f in self.factors])
 
     def to_ufl(self, name=None):
         return TensorProductCell(*[f.to_ufl() for f in self.factors])

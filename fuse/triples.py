@@ -412,7 +412,7 @@ class ElementTriple():
         flat_by_entity = {}
         cell = self.cell
         if tensor:
-            dims = list(product(*(range(f.dimension + 1) for f in cell.factors)))
+            dims = list(product(*(f.dimensions() for f in cell.factors)))
         else:
             dims = [i for i in range(cell.dimension + 1)]
         for dim in dims:
