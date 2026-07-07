@@ -2,29 +2,38 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
+from typing import Any
+from collections.abc import Callable
+from abc import ABCMeta
+from fuse.groups import GroupMemberRep
+from fuse.cells import Point
 
 
-class Trace():
+class Trace(metaclass=ABCMeta):
 
-    def __init__(self, cell):
+    def __init__(self, cell: Point):
         self.domain = cell
 
-    def __call__(self, trace_entity):
-        raise NotImplementedError("Trace uninstanitated")
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
+        raise NotImplementedError("Trace uninstantiated")
 
-    def plot(self, ax, coord, trace_entity, **kwargs):
-        raise NotImplementedError("Trace uninstanitated")
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
+        raise NotImplementedError("Trace uninstantiated")
+
+    def to_tikz(self, coord, trace_entity, scale, color="black") -> str:
+        raise NotImplementedError("Trace uninstantiated")
 
     def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict[str, str]:
         return {"trace": str(self)}
 
-    def dict_id(self):
+    def dict_id(self) -> str:
         return "Trace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict) -> type[Trace]:
         # might want to actually save these as functions or something for ambiguity?
         tr_id = obj_dict["trace"]
         if tr_id == "H1":
@@ -45,13 +54,13 @@ class TrH1(Trace):
     def __init__(self, cell):
         super(TrH1, self).__init__(cell)
 
-    def __call__(self, v, trace_entity):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         return v
 
-    def plot(self, ax, coord, trace_entity, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         ax.scatter(*coord, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black") -> str:
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
     def tabulate(self, Qpts, trace_entity):
@@ -70,7 +79,7 @@ class TrHDiv(Trace):
     def __init__(self, cell):
         super(TrHDiv, self).__init__(cell)
 
-    def __call__(self, v, trace_entity):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
@@ -79,7 +88,7 @@ class TrHDiv(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax, coord, trace_entity, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         # plot dofs of the type associated with this space
         vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
@@ -128,7 +137,7 @@ class TrHCurl(Trace):
     def __init__(self, cell):
         super(TrHCurl, self).__init__(cell)
 
-    def __call__(self, v, trace_entity):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
             if isinstance(result, np.float64):
@@ -146,7 +155,7 @@ class TrHCurl(Trace):
     def manipulate_basis(self, basis):
         return basis[0]
 
-    def plot(self, ax, coord, trace_entity, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
@@ -165,7 +174,7 @@ class TrGrad(Trace):
     def __init__(self, cell):
         super(TrGrad, self).__init__(cell)
 
-    def __call__(self, v, trace_entity):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         # Compute grad v and then dot with tangent rotated according to the group member
         raise NotImplementedError("Gradient immersions are under development")
         g = None
@@ -200,7 +209,7 @@ class TrHess(Trace):
     def __init__(self, cell):
         super(TrHess, self).__init__(cell)
 
-    def __call__(self, v, trace_entity):
+    def __call__(self, v: Callable[..., tuple[Any]], trace_entity: Point) -> Callable[..., tuple[Any]]:
         raise NotImplementedError("Hessian trace needs reviewing")
         g = None
         b0, b1 = self.domain.basis_vectors()
@@ -219,7 +228,7 @@ class TrHess(Trace):
             return tuple(result)
         return apply
 
-    def plot(self, ax, coord, trace_entity, **kwargs):
+    def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
 

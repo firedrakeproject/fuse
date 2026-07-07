@@ -1,5 +1,6 @@
 import fuse.cells as cells
 from fuse.utils import orientation_value
+from typing import Any
 from sympy.combinatorics import PermutationGroup, Permutation
 from sympy.combinatorics.named_groups import SymmetricGroup, DihedralGroup, CyclicGroup, AlternatingGroup
 from sympy.matrices.expressions import PermutationMatrix
@@ -32,9 +33,9 @@ def perm_list_to_matrix(identity, perm):
 class GroupMemberRep(object):
 
     def __init__(self, perm, M, group):
-        self.perm = perm
-        self.transform_matrix = M
-        self.group = group
+        self.perm: Permutation = perm
+        self.transform_matrix: Any = M
+        self.group: Any = group
 
     def __call__(self, x):
         if isinstance(x, cells.Point):
@@ -297,13 +298,14 @@ class PermutationSetRepresentation():
             return self.name + str(self.size())
         return "GS" + str(self.size())
 
-    def _to_dict(self):
+    def _to_dict(self) -> dict[str, Any]:
         return {"members": [m.perm.array_form for m in self._members]}
 
     def dict_id(self):
         return "PermutationSet"
 
-    def _from_dict(o_dict):
+    @staticmethod
+    def _from_dict(o_dict: dict[str, Any]) -> "PermutationSetRepresentation":
         perm_set = [Permutation(m) for m in o_dict["members"]]
         return PermutationSetRepresentation(perm_set)
 
@@ -469,7 +471,8 @@ class GroupRepresentation(PermutationSetRepresentation):
     def dict_id(self):
         return "Group"
 
-    def _from_dict(o_dict):
+    @staticmethod
+    def _from_dict(o_dict: dict[str, Any]) -> "GroupRepresentation":
         perm_group = PermutationGroup([Permutation(m) for m in o_dict["members"]])
         # , o_dict["cell"]
         return GroupRepresentation(perm_group)

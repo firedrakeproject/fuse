@@ -1,9 +1,11 @@
 import numpy as np
 import sympy as sp
+from typing import Any
+from collections.abc import Callable
 import math
 
 
-def fold_reduce(func_list, *prev):
+def fold_reduce(func_list: list[Callable[..., tuple[Any]]], *prev: Any) -> tuple[Any]:
     """
     Right to left function comprehension
 
@@ -15,7 +17,7 @@ def fold_reduce(func_list, *prev):
     return prev
 
 
-def sympy_to_numpy(array, symbols, values):
+def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[Any]) -> np.ndarray | float:
     """
     TODO: rename this function
     Evaluate symbols at values, then convert to numpy if all have been replaced
@@ -43,7 +45,7 @@ def sympy_to_numpy(array, symbols, values):
     return nparray
 
 
-def tabulate_sympy(expr, pts):
+def tabulate_sympy(expr: sp.Matrix, pts: list[list[float]]) -> np.ndarray:
     # expr: sp matrix expression in x,y,z for components of R^d
     # pts: n values in R^d
     # returns: evaluation of expr at pts
@@ -52,7 +54,8 @@ def tabulate_sympy(expr, pts):
     syms = ["x", "y", "z"]
     for pt in pts:
         if not hasattr(pt, "__iter__"):
-            pt = (pt,)
+            raise ValueError("Coordinates should be stored in a tuple or list")
+        #    pt = (pt,)
         subbed = expr.evalf(subs={syms[i]: pt[i] for i in range(len(pt))})
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]
@@ -61,7 +64,7 @@ def tabulate_sympy(expr, pts):
     return final
 
 
-def max_deg_sp_mat(sp_mat):
+def max_deg_sp_mat(sp_mat: sp.Matrix) -> int:
     degs = []
     for comp in sp_mat:
         # only compute degree if component is a polynomial
@@ -70,7 +73,7 @@ def max_deg_sp_mat(sp_mat):
     return max(degs)
 
 
-def numpy_to_str_tuple(arr, scale=1):
+def numpy_to_str_tuple(arr: Any, scale: int = 1) -> str:
     str_as = []
     for a in arr:
         str_a = str(scale*a)
@@ -78,19 +81,7 @@ def numpy_to_str_tuple(arr, scale=1):
     return f'({",".join(str_as)})'
 
 
-# def orientation_value(identity_arg, perm_arg):
-#     # copy arrays as they are modified in place
-#     identity = identity_arg.copy()
-#     perm = perm_arg.copy()
-
-#     val = 0
-#     for i in range(len(identity)):
-#         loc = perm.index(identity[i])
-#         perm.remove(identity[i])
-#         val += loc * math.factorial(len(identity) - i - 1)
-#     return val
-
-def orientation_value(identity_arg, perm_arg):
+def orientation_value(identity_arg: list[int], perm_arg: list[int]) -> int:
     # copy arrays as they are modified in place
     identity = identity_arg.copy()
     perm = perm_arg.copy()

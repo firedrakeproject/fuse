@@ -1,3 +1,5 @@
+from typing import Any
+
 from fuse.triples import ElementTriple
 from fuse.cells import TensorProductPoint
 from finat.ufl import TensorProductElement, FuseElement
@@ -12,16 +14,16 @@ def tensor_product(A, B):
 class TensorProductTriple(ElementTriple):
 
     def __init__(self, A, B, flat=False):
-        self.A = A
-        self.B = B
-        self.spaces = []
+        self.A: Any = A
+        self.B: Any = B
+        self.spaces: Any = []
         for (a, b) in zip(self.A.spaces, self.B.spaces):
             self.spaces.append(a if a >= b else b)
 
-        self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
-        self.cell = TensorProductPoint(A.cell, B.cell)
-        self.flat = flat
-        self.apply_matrices = False
+        self.DOFGenerator: Any = [A.DOFGenerator, B.DOFGenerator]
+        self.cell: TensorProductPoint = TensorProductPoint(A.cell, B.cell)
+        self.flat: bool = flat
+        self.apply_matrices: bool = False
 
     def sub_elements(self):
         return [self.A, self.B]
@@ -32,10 +34,10 @@ class TensorProductTriple(ElementTriple):
     def setup_matrices(self):
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.A.generate() + self.B.generate())
         breakpoint()
-        for dim in range(self.cell.dimension):
+        for dim in range(self.cell.get_spatial_dimension()):
             for dimA in range(self.A.cell.dimension):
                 pass
-            for dimB in range(self.B.cell_dimension):
+            for dimB in range(self.B.cell.get_spatial_dimension()):
                 pass
         return super().setup_matrices()
 

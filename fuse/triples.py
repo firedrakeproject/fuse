@@ -16,6 +16,8 @@ import warnings
 import numpy as np
 import scipy
 from functools import cache
+from typing import Any
+from collections import defaultdict
 
 
 class ElementTriple():
@@ -35,8 +37,8 @@ class ElementTriple():
             assert isinstance(d, DOFGenerator)
             d.add_cell(cell)
 
-        self.cell = cell
-        cell_spaces = []
+        self.cell: Any = cell
+        cell_spaces: list[Any] = []
         for space in spaces:
             # TODO: Fix this to a more sensible condition when all spaces
             # implemented
@@ -44,13 +46,13 @@ class ElementTriple():
                 cell_spaces.append(space(cell))
             else:
                 cell_spaces.append(space)
-        self.spaces = tuple(cell_spaces)
-        self.DOFGenerator = dof_gen
-        self.flat = False
+        self.spaces: Any = tuple(cell_spaces)
+        self.DOFGenerator: Any = dof_gen
+        self.flat: bool = False
 
-        self.ref_el = None
+        self.ref_el: Any = None
 
-        self.dofs = None
+        self.dofs: Any = None
         self.dofs = self.generate()
         self.perm = perm
 
@@ -60,11 +62,11 @@ class ElementTriple():
         value_shape = self.get_value_shape()
         top = self.ref_el.get_topology()
         min_ids = self.cell.get_starter_ids()
-        entity_ids = {}
+        entity_ids = defaultdict(lambda: defaultdict(list))  # type: ignore[var-annotated]
         nodes = []
 
         for dim in sorted(top):
-            entity_ids[dim] = {i: [] for i in top[dim]}
+            entity_ids[dim] = defaultdict(list)
 
         self.dof_id_to_fiat_id = {}
         entities = [(dim, entity) for dim in sorted(top) for entity in sorted(top[dim])]
@@ -224,7 +226,7 @@ class ElementTriple():
                     dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
                 else:
                     ax.scatter(*coord, color=color)
-                ax.text(*coord, dof.id)
+                ax.text(coord[0], coord[1], str(dof.id))
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
@@ -249,7 +251,7 @@ class ElementTriple():
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
                     dof.target_space.plot(ax, center, dof.cell_defined_on, color=color, length=0.2)
-                ax.text(*coord, dof.id)
+                ax.text(coord[0], coord[1], str(dof.id))
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
@@ -350,8 +352,7 @@ class ElementTriple():
 
     def _entity_associations(self, dofs):
         min_ids = self.cell.get_starter_ids()
-        entity_associations = {dim: {e.id - min_ids[dim]: {} for e in self.cell.d_entities(dim)}
-                               for dim in range(self.cell.dim() + 1)}
+        entity_associations = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))  # type: ignore[var-annotated]
         cell_dim = self.cell.dim()
         cell_dict = entity_associations[cell_dim][0]
         pure_perm = True
@@ -387,8 +388,8 @@ class ElementTriple():
     def _initialise_entity_dicts(self, dofs):
         min_ids = self.cell.get_starter_ids()
         dof_id_mat = np.eye(len(dofs))
-        oriented_mats_by_entity = {}
-        flat_by_entity = {}
+        oriented_mats_by_entity = defaultdict(dict)  # type: ignore[var-annotated]
+        flat_by_entity = defaultdict(dict)  # type: ignore[var-annotated]
         for dim in range(self.cell.dim() + 1):
             oriented_mats_by_entity[dim] = {}
             flat_by_entity[dim] = {}
@@ -564,7 +565,7 @@ class ElementTriple():
 
     def reverse_dof_perms(self, matrices):
         min_ids = self.cell.get_starter_ids()
-        reversed_mats = {}
+        reversed_mats = defaultdict(dict)  # type: ignore[var-annotated]
         for dim in matrices.keys():
             reversed_mats[dim] = {}
             ents = self.cell.d_entities(dim)
@@ -594,7 +595,8 @@ class ElementTriple():
     def dict_id(self):
         return "Triple"
 
-    def _from_dict(o_dict):
+    @staticmethod
+    def _from_dict(o_dict: dict[str, Any]) -> "ElementTriple":
         return ElementTriple(o_dict["cell"], o_dict["spaces"], o_dict["dofs"])
 
 
@@ -643,13 +645,16 @@ class DOFGenerator():
 
     def make_entity_ids(self):
         dofs = self.ls
-        entity_ids = {}
-        min_ids = dofs[0].cell.get_starter_ids()
+        entity_ids = defaultdict(lambda: defaultdict(list))  # type: ignore[var-annotated]
+        assert dofs is not None
+        first_dof = dofs[0]
+        assert first_dof.cell is not None
+        min_ids = first_dof.cell.get_starter_ids()
 
-        top = dofs[0].cell.get_topology()
+        top = first_dof.cell.get_topology()
 
         for dim in sorted(top):
-            entity_ids[dim] = {i: [] for i in top[dim]}
+            entity_ids[dim] = defaultdict(list)
 
         for i in range(len(dofs)):
             entity = dofs[i].cell_defined_on
@@ -671,7 +676,8 @@ class DOFGenerator():
     def dict_id(self):
         return "DOFGen"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> "DOFGenerator":
         return DOFGenerator(obj_dict["x"], obj_dict["g1"], obj_dict["g2"])
 
 
@@ -714,7 +720,8 @@ class ImmersedDOFs():
     def dict_id(self):
         return "ImmersedDOF"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> "ImmersedDOFs":
         return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"])
 
 
