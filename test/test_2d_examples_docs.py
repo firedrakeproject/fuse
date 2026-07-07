@@ -400,13 +400,14 @@ def construct_hermite():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
 
-    v_xs = [immerse(tri, dg0, TrH1)]
+    v_xs = [immerse(tri, dg0, TrH1())]
     v_dofs = DOFGenerator(v_xs, S3/S2, S1)
 
-    v_derv_xs = [immerse(tri, dg0, TrGrad)]
+    v_derv_xs = [immerse(tri, dg0, TrGrad(alpha=(1, 0))),
+                 immerse(tri, dg0, TrGrad(alpha=(0, 1)))]
     v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S1)
 
-    v_derv2_xs = [immerse(tri, dg0, TrHess)]
+    v_derv2_xs = [immerse(tri, dg0, TrHess())]
     v_derv2_dofs = DOFGenerator(v_derv2_xs, S3/S2, S1)
 
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
@@ -415,6 +416,7 @@ def construct_hermite():
     her = ElementTriple(tri, (P3, CellH2, C0),
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
     return her
+
 
 # draft of hermite test, immersions need work
 # def test_hermite_example():

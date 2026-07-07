@@ -6,7 +6,7 @@ from fuse.element_construction import periodic_table
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_hermite
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
@@ -1159,3 +1159,10 @@ def test_scaling_mesh():
     print(res1.dat.data)
     res2 = assemble(interpolate(vec, V2))
     print(res2.dat.data)
+
+def test_convert_hermite():
+    her = construct_hermite()
+    for dof in her.generate():
+        dof.to_quadrature(1, tuple())
+    # her.to_fiat()
+    breakpoint()

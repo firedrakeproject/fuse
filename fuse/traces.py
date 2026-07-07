@@ -6,8 +6,12 @@ from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
 
 class Trace():
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         self.domain = cell
+        self.alpha = alpha
+    
+    def add_cell(self, cell):
+        return type(self)(cell=cell, alpha=self.alpha)
 
     def __call__(self, trace_entity):
         raise NotImplementedError("Trace uninstanitated")
@@ -17,6 +21,9 @@ class Trace():
 
     def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
+    
+    def tabulate_derivs(self, Qwts, trace_entity):
+        return []
 
     def _to_dict(self):
         return {"trace": str(self)}
@@ -42,7 +49,7 @@ class Trace():
 
 class TrH1(Trace):
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         super(TrH1, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
@@ -67,7 +74,7 @@ class TrH1(Trace):
 
 class TrHDiv(Trace):
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         super(TrHDiv, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
@@ -125,7 +132,7 @@ class TrHDiv(Trace):
 
 class TrHCurl(Trace):
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         super(TrHCurl, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
@@ -142,7 +149,7 @@ class TrHCurl(Trace):
         # result = np.matmul(tangent, subEntityBasis)
         return subEntityBasis
         # return result
-
+    
     def manipulate_basis(self, basis):
         return basis[0]
 
@@ -162,14 +169,18 @@ class TrHCurl(Trace):
 
 class TrGrad(Trace):
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         super(TrGrad, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
-        raise NotImplementedError("Gradient immersions are under development")
-        g = None
-        tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
+        # raise NotImplementedError("Gradient immersions are under development")
+        def apply(*x):
+            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
+            if isinstance(result, np.float64):
+                return (result,)
+            return tuple(result)
+        return apply
 
         def apply(*x):
             X = sp.DeferredVector('x')
@@ -202,9 +213,13 @@ class TrGrad(Trace):
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
+    
+    def tabulate(self, Qpts, trace_entity):
+        return np.array([])
 
-    def tabulate(self, Qpts, trace_entity, g):
-        return np.ones_like(Qpts)
+    def tabulate_derivs(self, Qpts, immersed_entity):
+        basis = np.array(immersed_entity.basis_vectors())
+        return basis
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
@@ -215,7 +230,7 @@ class TrGrad(Trace):
 
 class TrHess(Trace):
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None):
         super(TrHess, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
@@ -236,6 +251,12 @@ class TrHess(Trace):
                 return (result,)
             return tuple(result)
         return apply
+    
+    def tabulate(self, Qpts, trace_entity):
+        return np.array([])
+    
+    def tabulate_derivs(self, Qpts, trace_entity):
+        return np.array([])
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)

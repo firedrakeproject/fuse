@@ -384,7 +384,7 @@ class DOF():
         if not self.immersed:
             self.target_space = TrH1(self.cell_defined_on)
         else:
-            self.target_space = target_space
+            self.target_space = target_space.add_cell(cell=cell)
         self.g = g
         self.id = None
         self.sub_id = sub_id
@@ -424,12 +424,14 @@ class DOF():
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
-        # TODO deriv dict needs implementing (currently {})
-        return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
+        pt_dict, deriv_dict = self.to_quadrature(interpolant_degree, value_shape)
+        return Functional(ref_el, value_shape, pt_dict, deriv_dict, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
+        deriv_wts = []
+        alphas = []
         dim = self.cell_defined_on.get_spatial_dimension()
         if dim > 0:
             bvs = np.array(self.cell_defined_on.basis_vectors())
@@ -443,23 +445,13 @@ class DOF():
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
                 J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
-                # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
-                # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
-                #     breakpoint()
                 return np.matmul(J, basis_coeffs)
         else:
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            # if self.pairing.orientation is not None and
-            # self.pairing.orientation.numeric_rep() == 1:
-            #     breakpoint()
-            # print(self)
-            # print(self.cell_defined_on.cartesian_to_barycentric(Qpts))
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
-            # print(bary_pts)
-            # print(basis_change)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
@@ -476,19 +468,35 @@ class DOF():
                 new_wts = wts
             else:
                 new_wts = np.outer(wts * J_det, immersion)
-                # shape is wrong for 2d face on tet
-            # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
-            #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
+            
+
+            deriv_immersion = self.target_space.tabulate_derivs(pts, self.cell)
+            if len(deriv_immersion) == 0:
+                deriv_wts = []
+                alphas = []
+            else:
+                deriv_wts = np.outer(wts * J_det, deriv_immersion)
+                alphas = [[self.target_space.alpha] for pt in Qpts]
+            print(self.target_space.alpha)
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
+        # deriv dict is {pt: [(weight, alpha, component)]}
+        deriv_dict = {tuple(pt): [(w, a, c) for w, a, c in zip(wt, alp, cp)] for pt, wt, alp,  cp in zip(pts, deriv_wts, alphas, comps)}
+        if len(deriv_dict) > 0:
+            breakpoint()
         # if self.cell_defined_on.dimension >= 2:
-        #     print(self)
-        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        #     for key, val in pt_dict.items():
-        #         print(np.array(key), ":", np.array([v[0] for v in val]))
-        return pt_dict
+        print(self)
+        np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        print("pt")
+        for key, val in pt_dict.items():
+            print(np.array(key), ":", np.array([v[0] for v in val]))
+        print("deriv")
+        for key, val in deriv_dict.items():
+            print(np.array(key), ":", np.array([v[0] for v in val]))
+        return pt_dict, deriv_dict
+
 
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)

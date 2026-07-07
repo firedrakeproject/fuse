@@ -155,6 +155,7 @@ class ElementTriple():
             self.ref_el = self.cell.to_fiat()
             self.poly_set = self.spaces[0].to_ON_polynomial_set(self.ref_el)
             self.entity_ids, self.nodes = self.setup_ids_and_nodes()
+            breakpoint()
             self.matrices, self.reversed_matrices = self.setup_matrices()
         return FuseElement(self)
 
@@ -682,7 +683,7 @@ class ImmersedDOFs():
         self.target_cell = target_cell
         self.triple = triple
         self.C, self.V, self.E = triple
-        self.trace = trace(target_cell)
+        self.trace = trace.add_cell(target_cell)
         self.start_node = start_node
 
     def __call__(self, g):
