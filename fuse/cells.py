@@ -7,6 +7,7 @@ import networkx as nx
 import fuse.groups as fuse_groups
 import copy
 import sympy as sp
+from typing import Any
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
@@ -108,43 +109,41 @@ def compute_scaled_verts(d, n):
         scaled_coords = np.array([[scale*x, scale*y] for (x, y) in rot_coords])
         return scaled_coords
     elif d == 3:
+        coords: list[list[int]]
+        faces: list[list[list[int]]]
         if n == 4:
             A = [-1, 1, -1]
             B = [1, -1, -1]
             C = [1, 1, 1]
             D = [-1, -1, 1]
             coords = [A, B, C, D]
-            face1 = np.array([A, D, C])
-            face2 = np.array([A, B, D])
-            face3 = np.array([A, C, B])
-            face4 = np.array([B, D, C])
-            faces = [face1, face2, face3, face4]
+            faces = [[A, D, C], [A, B, D], [A, C, B], [B, D, C]]
         elif n == 8:
-            coords3d: list[list[int]] = []
-            faces3d: list[list[list[int]]] = [[] for i in range(6)]
+            coords = []
+            faces = [[] for i in range(6)]
             for i in [-1, 1]:
                 for j in [-1, 1]:
                     for k in [-1, 1]:
-                        coords3d.append([i, j, k])
+                        coords.append([i, j, k])
 
             for j in [-1, 1]:
                 for k in [-1, 1]:
-                    faces3d[0].append([1, j, k])
-                    faces3d[1].append([-1, j, k])
-                    faces3d[2].append([j, 1, k])
-                    faces3d[3].append([j, -1, k])
-                    faces3d[4].append([j, k, 1])
-                    faces3d[5].append([j, k, -1])
+                    faces[0].append([1, j, k])
+                    faces[1].append([-1, j, k])
+                    faces[2].append([j, 1, k])
+                    faces[3].append([j, -1, k])
+                    faces[4].append([j, k, 1])
+                    faces[5].append([j, k, -1])
 
         else:
             raise ValueError("Polyhedron with {} vertices not supported".format(n))
 
-        xdiff, ydiff, zdiff = (coords3d[0][0] - coords3d[1][0],
-                               coords3d[0][1] - coords3d[1][1],
-                               coords3d[0][2] - coords3d[1][2])
+        xdiff, ydiff, zdiff = (coords[0][0] - coords[1][0],
+                               coords[0][1] - coords[1][1],
+                               coords[0][2] - coords[1][2])
         scale = 2 / np.sqrt(xdiff**2 + ydiff**2 + zdiff**2)
-        scaled_coords = np.array([[scale*x, scale*y, scale*z] for (x, y, z) in coords3d])
-        scaled_faces = np.array([[[scale*x, scale*y, scale*z] for (x, y, z) in face] for face in faces3d])
+        scaled_coords = np.array([[scale*x, scale*y, scale*z] for (x, y, z) in coords])
+        scaled_faces = np.array([[[scale*x, scale*y, scale*z] for (x, y, z) in face] for face in faces])
 
         return scaled_coords, scaled_faces
     else:
@@ -552,7 +551,7 @@ class Point():
     def d_entities_ids(self, d) -> list[int]:
         return self.d_entities(d, get_class=False)
 
-    def d_entities(self, d, get_class=True) -> list[object]:
+    def d_entities(self, d, get_class=True) -> list[Any]:
         """Get all the d dimensional entities of the cell complex.
 
         :param: d: Dimension of required entities
@@ -745,7 +744,7 @@ class Point():
                     vert_coords += [plotted]
                     if not plain:
                         plt.plot(plotted[0], plotted[1], 'bo')
-                        plt.annotate(node, (plotted[0], plotted[1]))
+                        plt.annotate(str(node), (plotted[0], plotted[1]))
                 elif i == 1:
                     edgevals = np.array([attach(x) for x in xs])
                     if len(edgevals[0]) < 2:
@@ -967,7 +966,7 @@ class TensorProductPoint():
     def __init__(self, A, B, flat=False):
         self.A = A
         self.B = B
-        self.dimension = self.A.dimension + self.B.dimension
+        self.dimension = self.A.dimension + self.B.dimension  # type: ignore[method-assign]
         self.flat = flat
 
     def ordered_vertices(self):

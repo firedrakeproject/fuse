@@ -465,7 +465,7 @@ class DOF():
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
 
         new_pts = pts
-        new_wts = np.asarray(wts)
+        new_wts: np.ndarray = np.asarray(wts)
         if self.immersed:
             # need to compute jacobian from attachment.
             new_pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
@@ -482,7 +482,7 @@ class DOF():
             # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
             #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
         # pt dict is { pt: [(weight, component)]}
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(new_pts if self.immersed else pts, new_wts, comps)}
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(new_pts, new_wts, comps)}
         # if self.cell_defined_on.dimension >= 2:
         #     print(self)
         #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
