@@ -7,6 +7,7 @@ from fuse.utils import tabulate_sympy, max_deg_sp_mat
 import sympy as sp
 import numpy as np
 from functools import total_ordering
+from typing import Any
 
 
 @total_ordering
@@ -28,17 +29,17 @@ class PolynomialSpace(object):
     """
 
     def __init__(self, maxdegree, contains=None, mindegree=0, set_shape=False):
-        self.maxdegree = maxdegree
-        self.mindegree = mindegree
+        self.maxdegree: int = maxdegree
+        self.mindegree: int = mindegree
 
         if not contains and mindegree == 0:
-            self.contains = maxdegree
+            self.contains: int = maxdegree
         elif not contains and mindegree >= 0:
             self.contains = -1
         else:
             self.contains = contains
 
-        self.set_shape = set_shape
+        self.set_shape: bool = set_shape
 
     def complete(self):
         return self.mindegree == self.maxdegree
@@ -46,19 +47,20 @@ class PolynomialSpace(object):
     def degree(self):
         return self.maxdegree
 
-    def to_ON_polynomial_set(self, ref_el, k=None):
+    def to_ON_polynomial_set(self, ref_el: Any, k: Any = None):
         # how does super/sub degrees work here
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         sd = ref_el.get_spatial_dimension()
         ref_el = cell_to_simplex(ref_el)
+        shape_value: tuple[Any, ...]
         if self.set_shape:
-            shape = (sd,)
+            shape_value = (sd,)
         else:
-            shape = tuple()
+            shape_value = ()
 
         if self.mindegree > 0:
-            base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+            base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape_value, scale="orthonormal")
             dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
             dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
             if self.set_shape:
@@ -67,7 +69,7 @@ class PolynomialSpace(object):
                 indices = list(range(dimPmin, dimPmax))
             restricted_ON = base_ON.take(indices)
             return restricted_ON
-        return ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+            return ONPolynomialSet(ref_el, self.maxdegree, shape_value, scale="orthonormal")
 
     def __repr__(self):
         res = ""
@@ -132,7 +134,8 @@ class PolynomialSpace(object):
     def dict_id(self):
         return "PolynomialSpace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> "PolynomialSpace":
         return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], obj_dict["set_shape"])
 
 
@@ -144,9 +147,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
     weights can either be 1 or a polynomial in x, where x in R^d
     """
     def __init__(self, weights, spaces):
-
-        self.weights = weights
-        self.spaces = spaces
+        self.weights: list[Any] = list(weights)
+        self.spaces: list[PolynomialSpace] = list(spaces)
 
         weight_degrees = [0 if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)) else max_deg_sp_mat(w) for w in self.weights]
 
@@ -159,7 +161,7 @@ class ConstructedPolynomialSpace(PolynomialSpace):
     def __repr__(self):
         return "+".join([str(w) + "*" + str(x) for (w, x) in zip(self.weights, self.spaces)])
 
-    def to_ON_polynomial_set(self, ref_el):
+    def to_ON_polynomial_set(self, ref_el: Any, k: Any = None):
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         k = max([s.maxdegree for s in self.spaces])
@@ -221,7 +223,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
     def dict_id(self):
         return "ConstructedPolynomialSpace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> "ConstructedPolynomialSpace":
         return ConstructedPolynomialSpace(obj_dict["weights"], obj_dict["spaces"])
 
 

@@ -1,6 +1,5 @@
 from functools import total_ordering
-
-
+from typing import Any
 @total_ordering
 class InterpolationSpace(object):
     """Symbolic representation of an interpolation function space
@@ -18,9 +17,10 @@ class InterpolationSpace(object):
             space is a subspace.
         """
         self.name = name
+        self.shape = shape
         p = frozenset(parents or [])
         # Ensure that the inclusion operations are transitive.
-        self.parents = p.union(*[p_.parents for p_ in p])
+        self.parents: frozenset[InterpolationSpace] = p.union(*[p_.parents for p_ in p])
 
     def __str__(self):
         """Format as a string."""
@@ -52,7 +52,8 @@ class InterpolationSpace(object):
     def dict_id(self):
         return "InterpolationSpace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> "InterpolationSpace":
         return InterpolationSpace(obj_dict["space"])
 
 

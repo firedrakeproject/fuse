@@ -6,6 +6,7 @@ from recursivenodes import recursive_nodes
 import itertools
 from functools import reduce
 from operator import mul
+from collections import defaultdict
 
 
 def convert_to_generation(coords, verts, return_idx=False):
@@ -110,7 +111,7 @@ def group_by_symmetry(points, verts, tol=1e-6):
     """
     points = [np.array(p) for p in points]
 
-    groups = {}
+    groups = defaultdict(list)  # type: ignore[var-annotated]
     for i, p in enumerate(points):
         lam = barycentric_coords(p, verts)
 

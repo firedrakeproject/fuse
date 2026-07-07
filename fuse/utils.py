@@ -17,7 +17,7 @@ def fold_reduce(func_list: list[Callable[..., tuple[Any]]], *prev: Any) -> tuple
     return prev
 
 
-def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[int]) -> np.ndarray | float:
+def sympy_to_numpy(array: sp.Matrix, symbols: sp.Symbol, values: list[Any]) -> np.ndarray | float:
     """
     TODO: rename this function
     Evaluate symbols at values, then convert to numpy if all have been replaced
@@ -73,7 +73,7 @@ def max_deg_sp_mat(sp_mat: sp.Matrix) -> int:
     return max(degs)
 
 
-def numpy_to_str_tuple(arr: np.ndarray, scale: int = 1) -> str:
+def numpy_to_str_tuple(arr: Any, scale: int = 1) -> str:
     str_as = []
     for a in arr:
         str_a = str(scale*a)

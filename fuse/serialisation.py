@@ -33,7 +33,7 @@ class ElementSerialiser():
         self.seen_objs = {}
         self.obj_storage = {}
 
-        self.obj_types = {"Cell": Point,
+        self.obj_types: dict[str, Any] = {"Cell": Point,
                           "Edge": Edge,
                           "Triple": ElementTriple,
                           "Group": GroupRepresentation,
@@ -119,7 +119,7 @@ class ElementSerialiser():
                 breakpoint()
                 for (key, value) in sub_dict.items():
                     sub_dict[key] = self.decode_traverse(value, obj_dict)
-                return self.obj_types[name]._from_dict(sub_dict)
+                return self.obj_types[name]._from_dict(sub_dict)  # type: ignore[attr-defined]
             elif split_str[0] == "Sympy":
                 return sp.parse_expr(" ".join(split_str[1:]))
             else:

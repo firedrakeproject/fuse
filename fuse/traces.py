@@ -20,6 +20,9 @@ class Trace(metaclass=ABCMeta):
     def plot(self, ax: plt.Axes, coord: tuple[Any, ...], trace_entity: Point, **kwargs):
         raise NotImplementedError("Trace uninstantiated")
 
+    def to_tikz(self, coord, trace_entity, scale, color="black") -> str:
+        raise NotImplementedError("Trace uninstantiated")
+
     def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
 

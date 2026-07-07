@@ -1,6 +1,5 @@
 from functools import total_ordering
-
-
+from typing import Any
 @total_ordering
 class ElementSobolevSpace(object):
     """
@@ -12,8 +11,8 @@ class ElementSobolevSpace(object):
     """
 
     def __init__(self, parents, domain=None):
-        self.domain = domain
-        self.parents = parents
+        self.domain: Any = domain
+        self.parents: list[type[ElementSobolevSpace]] = parents
 
     def __lt__(self, other):
         """In common with intrinsic Python sets, < indicates "is a proper subset of"."""
@@ -33,7 +32,8 @@ class ElementSobolevSpace(object):
     def dict_id(self):
         return "SobolevSpace"
 
-    def _from_dict(obj_dict):
+    @staticmethod
+    def _from_dict(obj_dict: dict[str, Any]) -> type["ElementSobolevSpace"] | None:
         space_name = obj_dict["space"]
         if space_name == "L2":
             return CellL2
@@ -45,6 +45,7 @@ class ElementSobolevSpace(object):
             return CellHCurl
         elif space_name == "H2":
             return CellH2
+        return None
 
 
 class CellH1(ElementSobolevSpace):

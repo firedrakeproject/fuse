@@ -22,9 +22,9 @@ class Arrow3D(FancyArrowPatch):
         super().__init__((0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
-    def do_3d_projection(self, renderer=None):
+    def do_3d_projection(self, renderer: object = None):
         xs3d, ys3d, zs3d = self._verts3d
-        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)  # type: ignore[union-attr]
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
 
         return np.min(zs)
@@ -120,31 +120,31 @@ def compute_scaled_verts(d, n):
             face4 = np.array([B, D, C])
             faces = [face1, face2, face3, face4]
         elif n == 8:
-            coords = []
-            faces = [[] for i in range(6)]
+            coords3d: list[list[int]] = []
+            faces3d: list[list[list[int]]] = [[] for i in range(6)]
             for i in [-1, 1]:
                 for j in [-1, 1]:
                     for k in [-1, 1]:
-                        coords.append([i, j, k])
+                        coords3d.append([i, j, k])
 
             for j in [-1, 1]:
                 for k in [-1, 1]:
-                    faces[0].append([1, j, k])
-                    faces[1].append([-1, j, k])
-                    faces[2].append([j, 1, k])
-                    faces[3].append([j, -1, k])
-                    faces[4].append([j, k, 1])
-                    faces[5].append([j, k, -1])
+                    faces3d[0].append([1, j, k])
+                    faces3d[1].append([-1, j, k])
+                    faces3d[2].append([j, 1, k])
+                    faces3d[3].append([j, -1, k])
+                    faces3d[4].append([j, k, 1])
+                    faces3d[5].append([j, k, -1])
 
         else:
             raise ValueError("Polyhedron with {} vertices not supported".format(n))
 
-        xdiff, ydiff, zdiff = (coords[0][0] - coords[1][0],
-                               coords[0][1] - coords[1][1],
-                               coords[0][2] - coords[1][2])
+        xdiff, ydiff, zdiff = (coords3d[0][0] - coords3d[1][0],
+                               coords3d[0][1] - coords3d[1][1],
+                               coords3d[0][2] - coords3d[1][2])
         scale = 2 / np.sqrt(xdiff**2 + ydiff**2 + zdiff**2)
-        scaled_coords = np.array([[scale*x, scale*y, scale*z] for (x, y, z) in coords])
-        scaled_faces = np.array([[[scale*x, scale*y, scale*z] for (x, y, z) in face] for face in faces])
+        scaled_coords = np.array([[scale*x, scale*y, scale*z] for (x, y, z) in coords3d])
+        scaled_faces = np.array([[[scale*x, scale*y, scale*z] for (x, y, z) in face] for face in faces3d])
 
         return scaled_coords, scaled_faces
     else:
@@ -347,12 +347,11 @@ class Point():
         if self.dimension == 3:
             coords, faces = compute_scaled_verts(3, n)
             coords_2d = np.c_[np.ones(len(faces[0])), compute_scaled_verts(2, len(faces[0]))]
-            res = []
+            res = None
             edges = []
 
             for i in range(len(faces)):
                 res = np.linalg.solve(coords_2d, faces[i])
-
                 res_fn = construct_attach_3d(res)
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[0][1], "y": coords_2d[0][2]})).astype(np.float64), faces[i][0])
                 assert np.allclose(np.array(res_fn.subs({"x": coords_2d[1][1], "y": coords_2d[1][2]})).astype(np.float64), faces[i][1])
@@ -426,8 +425,8 @@ class Point():
         vertices = self.ordered_vertices()
         relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
 
-        self._topology = {}
-        self._topology_unrelabelled = {}
+        self._topology: dict[int, dict[int, tuple[int, ...]]] = {}
+        self._topology_unrelabelled: dict[int, dict[int, tuple[int, ...]]] = {}
         for i in range(len(structure)):
             dimension = structure[i]
             self._topology[i] = {}
@@ -458,7 +457,10 @@ class Point():
 
     def get_sub_entities(self):
         min_ids = self.get_starter_ids()
-        sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
+        sub_entities: dict[int, dict[int, list[tuple[int, int]]]] = {
+            d: {e.id - min_ids[d]: [] for e in self.d_entities(d)}
+            for d in range(self.get_spatial_dimension() + 1)
+        }
         self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
         return self.sub_entities
 
@@ -495,7 +497,7 @@ class Point():
         return sub_ents
 
     @cache
-    def get_starter_ids(self):
+    def get_starter_ids(self) -> list[int]:
         structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
         structure.reverse()
 
@@ -523,7 +525,7 @@ class Point():
         edge_dict = {(u, v): self.G.edges[u, v]["edge_class"].o for (u, v) in self.G.edges()}
         nx.draw_networkx_edge_labels(self.G, pos=topo_pos(self.G), edge_labels=edge_dict, ax=ax)
         if filename:
-            ax.figure.savefig(filename)
+            ax.figure.savefig(filename)  # type: ignore[union-attr]
         else:
             plt.show()
 
@@ -547,10 +549,10 @@ class Point():
     def ordered_vertex_coords(self):
         return [self.get_node(o, return_coords=True) for o in self.ordered_vertices()]
 
-    def d_entities_ids(self, d):
+    def d_entities_ids(self, d) -> list[int]:
         return self.d_entities(d, get_class=False)
 
-    def d_entities(self, d, get_class=True):
+    def d_entities(self, d, get_class=True) -> list[object]:
         """Get all the d dimensional entities of the cell complex.
 
         :param: d: Dimension of required entities
@@ -612,7 +614,7 @@ class Point():
         """
         return self.d_entities(1, get_class)
 
-    def permute_entities(self, g, d):
+    def permute_entities(self, g, d) -> list[object]:
         # TODO something is wrong here for squares it can return [()]
         # verts = self.ordered_vertices()
         verts = self.vertices(get_class=False)
@@ -629,7 +631,7 @@ class Point():
             entity_dict[e.id] = tuple(e.ordered_vertices())
             reordered_entity_dict[e.id] = tuple([reordered[verts.index(i)] for i in e.ordered_vertices()])
 
-        reordered_entities = [tuple() for e in range(len(entities))]
+        reordered_entities: list[object] = [tuple() for e in range(len(entities))]
         entity_group = self.d_entities(d)[0].group
         for ent in entities:
             for ent1 in entities:
@@ -642,7 +644,7 @@ class Point():
 
         return reordered_entities
 
-    def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True):
+    def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True) -> list[object]:
         if not entity:
             entity = self
         self_levels = [generation for generation in nx.topological_generations(self.G)]
@@ -658,7 +660,7 @@ class Point():
         v_0 = vertices[0]
         if return_coords:
             v_0_coords = self.attachment(top_level_node, v_0)()
-        basis_vecs = []
+        basis_vecs: list[object] = []
         for v in vertices[1:]:
             if return_coords:
                 v_coords = self.attachment(top_level_node, v)()
@@ -902,7 +904,8 @@ class Point():
     def dict_id(self):
         return "Cell"
 
-    def _from_dict(o_dict):
+    @staticmethod
+    def _from_dict(o_dict: dict[str, object]) -> "Point":
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
 
@@ -920,17 +923,17 @@ class Edge():
         self.point = point
         self.o = o
 
-    def __call__(self, *x):
+    def __call__(self, *x: object):
         if self.o:
             x = self.o(x)
         if self.attachment:
             syms = ["x", "y", "z"]
             if hasattr(self.attachment, '__iter__'):
-                res = []
+                res: list[object] = []
                 for attach_comp in self.attachment:
-                    res.append(sympy_to_numpy(attach_comp, syms, x))
+                    res.append(sympy_to_numpy(attach_comp, syms, list(x)))
                 return tuple(res)
-            return sympy_to_numpy(self.attachment, syms, x)
+            return sympy_to_numpy(self.attachment, syms, list(x))
         return x
 
     def ordered_vertices(self, get_class=False):
@@ -954,7 +957,8 @@ class Edge():
     def dict_id(self):
         return "Edge"
 
-    def _from_dict(o_dict):
+    @staticmethod
+    def _from_dict(o_dict: dict[str, object]) -> "Edge":
         return Edge(o_dict["point"], o_dict["attachment"], o_dict["orientation"])
 
 
@@ -977,7 +981,7 @@ class TensorProductPoint():
         self.B.get_sub_entities()
 
     def dimension(self):
-        return tuple(self.A.dimension, self.B.dimension)
+        return (self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
