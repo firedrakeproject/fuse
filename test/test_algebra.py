@@ -18,7 +18,7 @@ def construct_bubble(cell=None):
 
 
 def test_bubble():
-    mesh = UnitTriangleMesh()
+    mesh = UnitTriangleMesh(use_fuse=True)
     x = SpatialCoordinate(mesh)
 
     tri = polygon(3)

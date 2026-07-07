@@ -610,7 +610,7 @@ def test_project(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
     mesh = UnitTriangleMesh(use_fuse=True)
-
+    
     # U = FunctionSpace(mesh, elem_code, deg)
     # assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
 
