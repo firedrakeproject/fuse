@@ -23,7 +23,9 @@ class Trace():
         raise NotImplementedError("Tabulation uninstantiated")
     
     def tabulate_derivs(self, Qwts, trace_entity):
-        return []
+        if self.alpha is None:
+            return None
+        return [(1.0, self.alpha)]
 
     def _to_dict(self):
         return {"trace": str(self)}
@@ -169,8 +171,12 @@ class TrHCurl(Trace):
 
 class TrGrad(Trace):
 
-    def __init__(self, cell=None, alpha=None):
+    def __init__(self, cell=None, alpha=None, direction=None):
         super(TrGrad, self).__init__(cell, alpha)
+        self.direction = direction
+
+    def add_cell(self, cell):
+        return type(self)(cell=cell, alpha=self.alpha, direction=self.direction)
 
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
@@ -217,10 +223,20 @@ class TrGrad(Trace):
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
 
-    def tabulate_derivs(self, Qpts, immersed_entity):
-        if self.alpha is None:
-            return np.array([])
-        return np.ones((len(Qpts), 1))
+    def tabulate_derivs(self, Qpts, trace_entity):
+        if self.direction == "normal":
+            sd = self.domain.get_spatial_dimension()
+            if trace_entity.dimension != sd - 1:
+                raise ValueError("Normal derivative is only defined on facets (codimension 1 entities)")
+            basis = np.array(self.domain.basis_vectors(entity=trace_entity))
+            if sd == 2:
+                n = np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
+            elif sd == 3:
+                n = np.cross(basis[0], basis[1])
+            else:
+                raise ValueError("Normal derivative not implemented in dimension > 3")
+            return [(n[i], tuple(1 if j == i else 0 for j in range(sd))) for i in range(sd)]
+        return super(TrGrad, self).tabulate_derivs(Qpts, trace_entity)
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
@@ -255,11 +271,6 @@ class TrHess(Trace):
     
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
-
-    def tabulate_derivs(self, Qpts, trace_entity):
-        if self.alpha is None:
-            return np.array([])
-        return np.ones((len(Qpts), 1))
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)

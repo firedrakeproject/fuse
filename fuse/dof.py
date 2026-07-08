@@ -384,7 +384,7 @@ class DOF():
         if not self.immersed:
             self.target_space = TrH1(self.cell_defined_on)
         else:
-            self.target_space = target_space.add_cell(cell=cell)
+            self.target_space = target_space
         self.g = g
         self.id = None
         self.sub_id = sub_id
@@ -430,8 +430,7 @@ class DOF():
     def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        deriv_wts = []
-        alphas = []
+        deriv_terms = None
         dim = self.cell_defined_on.get_spatial_dimension()
         if dim > 0:
             bvs = np.array(self.cell_defined_on.basis_vectors())
@@ -468,18 +467,11 @@ class DOF():
                 new_wts = wts
             else:
                 new_wts = np.outer(wts * J_det, immersion)
-            
 
-            deriv_immersion = self.target_space.tabulate_derivs(pts, self.cell)
-            if len(deriv_immersion) == 0:
-                deriv_wts = []
-                alphas = []
-            else:
-                # alpha is already expressed w.r.t. the ambient cell's reference
-                # frame (matching FIAT's own PointDerivative), so the derivative
-                # functional reuses the point kernel's own weight unscaled.
-                deriv_wts = wts * J_det
-                alphas = [[self.target_space.alpha] for pt in Qpts]
+            # a derivative dof is described as sum_i coeff_i * D^{alpha_i},
+            # already expressed w.r.t. the ambient cell's reference frame
+            # (matching FIAT's own PointDerivative/PointDirectionalDerivative)
+            deriv_terms = self.target_space.tabulate_derivs(pts, self.cell_defined_on)
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
@@ -487,7 +479,11 @@ class DOF():
         # those points to be absent from pt_dict entirely rather than mapped to [] if (list(zip(wt, cp)) ensures this
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps) if list(zip(wt, cp))}
         # deriv dict is {pt: [(weight, alpha, component)]}
-        deriv_dict = {tuple(pt): [(w, a, c) for w, a, c in zip(wt, alp, cp)] for pt, wt, alp,  cp in zip(pts, deriv_wts, alphas, comps)}
+        if deriv_terms is None:
+            deriv_dict = {}
+        else:
+            deriv_dict = {tuple(pt): [(w[0] * coeff * J_det, alpha, cp[0]) for coeff, alpha in deriv_terms]
+                          for pt, w, cp in zip(pts, wts, comps)}
         # if self.cell_defined_on.dimension >= 2:
         print(self)
         np.set_printoptions(linewidth=90, precision=4, suppress=True)
