@@ -50,7 +50,7 @@ class Trace():
 class TrH1(Trace):
 
     def __init__(self, cell=None, alpha=None):
-        super(TrH1, self).__init__(cell)
+        super(TrH1, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         return v
@@ -75,7 +75,7 @@ class TrH1(Trace):
 class TrHDiv(Trace):
 
     def __init__(self, cell=None, alpha=None):
-        super(TrHDiv, self).__init__(cell)
+        super(TrHDiv, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         def apply(*x):
@@ -133,7 +133,7 @@ class TrHDiv(Trace):
 class TrHCurl(Trace):
 
     def __init__(self, cell=None, alpha=None):
-        super(TrHCurl, self).__init__(cell)
+        super(TrHCurl, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         def apply(*x):
@@ -170,7 +170,7 @@ class TrHCurl(Trace):
 class TrGrad(Trace):
 
     def __init__(self, cell=None, alpha=None):
-        super(TrGrad, self).__init__(cell)
+        super(TrGrad, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
@@ -218,8 +218,9 @@ class TrGrad(Trace):
         return np.array([])
 
     def tabulate_derivs(self, Qpts, immersed_entity):
-        basis = np.array(immersed_entity.basis_vectors())
-        return basis
+        if self.alpha is None:
+            return np.array([])
+        return np.ones((len(Qpts), 1))
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
@@ -231,7 +232,7 @@ class TrGrad(Trace):
 class TrHess(Trace):
 
     def __init__(self, cell=None, alpha=None):
-        super(TrHess, self).__init__(cell)
+        super(TrHess, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         raise NotImplementedError("Hessian trace needs reviewing")

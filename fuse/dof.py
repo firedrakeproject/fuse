@@ -475,17 +475,19 @@ class DOF():
                 deriv_wts = []
                 alphas = []
             else:
-                deriv_wts = np.outer(wts * J_det, deriv_immersion)
+                # alpha is already expressed w.r.t. the ambient cell's reference
+                # frame (matching FIAT's own PointDerivative), so the derivative
+                # functional reuses the point kernel's own weight unscaled.
+                deriv_wts = wts * J_det
                 alphas = [[self.target_space.alpha] for pt in Qpts]
-            print(self.target_space.alpha)
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
+        # a pure derivative dof has no point-value contribution, so FIAT expects
+        # those points to be absent from pt_dict entirely rather than mapped to [] if (list(zip(wt, cp)) ensures this
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps) if list(zip(wt, cp))}
         # deriv dict is {pt: [(weight, alpha, component)]}
         deriv_dict = {tuple(pt): [(w, a, c) for w, a, c in zip(wt, alp, cp)] for pt, wt, alp,  cp in zip(pts, deriv_wts, alphas, comps)}
-        if len(deriv_dict) > 0:
-            breakpoint()
         # if self.cell_defined_on.dimension >= 2:
         print(self)
         np.set_printoptions(linewidth=90, precision=4, suppress=True)
