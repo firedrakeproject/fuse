@@ -465,8 +465,11 @@ def construct_argyris():
                   immerse(tri, dg0, TrHess(alpha=(0, 2)))]
     v_derv2_dofs = DOFGenerator(v_derv2_xs, S3/S2, S1)
 
+    # g2=S2 (not S1) matches construct_rt's own edge dof: the normal direction
+    # flips sign when the edge's local vertex ordering is reversed (the same
+    # edge seen from the neighbouring triangle), so this dof's value must too.
     dg0_edge = ElementTriple(edge, (P0, CellL2, C0),
-                             DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+                             DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S2))
     e_xs = [immerse(tri, dg0_edge, TrGrad(directions=["normal"]))]
     e_dofs = DOFGenerator(e_xs, C3, S1)
 

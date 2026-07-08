@@ -1166,21 +1166,46 @@ def test_convert_hermite():
     her = construct_hermite()
     for dof in her.generate():
         dof.to_quadrature(1, tuple())
-    # her.to_fiat()
+    her.to_fiat()
+    # a vertex has no nontrivial automorphisms, so every dof group sharing a
+    # vertex (value, grad-x, grad-y) must see an identity transform there,
+    # regardless of how many dofs share that vertex+generator bucket.
+    for vals in her.matrices[0].values():
+        for mat in vals.values():
+            assert np.allclose(mat, np.eye(mat.shape[0]))
 
 
 def test_convert_bfs():
     bfs = construct_bfs()
     for dof in bfs.generate():
         dof.to_quadrature(1, tuple())
-    # bfs.to_fiat()
+    # bfs.to_fiat() 
 
 
 def test_convert_argyris():
     argyris = construct_argyris()
     for dof in argyris.generate():
         dof.to_quadrature(1, tuple())
-    # argyris.to_fiat()
+    argyris.to_fiat()
+    # vertices: no orientation ambiguity, so value/grad/hess groups sharing a
+    # vertex must all see the identity, exactly as for construct_hermite.
+    for vals in argyris.matrices[0].values():
+        for mat in vals.values():
+            assert np.allclose(mat, np.eye(mat.shape[0]))
+    # edges: the normal-derivative dof's value depends on the edge's own
+    # orientation (the normal flips sign when the edge's local vertex order
+    # is reversed), matching construct_rt's own single edge dof - identity
+    # when unflipped, a clean sign flip (isolated to that dof's own row/col)
+    # when flipped.
+    for e_id, vals in argyris.matrices[1].items():
+        identity_mat = vals[0]
+        assert np.allclose(identity_mat, np.eye(identity_mat.shape[0]))
+        flipped_mat = vals[1]
+        diff = flipped_mat - np.eye(flipped_mat.shape[0])
+        changed = np.flatnonzero(np.any(diff != 0, axis=0))
+        assert len(changed) == 1
+        col = changed[0]
+        assert np.isclose(flipped_mat[col, col], -1.0)
 
 
 def _accumulate_outer(vectors):
