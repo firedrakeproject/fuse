@@ -6,7 +6,7 @@ from fuse.element_construction import periodic_table
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_hermite
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_hermite, construct_bfs
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
@@ -1166,3 +1166,10 @@ def test_convert_hermite():
         dof.to_quadrature(1, tuple())
     # her.to_fiat()
     breakpoint()
+
+
+def test_convert_bfs():
+    bfs = construct_bfs()
+    for dof in bfs.generate():
+        dof.to_quadrature(1, tuple())
+    # bfs.to_fiat()

@@ -255,9 +255,11 @@ class TrHess(Trace):
     
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
-    
+
     def tabulate_derivs(self, Qpts, trace_entity):
-        return np.array([])
+        if self.alpha is None:
+            return np.array([])
+        return np.ones((len(Qpts), 1))
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
