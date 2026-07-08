@@ -235,7 +235,7 @@ class ElementTriple():
         elif self.cell.dimension == 3:
             fig = plt.figure()
             ax = fig.add_subplot(projection='3d')
-            self.cell.plot3d(show=False, ax=ax)
+            self.cell.plot3d(show=False, plain=True, ax=ax)
             for dof in dofs:
                 center, color = self.get_dof_info(dof)
                 if center is None:

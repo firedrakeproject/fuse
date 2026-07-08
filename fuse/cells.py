@@ -767,7 +767,6 @@ class Point():
             fig = plt.figure()
             ax = fig.add_subplot(projection='3d')
         xs = np.linspace(-1, 1, 20)
-
         top_level_node = self.d_entities_ids(self.graph_dim())[0]
         nodes = self.d_entities_ids(0)
         min_ids = self.get_starter_ids()

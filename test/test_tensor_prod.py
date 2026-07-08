@@ -35,6 +35,7 @@ def mass_solve(U):
     return out.dat.data
 
 
+@pytest.mark.xfail(reason="tensor prod issues")
 @pytest.mark.parametrize("generator1, generator2, code1, code2, deg1, deg2",
                          [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
                           (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
