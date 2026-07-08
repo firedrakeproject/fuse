@@ -484,15 +484,14 @@ class DOF():
         else:
             deriv_dict = {tuple(pt): [(w[0] * coeff * J_det, alpha, cp[0]) for coeff, alpha in deriv_terms]
                           for pt, w, cp in zip(pts, wts, comps)}
-        # if self.cell_defined_on.dimension >= 2:
-        print(self)
-        np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        print("pt")
-        for key, val in pt_dict.items():
-            print(np.array(key), ":", np.array([v[0] for v in val]))
-        print("deriv")
-        for key, val in deriv_dict.items():
-            print(np.array(key), ":", np.array([v[0] for v in val]))
+        # print(self)
+        # np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        # print("pt")
+        # for key, val in pt_dict.items():
+        #     print(np.array(key), ":", np.array([v[0] for v in val]))
+        # print("deriv")
+        # for key, val in deriv_dict.items():
+        #     print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict, deriv_dict
 
     def __repr__(self, fn="v"):

@@ -237,7 +237,7 @@ class TrGrad(Trace):
         # self.order = sum(self.alpha)
         return [({}, d) for d in deriv_dicts]
 
-    def plot(self, ax, coord, trace_entity, g, **kwargs):
+    def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
 

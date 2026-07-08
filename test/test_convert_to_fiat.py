@@ -897,12 +897,12 @@ def test_basis_funcs_gen(form_num):
         dofs = elem.generate()
         res = np.zeros(len(dofs))
         for i in range(len(dofs)):
-            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,)), vec)
+            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,))[0], vec)
         print(res)
         dofs = elem2.generate()
         res = np.zeros(len(dofs))
         for i in range(len(dofs)):
-            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,)), vec)
+            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,))[0], vec)
         print(res)
 
 

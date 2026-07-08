@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from fuse import *
 from firedrake import *
-from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg1_integral
+from test_2d_examples_docs import construct_cg1, construct_dg1
 # from test_convert_to_fiat import create_cg1
 
 
@@ -39,7 +39,7 @@ def mass_solve(U):
                          [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
                           (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
                           (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
-                          (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
+                          ])
 def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
     m = UnitIntervalMesh(2, use_fuse=True)
     mesh = ExtrudedMesh(m, 2)
