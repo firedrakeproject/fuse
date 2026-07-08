@@ -1,6 +1,7 @@
 from functools import total_ordering
 from ufl.sobolevspace import H1, HDiv, HCurl, L2, H2
 
+
 @total_ordering
 class ElementSobolevSpace(object):
     """
@@ -54,7 +55,7 @@ class CellH1(ElementSobolevSpace):
 
     def __repr__(self):
         return "H1"
-    
+
     def to_ufl(self):
         return H1
 

@@ -36,10 +36,10 @@ def mass_solve(U):
 
 
 @pytest.mark.parametrize("generator1, generator2, code1, code2, deg1, deg2",
-                          [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
-                           (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
-                           (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
-                           (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
+                         [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
+                          (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
+                          (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
+                          (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
 def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
     m = UnitIntervalMesh(2, use_fuse=True)
     mesh = ExtrudedMesh(m, 2)
