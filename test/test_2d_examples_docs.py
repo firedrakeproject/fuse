@@ -467,7 +467,7 @@ def construct_argyris():
 
     dg0_edge = ElementTriple(edge, (P0, CellL2, C0),
                              DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
-    e_xs = [immerse(tri, dg0_edge, TrGrad(direction="normal"))]
+    e_xs = [immerse(tri, dg0_edge, TrGrad(directions=["normal"]))]
     e_dofs = DOFGenerator(e_xs, C3, S1)
 
     # 3*(1 + 2 + 3) + 3*1 = 21 = dim(P5)

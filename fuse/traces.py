@@ -1,17 +1,63 @@
 import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
+from collections import defaultdict
+from functools import reduce
 from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
+
+
+def _resolve_direction(spec, domain, trace_entity):
+    """Resolve a direction spec - a fixed ambient vector, or one of the
+    keywords "tangent"/"normal" - to a concrete vector, given the facet
+    (trace_entity) immersed within domain. "tangent" mirrors
+    TrHCurl.tabulate; "normal" mirrors TrHDiv.tabulate."""
+    if not isinstance(spec, str):
+        return np.asarray(spec, dtype=float)
+    sd = domain.get_spatial_dimension()
+    basis = np.array(domain.basis_vectors(entity=trace_entity))
+    if spec == "tangent":
+        if trace_entity.dimension != 1:
+            raise ValueError('"tangent" direction requires a 1D (edge) entity')
+        return basis[0]
+    if spec == "normal":
+        if trace_entity.dimension != sd - 1:
+            raise ValueError('"normal" direction is only defined on facets (codimension 1 entities)')
+        if sd == 2:
+            return np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
+        if sd == 3:
+            return np.cross(basis[0], basis[1])
+        raise ValueError("normal direction not implemented in dimension > 3")
+    raise ValueError(f"Unknown direction keyword {spec!r}")
+
+
+def _directional_deriv_terms(directions, domain, trace_entity):
+    """Expand the order-k mixed directional derivative d/dv_1 ... d/dv_k into
+    FIAT-style [(coeff, alpha)] terms, by taking the outer product of the k
+    resolved direction vectors and accumulating entries that land on the same
+    multi-index - generalizing FIAT's own PointSecondDerivative
+    (FIAT/functional.py, which does exactly this for k=2 via numpy.outer and
+    a defaultdict keyed by alpha) to arbitrary k."""
+    sd = domain.get_spatial_dimension()
+    vectors = [_resolve_direction(s, domain, trace_entity) for s in directions]
+    tensor = reduce(np.multiply.outer, vectors)
+    tau = defaultdict(float)
+    for index in np.ndindex(tensor.shape):
+        alpha = [0] * sd
+        for i in index:
+            alpha[i] += 1
+        tau[tuple(alpha)] += tensor[index]
+    return [(coeff, alpha) for alpha, coeff in tau.items()]
 
 
 class Trace():
 
-    def __init__(self, cell=None, alpha=None):
+    def __init__(self, cell=None, alpha=None, directions=None):
         self.domain = cell
         self.alpha = alpha
-    
+        self.directions = directions
+
     def add_cell(self, cell):
-        return type(self)(cell=cell, alpha=self.alpha)
+        return type(self)(cell=cell, alpha=self.alpha, directions=self.directions)
 
     def __call__(self, trace_entity):
         raise NotImplementedError("Trace uninstanitated")
@@ -21,8 +67,12 @@ class Trace():
 
     def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
-    
+
     def tabulate_derivs(self, Qwts, trace_entity):
+        if self.alpha is not None and self.directions is not None:
+            raise ValueError("Specify either alpha or directions, not both")
+        if self.directions is not None:
+            return _directional_deriv_terms(self.directions, self.domain, trace_entity)
         if self.alpha is None:
             return None
         return [(1.0, self.alpha)]
@@ -51,9 +101,6 @@ class Trace():
 
 class TrH1(Trace):
 
-    def __init__(self, cell=None, alpha=None):
-        super(TrH1, self).__init__(cell, alpha)
-
     def __call__(self, v, trace_entity):
         return v
 
@@ -75,9 +122,6 @@ class TrH1(Trace):
 
 
 class TrHDiv(Trace):
-
-    def __init__(self, cell=None, alpha=None):
-        super(TrHDiv, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         def apply(*x):
@@ -134,9 +178,6 @@ class TrHDiv(Trace):
 
 class TrHCurl(Trace):
 
-    def __init__(self, cell=None, alpha=None):
-        super(TrHCurl, self).__init__(cell, alpha)
-
     def __call__(self, v, trace_entity):
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
@@ -170,13 +211,6 @@ class TrHCurl(Trace):
 
 
 class TrGrad(Trace):
-
-    def __init__(self, cell=None, alpha=None, direction=None):
-        super(TrGrad, self).__init__(cell, alpha)
-        self.direction = direction
-
-    def add_cell(self, cell):
-        return type(self)(cell=cell, alpha=self.alpha, direction=self.direction)
 
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
@@ -223,21 +257,6 @@ class TrGrad(Trace):
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
 
-    def tabulate_derivs(self, Qpts, trace_entity):
-        if self.direction == "normal":
-            sd = self.domain.get_spatial_dimension()
-            if trace_entity.dimension != sd - 1:
-                raise ValueError("Normal derivative is only defined on facets (codimension 1 entities)")
-            basis = np.array(self.domain.basis_vectors(entity=trace_entity))
-            if sd == 2:
-                n = np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
-            elif sd == 3:
-                n = np.cross(basis[0], basis[1])
-            else:
-                raise ValueError("Normal derivative not implemented in dimension > 3")
-            return [(n[i], tuple(1 if j == i else 0 for j in range(sd))) for i in range(sd)]
-        return super(TrGrad, self).tabulate_derivs(Qpts, trace_entity)
-
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
 
@@ -246,9 +265,6 @@ class TrGrad(Trace):
 
 
 class TrHess(Trace):
-
-    def __init__(self, cell=None, alpha=None):
-        super(TrHess, self).__init__(cell, alpha)
 
     def __call__(self, v, trace_entity):
         raise NotImplementedError("Hessian trace needs reviewing")

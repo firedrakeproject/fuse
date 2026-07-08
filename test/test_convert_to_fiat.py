@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import sympy as sp
+from collections import defaultdict
 from fuse import *
 from fuse.element_construction import periodic_table
 from firedrake import *
@@ -1179,3 +1180,66 @@ def test_convert_argyris():
     for dof in argyris.generate():
         dof.to_quadrature(1, tuple())
     # argyris.to_fiat()
+
+
+def _accumulate_outer(vectors):
+    """Reference computation for the outer-product-and-accumulate identity
+    that _directional_deriv_terms is expected to implement, mirroring FIAT's
+    own PointSecondDerivative pattern generalized to len(vectors) directions."""
+    tensor = vectors[0]
+    for v in vectors[1:]:
+        tensor = np.outer(tensor, v).reshape(tensor.shape + v.shape)
+    expected = defaultdict(float)
+    for index in np.ndindex(tensor.shape):
+        alpha = [0, 0]
+        for i in index:
+            alpha[i] += 1
+        expected[tuple(alpha)] += tensor[index]
+    return expected
+
+
+def _edge_directional_dof(trace):
+    tri = polygon(3)
+    edge = tri.edges()[0]
+    dg0_edge = ElementTriple(edge, (P0, CellL2, C0),
+                             DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    e_xs = [immerse(tri, dg0_edge, trace)]
+    e_dofs = DOFGenerator(e_xs, C3, S1)
+    triple = ElementTriple(tri, (P1, CellH2, C0), [e_dofs])
+    dof = triple.generate()[0]
+    basis = np.array(tri.basis_vectors(entity=dof.cell_defined_on))
+    t = basis[0]
+    n = np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
+    return dof, t, n
+
+
+def test_convert_tangential_deriv():
+    dof, t, n = _edge_directional_dof(TrGrad(directions=["tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    assert np.isclose(got[(1, 0)], t[0])
+    assert np.isclose(got[(0, 1)], t[1])
+
+
+def test_convert_tangential_tangential_deriv():
+    dof, t, n = _edge_directional_dof(TrHess(directions=["tangent", "tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    expected = _accumulate_outer([t, t])
+    for alpha, val in expected.items():
+        assert np.isclose(got[alpha], val)
+
+
+def test_convert_normal_tangential_twist_deriv():
+    dof, t, n = _edge_directional_dof(TrHess(directions=["normal", "tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    expected = _accumulate_outer([n, t])
+    for alpha, val in expected.items():
+        assert np.isclose(got[alpha], val)
