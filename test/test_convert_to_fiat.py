@@ -1161,11 +1161,12 @@ def test_scaling_mesh():
     res2 = assemble(interpolate(vec, V2))
     print(res2.dat.data)
 
+
 def test_convert_hermite():
     her = construct_hermite()
     for dof in her.generate():
         dof.to_quadrature(1, tuple())
-    #her.to_fiat()
+    # her.to_fiat()
 
 
 def test_convert_bfs():

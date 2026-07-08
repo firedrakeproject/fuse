@@ -192,7 +192,7 @@ class TrHCurl(Trace):
         # result = np.matmul(tangent, subEntityBasis)
         return subEntityBasis
         # return result
-    
+
     def manipulate_basis(self, basis):
         return basis[0]
 
@@ -222,19 +222,6 @@ class TrGrad(Trace):
             return tuple(result)
         return apply
 
-        def apply(*x):
-            X = sp.DeferredVector('x')
-            dX = tuple([X[i] for i in range(self.domain.dim())])
-            compute_v = v(*dX, sym=True)
-            grad_v = sp.Matrix([sp.diff(compute_v, dX[i]) for i in range(len(dX))])
-            eval_grad_v = sympy_to_numpy(grad_v, dX, v.attach_func(*x))
-            result = np.dot(tangent, np.array(eval_grad_v))
-
-            if not hasattr(result, "__iter__"):
-                return (result,)
-            return tuple(result)
-        return apply
-
     def convert_to_fiat(self, qpts, pts, wts):
         shp = (self.domain.get_spatial_dimension(),)
         alphas = []
@@ -253,7 +240,7 @@ class TrGrad(Trace):
     def plot(self, ax, coord, trace_entity, g, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
-    
+
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
 
@@ -284,7 +271,7 @@ class TrHess(Trace):
                 return (result,)
             return tuple(result)
         return apply
-    
+
     def tabulate(self, Qpts, trace_entity):
         return np.array([])
 

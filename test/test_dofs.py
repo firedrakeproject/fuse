@@ -224,6 +224,7 @@ def test_generate_quadrature():
 
     elem.to_fiat()
 
+
 def test_convert_dofs():
     cell = polygon(3)
 

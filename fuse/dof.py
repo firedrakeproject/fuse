@@ -495,7 +495,6 @@ class DOF():
             print(np.array(key), ":", np.array([v[0] for v in val]))
         return pt_dict, deriv_dict
 
-
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)
 
