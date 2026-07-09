@@ -363,62 +363,6 @@ def test_creation(A, B, C):
     print(flat_tensor_cell_3d)
 
 
-def test_cg1_dg0():
-    A = construct_cg1()
-    B = construct_dg1_integral()
-    ab = tensor_product(A, B).flatten()
-    ba = tensor_product(B, A).flatten()
-    combined = ab + ba
-    combined.symmetric = True
-    mesh1 = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
-    V = FunctionSpace(mesh1, combined.to_ufl())
-    ab = tensor_product(A, B)
-    ba = tensor_product(B, A)
-    combined = ab + ba
-    m = UnitIntervalMesh(2, use_fuse=True)
-    mesh2 = ExtrudedMesh(m, 2)
-    V2 = FunctionSpace(mesh2, combined.to_ufl())
-    # CG_1 = FiniteElement("CG", "interval", 1)
-    # DG_1 = FiniteElement("DG", "interval", 1)
-    # dgcg = TensorProductElement(DG_1, CG_1)
-    # cgdg = TensorProductElement(CG_1, DG_1)
-    # combined = dgcg + cgdg
-    # V = FunctionSpace(mesh, combined)
-    Vs = [V2, V]
-    meshes = [mesh2, mesh1]
-    for V, mesh in zip(Vs, meshes):
-        u = TrialFunction(V)
-        v = TestFunction(V)
-        f = Function(V)
-        x, y = SpatialCoordinate(mesh)
-        f.project((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
-        a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
-        L = inner(f, v) * dx
-        u = Function(V)
-        solve(a == L, u)
-        f.project(cos(x*pi*2)*cos(y*pi*2))
-        print("res", u.dat.data)
-        print("true", f.dat.data)
-        res = sqrt(assemble(dot(u - f, u - f) * dx))
-        print(res)
-    breakpoint()
-    # from finat.element_factory import convert
-    # non_sym, _ = convert(non_sym.to_ufl(), shift_axes=0)
-    # non_sym2, _ = convert(non_sym2.to_ufl(), shift_axes=0)
-    # from FIAT.reference_element import flatten_entities
-    # print()
-    # print(non_sym.entity_dofs())
-    # print(non_sym2.entity_dofs())
-    # print(flatten_entities(non_sym.entity_dofs()))
-    # print(flatten_entities(non_sym2.entity_dofs()))
-    print(non_sym)
-    A = construct_dg1_integral()
-    B = construct_dg1_integral()
-    non_sym1 = tensor_product(A, B)
-    print(non_sym1)
-    breakpoint()
-
-
 def test_trace_galerkin_projection():
     mesh = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
 
@@ -491,7 +435,6 @@ def test_hdiv():
         u = Function(V)
         solve(a == L, u)
         print(u.dat.data)
-    breakpoint()
 
 
 def test_transforms():
@@ -505,19 +448,19 @@ def test_transforms():
     import gem
     v = gem.Literal(5)
     print("HCurl")
-    print(HCurl(tensor_product(dg0, cg1))(v))
-    print(HCurl(tensor_product(rev_dg0, cg1))(v))
-    print(HCurl(tensor_product(cg1, dg0))(v))
-    print(HCurl(tensor_product(cg1, rev_dg0))(v))
-    print(HCurl(tensor_product(dg0, rev_cg1))(v))
-    print(HCurl(tensor_product(rev_cg1, dg0))(v))
+    print(HCurl(tensor_product(dg0, cg1)).gem_transformer(v))
+    print(HCurl(tensor_product(rev_dg0, cg1)).gem_transformer(v))
+    print(HCurl(tensor_product(cg1, dg0)).gem_transformer(v))
+    print(HCurl(tensor_product(cg1, rev_dg0)).gem_transformer(v))
+    print(HCurl(tensor_product(dg0, rev_cg1)).gem_transformer(v))
+    print(HCurl(tensor_product(rev_cg1, dg0)).gem_transformer(v))
     print("HDiv")
-    print(HDiv(tensor_product(dg0, cg1))(v))
-    print(HDiv(tensor_product(rev_dg0, cg1))(v))
-    print(HDiv(tensor_product(cg1, dg0))(v))
-    print(HDiv(tensor_product(cg1, rev_dg0))(v))
-    print(HDiv(tensor_product(dg0, rev_cg1))(v))
-    print(HDiv(tensor_product(rev_cg1, dg0))(v))
+    print(HDiv(tensor_product(dg0, cg1)).gem_transformer(v))
+    print(HDiv(tensor_product(rev_dg0, cg1)).gem_transformer(v))
+    print(HDiv(tensor_product(cg1, dg0)).gem_transformer(v))
+    print(HDiv(tensor_product(cg1, rev_dg0)).gem_transformer(v))
+    print(HDiv(tensor_product(dg0, rev_cg1)).gem_transformer(v))
+    print(HDiv(tensor_product(rev_cg1, dg0)).gem_transformer(v))
 
 
 def test_sum_fac():
