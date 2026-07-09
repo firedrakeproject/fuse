@@ -269,7 +269,7 @@ class HCurl(TensorProductTriple):
     def repr(self):
         return "HCurl(" + super(HCurl, self).repr() + ")"
 
-    def select_fuse_hcurl_transformer(element):
+    def select_fuse_hcurl_transformer(self, element):
         import gem
         # Assume: something x interval
         assert len(element.sub_elements) == 2
