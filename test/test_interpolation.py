@@ -1,8 +1,8 @@
 from firedrake import *
 from fuse import *
 import numpy as np
-from test_2d_examples_docs import construct_cg1, construct_cg3
 from test_convert_to_fiat import create_cg2, create_cg2_tri
+
 
 def test_cross_mesh():
     mesh1 = UnitSquareMesh(10, 10, use_fuse=True)
