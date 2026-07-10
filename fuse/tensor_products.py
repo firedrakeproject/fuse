@@ -218,7 +218,8 @@ class HDiv(TensorProductTriple):
             # y-aligned edges.
             cell = element.sub_elements[1].cell
             bv = cell.basis_vectors()[0][0]
-            return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
         elif ks == (1, 0):
             # Make the scalar value the upward-pointing normal on the
             # x-aligned edges.
@@ -260,8 +261,8 @@ class HCurl(TensorProductTriple):
     def __init__(self, tensor_element):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
-        super(HDiv, self).__init__(*tensor_element.factors, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
-        self.spaces = (self.spaces[0], TrHCurl, self.spaces[2])
+        super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
+        # self.spaces = (self.spaces[0], TrHCurl, self.spaces[2])
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
@@ -269,7 +270,7 @@ class HCurl(TensorProductTriple):
     def repr(self):
         return "HCurl(" + super(HCurl, self).repr() + ")"
 
-    def select_fuse_hcurl_transformer(element):
+    def select_fuse_hcurl_transformer(self, element):
         import gem
         # Assume: something x interval
         assert len(element.sub_elements) == 2
@@ -280,17 +281,20 @@ class HCurl(TensorProductTriple):
         # Tangential vectors interpret these as the positive direction.
         dim = element.cell.get_spatial_dimension()
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
+        transform = lambda cell, o: compute_matrix_transform(element.trace, cell, o)
         if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements):  # affine mapping
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
                 bv = element.sub_elements[0].cell.basis_vectors()[0][0]
-                return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()]
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+                return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
             elif ks == (0, 1):
                 # Can be any spatial dimension.  Make the scalar value the
                 # tangential following the cell edge direction .
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
-                return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)]
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
+                return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
         # elif any(str(fe.spaces[1]) == "HCurl" for fe in element.sub_elements):  # Covariant Piola mapping
