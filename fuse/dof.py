@@ -466,6 +466,7 @@ class DOF():
             J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
             if not np.allclose(J_det, 1):
                 raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
+            J_det = 1
             # if self.pairing.orientation:
             #     immersion = self.target_space.tabulate(wts, self.pairing.entity.orient(self.pairing.orientation))[0]
             # else:

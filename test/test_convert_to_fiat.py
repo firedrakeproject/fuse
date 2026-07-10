@@ -218,8 +218,8 @@ def create_cg2_tet(cell):
     return cg2
 
 
-def create_cg3_tet(cell, perm=True):
-
+def create_cg3_tet(cell=None, perm=True):
+    cell = make_tetrahedron()
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
@@ -1094,12 +1094,13 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
+                                                            (construct_tet_cg6, "CG", 6, 1e-13),
+                                                            (periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
                                                             (create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
+                                                            (periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
+                                                            (periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_rt3, "RT", 3, 1e-13),
                                                             (construct_tet_bdm2, "BDM", 2, 1e-13),
@@ -1109,7 +1110,8 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
                                                             (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
                                                             (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
-                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
+                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13)
+                                                    ])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     if hasattr(elem_gen, "__call__"):
         elem1 = elem_gen()
