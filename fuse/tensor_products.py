@@ -286,12 +286,14 @@ class HCurl(TensorProductTriple):
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
+                cell = element.sub_elements[0].cell
                 bv = element.sub_elements[0].cell.basis_vectors()[0][0]
                 mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
                 return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
             elif ks == (0, 1):
                 # Can be any spatial dimension.  Make the scalar value the
                 # tangential following the cell edge direction .
+                cell = element.sub_elements[1].cell
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
                 mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats

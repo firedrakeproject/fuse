@@ -434,7 +434,6 @@ class ElementTriple():
 
     def make_dof_perms(self, ref_el, entity_dofs, nodes, poly_set):
         dofs = self.generate()
-        min_ids = self.cell.get_starter_ids()
         entity_associations, pure_perm, sub_pure_perm = self._entity_associations(dofs)
         # if pure_perm is False:
         #    #TODO think about where this call goes
@@ -447,9 +446,6 @@ class ElementTriple():
         for dim in range(self.cell.dim() + 1):
             ents = self.cell.d_entities(dim)
             for e_id, e in enumerate(ents):
-                old_e_id = e.id - min_ids[dim]
-                if e_id != old_e_id:
-                    raise ValueError("e id problems")
                 members = e.group.members()
                 for g in members:
                     val = g.numeric_rep()
@@ -547,10 +543,7 @@ class ElementTriple():
                             g_sub_mat = perm_list_to_matrix(identity, [sub_e for sub_e, _ in permuted_ents])
                             for sub_e, sub_g in permuted_ents:
                                 sub_e = self.cell.get_node(sub_e)
-                                old_sub_e_id = sub_e.id - min_ids[sub_e.dim()]
                                 sub_e_id = self.cell.d_entities(sub_e.dim(), get_class=False).index(sub_e.id)
-                                if sub_e_id != old_sub_e_id:
-                                    raise ValueError("sub e id problems")
                                 sub_ent_ids = []
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
                                     sub_ent_ids += [self.dof_id_to_fiat_id[e.id] for e in v]
@@ -595,17 +588,14 @@ class ElementTriple():
             num_ents += len(ents)
 
     def reverse_dof_perms(self, matrices):
-        # min_ids = self.cell.get_starter_ids()
         reversed_mats = {}
-        cell = self.cellcell = self.cell
+        cell = self.cell
         # if isinstance(cell, TensorProductPoint)and cell.flat:
         #     cell = self.unflat_cell
         for dim in matrices.keys():
             reversed_mats[dim] = {}
             ents = cell.d_entities(dim)
-            for e in ents:
-                # old_e_id = e.id - min_ids[dim]
-                e_id = cell.d_entities(e.dim(), get_class=False).index(e.id)
+            for e_id, e in enumerate(ents):
                 perms_copy = matrices[dim][e_id].copy()
                 members = e.group.members()
                 for m in members:

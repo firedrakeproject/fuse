@@ -403,7 +403,7 @@ class Point():
 
     def dim(self):
         return self.dimension
-    
+
     def dimensions(self):
         return [i for i in range(self.dimension + 1)]
 
@@ -572,6 +572,7 @@ class Point():
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
+    @cache
     def d_entities(self, d, get_class=True):
         """Get all the d dimensional entities of the cell complex.
 
@@ -1036,7 +1037,6 @@ class TensorProductPoint():
         for d in self.dimensions()[:-1]:
             self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
         self.entities[self.dim()] = [self]
-                
 
     def ordered_vertices(self):
         return self.entities[0]
@@ -1100,7 +1100,7 @@ class TensorProductPoint():
 
     def dim(self):
         return self.dimensions()[-1]
-    
+
     def dimensions(self):
         return list(product(*(f.dimensions() for f in self.factors)))
 
