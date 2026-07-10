@@ -1107,12 +1107,14 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2, 1e-12),
                                                             (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
-                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
+                                                            (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
+                                                            (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
-    cell = make_tetrahedron()
-    elem1 = elem_gen(cell)
+    if hasattr(elem_gen, "__call__"):
+        elem1 = elem_gen()
+    else:
+        elem1 = elem_gen
     ufl_elem1 = elem1.to_ufl()
 
     def expr(mesh):
