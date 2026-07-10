@@ -29,6 +29,7 @@ def rt1_quad():
     dg0 = construct_dg0_integral()
     return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
 
+
 def rt1_tensor():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
@@ -138,12 +139,10 @@ def test_project_vec_quad(elem_gen, elem_code, deg, conv_rate):
     res = []
     for r in vals:
         mesh_fuse = UnitSquareMesh(2**r, 2**r, use_fuse=True)
-    
         U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
         res += [project_expr(mesh_fuse, U, expr)]
 
-        mesh_fire= UnitSquareMesh(2**r, 2**r)
-    
+        mesh_fire = UnitSquareMesh(2**r, 2**r)
         U = FunctionSpace(mesh_fire, elem_code, deg)
         res += [project_expr(mesh_fuse, U, expr)]
 
@@ -163,7 +162,6 @@ def test_project_vec_ext(elem_gen, elem_code, deg, conv_rate):
     res = []
     for r in vals:
         mesh_fuse = ExtrudedMesh(UnitIntervalMesh(2**r, use_fuse=True), 2**r)
-    
         U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
         res += [project_expr(mesh_fuse, U, expr)]
 

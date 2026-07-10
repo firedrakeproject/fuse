@@ -610,7 +610,7 @@ def test_project(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
     mesh = UnitTriangleMesh(use_fuse=True)
-    
+
     # U = FunctionSpace(mesh, elem_code, deg)
     # assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
 
@@ -1094,8 +1094,7 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
     assert len(error_gs) == 0
 
 
-@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [
-                                                            (construct_tet_cg6, "CG", 6, 1e-13),
+@pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
                                                             (periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
                                                             (create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
@@ -1110,8 +1109,7 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
                                                             (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
                                                             (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
-                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13)
-                                                    ])
+                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     if hasattr(elem_gen, "__call__"):
         elem1 = elem_gen()
