@@ -52,7 +52,9 @@ class TensorProductTriple(ElementTriple):
             self.cell = self.cell.flatten()
         self.dofs = self.generate()
 
-        self.mat_transformer = None
+        # Subclasses (HDiv, HCurl) set self.mat_transformer before calling
+        # this constructor; only default it here if they haven't.
+        self.mat_transformer = getattr(self, "mat_transformer", None)
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
@@ -96,7 +98,7 @@ class TensorProductTriple(ElementTriple):
                         for o in os:
                             sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]
                             if self.mat_transformer is not None:
-                                o_classes = (f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o))
+                                o_classes = [f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o)]
                                 combined_sub_mat = self.mat_transformer(*sub_mats, o_classes)
                             else:
                                 combined_sub_mat = reduce(lambda acc, x: np.kron(acc, x), sub_mats)
@@ -212,7 +214,7 @@ class HDiv(TensorProductTriple):
         # Their rotation by 90 degrees anticlockwise is interpreted as the
         # positive direction for normal vectors.
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
-        transform = lambda cell, o: compute_matrix_transform(element.trace, cell, o)
+        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
         if ks == (0, 1):
             # Make the scalar value the right hand rule normal on the
             # y-aligned edges.
@@ -281,21 +283,21 @@ class HCurl(TensorProductTriple):
         # Tangential vectors interpret these as the positive direction.
         dim = element.cell.get_spatial_dimension()
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
-        transform = lambda cell, o: compute_matrix_transform(element.trace, cell, o)
+        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
         if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements):  # affine mapping
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
                 cell = element.sub_elements[0].cell
                 bv = element.sub_elements[0].cell.basis_vectors()[0][0]
-                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
                 return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
             elif ks == (0, 1):
                 # Can be any spatial dimension.  Make the scalar value the
                 # tangential following the cell edge direction .
                 cell = element.sub_elements[1].cell
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
-                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False

@@ -4,7 +4,7 @@ from fuse import *
 from firedrake import *
 from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
 from test_convert_to_fiat import create_cg2, create_dg0, helmholtz_solve as helmholtz_solve2
-from fuse.tensor_products import HDiv as HDiv_fuse
+from fuse.tensor_products import HDiv as HDiv_fuse, HCurl as HCurl_fuse
 # from test_convert_to_fiat import create_cg1
 
 
@@ -431,6 +431,44 @@ def test_hdiv():
         f = Function(V)
         x, y = SpatialCoordinate(mesh)
         # f_vec = as_vector(((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2), (1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2)))
+        f_vec = as_vector((2, 3))
+        f = project(f_vec, V)
+        a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+        L = inner(f, v) * dx
+        u = Function(V)
+        solve(a == L, u)
+        # f_vec is constant, so grad(f_vec) = 0 and the exact solution of
+        # (grad(u):grad(v) + u.v)dx = f.v dx is u = f_vec everywhere.
+        error = sqrt(assemble(dot(u - f_vec, u - f_vec) * dx))
+        assert error < 1e-10
+
+
+def test_hcurl():
+    np.set_printoptions(linewidth=90, precision=4, suppress=True)
+
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+    fuse_ncurl1 = HCurl_fuse(tensor_product(dg0, cg1)) + HCurl_fuse(tensor_product(cg1, dg0))
+
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
+    DG0CG1 = TensorProductElement(DG_0, CG_1)
+    Ned_x = HCurlElement(DG0CG1)
+    CG1DG0 = TensorProductElement(CG_1, DG_0)
+    Ned_y = HCurlElement(CG1DG0)
+    firedrake_ncurl1 = Ned_x + Ned_y
+
+    m = UnitIntervalMesh(2)
+    mesh = ExtrudedMesh(m, 2)
+    m = UnitIntervalMesh(2, use_fuse=True)
+    mesh2 = ExtrudedMesh(m, 2)
+    V = FunctionSpace(mesh, firedrake_ncurl1)
+    V2 = FunctionSpace(mesh2, fuse_ncurl1.to_ufl())
+    assert V.dim() == V2.dim()
+    for V, mesh in zip([V, V2], (mesh, mesh2)):
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        x, y = SpatialCoordinate(mesh)
         f_vec = as_vector((2, 3))
         f = project(f_vec, V)
         a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
