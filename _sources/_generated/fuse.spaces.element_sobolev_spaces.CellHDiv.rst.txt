@@ -19,6 +19,7 @@ CellHDiv
    
       ~CellHDiv.__init__
       ~CellHDiv.dict_id
+      ~CellHDiv.to_ufl
    
    
 

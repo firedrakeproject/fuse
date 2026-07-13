@@ -19,6 +19,7 @@ CellHCurl
    
       ~CellHCurl.__init__
       ~CellHCurl.dict_id
+      ~CellHCurl.to_ufl
    
    
 

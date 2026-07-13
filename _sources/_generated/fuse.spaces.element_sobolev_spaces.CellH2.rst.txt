@@ -19,6 +19,7 @@ CellH2
    
       ~CellH2.__init__
       ~CellH2.dict_id
+      ~CellH2.to_ufl
    
    
 
