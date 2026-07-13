@@ -114,7 +114,6 @@ class ElementTriple():
         self.apply_matrices = True
 
         self.entity_perms = entity_perms
-        self.entity_perms = None
         return matrices, reversed_matrices
 
     def __repr__(self):

@@ -261,6 +261,7 @@ class HDiv(TensorProductTriple):
 class HCurl(TensorProductTriple):
 
     def __init__(self, tensor_element):
+        self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
         super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)

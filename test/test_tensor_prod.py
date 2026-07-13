@@ -23,17 +23,41 @@ def create_cg3_interval(cell=None):
                                                 DOFGenerator(interior, S2, S1)])
     return cg
 
+def ned1_quad():
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+    return HCurl_fuse(tensor_product(cg1, dg0).flatten()) + HCurl_fuse(tensor_product(dg0, cg1).flatten())
 
 def rt1_quad():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
     return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
 
+def ned1_tensor():
+    cg1 = construct_cg1()
+    dg0 = construct_dg0_integral()
+
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
+    P1P0 = TensorProductElement(CG_1, DG_0)
+    horiz = HCurlElement(P1P0)
+    P0P1 = TensorProductElement(DG_0, CG_1)
+    vert = HCurlElement(P0P1)
+    firedrake_ned1 = horiz + vert
+    return HCurl_fuse(tensor_product(cg1, dg0)) + HCurl_fuse(tensor_product(dg0, cg1)), firedrake_ned1
 
 def rt1_tensor():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
-    return HDiv_fuse(tensor_product(cg1, dg0)) + HDiv_fuse(tensor_product(dg0, cg1))
+
+    CG_1 = FiniteElement("CG", "interval", 1)
+    DG_0 = FiniteElement("DG", "interval", 0)
+    P1P0 = TensorProductElement(CG_1, DG_0)
+    RT_horiz = HDivElement(P1P0)
+    P0P1 = TensorProductElement(DG_0, CG_1)
+    RT_vert = HDivElement(P0P1)
+    firedrake_rt1 = RT_horiz + RT_vert
+    return HDiv_fuse(tensor_product(cg1, dg0)) + HDiv_fuse(tensor_product(dg0, cg1)), firedrake_rt1
 
 
 def helmholtz_solve(mesh, V):
@@ -130,47 +154,65 @@ def project_expr(mesh, U, expr):
     return res
 
 
-@pytest.mark.xfail(reason="Diverged linear solve- unclear issue")
-@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(rt1_quad, "RT", 1, 0.8)])
+@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(rt1_quad, "RTCF", 1, 1.8), (ned1_quad, "RTCE", 1, 0.8)])
 def test_project_vec_quad(elem_gen, elem_code, deg, conv_rate):
     vals = range(3, 6)
     function = lambda x, i: cos((3/4)*pi*x[i])
     expr = lambda x: as_vector([function(x, 0), function(x, 1)])
-    res = []
+    res_fuse = []
+    res_fire = []
     for r in vals:
-        mesh_fuse = UnitSquareMesh(2**r, 2**r, use_fuse=True)
+        mesh_fuse = UnitSquareMesh(2**r, 2**r, quadrilateral=True, use_fuse=True)
         U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
-        res += [project_expr(mesh_fuse, U, expr)]
+        res_fuse += [project_expr(mesh_fuse, U, expr)]
 
-        mesh_fire = UnitSquareMesh(2**r, 2**r)
+        mesh_fire = UnitSquareMesh(2**r, 2**r, quadrilateral=True)
         U = FunctionSpace(mesh_fire, elem_code, deg)
-        res += [project_expr(mesh_fuse, U, expr)]
+        res_fire += [project_expr(mesh_fire, U, expr)]
 
-    print("l2 error norms:", res)
-    res = np.array(res)
-    conv = np.log2(res[:-1] / res[1:])
-    print("convergence order:", conv)
+    print("fuse l2 error norms:", res_fuse)
+    res_fuse = np.array(res_fuse)
+    conv_fuse = np.log2(res_fuse[:-1] / res_fuse[1:])
+    print("fuse convergence order:", conv_fuse)
 
-    assert (np.array(conv) > conv_rate).all()
+    print("fire l2 error norms:", res_fire)
+    res_fire = np.array(res_fire)
+    conv_fire = np.log2(res_fire[:-1] / res_fire[1:])
+    print("fire convergence order:", conv_fire)
+
+    assert (conv_fuse > conv_rate).all()
+    assert (conv_fire > conv_rate).all()
 
 
-@pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(rt1_tensor, "RT", 1, 0.8)])
-def test_project_vec_ext(elem_gen, elem_code, deg, conv_rate):
+@pytest.mark.parametrize(["elem_gen", "conv_rate"], [(rt1_tensor, 0.8), (ned1_tensor, 0.8)])
+def test_project_vec_ext(elem_gen, conv_rate):
     vals = range(3, 6)
     function = lambda x, i: cos((3/4)*pi*x[i])
     expr = lambda x: as_vector([function(x, 0), function(x, 1)])
-    res = []
+    res_fuse = []
+    res_fire = []
     for r in vals:
+        fuse_elem, firedrake_elem = elem_gen()
         mesh_fuse = ExtrudedMesh(UnitIntervalMesh(2**r, use_fuse=True), 2**r)
-        U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
-        res += [project_expr(mesh_fuse, U, expr)]
+        U = FunctionSpace(mesh_fuse, fuse_elem.to_ufl())
+        res_fuse += [project_expr(mesh_fuse, U, expr)]
 
-    print("l2 error norms:", res)
-    res = np.array(res)
-    conv = np.log2(res[:-1] / res[1:])
-    print("convergence order:", conv)
+        mesh_fire = ExtrudedMesh(UnitIntervalMesh(2**r), 2**r)
+        U = FunctionSpace(mesh_fire, firedrake_elem)
+        res_fire += [project_expr(mesh_fire, U, expr)]
 
-    assert (np.array(conv) > conv_rate).all()
+    print("fuse l2 error norms:", res_fuse)
+    res_fuse = np.array(res_fuse)
+    conv_fuse = np.log2(res_fuse[:-1] / res_fuse[1:])
+    print("fuse convergence order:", conv_fuse)
+
+    print("fire l2 error norms:", res_fire)
+    res_fire = np.array(res_fire)
+    conv_fire = np.log2(res_fire[:-1] / res_fire[1:])
+    print("fire convergence order:", conv_fire)
+
+    assert (conv_fuse > conv_rate).all()
+    assert (conv_fire > conv_rate).all()
 
 
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
