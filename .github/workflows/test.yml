@@ -153,7 +153,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/refactor_pack
+          ref: refs/heads/indiamai/fuse_mesh_cell
     
       - name: Make cython
         run: |

@@ -437,7 +437,10 @@ def test_hdiv():
         L = inner(f, v) * dx
         u = Function(V)
         solve(a == L, u)
-        print(u.dat.data)
+        # f_vec is constant, so grad(f_vec) = 0 and the exact solution of
+        # (grad(u):grad(v) + u.v)dx = f.v dx is u = f_vec everywhere.
+        error = sqrt(assemble(dot(u - f_vec, u - f_vec) * dx))
+        assert error < 1e-10
 
 
 def test_transforms():
