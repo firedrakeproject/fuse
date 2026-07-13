@@ -149,6 +149,8 @@ def create_cg2(cell=None):
     if cell is None:
         cell = line()
     deg = 2
+    if cell is None:
+        cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     if cell.dim() > 1:
         raise NotImplementedError("This method is for cg2 on edges, please use create_cg2_tri for triangles")
     vert_dg = create_dg0(cell.vertices()[0])
@@ -161,8 +163,10 @@ def create_cg2(cell=None):
     return cg
 
 
-def create_cg2_tri(cell):
+def create_cg2_tri(cell=None):
     deg = 2
+    if cell is None:
+        cell = polygon(3)
     Pk = PolynomialSpace(deg)
 
     vert_dg0 = create_dg0(cell.vertices()[0])
@@ -219,7 +223,9 @@ def create_cg2_tet(cell):
 
 
 def create_cg3_tet(cell=None, perm=True):
-    cell = make_tetrahedron()
+    if cell is None:
+        cell = make_tetrahedron()
+
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
@@ -1048,11 +1054,14 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_cg4, "CG", 4),
                                                     (construct_tet_cg6, "CG", 6),
                                                     (construct_tet_ned3_old, "N1curl", 3),
-                                                    (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
-                                                    (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3)])
+                                                    (periodic_table(1, 3, 1, 3), "N2curl", 3),
+                                                    (periodic_table(0, 3, 1, 3), "N1curl", 3)])
 def test_two_tet_interpolation(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
-    elem = elem_gen(cell)
+    if hasattr(elem_gen, "__call__"):
+        elem = elem_gen(cell)
+    else:
+        elem = elem_gen
 
     def vec(mesh):
         x = SpatialCoordinate(mesh)
@@ -1112,10 +1121,10 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     if hasattr(elem_gen, "__call__"):
-        elem1 = elem_gen()
+        elem = elem_gen()
     else:
-        elem1 = elem_gen
-    ufl_elem1 = elem1.to_ufl()
+        elem = elem_gen
+    ufl_elem = elem.to_ufl()
 
     def expr(mesh):
         x = SpatialCoordinate(mesh)
@@ -1131,7 +1140,7 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
              sp.combinatorics.Permutation([0, 3, 2, 1]),
              sp.combinatorics.Permutation([0, 2, 1, 3])]
 
-    for elem in [ufl_elem1]:
+    for elem in [ufl_elem]:
         for g in group:
             mesh = TwoTetMesh(perm=g, use_fuse=True)
             print(g)
