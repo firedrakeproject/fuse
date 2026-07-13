@@ -289,7 +289,7 @@ class Point():
     id_iter = itertools.count()
 
     def __init__(self, d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
-        if not cell_id:
+        if cell_id is None:
             cell_id = next(self.id_iter)
         self.id = cell_id
         self.dimension = d
@@ -299,7 +299,7 @@ class Point():
 
         if d == 0:
             assert (edges == [])
-        if vertex_num:
+        if vertex_num and vertex_num > 1:
             edges = self.compute_attachments(vertex_num, edges, edge_orientations)
 
         self.oriented = oriented
@@ -478,7 +478,7 @@ class Point():
             # if self.oriented:
             #     connections = self.permute_entities(self.oriented, dim - 1)
             # if self.dimension == 2:
-            #     connections = [connections[-1]] + connections[:-1]
+            #     connections = [connections[1], connections[0], connections[2]]
             #     print([self.get_node(c[0]).id - min_ids[1] for c in connections])
             #     print([c.point.id - min_ids[1] for c in self.connections])
             for e, o in connections:
@@ -891,8 +891,10 @@ class Point():
 
     def _to_dict(self):
         # think this is probably missing stuff
+        # d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
         o_dict = {"dim": self.dimension,
                   "edges": [c for c in self.connections],
+                  "vertex_num": len(self.vertices()),
                   "oriented": self.oriented,
                   "id": self.id}
         return o_dict
@@ -1097,7 +1099,6 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
-# , sub_entities=self.fe_cell.get_sub_entities()
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):

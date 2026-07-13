@@ -217,7 +217,8 @@ def construct_nd2_2nd_kind(tri=None):
     edge_dofs = DOFGenerator(xs, C3, S1)
 
     s_1 = sp.Symbol("s_1")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1)))]
+    s_2 = sp.Symbol("s_2")
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1, s_2)))]
     face_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, set_shape=True)
