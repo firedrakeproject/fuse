@@ -23,15 +23,18 @@ def create_cg3_interval(cell=None):
                                                 DOFGenerator(interior, S2, S1)])
     return cg
 
+
 def ned1_quad():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
     return HCurl_fuse(tensor_product(cg1, dg0).flatten()) + HCurl_fuse(tensor_product(dg0, cg1).flatten())
 
+
 def rt1_quad():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
     return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
+
 
 def ned1_tensor():
     cg1 = construct_cg1()
@@ -45,6 +48,7 @@ def ned1_tensor():
     vert = HCurlElement(P0P1)
     firedrake_ned1 = horiz + vert
     return HCurl_fuse(tensor_product(cg1, dg0)) + HCurl_fuse(tensor_product(dg0, cg1)), firedrake_ned1
+
 
 def rt1_tensor():
     cg1 = construct_cg1()
