@@ -36,6 +36,18 @@ def rt1_quad():
     return HDiv_fuse(tensor_product(cg1, dg0).flatten()) + HDiv_fuse(tensor_product(dg0, cg1).flatten())
 
 
+def rt1_hex():
+    # In-plane (x, y) RT1-on-quad, extruded by a discontinuous interval in z.
+    h1 = HDiv_fuse(tensor_product(construct_cg1(), construct_dg0_integral()).flatten())
+    h2 = HDiv_fuse(tensor_product(construct_dg0_integral(), construct_cg1()).flatten())
+    x_component = HDiv_fuse(tensor_product(h1, construct_dg0_integral()))
+    y_component = HDiv_fuse(tensor_product(h2, construct_dg0_integral()))
+    # z-normal component: DG0-on-quad extruded by a continuous interval in z.
+    dg0_quad = tensor_product(construct_dg0_integral(), construct_dg0_integral()).flatten()
+    z_component = HDiv_fuse(tensor_product(dg0_quad, construct_cg1()))
+    return x_component + y_component + z_component
+
+
 def ned1_tensor():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
@@ -525,6 +537,22 @@ def test_hcurl():
         # (grad(u):grad(v) + u.v)dx = f.v dx is u = f_vec everywhere.
         error = sqrt(assemble(dot(u - f_vec, u - f_vec) * dx))
         assert error < 1e-10
+
+
+def test_hdiv_3d_orientation_consistency():
+    # If neighbouring cells disagreed on the sign of a shared facet DOF, the
+    # global RT space could no longer represent a true constant vector field
+    f_vec = as_vector((2, 3, 5))
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    V = FunctionSpace(mesh, rt1_hex().flatten().to_ufl())
+
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    sol = Function(V)
+    solve(inner(u, v) * dx == inner(f_vec, v) * dx, sol)
+
+    error = sqrt(assemble(dot(sol - f_vec, sol - f_vec) * dx))
+    assert error < 1e-10
 
 
 def test_transforms():

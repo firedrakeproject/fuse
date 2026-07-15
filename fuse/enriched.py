@@ -41,11 +41,6 @@ class EnrichedElement(ElementTriple):
         return [self.A, self.B]
 
     def get_value_shape(self):
-        # HDiv/HCurl-wrapped sub-elements report a scalar value_shape at
-        # this level (the vector embedding normally happens in the outer
-        # UFL HDivElement/HCurlElement wrapper); when this EnrichedElement
-        # is instead wrapped directly as a single FuseElement (flat cell),
-        # that outer wrapper doesn't exist, so report the vector shape here.
         if str(self.spaces[1]) in ("HDiv", "HCurl"):
             return (self.cell.get_spatial_dimension(),)
         return super().get_value_shape()
@@ -54,8 +49,6 @@ class EnrichedElement(ElementTriple):
         return "Enriched(%s, %s)" % (repr(self.A), repr(self.B))
 
     def __add__(self, other):
-        # Allow chaining (A + B) + C into further nested EnrichedElements,
-        # e.g. for the 3-term x/y/z sums needed by 3D HDiv/HCurl.
         assert self.spaces[0].set_shape == other.spaces[0].set_shape
         assert str(self.spaces[1]) == str(other.spaces[1])
         return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric,
@@ -111,8 +104,6 @@ class EnrichedElement(ElementTriple):
         return a_dofs + b_dofs
 
     def to_ufl(self):
-        if self.cell.flat:
-            return finat.ufl.FuseElement(self, self.cell.to_ufl())
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return finat.ufl.EnrichedElement(*ufl_sub_elements, triple=self)
 
