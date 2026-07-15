@@ -254,7 +254,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
 
     All transformation groups are S1 as these are interior to the cell.
     """
-    print(cell, deg)
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
     facet_cell = edge
@@ -280,7 +279,7 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                         xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
                         dofs += [DOFGenerator(xs1, pf_grp, S1)]
                         counter += (pf_grp).size()
-    print("facet dofs: ", counter)
+    # print("facet dofs: ", counter)
     counter = 0
     interior_deg = deg - 2
 
@@ -293,7 +292,7 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 counter += len(new_dofs)
                 dofs += [DOFGenerator(new_dofs, S1, S1)]
         interior_deg = deg - 3
-        print("interior facet dofs:", counter)
+        # print("interior facet dofs:", counter)
         counter = 0
 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
@@ -328,8 +327,8 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols))]
                 dofs += [DOFGenerator(xs1, grp, g2)]
                 counter += (grp).size()
-    print("interior dofs:", counter)
-    print("end cell", cell)
+    # print("interior dofs:", counter)
+    # print("end cell", cell)
     return dofs
 
 
