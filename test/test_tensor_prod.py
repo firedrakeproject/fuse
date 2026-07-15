@@ -48,6 +48,20 @@ def rt1_hex():
     return x_component + y_component + z_component
 
 
+def ned1_hex():
+    # In-plane (x, y) tangential edge components (Nedelec-1st-kind-on-quad
+    # pieces), extruded by a continuous interval in z
+    ex = HCurl_fuse(tensor_product(construct_dg0_integral(), construct_cg1()).flatten())
+    ey = HCurl_fuse(tensor_product(construct_cg1(), construct_dg0_integral()).flatten())
+    x_component = HCurl_fuse(tensor_product(ex, construct_cg1()))
+    y_component = HCurl_fuse(tensor_product(ey, construct_cg1()))
+    # z-tangential component: bilinear (Q1) scalar quad extruded by a
+    # discontinuous interval in z.
+    cg1_quad = tensor_product(construct_cg1(), construct_cg1()).flatten()
+    z_component = HCurl_fuse(tensor_product(cg1_quad, construct_dg0_integral()))
+    return x_component + y_component + z_component
+
+
 def ned1_tensor():
     cg1 = construct_cg1()
     dg0 = construct_dg0_integral()
@@ -545,6 +559,23 @@ def test_hdiv_3d_orientation_consistency():
     f_vec = as_vector((2, 3, 5))
     mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
     V = FunctionSpace(mesh, rt1_hex().flatten().to_ufl())
+
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    sol = Function(V)
+    solve(inner(u, v) * dx == inner(f_vec, v) * dx, sol)
+
+    error = sqrt(assemble(dot(sol - f_vec, sol - f_vec) * dx))
+    assert error < 1e-10
+
+
+def test_hcurl_3d_orientation_consistency():
+    # exact reproduction of a constant vector field is a genuine cross-cell
+    # sign-consistency check for the tangential edge DOFs, not just a
+    # well-posedness check.
+    f_vec = as_vector((2, 3, 5))
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    V = FunctionSpace(mesh, ned1_hex().flatten().to_ufl())
 
     u = TrialFunction(V)
     v = TestFunction(V)

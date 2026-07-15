@@ -323,18 +323,17 @@ class HCurl(TensorProductTriple):
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
-        # elif any(str(fe.spaces[1]) == "HCurl" for fe in element.sub_elements):  # Covariant Piola mapping
-        #     # Second factor must be continuous interval.  Just padding.
-        #     return lambda v: [gem.Indexed(v, (0,)),
-        #                       gem.Indexed(v, (1,)),
-        #                       gem.Zero()]
-        # elif any(str(fe.spaces[1]) == "HDiv" for fe in element.sub_elements):  # Contravariant Piola mapping
-        #     # Second factor must be continuous interval.  Rotate the
-        #     # 2-vector tangential component on the "base" cell 90 degrees
-        #     # clockwise into a 3-vector and pad.
-        #     return lambda v: [gem.Product(gem.Literal(-1), gem.Indexed(v, (1,))),
-        #                       gem.Indexed(v, (0,)),
-        #                       gem.Zero()]
+        elif ks == (1, 0) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+            # First factor is an already H(curl)-wrapped 2D element (an
+            # in-plane tangential edge component), second is a CG
+            # interval
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
+        elif ks == (0, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "H1":
+            # First factor is a plain (unwrapped) bilinear (Q1) scalar
+            # element on a 2D base cell, second is a DG interval
+            return lambda v: [gem.Zero(), gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, m_b)
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected original mapping!"
