@@ -1133,7 +1133,14 @@ class TensorProductPoint():
         return self.fiat_elem
 
     def flatten(self):
-        assert all(self.factors[0].equivalent(f) for f in self.factors)
+        # Each factor must itself be hypercube-shaped: either a point/interval
+        # (dimension <= 1, trivially both simplex and hypercube), or an
+        # already-flattened cell (built recursively from intervals, e.g. a
+        # flat quad nested inside a "quad x interval" hex construction).
+        # This allows flattening mixed-dimension nestings (e.g. HDiv/HCurl's
+        # "2D-thing x interval" pattern), not just N mutually-equal-dimension
+        # factors (e.g. interval x interval x interval).
+        assert all(f.dimension <= 1 or getattr(f, "flat", False) for f in self.factors)
         return FlattenedPoint(*self.factors)
 
 

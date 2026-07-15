@@ -15,7 +15,8 @@ class EnrichedElement(ElementTriple):
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
         from fuse.tensor_products import TensorProductTriple
-        if not isinstance(A, TensorProductTriple) or not isinstance(B, TensorProductTriple):
+        valid_types = (TensorProductTriple, EnrichedElement)
+        if not isinstance(A, valid_types) or not isinstance(B, valid_types):
             raise ValueError("EnrichedElement should only be used for Tensor product elements. Use + between triples for enrichment.")
         self.A = A
         self.B = B
@@ -25,6 +26,9 @@ class EnrichedElement(ElementTriple):
         if A.cell.flat != B.cell.flat:
             raise ValueError("Tensor products must both be flat or both not flat for enrichment.")
         self.cell = A.cell
+        self.flat = flat
+        if hasattr(A, "unflat_cell"):
+            self.unflat_cell = A.unflat_cell
         self.symmetric = symmetric
         self.apply_matrices = matrices
         if self.apply_matrices:
@@ -36,8 +40,26 @@ class EnrichedElement(ElementTriple):
     def sub_elements(self):
         return [self.A, self.B]
 
+    def get_value_shape(self):
+        # HDiv/HCurl-wrapped sub-elements report a scalar value_shape at
+        # this level (the vector embedding normally happens in the outer
+        # UFL HDivElement/HCurlElement wrapper); when this EnrichedElement
+        # is instead wrapped directly as a single FuseElement (flat cell),
+        # that outer wrapper doesn't exist, so report the vector shape here.
+        if str(self.spaces[1]) in ("HDiv", "HCurl"):
+            return (self.cell.get_spatial_dimension(),)
+        return super().get_value_shape()
+
     def __repr__(self):
         return "Enriched(%s, %s)" % (repr(self.A), repr(self.B))
+
+    def __add__(self, other):
+        # Allow chaining (A + B) + C into further nested EnrichedElements,
+        # e.g. for the 3-term x/y/z sums needed by 3D HDiv/HCurl.
+        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert str(self.spaces[1]) == str(other.spaces[1])
+        return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric,
+                               matrices=self.apply_matrices or other.apply_matrices)
 
     def setup_matrices(self):
         if self.cell.flat and not self.symmetric:
@@ -85,6 +107,8 @@ class EnrichedElement(ElementTriple):
         return a_dofs + b_dofs
 
     def to_ufl(self):
+        if self.cell.flat:
+            return finat.ufl.FuseElement(self, self.cell.to_ufl())
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return finat.ufl.EnrichedElement(*ufl_sub_elements, triple=self)
 

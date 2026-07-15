@@ -1,5 +1,6 @@
 from fuse.triples import ElementTriple, compute_form_degree
 from fuse.traces import TrHCurl, TrHDiv
+from fuse.spaces.element_sobolev_spaces import CellHDiv, CellHCurl
 from fuse.cells import TensorProductPoint
 from fuse.enriched import EnrichedElement
 import numpy as np
@@ -174,8 +175,18 @@ class TensorProductTriple(ElementTriple):
 
 
 def compute_matrix_transform(trace, cell, o):
+    dim = cell.get_spatial_dimension()
     bvs = np.array(cell.basis_vectors())
     new_bvs = np.array(cell.orient(~o).basis_vectors())
+    if bvs.shape[0] != dim:
+        # basis_vectors() gives one vector per non-reference vertex, which
+        # only forms a square (invertible) basis for simplices (vertex
+        # count == dim + 1). For non-simplex cells (e.g. a quadrilateral
+        # face of a hex), the vectors from the reference vertex to its two
+        # adjacent vertices (the first `dim` entries) already form a valid
+        # basis; later entries are redundant (e.g. diagonals).
+        bvs = bvs[:dim]
+        new_bvs = new_bvs[:dim]
     basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
     # if len(ent_dofs_ids) == basis_change.shape[0]:
     #     sub_mat = basis_change
@@ -196,7 +207,7 @@ class HDiv(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
         self.trace = TrHDiv
         super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
-        # self.spaces = (self.spaces[0], TrHDiv, self.spaces[2])
+        self.spaces = (self.spaces[0], CellHDiv(self.cell), self.spaces[2])
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
@@ -214,39 +225,48 @@ class HDiv(TensorProductTriple):
         # Their rotation by 90 degrees anticlockwise is interpreted as the
         # positive direction for normal vectors.
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
+        dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
-        if ks == (0, 1):
-            # Make the scalar value the right hand rule normal on the
-            # y-aligned edges.
+        if ks == (0, 1) and dims == (1, 1):
+            # Both factors are 1D intervals (2D quad case).  Make the
+            # scalar value the right hand rule normal on the y-aligned
+            # edges.
             cell = element.sub_elements[1].cell
             bv = cell.basis_vectors()[0][0]
             mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
             return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
-        elif ks == (1, 0):
-            # Make the scalar value the upward-pointing normal on the
-            # x-aligned edges.
+        elif ks == (1, 0) and dims == (1, 1):
+            # Both factors are 1D intervals (2D quad case).  Make the
+            # scalar value the upward-pointing normal on the x-aligned
+            # edges.
             cell = element.sub_elements[0].cell
             bv = cell.basis_vectors()[0][0]
-            return lambda v: [gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
-            # return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
-        # elif ks == (2, 0):
-        #     # Same for 3D, so z-plane.
-        #     return lambda v: [gem.Zero(), gem.Zero(), v]
-        # elif ks == (1, 1):
-        #     if element.mapping == "contravariant piola":
-        #         # Pad the 2-vector normal on the "base" cell into a
-        #         # 3-vector, maintaining direction.
-        #         return lambda v: [gem.Indexed(v, (0,)),
-        #                           gem.Indexed(v, (1,)),
-        #                           gem.Zero()]
-        #     elif element.mapping == "covariant piola":
-        #         # Rotate the 2-vector tangential component on the "base"
-        #         # cell 90 degrees anticlockwise into a 3-vector and pad.
-        #         return lambda v: [gem.Indexed(v, (1,)),
-        #                           gem.Product(gem.Literal(-1), gem.Indexed(v, (0,))),
-        #                           gem.Zero()]
-        #     else:
-        #         assert False, "Unexpected original mapping!"
+            #return lambda v: [gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
+            return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
+        elif ks == (2, 0) and dims == (2, 1):
+            # First factor is a plain (unwrapped) scalar DG element on a
+            # 2D base cell, second is a CG interval: the z-normal
+            # ("vertical flux") component of a 3D H(div) field.
+            cell = element.sub_elements[0].cell
+            # transform(...) on a non-simplex (e.g. quad) cell returns a
+            # bare scalar (not a (1,1) matrix like the interval case), so
+            # use elementwise multiplication rather than matmul.
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
+            return lambda v: [gem.Zero(), gem.Zero(), v], mats
+        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HDiv":
+            # First factor is an already H(div)-wrapped 2D element (the
+            # in-plane RT part), second is a DG interval: the horizontal
+            # (x, y) components of a 3D H(div) field.
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
+        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+            # First factor is an already H(curl)-wrapped 2D element,
+            # second is a DG interval: rotate the tangential 2-vector 90
+            # degrees anticlockwise into a 3-vector and pad.
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            return lambda v: [gem.Indexed(v, (1,)), gem.Product(gem.Literal(-1), gem.Indexed(v, (0,))), gem.Zero()], mats
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected form degree combination!"
@@ -265,7 +285,7 @@ class HCurl(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
         super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
-        # self.spaces = (self.spaces[0], TrHCurl, self.spaces[2])
+        self.spaces = (self.spaces[0], CellHCurl(self.cell), self.spaces[2])
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
@@ -284,8 +304,9 @@ class HCurl(TensorProductTriple):
         # Tangential vectors interpret these as the positive direction.
         dim = element.cell.get_spatial_dimension()
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
+        dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
-        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements):  # affine mapping
+        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
