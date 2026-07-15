@@ -72,8 +72,12 @@ class EnrichedElement(ElementTriple):
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
+        seen_total_dims = set()
         for dim in top.keys():
             total_dim = sum(dim) if self.cell.flat else dim
+            if total_dim in seen_total_dims:
+                continue
+            seen_total_dims.add(total_dim)
             ents = self.entity_dofs[total_dim].keys()
             # comp_os = cell.component_orientations()
             for e_idx, e in enumerate(ents):
