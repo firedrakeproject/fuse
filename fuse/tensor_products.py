@@ -241,7 +241,6 @@ class HDiv(TensorProductTriple):
             # edges.
             cell = element.sub_elements[0].cell
             bv = cell.basis_vectors()[0][0]
-            #return lambda v: [gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
             return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
         elif ks == (2, 0) and dims == (2, 1):
             # First factor is a plain (unwrapped) scalar DG element on a

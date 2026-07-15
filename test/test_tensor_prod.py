@@ -245,6 +245,25 @@ def test_project_vec_ext(elem_gen, conv_rate):
     assert (conv_fire > conv_rate).all()
 
 
+@pytest.mark.parametrize(["elem_gen", "conv_rate"], [(rt1_hex, 1.8), (ned1_hex, 0.8)])
+def test_project_vec_hex(elem_gen, conv_rate):
+    vals = [2, 3]
+    function = lambda x, i: cos((3/4)*pi*x[i])
+    expr = lambda x: as_vector([function(x, 0), function(x, 1), function(x, 2)])
+    res_fuse = []
+    for r in vals:
+        mesh_fuse = UnitCubeMesh(2**r, 2**r, 2**r, hexahedral=True, use_fuse=True)
+        U = FunctionSpace(mesh_fuse, elem_gen().flatten().to_ufl())
+        res_fuse += [project_expr(mesh_fuse, U, expr)]
+
+    print("fuse l2 error norms:", res_fuse)
+    res_fuse = np.array(res_fuse)
+    conv_fuse = np.log2(res_fuse[:-1] / res_fuse[1:])
+    print("fuse convergence order:", conv_fuse)
+
+    assert (conv_fuse > conv_rate).all()
+
+
 @pytest.mark.parametrize(["elem_gen", "elem_code", "deg", "conv_rate"], [(construct_cg1, "CG", 1, 1.8),
                                                                          (create_cg2, "CG", 2, 3.8),
                                                                          (create_cg3_interval, "CG", 3, 4.8)])
