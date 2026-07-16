@@ -10,12 +10,13 @@ class EnrichedElement(ElementTriple):
     In general, FUSE element triples should be represented nodally,
     however this may not be possible for all constructions.
 
-    In particulr, we need to preserve tensor product structure.
+    In particular, we need to preserve tensor product structure.
     """
 
     def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
         from fuse.tensor_products import TensorProductTriple
-        if not isinstance(A, TensorProductTriple) or not isinstance(B, TensorProductTriple):
+        valid_types = (TensorProductTriple, EnrichedElement)
+        if not isinstance(A, valid_types) or not isinstance(B, valid_types):
             raise ValueError("EnrichedElement should only be used for Tensor product elements. Use + between triples for enrichment.")
         self.A = A
         self.B = B
@@ -25,6 +26,9 @@ class EnrichedElement(ElementTriple):
         if A.cell.flat != B.cell.flat:
             raise ValueError("Tensor products must both be flat or both not flat for enrichment.")
         self.cell = A.cell
+        self.flat = flat
+        if hasattr(A, "unflat_cell"):
+            self.unflat_cell = A.unflat_cell
         self.symmetric = symmetric
         self.apply_matrices = matrices
         if self.apply_matrices:
@@ -36,8 +40,19 @@ class EnrichedElement(ElementTriple):
     def sub_elements(self):
         return [self.A, self.B]
 
+    def get_value_shape(self):
+        if str(self.spaces[1]) in ("HDiv", "HCurl"):
+            return (self.cell.get_spatial_dimension(),)
+        return super().get_value_shape()
+
     def __repr__(self):
         return "Enriched(%s, %s)" % (repr(self.A), repr(self.B))
+
+    def __add__(self, other):
+        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert str(self.spaces[1]) == str(other.spaces[1])
+        return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric,
+                               matrices=self.apply_matrices or other.apply_matrices)
 
     def setup_matrices(self):
         if self.cell.flat and not self.symmetric:
@@ -50,8 +65,12 @@ class EnrichedElement(ElementTriple):
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
+        seen_total_dims = set()
         for dim in top.keys():
             total_dim = sum(dim) if self.cell.flat else dim
+            if total_dim in seen_total_dims:
+                continue
+            seen_total_dims.add(total_dim)
             ents = self.entity_dofs[total_dim].keys()
             # comp_os = cell.component_orientations()
             for e_idx, e in enumerate(ents):
@@ -87,3 +106,9 @@ class EnrichedElement(ElementTriple):
     def to_ufl(self):
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         return finat.ufl.EnrichedElement(*ufl_sub_elements, triple=self)
+
+    def flatten(self):
+        return EnrichedElement(self.A.flatten(), self.B.flatten(), flat=True, symmetric=self.symmetric, matrices=self.matrices)
+
+    def unflatten(self):
+        return EnrichedElement(self.A.unflatten(), self.B.unflatten(), flat=False, symmetric=self.symmetric, matrices=self.matrices)

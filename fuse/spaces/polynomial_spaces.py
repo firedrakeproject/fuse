@@ -133,6 +133,9 @@ class PolynomialSpace(object):
     def restrict(self, mindegree, maxdegree):
         return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, set_shape=self.set_shape)
 
+    def to_vector(self):
+        return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, set_shape=True)
+
     def _to_dict(self):
         return {"set_shape": self.set_shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
 
@@ -230,6 +233,9 @@ class ConstructedPolynomialSpace(PolynomialSpace):
         s = self.spaces.copy()
         s.extend([x])
         return ConstructedPolynomialSpace(w, s)
+
+    def to_vector(self):
+        return ConstructedPolynomialSpace(self.weights, [space.to_vector() for space in self.spaces])
 
     def _to_dict(self):
         super_dict = super(ConstructedPolynomialSpace, self)._to_dict()

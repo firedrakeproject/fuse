@@ -1,21 +1,25 @@
 from fuse.triples import ElementTriple, compute_form_degree
 from fuse.traces import TrHCurl, TrHDiv
+from fuse.spaces.element_sobolev_spaces import CellHDiv, CellHCurl
 from fuse.cells import TensorProductPoint
 from fuse.enriched import EnrichedElement
 import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
+from itertools import product
+from functools import reduce
+from collections import defaultdict
 
 
-def tensor_product(A, B, matrices=True):
-    if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
-        raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B, matrices=matrices)
+def tensor_product(*factors, matrices=True):
+    if not all(isinstance(f, ElementTriple) for f in factors):
+        raise ValueError("All components of Tensor Product need to be a Fuse Triple.")
+    return TensorProductTriple(*factors, matrices=matrices)
 
 
-def symmetric_tensor_product(A, B, matrices=True):
-    if not (isinstance(A, ElementTriple) and isinstance(B, ElementTriple)):
-        raise ValueError("Both components of Tensor Product need to be a Fuse Triple.")
-    return TensorProductTriple(A, B, matrices=matrices, symmetric=True)
+def symmetric_tensor_product(*factors, matrices=True):
+    if not all(isinstance(f, ElementTriple) for f in factors):
+        raise ValueError("All components of Tensor Product need to be a Fuse Triple.")
+    return TensorProductTriple(*factors, matrices=matrices, symmetric=True)
 
 
 def flatten_dictionary(tensor_dict):
@@ -34,15 +38,14 @@ def flatten_dictionary(tensor_dict):
 
 class TensorProductTriple(ElementTriple):
 
-    def __init__(self, A, B, flat=False, symmetric=True, matrices=True):
-        self.A = A
-        self.B = B
+    def __init__(self, *factors, flat=False, symmetric=True, matrices=True):
+        self.factors = factors
         self.spaces = []
-        for (a, b) in zip(self.A.spaces, self.B.spaces):
-            self.spaces.append(a if a >= b else b)
+        for i in range(len(self.factors[0].spaces)):
+            self.spaces.append(max(f.spaces[i] for f in self.factors))
 
-        self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
-        self.cell = TensorProductPoint(A.cell, B.cell)
+        self.DOFGenerator = [f.DOFGenerator for f in self.factors]
+        self.cell = TensorProductPoint(*[f.cell for f in factors])
         self.symmetric = symmetric
         self.flat = flat
         if self.flat:
@@ -50,7 +53,9 @@ class TensorProductTriple(ElementTriple):
             self.cell = self.cell.flatten()
         self.dofs = self.generate()
 
-        self.mat_transformer = None
+        # Subclasses (HDiv, HCurl) set self.mat_transformer before calling
+        # this constructor; only default it here if they haven't.
+        self.mat_transformer = getattr(self, "mat_transformer", None)
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
@@ -59,51 +64,49 @@ class TensorProductTriple(ElementTriple):
 
     @property
     def sub_elements(self):
-        return [self.A, self.B]
+        return self.factors
 
     def __repr__(self):
-        return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
+        return f"TensorProd({','.join(['{}' for f in self.factors])})".format(*(repr(f) for f in self.factors))
+
+    def _entity_associations(self, dofs, overall=True):
+        return self.entity_assocs, None, None
 
     def setup_matrices(self):
-        if self.A.cell.dimension > 1 or self.B.cell.dimension > 1:
-            raise NotImplementedError("Combining of matrices not implemented in 3D")
         if self.cell.flat and not self.symmetric:
             raise NotImplementedError("Matrices for flattened cells that are not symmetric not supported")
-        self.A.to_ufl()
-        self.B.to_ufl()
+        for f in self.factors:
+            f.to_ufl()
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.generate(), tensor=True)
         if self.flat:
             cell = self.unflat_cell
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
-        for dim in top.keys():
-            total_dim = sum(dim) if self.flat else dim
-            a_ents = self.A.cell.get_topology()[dim[0]].keys()
-            b_ents = self.B.cell.get_topology()[dim[1]].keys()
-            ents = [(a, b) for a in a_ents for b in b_ents]
-            comp_os = cell.component_orientations()
-            for e, (a, b) in enumerate(ents):
-                ent_dofs = self.entity_dofs[total_dim][self.ent_mapping[dim][(a, b)]]
-                if len(ent_dofs) >= 1:
-                    sub_mat = oriented_mats_by_entity[dim][e]
-                    a_mat = self.A.matrices[dim[0]][a]
-                    a_ent_ids = self.A.entity_ids[dim[0]][a]
-                    b_mat = self.B.matrices[dim[1]][b]
-                    b_ent_ids = self.B.entity_ids[dim[1]][b]
-
-                    os = [(o_a, o_b) for o_a in a_mat.keys() for o_b in b_mat.keys()]
-                    for o in os:
-                        a_sub_mat = a_mat[o[0]][np.ix_(a_ent_ids, a_ent_ids)]
-                        b_sub_mat = b_mat[o[1]][np.ix_(b_ent_ids, b_ent_ids)]
-                        if self.mat_transformer is not None:
-                            o_classes = (self.A.cell.group.get_member_by_val(o[0]), self.B.cell.group.get_member_by_val(o[1]))
-                            combined_sub_mat = self.mat_transformer(a_sub_mat, b_sub_mat, o_classes)
-                        else:
-                            combined_sub_mat = np.kron(a_sub_mat, b_sub_mat)
-                        new_o = comp_os[dim][o]
-                        sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
-                        # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
+        if len(self.factors) == 2:
+            for dim in top.keys():
+                total_dim = sum(dim) if self.flat else dim
+                f_ents = [f.cell.get_topology()[d].keys() for f, d in zip(self.factors, dim)]
+                ents = list(product(*(f_ents)))
+                comp_os = cell.component_orientations()
+                for e, sub_ents in enumerate(ents):
+                    ent_dofs = self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]]
+                    if len(ent_dofs) >= 1:
+                        sub_mat = oriented_mats_by_entity[dim][e]
+                        mats = [f.matrices[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                        ent_ids = [f.entity_dofs[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                        os = list(product(*([mat.keys() for mat in mats])))
+                        for o in os:
+                            sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]
+                            if self.mat_transformer is not None:
+                                o_classes = [f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o)]
+                                combined_sub_mat = self.mat_transformer(*sub_mats, o_classes)
+                            else:
+                                combined_sub_mat = reduce(lambda acc, x: np.kron(acc, x), sub_mats)
+                            new_o = comp_os[dim][o]
+                            if new_o in sub_mat.keys():
+                                sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
+                            # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
 
         if self.cell.flat:
             oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
@@ -112,39 +115,41 @@ class TensorProductTriple(ElementTriple):
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
 
     def generate(self):
-        a_dofs = self.A.generate()
-        b_dofs = self.B.generate()
-        a_ent_assocs, _, _ = self.A._entity_associations(a_dofs, overall=False)
-        b_ent_assocs, _, _ = self.B._entity_associations(b_dofs, overall=False)
+        dofs = [f.generate() for f in self.factors]
+        ent_assocs = [f._entity_associations(dofs_f, overall=False)[0] for f, dofs_f in zip(self.factors, dofs)]
         if self.flat:
             top = self.unflat_cell.to_fiat().get_topology()
         else:
             top = self.cell.to_fiat().get_topology()
-        self.entity_dofs = {}
+        self.entity_dofs = defaultdict(dict)
         self.ent_mapping = {}
+        self.entity_assocs = defaultdict(dict)
+        self.dof_ids = {}
         dofs = []
-        ent_counter = {}
+        ent_counter = defaultdict(lambda: 0)
         dof_counter = 0
         for dim in top.keys():
             total_dim = sum(dim) if self.flat else dim
-            ents_A = a_ent_assocs[dim[0]].keys()
-            ents_B = b_ent_assocs[dim[1]].keys()
-            if total_dim not in self.entity_dofs.keys():
-                self.entity_dofs[total_dim] = {}
-                ent_counter[total_dim] = 0
+            ents = [ent_assoc[d].keys() for ent_assoc, d in zip(ent_assocs, dim)]
+            # if total_dim not in self.entity_dofs.keys():
+            #     self.entity_dofs[total_dim] = {}
+            #     self.entity_assocs[total_dim] = {}
             self.ent_mapping[dim] = {}
             ent_list = []
-            for i, ent in enumerate([(a_e, b_e) for a_e in ents_A for b_e in ents_B]):
+            for i, ent in enumerate(list(product(*ents))):
                 self.ent_mapping[dim][ent] = i + ent_counter[total_dim] if self.flat else ent
-                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = tuple()
+                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = []
                 ent_list += [ent]
-            for a_e, b_e in ent_list:
-                a_dofs = [d for dofs in a_ent_assocs[dim[0]][a_e].values() for d in dofs]
-                b_dofs = [d for dofs in b_ent_assocs[dim[1]][b_e].values() for d in dofs]
-                new_dofs = [(a, b) for a in a_dofs for b in b_dofs]
+            for es in ent_list:
+                e_dofs = [[d for dofs in ent_assoc[d][e].values() for d in dofs] for ent_assoc, d, e in zip(ent_assocs, dim, es)]
+                new_dofs = list(product(*e_dofs))
                 dofs += new_dofs
-                self.entity_dofs[total_dim][self.ent_mapping[dim][(a_e, b_e)]] = [i + dof_counter for i in range(len(new_dofs))]
-                dof_counter += len(new_dofs)
+                dof_gens = "(" + "*".join([",".join(list(ent_assoc[d][e].keys())) for ent_assoc, d, e in zip(ent_assocs, dim, es)]) + ")"
+                self.entity_assocs[total_dim][self.ent_mapping[dim][es]] = {dof_gens: new_dofs}
+                self.entity_dofs[total_dim][self.ent_mapping[dim][es]] += [i + dof_counter for i in range(len(new_dofs))]
+                for d in new_dofs:
+                    self.dof_ids[d] = dof_counter
+                    dof_counter += 1
                 ent_counter[total_dim] += 1
 
         return dofs
@@ -163,15 +168,25 @@ class TensorProductTriple(ElementTriple):
         return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric, matrices=self.apply_matrices or other.apply_matrices)
 
     def flatten(self):
-        return TensorProductTriple(self.A, self.B, flat=True, symmetric=self.symmetric, matrices=self.apply_matrices)
+        return TensorProductTriple(*self.factors, flat=True, symmetric=self.symmetric, matrices=self.apply_matrices)
 
     def unflatten(self):
-        return TensorProductTriple(self.A, self.B, flat=False, symmetric=self.symmetric, matrices=self.apply_matrices)
+        return TensorProductTriple(*self.factors, flat=False, symmetric=self.symmetric, matrices=self.apply_matrices)
 
 
 def compute_matrix_transform(trace, cell, o):
+    dim = cell.get_spatial_dimension()
     bvs = np.array(cell.basis_vectors())
     new_bvs = np.array(cell.orient(~o).basis_vectors())
+    if bvs.shape[0] != dim:
+        # basis_vectors() gives one vector per non-reference vertex, which
+        # only forms a square (invertible) basis for simplices (vertex
+        # count == dim + 1). For non-simplex cells (e.g. a quadrilateral
+        # face of a hex), the vectors from the reference vertex to its two
+        # adjacent vertices (the first `dim` entries) already form a valid
+        # basis; later entries are redundant (e.g. diagonals).
+        bvs = bvs[:dim]
+        new_bvs = new_bvs[:dim]
     basis_change = np.matmul(new_bvs, np.linalg.inv(bvs))
     # if len(ent_dofs_ids) == basis_change.shape[0]:
     #     sub_mat = basis_change
@@ -188,13 +203,17 @@ def compute_matrix_transform(trace, cell, o):
 class HDiv(TensorProductTriple):
 
     def __init__(self, tensor_element):
+        self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
         self.trace = TrHDiv
-        super(HDiv, self).__init__(tensor_element.A, tensor_element.B, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
-        self.spaces[1] = TrHDiv
+        super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
+        self.spaces = (self.spaces[0], CellHDiv(self.cell), self.spaces[2])
 
     def to_ufl(self):
-        return HDivElement(super(HDiv, self).to_ufl(), self.gem_transformer)
+        return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
+
+    def repr(self):
+        return "HDiv(" + super(HDiv, self).repr() + ")"
 
     def select_fuse_hdiv_transformer(self, element):
         # Assume: something x interval
@@ -206,89 +225,113 @@ class HDiv(TensorProductTriple):
         # Their rotation by 90 degrees anticlockwise is interpreted as the
         # positive direction for normal vectors.
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
-        transform = lambda cell, o: compute_matrix_transform(element.trace, cell, o)
-        if ks == (0, 1):
-            # Make the scalar value the right hand rule normal on the
-            # y-aligned edges.
+        dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
+        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
+        if ks == (0, 1) and dims == (1, 1):
+            # Both factors are 1D intervals (2D quad case).  Make the
+            # scalar value the right hand rule normal on the y-aligned
+            # edges.
             cell = element.sub_elements[1].cell
-            bv = cell.basis_vectors()[0]
-            return lambda v: [gem.Product(gem.Literal(bv[0]), v), gem.Zero()], lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
-        elif ks == (1, 0):
-            # Make the scalar value the upward-pointing normal on the
-            # x-aligned edges.
+            bv = cell.basis_vectors()[0][0]
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
+        elif ks == (1, 0) and dims == (1, 1):
+            # Both factors are 1D intervals (2D quad case).  Make the
+            # scalar value the upward-pointing normal on the x-aligned
+            # edges.
             cell = element.sub_elements[0].cell
             bv = cell.basis_vectors()[0][0]
             return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
-        # elif ks == (2, 0):
-        #     # Same for 3D, so z-plane.
-        #     return lambda v: [gem.Zero(), gem.Zero(), v]
-        # elif ks == (1, 1):
-        #     if element.mapping == "contravariant piola":
-        #         # Pad the 2-vector normal on the "base" cell into a
-        #         # 3-vector, maintaining direction.
-        #         return lambda v: [gem.Indexed(v, (0,)),
-        #                           gem.Indexed(v, (1,)),
-        #                           gem.Zero()]
-        #     elif element.mapping == "covariant piola":
-        #         # Rotate the 2-vector tangential component on the "base"
-        #         # cell 90 degrees anticlockwise into a 3-vector and pad.
-        #         return lambda v: [gem.Indexed(v, (1,)),
-        #                           gem.Product(gem.Literal(-1), gem.Indexed(v, (0,))),
-        #                           gem.Zero()]
-        #     else:
-        #         assert False, "Unexpected original mapping!"
+        elif ks == (2, 0) and dims == (2, 1):
+            # First factor is a plain (unwrapped) scalar DG element on a
+            # 2D base cell, second is a CG interval
+            cell = element.sub_elements[0].cell
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
+            return lambda v: [gem.Zero(), gem.Zero(), v], mats
+        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HDiv":
+            # First factor is an already H(div)-wrapped 2D element (the
+            # in-plane RT part), second is a DG interval: the horizontal
+            # (x, y) components of a 3D H(div) field.
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
+            return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
+        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+            # First factor is an already H(curl)-wrapped 2D element,
+            # second is a DG interval: rotate the tangential 2-vector 90
+            # degrees anticlockwise into a 3-vector and pad.
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
+            return lambda v: [gem.Indexed(v, (1,)), gem.Product(gem.Literal(-1), gem.Indexed(v, (0,))), gem.Zero()], mats
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected form degree combination!"
+
+    def flatten(self):
+        return HDiv(self.base_element.flatten())
+
+    def unflatten(self):
+        return HDiv(self.base_element.unflatten())
 
 
 class HCurl(TensorProductTriple):
 
     def __init__(self, tensor_element):
+        self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
-        super(HDiv, self).__init__(tensor_element.A, tensor_element.B, tensor_element.flat, tensor_element.symmetric, tensor_element.matrices)
-        self.spaces[1] = TrHCurl
+        super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.symmetric, matrices=tensor_element.matrices)
+        self.spaces = (self.spaces[0], CellHCurl(self.cell), self.spaces[2])
 
     def to_ufl(self):
-        return HCurlElement(super(HDiv, self).to_ufl(), self.gem_transformer)
+        return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
 
-    def select_fuse_hcurl_transformer(element):
+    def repr(self):
+        return "HCurl(" + super(HCurl, self).repr() + ")"
+
+    def select_fuse_hcurl_transformer(self, element):
         import gem
         # Assume: something x interval
         assert len(element.sub_elements) == 2
         assert element.sub_elements[1].cell.get_shape() == 1
 
-        # Globally consistent edge orientations of the reference
-        # quadrilateral: rightward horizontally, upward vertically.
-        # Tangential vectors interpret these as the positive direction.
         dim = element.cell.get_spatial_dimension()
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
-        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements):  # affine mapping
+        dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
+        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
+        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
+                cell = element.sub_elements[0].cell
                 bv = element.sub_elements[0].cell.basis_vectors()[0][0]
-                return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()]
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
+                return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
             elif ks == (0, 1):
                 # Can be any spatial dimension.  Make the scalar value the
                 # tangential following the cell edge direction .
+                cell = element.sub_elements[1].cell
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
-                return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)]
+                mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) @ m_b)
+                return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
-        # elif any(str(fe.spaces[1]) == "HCurl" for fe in element.sub_elements):  # Covariant Piola mapping
-        #     # Second factor must be continuous interval.  Just padding.
-        #     return lambda v: [gem.Indexed(v, (0,)),
-        #                       gem.Indexed(v, (1,)),
-        #                       gem.Zero()]
-        # elif any(str(fe.spaces[1]) == "HDiv" for fe in element.sub_elements):  # Contravariant Piola mapping
-        #     # Second factor must be continuous interval.  Rotate the
-        #     # 2-vector tangential component on the "base" cell 90 degrees
-        #     # clockwise into a 3-vector and pad.
-        #     return lambda v: [gem.Product(gem.Literal(-1), gem.Indexed(v, (1,))),
-        #                       gem.Indexed(v, (0,)),
-        #                       gem.Zero()]
+        elif ks == (1, 0) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+            # First factor is an already H(curl)-wrapped 2D element (an
+            # in-plane tangential edge component), second is a CG interval
+            mats = lambda m_a, m_b, o: np.kron(m_a, m_b)
+            return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
+        elif ks == (0, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "H1":
+            # First factor is a plain (unwrapped) bilinear (Q1) scalar
+            # element on a 2D base cell, second is a DG interval
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
+            return lambda v: [gem.Zero(), gem.Zero(), v], mats
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected original mapping!"
+
+    def flatten(self):
+        return HCurl(self.base_element.flatten())
+
+    def unflatten(self):
+        return HCurl(self.base_element.unflatten())

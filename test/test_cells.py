@@ -1,6 +1,6 @@
 from fuse import *
 from firedrake import *
-from fuse.cells import ufc_triangle
+from fuse.cells import ufc_triangle, ufc_tetrahedron
 import pytest
 import numpy as np
 from FIAT.reference_element import default_simplex
@@ -248,7 +248,7 @@ def test_new_connectivity(cell):
 def test_compare_tris():
     fuse_tet = polygon(3)
     ufc_tet = ufc_triangle()
-    fiat_tet = ufc_simplex(2)
+    fiat_tet = default_simplex(2)
 
     print(fiat_tet.get_topology())
     print(fuse_tet.get_topology())
@@ -279,7 +279,7 @@ def test_compare_tets():
     # perm = tet.group.get_member([1, 2, 0, 3])
     fuse_tet = tet
     ufc_tet = ufc_tetrahedron()
-    fiat_tet = ufc_simplex(3)
+    fiat_tet = default_simplex(3)
     # breakpoint()
     print(fiat_tet.get_topology())
     print(fuse_tet.get_topology())

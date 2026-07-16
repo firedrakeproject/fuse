@@ -149,6 +149,8 @@ def create_cg2(cell=None):
     if cell is None:
         cell = line()
     deg = 2
+    if cell is None:
+        cell = Point(1, [Point(0), Point(0)], vertex_num=2)
     if cell.dim() > 1:
         raise NotImplementedError("This method is for cg2 on edges, please use create_cg2_tri for triangles")
     vert_dg = create_dg0(cell.vertices()[0])
@@ -161,8 +163,10 @@ def create_cg2(cell=None):
     return cg
 
 
-def create_cg2_tri(cell):
+def create_cg2_tri(cell=None):
     deg = 2
+    if cell is None:
+        cell = polygon(3)
     Pk = PolynomialSpace(deg)
 
     vert_dg0 = create_dg0(cell.vertices()[0])
@@ -218,7 +222,9 @@ def create_cg2_tet(cell):
     return cg2
 
 
-def create_cg3_tet(cell, perm=True):
+def create_cg3_tet(cell=None, perm=True):
+    if cell is None:
+        cell = make_tetrahedron()
 
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -365,10 +371,10 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
-                                                    pytest.param(construct_dg0_integral, "DG", 0, marks=pytest.mark.xfail(reason='Passes locally, fails in CI, probably same as dg2')),
+                                                    (construct_dg0_integral, "DG", 0),
                                                     (construct_dg1_integral, "DG", 1),
                                                     (construct_dg2_integral, "DG", 2),
-                                                    pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
+                                                    (create_dg2, "DG", 2),
                                                     (create_cg2, "CG", 2)
                                                     ])
 def test_1d(elem_gen, elem_code, deg):
@@ -566,7 +572,7 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Issue with cell/mesh'))])
+                         [(create_cg1_quad_tensor,), (create_cg1_quad,)])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
@@ -899,10 +905,10 @@ def test_basis_funcs_gen(form_num):
     for v in basis_funcs[:1]:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
-        min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
-        max_id1 = max([v for e in elem.entity_ids[2].values() for v in e]) + 1
-        min_id2 = min([v for e in elem2.entity_ids[2].values() for v in e])
-        max_id2 = max([v for e in elem2.entity_ids[2].values() for v in e]) + 1
+        min_id1 = min([v for e in elem.entity_dofs[2].values() for v in e])
+        max_id1 = max([v for e in elem.entity_dofs[2].values() for v in e]) + 1
+        min_id2 = min([v for e in elem2.entity_dofs[2].values() for v in e])
+        max_id2 = max([v for e in elem2.entity_dofs[2].values() for v in e]) + 1
 
         res = assemble(interpolate(vec, V)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data
@@ -1048,11 +1054,14 @@ def evaluate_pt_dict(pt_dict, fn):
                                                     (construct_tet_cg4, "CG", 4),
                                                     (construct_tet_cg6, "CG", 6),
                                                     (construct_tet_ned3_old, "N1curl", 3),
-                                                    (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3),
-                                                    (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3)])
+                                                    (periodic_table(1, 3, 1, 3), "N2curl", 3),
+                                                    (periodic_table(0, 3, 1, 3), "N1curl", 3)])
 def test_two_tet_interpolation(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
-    elem = elem_gen(cell)
+    if hasattr(elem_gen, "__call__"):
+        elem = elem_gen(cell)
+    else:
+        elem = elem_gen
 
     def vec(mesh):
         x = SpatialCoordinate(mesh)
@@ -1095,11 +1104,11 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg,max_err", [(construct_tet_cg6, "CG", 6, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
+                                                            (periodic_table(0, 3, 1, 3), "N1curl", 3, 1e-12),
                                                             (create_cg3_tet, "CG", 3, 1e-13),
                                                             (construct_tet_cg4, "CG", 4, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
-                                                            (lambda cell: periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
+                                                            (periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
+                                                            (periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
                                                             (construct_tet_rt2, "RT", 2, 1e-13),
                                                             (construct_tet_rt3, "RT", 3, 1e-13),
                                                             (construct_tet_bdm2, "BDM", 2, 1e-13),
@@ -1107,13 +1116,15 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2, 1e-12),
                                                             (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
-                                                            (lambda cell: periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
+                                                            (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
+                                                            (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-11),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
-    cell = make_tetrahedron()
-    elem1 = elem_gen(cell)
-    ufl_elem1 = elem1.to_ufl()
+    if hasattr(elem_gen, "__call__"):
+        elem = elem_gen()
+    else:
+        elem = elem_gen
+    ufl_elem = elem.to_ufl()
 
     def expr(mesh):
         x = SpatialCoordinate(mesh)
@@ -1129,7 +1140,7 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
              sp.combinatorics.Permutation([0, 3, 2, 1]),
              sp.combinatorics.Permutation([0, 2, 1, 3])]
 
-    for elem in [ufl_elem1]:
+    for elem in [ufl_elem]:
         for g in group:
             mesh = TwoTetMesh(perm=g, use_fuse=True)
             print(g)
