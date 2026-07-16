@@ -298,9 +298,6 @@ class HCurl(TensorProductTriple):
         assert len(element.sub_elements) == 2
         assert element.sub_elements[1].cell.get_shape() == 1
 
-        # Globally consistent edge orientations of the reference
-        # quadrilateral: rightward horizontally, upward vertically.
-        # Tangential vectors interpret these as the positive direction.
         dim = element.cell.get_spatial_dimension()
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
@@ -318,21 +315,21 @@ class HCurl(TensorProductTriple):
                 # tangential following the cell edge direction .
                 cell = element.sub_elements[1].cell
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
-                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+                mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) @ m_b)
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
         elif ks == (1, 0) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
             # First factor is an already H(curl)-wrapped 2D element (an
-            # in-plane tangential edge component), second is a CG
-            # interval
-            cell = element.sub_elements[1].cell
-            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            # in-plane tangential edge component), second is a CG interval
+            mats = lambda m_a, m_b, o: np.kron(m_a, m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
         elif ks == (0, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "H1":
             # First factor is a plain (unwrapped) bilinear (Q1) scalar
             # element on a 2D base cell, second is a DG interval
-            return lambda v: [gem.Zero(), gem.Zero(), v], lambda m_a, m_b, o: np.kron(m_a, m_b)
+            cell = element.sub_elements[1].cell
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
+            return lambda v: [gem.Zero(), gem.Zero(), v], mats
         else:
             raise NotImplementedError("Unexpected original mapping!")
             assert False, "Unexpected original mapping!"

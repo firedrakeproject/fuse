@@ -594,8 +594,9 @@ def test_hcurl_3d_orientation_consistency():
     # well-posedness check.
     f_vec = as_vector((2, 3, 5))
     mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
-    V = FunctionSpace(mesh, ned1_hex().flatten().to_ufl())
-
+    elem = ned1_hex().flatten()
+    V = FunctionSpace(mesh, elem.to_ufl())
+    breakpoint()
     u = TrialFunction(V)
     v = TestFunction(V)
     sol = Function(V)
