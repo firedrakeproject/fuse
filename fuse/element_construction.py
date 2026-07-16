@@ -6,6 +6,9 @@ from recursivenodes import recursive_nodes
 import itertools
 from functools import reduce
 from operator import mul
+# Aliased to avoid clashing with the HDiv/HCurl interpolation-space tags
+# already brought in by `from fuse import *`.
+from fuse.tensor_products import HDiv as HDivTP, HCurl as HCurlTP
 
 
 def convert_to_generation(coords, verts, return_idx=False):
@@ -739,6 +742,58 @@ def construct_hex_dgN(deg):
     return elem
 
 
+def construct_quad_rtN(deg):
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    elem = HDivTP(tensor_product(cgN, dgNm1).flatten()) + HDivTP(tensor_product(dgNm1, cgN).flatten())
+    assert len(elem.generate()) == 2 * deg * (deg + 1)
+    return elem
+
+
+def construct_quad_ndN(deg):
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    elem = HCurlTP(tensor_product(cgN, dgNm1).flatten()) + HCurlTP(tensor_product(dgNm1, cgN).flatten())
+    assert len(elem.generate()) == 2 * deg * (deg + 1)
+    return elem
+
+
+def construct_hex_rtN(deg):
+    # In-plane RT_deg-on-quad pieces, extruded by a discontinuous
+    # interval, following the same structure as rt1_hex (deg=1 case).
+    h1 = HDivTP(tensor_product(construct_interval_cgN(deg), construct_interval_dgN_integral(deg - 1)).flatten())
+    h2 = HDivTP(tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_cgN(deg)).flatten())
+    x_component = HDivTP(tensor_product(h1, construct_interval_dgN_integral(deg - 1)))
+    y_component = HDivTP(tensor_product(h2, construct_interval_dgN_integral(deg - 1)))
+    dg_quad = tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_dgN_integral(deg - 1)).flatten()
+    z_component = HDivTP(tensor_product(dg_quad, construct_interval_cgN(deg)))
+    elem = x_component + y_component + z_component
+    assert len(elem.generate()) == 3 * deg**2 * (deg + 1)
+    # Unlike the quad case, the outer tensor_product here combines an
+    # already-flat 2D piece with a genuine 1D interval, so the result
+    # isn't itself flat yet (matches rt1_hex's own need for an explicit
+    # .flatten() at the call site) -- flatten here so callers get a
+    # directly-usable element, consistent with construct_hex_cgN/dgN.
+    return elem.flatten()
+
+
+def construct_hex_ndN(deg):
+    # In-plane Nedelec-1st-kind-deg-on-quad pieces, extruded by a
+    # continuous interval, following the same structure as ned1_hex
+    # (deg=1 case).
+    ex = HCurlTP(tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_cgN(deg)).flatten())
+    ey = HCurlTP(tensor_product(construct_interval_cgN(deg), construct_interval_dgN_integral(deg - 1)).flatten())
+    x_component = HCurlTP(tensor_product(ex, construct_interval_cgN(deg)))
+    y_component = HCurlTP(tensor_product(ey, construct_interval_cgN(deg)))
+    cg_quad = tensor_product(construct_interval_cgN(deg), construct_interval_cgN(deg)).flatten()
+    z_component = HCurlTP(tensor_product(cg_quad, construct_interval_dgN_integral(deg - 1)))
+    elem = x_component + y_component + z_component
+    assert len(elem.generate()) == 3 * (deg + 1)**2 * deg
+    # See construct_hex_rtN: flatten here so callers get a directly-usable
+    # element, consistent with construct_hex_cgN/dgN.
+    return elem.flatten()
+
+
 # column: dimension: form number
 constructors = {
     0: {
@@ -772,10 +827,14 @@ constructors = {
     2: {
         2: {
             0: construct_quad_cgN,
+            1: construct_quad_ndN,
+            2: construct_quad_rtN,
             3: construct_quad_dgN,
         },
         3: {
             0: construct_hex_cgN,
+            1: construct_hex_ndN,
+            2: construct_hex_rtN,
             3: construct_hex_dgN,
         },
     },
