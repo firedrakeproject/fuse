@@ -240,12 +240,8 @@ class HDiv(TensorProductTriple):
             return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
         elif ks == (2, 0) and dims == (2, 1):
             # First factor is a plain (unwrapped) scalar DG element on a
-            # 2D base cell, second is a CG interval: the z-normal
-            # ("vertical flux") component of a 3D H(div) field.
+            # 2D base cell, second is a CG interval
             cell = element.sub_elements[0].cell
-            # transform(...) on a non-simplex (e.g. quad) cell returns a
-            # bare scalar (not a (1,1) matrix like the interval case), so
-            # use elementwise multiplication rather than matmul.
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
             return lambda v: [gem.Zero(), gem.Zero(), v], mats
         elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HDiv":
@@ -253,14 +249,14 @@ class HDiv(TensorProductTriple):
             # in-plane RT part), second is a DG interval: the horizontal
             # (x, y) components of a 3D H(div) field.
             cell = element.sub_elements[1].cell
-            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
         elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
             # First factor is an already H(curl)-wrapped 2D element,
             # second is a DG interval: rotate the tangential 2-vector 90
             # degrees anticlockwise into a 3-vector and pad.
             cell = element.sub_elements[1].cell
-            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
+            mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
             return lambda v: [gem.Indexed(v, (1,)), gem.Product(gem.Literal(-1), gem.Indexed(v, (0,))), gem.Zero()], mats
         else:
             raise NotImplementedError("Unexpected original mapping!")
