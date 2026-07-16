@@ -18,7 +18,7 @@ def test_construction3d(col, k, deg):
     elem.to_fiat()
 
 
-quad_params = [(2, k, deg) for deg in list(range(1, 4)) for k in [0, 3]]
+quad_params = [(2, k, deg) for deg in list(range(1, 4)) for k in [0, 1, 2, 3]]
 
 
 @pytest.mark.parametrize("col,k,deg", quad_params)
@@ -28,7 +28,7 @@ def test_construction_quad(col, k, deg):
     FunctionSpace(mesh, elem.to_ufl())
 
 
-hex_params = [(2, k, deg) for deg in list(range(1, 3)) for k in [0, 3]]
+hex_params = [(2, k, deg) for deg in list(range(1, 3)) for k in [0, 1, 2, 3]]
 
 
 @pytest.mark.parametrize("col,k,deg", hex_params)
@@ -36,6 +36,17 @@ def test_construction_hex(col, k, deg):
     elem = periodic_table(col, 3, k, deg)
     mesh = UnitCubeMesh(2, 2, 2, hexahedral=True, use_fuse=True)
     FunctionSpace(mesh, elem.to_ufl())
+
+
+def project_only(V, mesh, expr):
+    f = assemble(project(expr, V))
+    out = Function(V)
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)
+    return sqrt(assemble(dot(out - expr, out - expr) * dx))
 
 
 cg_quad_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
@@ -63,6 +74,30 @@ def test_convergence_quad(col, k, deg, conv_rate):
     assert all([c > conv_rate for c in conv])
 
 
+nd_quad_params = [(2, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
+rt_quad_params = [(2, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", nd_quad_params + rt_quad_params)
+def test_convergence_quad_vec(col, k, deg, conv_rate):
+    elem = periodic_table(col, 2, k, deg)
+    scale_range = range(3, 6)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y = SpatialCoordinate(mesh)
+        expr = as_vector([cos(x*pi*2)*sin(y*pi*2), cos(x*pi*2)*sin(y*pi*2)])
+        diff_proj[n-min(scale_range)] = project_only(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv)
+    assert all([c > conv_rate for c in conv])
+
+
 cg_hex_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 dg_hex_params = [(2, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
 
@@ -86,6 +121,45 @@ def test_convergence_hex(col, k, deg, conv_rate):
     conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
     print("convergence order:", conv1)
     assert all([c > conv_rate for c in conv1])
+
+
+nd_hex_params = [(2, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
+rt_hex_params = [(2, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", nd_hex_params + rt_hex_params)
+def test_convergence_hex_vec(col, k, deg, conv_rate):
+    elem = periodic_table(col, 3, k, deg)
+
+    scale_range = range(2, 4)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y, z = SpatialCoordinate(mesh)
+        expr = as_vector([cos(x*pi*2)*sin(y*pi*2)]*3)
+        diff_proj[n-min(scale_range)] = project_only(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv1)
+    assert all([c > conv_rate for c in conv1])
+
+
+@pytest.mark.parametrize("k", [1, 2])
+def test_hex_orientation_consistency(k):
+    f_vec = as_vector((2, 3, 5))
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    elem = periodic_table(2, 3, k, 2)
+    V = FunctionSpace(mesh, elem.to_ufl())
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    sol = Function(V)
+    solve(inner(u, v) * dx == inner(f_vec, v) * dx, sol)
+    error = sqrt(assemble(dot(sol - f_vec, sol - f_vec) * dx))
+    assert error < 1e-10
 
 
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 7))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
