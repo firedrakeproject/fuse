@@ -18,6 +18,76 @@ def test_construction3d(col, k, deg):
     elem.to_fiat()
 
 
+quad_params = [(2, k, deg) for deg in list(range(1, 4)) for k in [0, 3]]
+
+
+@pytest.mark.parametrize("col,k,deg", quad_params)
+def test_construction_quad(col, k, deg):
+    elem = periodic_table(col, 2, k, deg)
+    mesh = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
+    FunctionSpace(mesh, elem.to_ufl())
+
+
+hex_params = [(2, k, deg) for deg in list(range(1, 3)) for k in [0, 3]]
+
+
+@pytest.mark.parametrize("col,k,deg", hex_params)
+def test_construction_hex(col, k, deg):
+    elem = periodic_table(col, 3, k, deg)
+    mesh = UnitCubeMesh(2, 2, 2, hexahedral=True, use_fuse=True)
+    FunctionSpace(mesh, elem.to_ufl())
+
+
+cg_quad_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
+dg_quad_params = [(2, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_quad_params + dg_quad_params)
+def test_convergence_quad(col, k, deg, conv_rate):
+    elem = periodic_table(col, 2, k, deg)
+    scale_range = range(3, 6)
+    diff_inte = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        _, exact = get_expression(V)
+        _, diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
+
+    print("interpolation l2 error norms:", diff_inte)
+    diff_inte = np.array(diff_inte)
+    conv = np.log2(diff_inte[:-1] / diff_inte[1:])
+    print("convergence order:", conv)
+    assert all([c > conv_rate for c in conv])
+
+
+cg_hex_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
+dg_hex_params = [(2, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_hex_params + dg_hex_params)
+def test_convergence_hex(col, k, deg, conv_rate):
+    elem = periodic_table(col, 3, k, deg)
+
+    scale_range = range(2, 4)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y, z = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv1)
+    assert all([c > conv_rate for c in conv1])
+
+
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 7))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 7))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 7))]

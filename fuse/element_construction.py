@@ -705,6 +705,40 @@ def construct_dgNminus(dim):
     return construct_dim_dgNminus
 
 
+def construct_quad_cgN(deg):
+    A = construct_interval_cgN(deg)
+    B = construct_interval_cgN(deg)
+    elem = tensor_product(A, B).flatten()
+    assert len(elem.generate()) == (deg + 1)**2
+    return elem
+
+
+def construct_hex_cgN(deg):
+    A = construct_interval_cgN(deg)
+    B = construct_interval_cgN(deg)
+    C = construct_interval_cgN(deg)
+    elem = symmetric_tensor_product(A, B, C).flatten()
+    assert len(elem.generate()) == (deg + 1)**3
+    return elem
+
+
+def construct_quad_dgN(deg):
+    A = construct_interval_dgN_integral(deg)
+    B = construct_interval_dgN_integral(deg)
+    elem = tensor_product(A, B).flatten()
+    assert len(elem.generate()) == (deg + 1)**2
+    return elem
+
+
+def construct_hex_dgN(deg):
+    A = construct_interval_dgN_integral(deg)
+    B = construct_interval_dgN_integral(deg)
+    C = construct_interval_dgN_integral(deg)
+    elem = symmetric_tensor_product(A, B, C).flatten()
+    assert len(elem.generate()) == (deg + 1)**3
+    return elem
+
+
 # column: dimension: form number
 constructors = {
     0: {
@@ -733,6 +767,16 @@ constructors = {
             1: construct_tet_ndN_2,
             2: construct_tet_bdmN,
             3: construct_dgN(3),
+        },
+    },
+    2: {
+        2: {
+            0: construct_quad_cgN,
+            3: construct_quad_dgN,
+        },
+        3: {
+            0: construct_hex_cgN,
+            3: construct_hex_dgN,
         },
     },
 }
