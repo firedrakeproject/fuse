@@ -220,10 +220,6 @@ class HDiv(TensorProductTriple):
         import gem
         assert len(element.sub_elements) == 2
         assert element.sub_elements[1].cell.get_shape() == 1
-        # Globally consistent edge orientations of the reference
-        # quadrilateral: rightward horizontally, upward vertically.
-        # Their rotation by 90 degrees anticlockwise is interpreted as the
-        # positive direction for normal vectors.
         ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
@@ -233,7 +229,7 @@ class HDiv(TensorProductTriple):
             # edges.
             cell = element.sub_elements[1].cell
             bv = cell.basis_vectors()[0][0]
-            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) @ m_a, m_b)
+            mats = lambda m_a, m_b, o: np.kron(transform(cell, o[1]) * m_a, m_b)
             return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
         elif ks == (1, 0) and dims == (1, 1):
             # Both factors are 1D intervals (2D quad case).  Make the
@@ -241,7 +237,7 @@ class HDiv(TensorProductTriple):
             # edges.
             cell = element.sub_elements[0].cell
             bv = cell.basis_vectors()[0][0]
-            return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) @ m_b)
+            return lambda v: [gem.Zero(), gem.Product(gem.Literal(bv), v)], lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
         elif ks == (2, 0) and dims == (2, 1):
             # First factor is a plain (unwrapped) scalar DG element on a
             # 2D base cell, second is a CG interval: the z-normal
@@ -308,14 +304,14 @@ class HCurl(TensorProductTriple):
                 # tangential following the cell edge direction on the x-aligned edges.
                 cell = element.sub_elements[0].cell
                 bv = element.sub_elements[0].cell.basis_vectors()[0][0]
-                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) @ m_a, m_b)
+                mats = lambda m_a, m_b, o: np.kron(transform(cell, o[0]) * m_a, m_b)
                 return lambda v: [gem.Product(gem.Literal(bv), v), gem.Zero()], mats
             elif ks == (0, 1):
                 # Can be any spatial dimension.  Make the scalar value the
                 # tangential following the cell edge direction .
                 cell = element.sub_elements[1].cell
                 bv = element.sub_elements[1].cell.basis_vectors()[0][0]
-                mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) @ m_b)
+                mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
