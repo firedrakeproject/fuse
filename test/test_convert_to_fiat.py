@@ -1152,6 +1152,103 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     assert all([res < max_err for res in errors])
 
 
+def _two_hex_d4_perms():
+    # The 8 cube symmetries of cell A that fix its top/bottom face pair,
+    # one per relative orientation of the shared face. Each D4 element
+    # must act on BOTH blocks of TwoHexMesh's cell A vertex list (private
+    # face, positions 0-3, and shared face, positions 4-7): permuting
+    # only the shared-face block while fixing the private face is not a
+    # cube symmetry and yields a twisted, geometrically degenerate
+    # trilinear cell (cell volume != 1). The two blocks are matched via
+    # the vertical vertex pairing of the DMPlex hexahedron cone
+    # convention (bottom position i is below top position T[i]).
+    from sympy.combinatorics.named_groups import DihedralGroup
+    T = [0, 3, 2, 1]
+    Tinv = [T.index(i) for i in range(4)]
+    perms = []
+    for m in DihedralGroup(4).generate():
+        sigma = list(m.array_form)
+        bottom = [Tinv[sigma[T[i]]] for i in range(4)]
+        perms.append(Permutation(bottom + [4 + i for i in sigma], size=8))
+    return perms
+
+
+@pytest.mark.parametrize("deg", [1, 2])
+def test_two_hex_projection_fiat_cg(deg):
+    is_vector = False
+
+    from firedrake.utility_meshes import TwoHexMesh
+    from firedrake import project as firedrake_project  # this module's own `project` (line 592) shadows the builtin
+    group = _two_hex_d4_perms()
+
+    errors = []
+    for g in group:
+        mesh = TwoHexMesh(perm=g)
+        V = FunctionSpace(mesh, "CG", deg)
+        x = SpatialCoordinate(mesh)
+        # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
+        # scalar field; k=1/k=2 (Nedelec/RT) spaces at any degree >= 1
+        # exactly represent a constant vector field (matching
+        # test_hdiv_3d_orientation_consistency's rationale). k=3 (DG) is
+        # excluded: it has no shared DOFs across cells, so there is no
+        # cross-cell orientation to get wrong.
+        expr = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = assemble(firedrake_project(expr, V))
+        out = Function(V)
+        a = inner(u, v)*dx
+        L = inner(f, v)*dx
+        solve(a == L, out)
+        res = sqrt(assemble(dot(out - expr, out - expr) * dx))
+        print(g.array_form, res)
+        errors += [res]
+    assert all([res < 1e-10 for res in errors])
+
+
+@pytest.mark.parametrize("col,k,deg", [(2, 0, 1), (2, 0, 2), (2, 1, 1), (2, 1, 2), (2, 2, 1), (2, 2, 2)])
+def test_two_hex_projection(col, k, deg):
+    # Analogous to test_two_tet_projection, but for hexahedra: sweeps the
+    # shared quadrilateral face's full 8-element dihedral symmetry group
+    # (TwoTetMesh's shared triangular face only has a 6-element group),
+    # exhaustively covering every possible relative orientation between
+    # two hex cells -- a genuinely stronger orientation-consistency check
+    # than test_hdiv_3d_orientation_consistency/test_hcurl_3d_orientation_consistency
+    # in test_tensor_prod.py, which rely on a mesh happening to contain
+    # enough distinct orientations.
+    elem = periodic_table(col, 3, k, deg)
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+
+    from firedrake.utility_meshes import TwoHexMesh
+    from firedrake import project as firedrake_project  # this module's own `project` (line 592) shadows the builtin
+    group = _two_hex_d4_perms()
+
+    errors = []
+    for g in group:
+        mesh = TwoHexMesh(perm=g, use_fuse=True)
+        V = FunctionSpace(mesh, ufl_elem)
+        x = SpatialCoordinate(mesh)
+        # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
+        # scalar field; k=1/k=2 (Nedelec/RT) spaces at any degree >= 1
+        # exactly represent a constant vector field (matching
+        # test_hdiv_3d_orientation_consistency's rationale). k=3 (DG) is
+        # excluded: it has no shared DOFs across cells, so there is no
+        # cross-cell orientation to get wrong.
+        expr = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = assemble(firedrake_project(expr, V))
+        out = Function(V)
+        a = inner(u, v)*dx
+        L = inner(f, v)*dx
+        solve(a == L, out)
+        res = sqrt(assemble(dot(out - expr, out - expr) * dx))
+        print(g.array_form, res)
+        errors += [res]
+    assert all([res < 1e-10 for res in errors])
+
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg",
                          [(construct_tet_cg4, "CG", 4), (construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2), (construct_tet_bdm2, "BDM", 2),
                           ])
