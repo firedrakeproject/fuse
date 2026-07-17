@@ -115,6 +115,38 @@ class TensorProductTriple(ElementTriple):
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
 
+        if self.cell.flat:
+            self._regroup_matrices()
+
+    def _regroup_matrices(self):
+        """Re-express the orientation matrices in dimension-grouped DOF order.
+
+        FUSE generates tensor-product DOFs in an interleaved order (a hex,
+        for example, emits some face DOFs before later edge DOFs). During
+        assembly Firedrake packs each cell's closure DOFs grouped by entity
+        dimension (vertices, then edges, then faces, ...), keeping the
+        element's own relative order within each group, and applies these
+        matrices in that order. Re-index the matrices into that grouped
+        order so they line up with the vector they multiply. This is a
+        no-op when the generation order is already grouped (e.g. every
+        matrix is the identity, as for degree < 3).
+        """
+        dim_of = {}
+        for total_dim, ents in self.entity_dofs.items():
+            for dofs in ents.values():
+                for d in dofs:
+                    dim_of[d] = total_dim
+        n = len(dim_of)
+        grouped = sorted(range(n), key=lambda i: (dim_of[i], i))
+        if grouped == list(range(n)):
+            return
+        ix = np.ix_(grouped, grouped)
+        for mats in (self.matrices, self.reversed_matrices):
+            for ents in mats.values():
+                for os in ents.values():
+                    for k in list(os.keys()):
+                        os[k] = os[k][ix].copy()
+
     def _fill_face_axis_swaps(self, dim, ent_dofs, sub_mat):
         """Populate the axis-swap (extrinsic) orientations of a quad face.
 
