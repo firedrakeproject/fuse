@@ -1,5 +1,5 @@
 import fuse.cells as cells
-from fuse.utils import orientation_value
+from fuse.utils import orientation_value, canonical_tensor_orientation_key
 from sympy.combinatorics import PermutationGroup, Permutation
 from sympy.combinatorics.named_groups import SymmetricGroup, DihedralGroup, CyclicGroup, AlternatingGroup
 from sympy.matrices.expressions import PermutationMatrix
@@ -27,6 +27,50 @@ def perm_list_to_matrix(identity, perm):
         loc = perm.index(member)
         res[i, loc] = 1
     return res
+
+
+def is_hypercube_cell(cell):
+    """True for interval-product entities (quad, hex, ...), i.e. cells with
+    ``2**dim`` vertices and ``dim >= 2``. Simplices never satisfy this, so
+    their numbering is untouched."""
+    if cell is None:
+        return False
+    dim = getattr(cell, "dimension", None)
+    if dim is None or dim < 2:
+        return False
+    try:
+        nverts = len(cell.vertices())
+    except (AttributeError, TypeError):
+        return False
+    return nverts == 2 ** dim
+
+
+def signed_axis_permutation(member, d):
+    """Decompose a hypercube symmetry into ``(axis_perm, flips)``.
+
+    Reads the linear part of the member's affine transform (``new = v @ L``):
+    input axis ``i`` maps to output axis ``axis_perm[i]``, and ``flips[i]``
+    marks a reflection of axis ``i``.
+    """
+    L = np.array(member.transform_matrix)[:d, :d]
+    axis_perm = [0] * d
+    flips = [0] * d
+    for j in range(d):
+        i = int(np.argmax(np.abs(L[:, j])))
+        axis_perm[i] = j
+        flips[i] = 1 if L[i, j] < 0 else 0
+    return tuple(axis_perm), tuple(flips)
+
+
+def canonical_hypercube_numbering(members, cell):
+    """Map each member's raw orientation value to its canonical FIAT/dmcommon
+    key for an interval-product ``cell``."""
+    d = cell.dimension
+    numbering = {}
+    for m in members:
+        axis_perm, flips = signed_axis_permutation(m, d)
+        numbering[m.numeric_rep()] = canonical_tensor_orientation_key(axis_perm, flips, d)
+    return numbering
 
 
 class GroupMemberRep(object):
@@ -204,9 +248,12 @@ class PermutationSetRepresentation():
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
             self.group_rep_numbering = None
-            numeric_reps = [m.numeric_rep() for m in self.members()]
-            if sorted(numeric_reps) != list(range(len(numeric_reps))):
-                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
+            if is_hypercube_cell(self.cell):
+                self.group_rep_numbering = canonical_hypercube_numbering(self.members(), self.cell)
+            else:
+                numeric_reps = [m.numeric_rep() for m in self.members()]
+                if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                    self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
 
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell, name=self.name)
@@ -358,9 +405,12 @@ class GroupRepresentation(PermutationSetRepresentation):
                 counter += 1
 
             self.group_rep_numbering = None
-            numeric_reps = [m.numeric_rep() for m in self.members()]
-            if sorted(numeric_reps) != list(range(len(numeric_reps))):
-                self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
+            if is_hypercube_cell(self.cell):
+                self.group_rep_numbering = canonical_hypercube_numbering(self.members(), self.cell)
+            else:
+                numeric_reps = [m.numeric_rep() for m in self.members()]
+                if sorted(numeric_reps) != list(range(len(numeric_reps))):
+                    self.group_rep_numbering = {a: b for a, b in zip(sorted(numeric_reps), list(range(len(numeric_reps))))}
 
             # this order produces simpler generator lists
             # self.generators.reverse()

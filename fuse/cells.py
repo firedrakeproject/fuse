@@ -1045,24 +1045,19 @@ class TensorProductPoint():
         return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
 
     def component_orientations(self):
-        from fuse.utils import orientation_value
+        from fuse.utils import canonical_tensor_orientation_key
         self.component_os_to_os = {}
         for dim in self.to_fiat().get_topology():
             self.component_os_to_os[dim] = {}
             ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
-            verts = list(product(*(e.vertices() for e in ents)))
-            ident = [i for i in range(len(verts))]
+            active = [i for i, d in enumerate(dim) if d > 0]
+            ed = sum(dim)
+            axis_perm = tuple(range(ed))
             group = list(product(*(e.group.members() for e in ents)))
             for gs in group:
-                new_verts = list(product(*(g.permute(f.vertices()) for g, f in zip(gs, ents))))
-                perm = [verts.index(v) for v in new_verts]
-                o_val = orientation_value(ident, perm)
-                if sum(dim) == self.dimension and self.group.group_rep_numbering is not None:
-                    o_val = self.group.group_rep_numbering[o_val]
-                # if o_val in [m.numeric_rep() for m in self.group.members()]:
+                flips = tuple(gs[i].numeric_rep() for i in active)
+                o_val = canonical_tensor_orientation_key(axis_perm, flips, ed)
                 self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
-                # else:
-                #     breakpoint()
         return self.component_os_to_os
 
     def compute_cell_group(self):

@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 import sympy as sp
 import math
@@ -107,6 +108,39 @@ def orientation_value(identity_arg, perm_arg):
         identity.remove(perm[i])
         val += loc * math.factorial(len(perm) - i - 1)
     return val
+
+
+def lehmer_rank(perm):
+    """Rank of ``perm`` within ``sorted(permutations(range(len(perm))))``."""
+    return orientation_value(list(range(len(perm))), list(perm))
+
+
+def canonical_tensor_orientation_key(axis_perm, flips, d):
+    """Canonical FIAT/dmcommon orientation key for an interval-product entity.
+
+    ``o = (2**d) * lehmer_rank(axis_perm) + sum_i flips[i] * 2**(d - 1 - i)``
+
+    ``axis_perm`` is a permutation of ``range(d)`` sending input axis ``i`` to
+    output axis ``axis_perm[i]``; ``flips[i]`` in ``{0, 1}`` marks a reflection
+    of axis ``i``. This matches FIAT's
+    ``make_entity_permutations_tensorproduct``, whose tuple keys
+    ``(eo, o_1, ..., o_d)`` flatten to this same integer, and the numbering
+    consumed by Firedrake's ``dmcommon`` tensor-product orientation switch.
+    """
+    io = sum(int(flips[i]) * 2 ** (d - 1 - i) for i in range(d))
+    return (2 ** d) * lehmer_rank(axis_perm) + io
+
+
+def inverse_canonical_tensor_orientation_key(key, d):
+    """Inverse of :func:`canonical_tensor_orientation_key`.
+
+    Returns ``(axis_perm, flips)`` for a dimension-``d`` interval-product key.
+    """
+    breakpoint()
+    eo, io = divmod(key, 2 ** d)
+    axis_perm = sorted(itertools.permutations(range(d)))[eo]
+    flips = tuple((io >> (d - 1 - i)) & 1 for i in range(d))
+    return axis_perm, flips
 
 
 def as_tuple(expr):

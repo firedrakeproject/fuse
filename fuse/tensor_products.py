@@ -83,7 +83,7 @@ class TensorProductTriple(ElementTriple):
         else:
             cell = self.cell
         top = cell.to_fiat().get_topology()
-        if len(self.factors) == 2:
+        if len(self.factors) >= 2:
             for dim in top.keys():
                 total_dim = sum(dim) if self.flat else dim
                 f_ents = [f.cell.get_topology()[d].keys() for f, d in zip(self.factors, dim)]
@@ -107,12 +107,48 @@ class TensorProductTriple(ElementTriple):
                             if new_o in sub_mat.keys():
                                 sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                             # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
+                        self._fill_face_axis_swaps(dim, ent_dofs, sub_mat)
 
         if self.cell.flat:
             oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
+
+    def _fill_face_axis_swaps(self, dim, ent_dofs, sub_mat):
+        """Populate the axis-swap (extrinsic) orientations of a quad face.
+
+        The per-entity loop in ``setup_matrices`` fills only the
+        reflection subgroup (extrinsic orientation ``eo == 0``, canonical
+        keys ``0..2**d - 1``) because it enumerates products of the
+        factors' own orientations, which cannot swap axes. For a
+        symmetric product the remaining dihedral members compose those
+        reflections with the transpose of the face's interior-node grid:
+        the canonical key ``2**d * eo + io`` for the single 2D axis swap
+        (``eo == 1``) equals ``M[io] @ P_T`` (verified against FIAT's
+        ``make_entity_permutations_tensorproduct``). Only 2D faces are
+        needed: Firedrake's orientation switch drops the cell-interior
+        dimension, and the reflection-only vector (H(div)/H(curl)) path
+        is handled separately.
+        """
+        if self.mat_transformer is not None or not self.symmetric:
+            return
+        if len(self.factors) < 3:
+            return
+        active = [d for d in dim if d > 0]
+        if len(active) != 2 or any(d != 1 for d in active):
+            return
+        n2 = len(ent_dofs)
+        n = int(round(n2 ** 0.5))
+        if n * n != n2:
+            return
+        transpose = [j * n + i for i in range(n) for j in range(n)]
+        P_T = np.eye(n2)[transpose]
+        grid = np.ix_(ent_dofs, ent_dofs)
+        for io in range(4):
+            swap_key = 4 + io
+            if io in sub_mat and swap_key in sub_mat:
+                sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], P_T)
 
     def generate(self):
         dofs = [f.generate() for f in self.factors]

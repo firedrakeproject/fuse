@@ -1206,7 +1206,7 @@ def test_two_hex_projection_fiat_cg(deg):
     assert all([res < 1e-10 for res in errors])
 
 
-@pytest.mark.parametrize("col,k,deg", [(2, 0, 1), (2, 0, 2), (2, 1, 1), (2, 1, 2), (2, 2, 1), (2, 2, 2)])
+@pytest.mark.parametrize("col,k,deg", [(2, 0, 1), (2, 0, 2), (2, 0, 3), (2, 1, 1), (2, 1, 2), (2, 2, 1), (2, 2, 2)])
 def test_two_hex_projection(col, k, deg):
     # Analogous to test_two_tet_projection, but for hexahedra: sweeps the
     # shared quadrilateral face's full 8-element dihedral symmetry group
