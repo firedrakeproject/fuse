@@ -1210,12 +1210,6 @@ def test_two_hex_projection_fiat_cg(deg):
 def test_two_hex_projection(col, k, deg):
     # Analogous to test_two_tet_projection, but for hexahedra: sweeps the
     # shared quadrilateral face's full 8-element dihedral symmetry group
-    # (TwoTetMesh's shared triangular face only has a 6-element group),
-    # exhaustively covering every possible relative orientation between
-    # two hex cells -- a genuinely stronger orientation-consistency check
-    # than test_hdiv_3d_orientation_consistency/test_hcurl_3d_orientation_consistency
-    # in test_tensor_prod.py, which rely on a mesh happening to contain
-    # enough distinct orientations.
     elem = periodic_table(col, 3, k, deg)
     ufl_elem = elem.to_ufl()
     is_vector = len(elem.get_value_shape()) > 0

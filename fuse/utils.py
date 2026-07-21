@@ -131,18 +131,6 @@ def canonical_tensor_orientation_key(axis_perm, flips, d):
     return (2 ** d) * lehmer_rank(axis_perm) + io
 
 
-def inverse_canonical_tensor_orientation_key(key, d):
-    """Inverse of :func:`canonical_tensor_orientation_key`.
-
-    Returns ``(axis_perm, flips)`` for a dimension-``d`` interval-product key.
-    """
-    breakpoint()
-    eo, io = divmod(key, 2 ** d)
-    axis_perm = sorted(itertools.permutations(range(d)))[eo]
-    flips = tuple((io >> (d - 1 - i)) & 1 for i in range(d))
-    return axis_perm, flips
-
-
 def as_tuple(expr):
     if isinstance(expr, tuple):
         return expr

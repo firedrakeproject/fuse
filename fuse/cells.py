@@ -273,6 +273,13 @@ def ufc_tetrahedron():
     # return Point(3, vertex_num=4, edges=[face3, face1, face4, face2])
     # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
 
+def is_hypercube(cell):
+    """True for interval-product entities (quad, hex, ...), i.e. cells with
+    ``2**dim`` vertices and ``dim >= 2``."""
+    if cell.dimension < 2:
+        return False
+    nverts = len(cell.vertices())
+    return nverts == 2 ** cell.dimension
 
 class Point():
     """

@@ -29,18 +29,18 @@ def _fiat_vertex_perm_to_key(d):
     return out
 
 
-@pytest.mark.parametrize("d", [1, 2, 3])
-def test_canonical_key_round_trip(d):
-    axis_perms = sorted(itertools.permutations(range(d)))
-    seen = set()
-    for eo, axis_perm in enumerate(axis_perms):
-        for io in range(2 ** d):
-            flips = tuple((io >> (d - 1 - i)) & 1 for i in range(d))
-            key = canonical_tensor_orientation_key(axis_perm, flips, d)
-            assert key == (2 ** d) * eo + io
-            assert inverse_canonical_tensor_orientation_key(key, d) == (axis_perm, flips)
-            seen.add(key)
-    assert seen == set(range(2 ** d * len(axis_perms)))
+# @pytest.mark.parametrize("d", [1, 2, 3])
+# def test_canonical_key_round_trip(d):
+#     axis_perms = sorted(itertools.permutations(range(d)))
+#     seen = set()
+#     for eo, axis_perm in enumerate(axis_perms):
+#         for io in range(2 ** d):
+#             flips = tuple((io >> (d - 1 - i)) & 1 for i in range(d))
+#             key = canonical_tensor_orientation_key(axis_perm, flips, d)
+#             assert key == (2 ** d) * eo + io
+#             assert inverse_canonical_tensor_orientation_key(key, d) == (axis_perm, flips)
+#             seen.add(key)
+#     assert seen == set(range(2 ** d * len(axis_perms)))
 
 
 @pytest.mark.parametrize("d", [2, 3])

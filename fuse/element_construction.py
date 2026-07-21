@@ -690,6 +690,7 @@ def construct_dgN(dim):
 
 
 def construct_dgNminus(dim):
+
     if dim == 2:
         cell = polygon(3)
         inc = 3
@@ -797,6 +798,10 @@ def construct_hex_ndN(deg):
 # column: dimension: form number
 constructors = {
     0: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
         2: {
             0: construct_tri_cgN,
             1: construct_tri_ndN,
@@ -811,6 +816,10 @@ constructors = {
         },
     },
     1: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
         2: {
             0: construct_tri_cgN,
             1: construct_tri_ndN_2,
@@ -825,6 +834,10 @@ constructors = {
         },
     },
     2: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
         2: {
             0: construct_quad_cgN,
             1: construct_quad_ndN,
