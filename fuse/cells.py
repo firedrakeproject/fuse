@@ -1046,17 +1046,30 @@ class TensorProductPoint():
 
     def component_orientations(self):
         from fuse.utils import canonical_tensor_orientation_key
+        from fuse.groups import signed_axis_permutation
         self.component_os_to_os = {}
         for dim in self.to_fiat().get_topology():
             self.component_os_to_os[dim] = {}
             ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
             active = [i for i, d in enumerate(dim) if d > 0]
             ed = sum(dim)
-            axis_perm = tuple(range(ed))
             group = list(product(*(e.group.members() for e in ents)))
             for gs in group:
-                flips = tuple(gs[i].numeric_rep() for i in active)
-                o_val = canonical_tensor_orientation_key(axis_perm, flips, ed)
+                # Each active factor may itself be a multi-dimensional entity
+                # (e.g. a flattened quad face used as a tensor factor), so its
+                # member is decomposed into its own (axis_perm, flips) block
+                # rather than assumed to contribute a single reflection bit.
+                axis_perm = [0] * ed
+                flips = [0] * ed
+                offset = 0
+                for i in active:
+                    d_local = dim[i]
+                    local_perm, local_flips = signed_axis_permutation(gs[i], d_local)
+                    for j in range(d_local):
+                        axis_perm[offset + j] = offset + local_perm[j]
+                        flips[offset + j] = local_flips[j]
+                    offset += d_local
+                o_val = canonical_tensor_orientation_key(tuple(axis_perm), tuple(flips), ed)
                 self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
         return self.component_os_to_os
 
