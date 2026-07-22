@@ -1154,14 +1154,6 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
 
 def _two_hex_d4_perms():
     # The 8 cube symmetries of cell A that fix its top/bottom face pair,
-    # one per relative orientation of the shared face. Each D4 element
-    # must act on BOTH blocks of TwoHexMesh's cell A vertex list (private
-    # face, positions 0-3, and shared face, positions 4-7): permuting
-    # only the shared-face block while fixing the private face is not a
-    # cube symmetry and yields a twisted, geometrically degenerate
-    # trilinear cell (cell volume != 1). The two blocks are matched via
-    # the vertical vertex pairing of the DMPlex hexahedron cone
-    # convention (bottom position i is below top position T[i]).
     from sympy.combinatorics.named_groups import DihedralGroup
     T = [0, 3, 2, 1]
     Tinv = [T.index(i) for i in range(4)]
@@ -1189,9 +1181,7 @@ def test_two_hex_projection_fiat_cg(deg):
         # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
         # scalar field; k=1/k=2 (Nedelec/RT) spaces at any degree >= 1
         # exactly represent a constant vector field (matching
-        # test_hdiv_3d_orientation_consistency's rationale). k=3 (DG) is
-        # excluded: it has no shared DOFs across cells, so there is no
-        # cross-cell orientation to get wrong.
+        # test_hdiv_3d_orientation_consistency's rationale).
         expr = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
         u = TrialFunction(V)
         v = TestFunction(V)
@@ -1241,6 +1231,76 @@ def test_two_hex_projection(col, k, deg):
         print(g.array_form, res)
         errors += [res]
     assert all([res < 1e-10 for res in errors])
+
+
+def _one_form_norm_spread(ufl_elem, is_vector, mesh_factory, perms):
+    # For a transformation that is a signed permutation, the norm of the assembled
+    # vector should be fixed.
+    norms = []
+    for g in perms:
+        mesh = mesh_factory(g)
+        V = FunctionSpace(mesh, ufl_elem)
+        v = TestFunction(V)
+        x = SpatialCoordinate(mesh)
+        f = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        b = assemble(inner(f, v)*dx)
+        norms.append(float(np.linalg.norm(np.asarray(b.dat.data_ro).reshape(-1))))
+    norms = np.array(norms)
+    return norms, norms.max() - norms.min()
+
+
+_HEX_VEC_XFAIL = pytest.mark.xfail(
+    reason="hex H(div)/H(curl) facet orientation sign is wrong on reflections; "
+           "the 1-form norm is not orientation-invariant",
+    strict=True)
+
+
+@pytest.mark.parametrize("k,deg", [
+    pytest.param(0, 2, id="CG-2"),
+    pytest.param(0, 3, id="CG-3"),
+    pytest.param(1, 1, marks=_HEX_VEC_XFAIL, id="N1curl-1"),
+    pytest.param(1, 2, marks=_HEX_VEC_XFAIL, id="N1curl-2"),
+    pytest.param(2, 1, marks=_HEX_VEC_XFAIL, id="RT-1"),
+    pytest.param(2, 2, marks=_HEX_VEC_XFAIL, id="RT-2"),
+])
+def test_two_hex_one_form_orientation_invariance(k, deg):
+    # Scalar (CG) cases are orientation-invariant; the hex vector cases
+    # (k=1 H(curl), k=2 H(div)) are the known facet-sign bug and are xfail.
+    from firedrake.utility_meshes import TwoHexMesh
+    elem = periodic_table(2, 3, k, deg)
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+    perms = _two_hex_d4_perms()
+    _, spread = _one_form_norm_spread(
+        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, use_fuse=True), perms)
+    assert spread < 1e-10
+
+
+_TET_ONE_FORM_PERMS = [
+    Permutation([0, 1, 2, 3]),
+    Permutation([0, 2, 3, 1]),
+    Permutation([0, 3, 1, 2]),
+    Permutation([0, 1, 3, 2]),
+    Permutation([0, 3, 2, 1]),
+    Permutation([0, 2, 1, 3]),
+]
+
+
+@pytest.mark.parametrize("elem_gen", [
+    pytest.param(construct_tet_cg4, id="CG-4"),
+    pytest.param(construct_tet_rt2, id="RT-2"),
+    pytest.param(construct_tet_ned_2nd_kind_2, id="N2curl-2"),
+])
+def test_two_tet_one_form_orientation_invariance(elem_gen):
+    # construct_tet_ned2 (1st-kind Nedelec deg 2) is deliberately excluded: its
+    # face orientation matrices are not signed permutations
+    from firedrake.utility_meshes import TwoTetMesh
+    elem = elem_gen()
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+    _, spread = _one_form_norm_spread(
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+    assert spread < 1e-10
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg",
