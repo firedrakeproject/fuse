@@ -1258,9 +1258,11 @@ _HEX_VEC_XFAIL = pytest.mark.xfail(
 @pytest.mark.parametrize("k,deg", [
     pytest.param(0, 2, id="CG-2"),
     pytest.param(0, 3, id="CG-3"),
+    # RT deg 1 (single-dof faces) is correct; its 1x1 sign reconciliation is
+    # invisible to ||b||, so it is an expected pass, guarded by the projection test.
+    pytest.param(2, 1, id="RT-1"),
     pytest.param(1, 1, marks=_HEX_VEC_XFAIL, id="N1curl-1"),
     pytest.param(1, 2, marks=_HEX_VEC_XFAIL, id="N1curl-2"),
-    pytest.param(2, 1, marks=_HEX_VEC_XFAIL, id="RT-1"),
     pytest.param(2, 2, marks=_HEX_VEC_XFAIL, id="RT-2"),
 ])
 def test_two_hex_one_form_orientation_invariance(k, deg):

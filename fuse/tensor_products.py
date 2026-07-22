@@ -158,14 +158,16 @@ class TensorProductTriple(ElementTriple):
         reflections with the transpose of the face's interior-node grid:
         the canonical key ``2**d * eo + io`` for the single 2D axis swap
         (``eo == 1``) equals ``M[io] @ P_T`` (verified against FIAT's
-        ``make_entity_permutations_tensorproduct``). Only 2D faces are
-        needed: Firedrake's orientation switch drops the cell-interior
-        dimension, and the reflection-only vector (H(div)/H(curl)) path
-        is handled separately.
+        ``make_entity_permutations_tensorproduct``). This runs for any
+        symmetric product's 2D face/cell entity: for a 2-factor quad it
+        fills that quad's own cell swaps, which propagate to the hex face
+        when the quad is a factor -- supplying the swap permutation for the
+        vector (H(div)/H(curl)) hex faces, whose own call here is skipped by
+        the ``mat_transformer`` guard below.
         """
         if self.mat_transformer is not None or not self.symmetric:
             return
-        if len(self.factors) < 3:
+        if len(self.factors) < 2:
             return
         active = [d for d in dim if d > 0]
         if len(active) != 2 or any(d != 1 for d in active):
