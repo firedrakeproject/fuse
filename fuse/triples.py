@@ -516,13 +516,14 @@ class ElementTriple():
                                 # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
                                 warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
-                        else:
-                            # TODO what if an orientation is not in G1
-                            warnings.warn("FUSE: orientation case not covered")
-                            # sub_mat = g.matrix_form()
-                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
+                        elif len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
+                            # Top-dimension block of an immersed dof: the direct
+                            # orientation transform here is the identity; 
                             pass
+                        else:
+                            warnings.warn("FUSE: orientation case not covered")
+                            pass
+
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
                             # Handle immersion - can only happen once so number of keys is max 2
                             dimensions = list(dof_gen_class.keys())
