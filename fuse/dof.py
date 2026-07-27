@@ -532,6 +532,14 @@ class DOF():
         new_generation = self.generation.copy()
         return ImmersedDOF(self.pairing, self.kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
 
+    def with_kernel(self, kernel):
+        """A copy of this DOF acting through a different kernel.
+
+        The generation dict is copied but its generators are shared, so the
+        copy is grouped with the original by ``_entity_associations``.
+        """
+        return DOF(self.pairing, kernel, self.cell_defined_on, self.attachment, self.target_space, self.g, self.immersed, self.generation.copy(), self.sub_id, self.cell, self.entity_o)
+
     def _to_dict(self):
         """ almost certainly needs more things"""
         o_dict = {"pairing": self.pairing, "kernel": self.kernel}
@@ -580,6 +588,9 @@ class ImmersedDOF(DOF):
 
     def immerse(self, entity, attachment, trace, g):
         raise RuntimeError("Error: Immersing twice not supported")
+
+    def with_kernel(self, kernel):
+        return ImmersedDOF(self.pairing, kernel, self.cell_defined_on, self.attachment, self.target_space, self.g, self.triple, self.generation.copy(), self.sub_id, self.cell, self.entity_o)
 
 
 class FuseFunction():

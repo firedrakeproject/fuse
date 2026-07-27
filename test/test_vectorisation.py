@@ -2,6 +2,7 @@ from fuse import *
 from fuse.element_construction import (construct_tri_cgN, construct_tri_ndN, construct_tri_rtN,
                                        construct_tet_cgN, construct_tet_ndN, construct_tet_rtN,
                                        construct_dgNminus)
+from fuse.dof import ImmersedDOF
 from recursivenodes import recursive_nodes
 import sympy as sp
 import pytest
@@ -91,4 +92,137 @@ def test_component_kernel_comp_is_tuple():
     """A list component would silently trigger fancy indexing in FIAT's to_riesz."""
     assert isinstance(ComponentKernel([0]).comp, tuple)
     assert isinstance(ComponentKernel._from_dict({"comp": [1], "base_kernel": None}).comp, tuple)
+
+
+@pytest.mark.parametrize("deg", [1, 3])
+def test_with_kernel_preserves_attributes(deg):
+    """CG3 covers immersed vertex, immersed edge and non-immersed interior DOFs."""
+    for dof in construct_tri_cgN(deg).generate():
+        copy = dof.with_kernel(PointKernel((0.5,)))
+
+        assert type(copy) is type(dof)
+        for attr in ["cell_defined_on", "attachment", "g", "immersed", "sub_id", "cell", "entity_o"]:
+            assert getattr(copy, attr) is getattr(dof, attr)
+        if isinstance(dof, ImmersedDOF):
+            assert copy.triple is dof.triple
+        # add_entity is reapplied by DOF.__init__, so check it round trips
+        assert copy.pairing.entity is dof.pairing.entity
+        assert copy.pairing.orientation is dof.pairing.orientation
+        # a non immersed DOF is always given a fresh TrH1, so compare by value
+        assert type(copy.target_space) is type(dof.target_space)
+
+
+def test_with_kernel_replaces_only_the_kernel():
+    dof = construct_tri_cgN(1).generate()[0]
+    original = dof.kernel
+    new_kernel = PointKernel((0.5,))
+    copy = dof.with_kernel(new_kernel)
+
+    assert copy.kernel is new_kernel
+    assert dof.kernel is original
+    assert copy is not dof
+    assert copy.generation is not dof.generation
+    assert copy.generation == dof.generation
+
+
+def test_component_dofs_ordering():
+    base = construct_tri_cgN(2).generate()
+    base_triple = construct_tri_cgN(2)
+    base = base_triple.generate()
+    vector_triple = VectorTriple(base_triple)
+    dofs = vector_triple.generate()
+    comp_map = vector_triple.comp_map
+
+    assert len(dofs) == 2 * len(base)
+    assert [d.id for d in dofs] == list(range(2 * len(base)))
+    for i, dof in enumerate(dofs):
+        parent, comp = base[i // 2], i % 2
+        assert comp_map[dof.id] == (parent.id, comp)
+        assert dof.cell_defined_on is parent.cell_defined_on
+        assert dof.kernel.comp == (comp,)
+        assert dof.kernel.base_kernel is parent.kernel
+
+
+@pytest.mark.parametrize("deg", [1, 2, 3])
+def test_component_dofs_quadrature_matches_scalar(deg):
+    """Component DOFs keep the scalar points and weights, and only rewrite the component."""
+    base_triple = construct_tri_cgN(deg)
+    base = base_triple.generate()
+    vector_triple = VectorTriple(base_triple)
+    dofs = vector_triple.generate()
+    comp_map = vector_triple.comp_map
+
+    for dof in dofs:
+        parent_id, comp = comp_map[dof.id]
+        parent = next(d for d in base if d.id == parent_id)
+        scalar = parent.to_quadrature(4, ())
+        vector = dof.to_quadrature(4, (2,))
+
+        assert list(scalar.keys()) == list(vector.keys())
+        for pt in scalar:
+            assert [w for w, _ in scalar[pt]] == [w for w, _ in vector[pt]]
+            assert [c for _, c in scalar[pt]] == [()]
+            assert [c for _, c in vector[pt]] == [(comp,)]
+
+
+@pytest.mark.parametrize("builder,match", [
+    (lambda: construct_tri_rtN(1), "HDiv"),
+    (lambda: construct_tri_ndN(1), "HCurl"),
+])
+def test_vector_triple_rejects_piola_mapped(builder, match):
+    with pytest.raises(ValueError, match=match):
+        VectorTriple(builder())
+
+
+def test_vector_triple_rejects_vector_valued():
+    with pytest.raises(ValueError, match="already vector valued"):
+        VectorTriple(VectorTriple(construct_tri_cgN(1)))
+
+
+@pytest.mark.parametrize("builder,sd", [(construct_tri_cgN, 2), (construct_tet_cgN, 3)])
+@pytest.mark.parametrize("deg", [1, 2])
+def test_vector_triple_shape_degree_and_count(builder, sd, deg):
+    base = builder(deg)
+    vec = VectorTriple(base)
+
+    assert vec.N == sd
+    assert vec.get_value_shape() == (sd,)
+    # inherited, and 0 because the clones keep their parent's entity
+    assert vec.form_degree == base.form_degree == 0
+    assert vec.num_dofs() == sd * base.num_dofs()
+    assert len(vec.generate()) == sd * len(base.generate())
+    assert vec.spaces[0].set_shape
+    assert not base.spaces[0].set_shape
+
+
+@pytest.mark.parametrize("builder", [construct_tri_cgN, construct_tet_cgN])
+@pytest.mark.parametrize("deg", [1, 2])
+def test_vector_triple_entity_ids_scale(builder, deg):
+    """Pins the DOF ordering contract that the orientation matrix lift will rely on."""
+    base = builder(deg)
+    base.to_ufl()
+    vec = VectorTriple(base)
+    N = vec.N
+
+    # to_ufl is blocked until orientation matrices exist, so drive the parts directly
+    vec.ref_el = vec.cell.to_fiat()
+    vec.poly_set = vec.spaces[0].to_ON_polynomial_set(vec.ref_el)
+    entity_ids, nodes = vec.setup_ids_and_nodes()
+
+    assert len(nodes) == vec.poly_set.get_num_members()
+    for dim in entity_ids:
+        for entity in entity_ids[dim]:
+            assert len(entity_ids[dim][entity]) == N * len(base.entity_ids[dim][entity])
+
+    for vec_id, (base_id, comp) in vec.comp_map.items():
+        assert vec.dof_id_to_fiat_id[vec_id] == N * base.dof_id_to_fiat_id[base_id] + comp
+
+
+def test_vector_triple_conversion_blocked():
+    """The guard must fail loudly rather than yield identity orientation matrices."""
+    vec = VectorTriple(construct_tri_cgN(1))
+    with pytest.raises(NotImplementedError, match="Orientation matrices"):
+        vec.to_ufl()
+    with pytest.raises(NotImplementedError, match="Orientation matrices"):
+        vec.to_fiat()
 
