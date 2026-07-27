@@ -42,7 +42,7 @@ class VectorTriple(ElementTriple):
         to the ``(original dof id, component)`` it came from.
 
         Ordering is component innermost, matching the convention of
-        ``finat.TensorFiniteElement`` with ``shape_innermost``. 
+        ``finat.TensorFiniteElement`` with ``shape_innermost``.
         Each clone keeps the entity of the DOF it came from, so the entity grouping of the original
         element carries over unchanged.
         """
@@ -55,7 +55,7 @@ class VectorTriple(ElementTriple):
                     new_dof.id = len(new_dofs)
                     comp_map[new_dof.id] = (dof.id, c)
                     new_dofs.append(new_dof)
-            self.dofs, self.comp_map = new_dofs, comp_map 
+            self.dofs, self.comp_map = new_dofs, comp_map
         return self.dofs
 
     def num_dofs(self):

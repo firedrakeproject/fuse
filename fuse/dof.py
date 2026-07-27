@@ -344,7 +344,7 @@ class ComponentKernel(BaseKernel):
     which is how a scalar functional is lifted to act on one component of a
     vector valued function.
 
-    Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped. 
+    Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped.
     """
 
     def __init__(self, comp, base_kernel=None):

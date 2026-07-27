@@ -225,4 +225,3 @@ def test_vector_triple_conversion_blocked():
         vec.to_ufl()
     with pytest.raises(NotImplementedError, match="Orientation matrices"):
         vec.to_fiat()
-
