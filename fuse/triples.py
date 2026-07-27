@@ -235,7 +235,7 @@ class ElementTriple():
         elif self.cell.dimension == 3:
             fig = plt.figure()
             ax = fig.add_subplot(projection='3d')
-            self.cell.plot3d(show=False, ax=ax)
+            self.cell.plot3d(show=False, plain=True, ax=ax)
             for dof in dofs:
                 center, color = self.get_dof_info(dof)
                 if center is None:
@@ -270,7 +270,7 @@ class ElementTriple():
         A = dualmat.reshape((shp[0], -1))
         B = old_coeffs.reshape((shp[0], -1))
         V = np.dot(A, np.transpose(B))
-
+        print(V)
         with warnings.catch_warnings():
             warnings.filterwarnings("error")
             try:
@@ -344,6 +344,7 @@ class ElementTriple():
                 res_dict[dim][e_id][val] = np.eye(len(nodes))
             else:
                 new_nodes = [d(g).convert_to_fiat(ref_el, degree, self.get_value_shape()) for d in self.generate()]
+                new_nodes = sum([d(g).convert_to_fiat(ref_el, degree) for d in self.generate()], [])
                 transformed_V, transformed_basis = self.compute_dense_matrix(ref_el, entity_ids, new_nodes, poly_set)
                 res_dict[dim][e_id][val] = np.matmul(transformed_basis, original_V.T)
         return res_dict
@@ -364,6 +365,13 @@ class ElementTriple():
             sub_dict = entity_associations[sub_dim][d.cell_defined_on.id - min_ids[sub_dim]]
             for dim in set([sub_dim, cell_dim]):
                 dof_gen = str(d.generation[dim])
+                if dim < cell_dim and d.immersed:
+                    # Distinct outer immersions (value, grad, hess, ...) can share
+                    # the same inner sub-entity generator when they all immerse
+                    # the same sub-triple onto the same entity - disambiguate by
+                    # also keying on the outer (cell-dimension) generator that
+                    # produced this dof.
+                    dof_gen = dof_gen + "|" + str(d.generation[cell_dim])
                 num_dofs[dof_gen] = (dim, d.generation[dim].g1.size())
 
                 if not len(d.generation[dim].g2.members()) == 1:
@@ -422,6 +430,12 @@ class ElementTriple():
             for e in ents:
                 e_id = e.id - min_ids[dim]
                 members = e.group.members()
+                # An entity with a trivial automorphism group (e.g. any vertex -
+                # a point has no nontrivial automorphisms) has no orientation
+                # ambiguity to resolve, regardless of how many dofs (from however
+                # many distinct generators) live on it, so its block is always
+                # the identity.
+                entity_trivial = len(members) == 1
                 for g in members:
                     val = g.numeric_rep()
                     total_ent_dof_ids = []
@@ -434,7 +448,9 @@ class ElementTriple():
                         dof_gen_class = ent_dofs[0].generation
                         # cosets = e.group.cosets_by_submember(dof_gen_class[dim].g1)
 
-                        if not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
+                        if entity_trivial:
+                            oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
+                        elif not len(dof_gen_class[dim].g2.members()) == 1 and dim == min(dof_gen_class.keys()):
                             # if DOFs on entity are not perms, get the matrix
                             # only get this if they are defined on the current dimension
                             bvs = np.array(e.basis_vectors())
@@ -500,13 +516,14 @@ class ElementTriple():
                                 # Interior matrices for tetrahedrons are tricky - and they don't matter unless you're in 4d
                                 warnings.warn("Interior Matrices in 3d not implemented, but are not needed.")
                                 oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = np.eye(len(ent_dofs_ids))
-                        else:
-                            # TODO what if an orientation is not in G1
-                            warnings.warn("FUSE: orientation case not covered")
-                            # sub_mat = g.matrix_form()
-                            # oriented_mats_by_entity[dim][e_id][val][np.ix_(ent_dofs_ids, ent_dofs_ids)] = sub_mat.copy()
-                            # raise NotImplementedError(f"Orientation {g} is not in group {dof_gen_class[dim].g1.members()}")
+                        elif len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
+                            # Top-dimension block of an immersed dof: the direct
+                            # orientation transform here is the identity; 
                             pass
+                        else:
+                            warnings.warn("FUSE: orientation case not covered")
+                            pass
+
                         if len(dof_gen_class.keys()) == 2 and dim == self.cell.dim():
                             # Handle immersion - can only happen once so number of keys is max 2
                             dimensions = list(dof_gen_class.keys())
@@ -516,12 +533,22 @@ class ElementTriple():
                             permuted_ents = self.cell.permute_entities(g, immersed_dim)
                             # g_sub_mat = g.matrix_form()
                             g_sub_mat = perm_list_to_matrix(identity, [sub_e for sub_e, _ in permuted_ents])
+                            # entity_associations[immersed_dim][*] may hold several
+                            # buckets per sub-entity keyed "<inner gen>|<outer gen>"
+                            # (e.g. value vs grad vs hess, each a distinct outer
+                            # immersion), or several inner generators sharing one
+                            # outer immersion (e.g. a P2 edge's 2-point + center
+                            # generators, both wrapped by one outer immersion) -
+                            # only buckets sharing this dof_gen's own outer
+                            # generator belong to this expansion.
+                            target_suffix = "|" + dof_gen
                             for sub_e, sub_g in permuted_ents:
                                 sub_e = self.cell.get_node(sub_e)
                                 sub_e_id = sub_e.id - min_ids[sub_e.dim()]
                                 sub_ent_ids = []
                                 for (k, v) in entity_associations[immersed_dim][sub_e_id].items():
-                                    sub_ent_ids += [self.dof_id_to_fiat_id[e.id] for e in v]
+                                    if k.endswith(target_suffix):
+                                        sub_ent_ids += [self.dof_id_to_fiat_id[e.id] for e in v]
                                 sub_mat = oriented_mats_by_entity[immersed_dim][sub_e_id][sub_g.numeric_rep()][np.ix_(sub_ent_ids, sub_ent_ids)]
 
                                 expanded = np.kron(g_sub_mat, sub_mat)
@@ -681,7 +708,9 @@ class ImmersedDOFs():
         self.target_cell = target_cell
         self.triple = triple
         self.C, self.V, self.E = triple
-        self.trace = trace(target_cell)
+        if isinstance(trace, type):
+            trace = trace()
+        self.trace = trace.add_cell(target_cell)
         self.start_node = start_node
 
     def __call__(self, g):

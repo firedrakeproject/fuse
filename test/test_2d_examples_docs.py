@@ -400,21 +400,84 @@ def construct_hermite():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
 
-    v_xs = [immerse(tri, dg0, TrH1)]
+    v_xs = [immerse(tri, dg0, TrH1())]
     v_dofs = DOFGenerator(v_xs, S3/S2, S1)
 
-    v_derv_xs = [immerse(tri, dg0, TrGrad)]
+    v_derv_xs = [immerse(tri, dg0, TrGrad(alpha=(1, 0))),
+                 immerse(tri, dg0, TrGrad(alpha=(0, 1)))]
     v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S1)
-
-    v_derv2_xs = [immerse(tri, dg0, TrHess)]
-    v_derv2_dofs = DOFGenerator(v_derv2_xs, S3/S2, S1)
 
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1, S1)
 
     her = ElementTriple(tri, (P3, CellH2, C0),
-                        [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
+                        [v_dofs, v_derv_dofs, i_dofs])
     return her
+
+
+def construct_bfs():
+    # Bogner-Fox-Schmit rectangle: bicubic (Q3, dim 16) element carrying
+    # value, both first derivatives, and the mixed second derivative
+    # d^2/dxdy at each of the 4 vertices (4 * 4 = 16 dofs).
+    square = polygon(4)
+    vert = square.vertices()[0]
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(square, dg0, TrH1())]
+    v_dofs = DOFGenerator(v_xs, C4, S1)
+
+    v_derv_xs = [immerse(square, dg0, TrGrad(alpha=(1, 0))),
+                 immerse(square, dg0, TrGrad(alpha=(0, 1)))]
+    v_derv_dofs = DOFGenerator(v_derv_xs, C4, S1)
+
+    v_derv2_xs = [immerse(square, dg0, TrHess(alpha=(1, 1)))]
+    v_derv2_dofs = DOFGenerator(v_derv2_xs, C4, S1)
+
+    bfs = ElementTriple(square, (Q3, CellH2, C0),
+                        [v_dofs, v_derv_dofs, v_derv2_dofs])
+    return bfs
+
+
+def construct_argyris():
+    # Argyris triangle: quintic (P5, dim 21) C1 element carrying value, both
+    # first derivatives and all three second derivatives at each vertex
+    # (3 * 6 = 18), plus the normal derivative at each edge midpoint (3 * 1),
+    # for 21 dofs total. The normal derivative is entity-dependent (differs
+    # per edge), unlike the vertex dofs which use a fixed ambient-frame alpha.
+    tri = polygon(3)
+    vert = tri.vertices()[0]
+    edge = tri.edges()[0]
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+
+    v_xs = [immerse(tri, dg0, TrH1())]
+    v_dofs = DOFGenerator(v_xs, S3/S2, S1)
+
+    v_derv_xs = [immerse(tri, dg0, TrGrad(alpha=(1, 0))),
+                 immerse(tri, dg0, TrGrad(alpha=(0, 1)))]
+    v_derv_dofs = DOFGenerator(v_derv_xs, S3/S2, S1)
+
+    v_derv2_xs = [immerse(tri, dg0, TrHess(alpha=(2, 0))),
+                  immerse(tri, dg0, TrHess(alpha=(1, 1))),
+                  immerse(tri, dg0, TrHess(alpha=(0, 2)))]
+    v_derv2_dofs = DOFGenerator(v_derv2_xs, S3/S2, S1)
+
+    # g2=S2 (not S1) matches construct_rt's own edge dof: the normal direction
+    # flips sign when the edge's local vertex ordering is reversed (the same
+    # edge seen from the neighbouring triangle), so this dof's value must too.
+    dg0_edge = ElementTriple(edge, (P0, CellL2, C0),
+                             DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S2))
+    e_xs = [immerse(tri, dg0_edge, TrGrad(directions=["normal"]))]
+    e_dofs = DOFGenerator(e_xs, C3, S1)
+
+    # 3*(1 + 2 + 3) + 3*1 = 21 = dim(P5)
+    argyris = ElementTriple(tri, (P5, CellH2, C0),
+                            [v_dofs, v_derv_dofs, v_derv2_dofs, e_dofs])
+    return argyris
+
 
 # draft of hermite test, immersions need work
 # def test_hermite_example():

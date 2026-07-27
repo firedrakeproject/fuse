@@ -1,13 +1,63 @@
 import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
+from collections import defaultdict
+from functools import reduce
 from fuse.utils import sympy_to_numpy, numpy_to_str_tuple
+
+
+def _resolve_direction(spec, domain, trace_entity):
+    """Resolve a direction spec - a fixed ambient vector, or one of the
+    keywords "tangent"/"normal" - to a concrete vector, given the facet
+    (trace_entity) immersed within domain. "tangent" mirrors
+    TrHCurl.tabulate; "normal" mirrors TrHDiv.tabulate."""
+    if not isinstance(spec, str):
+        return np.asarray(spec, dtype=float)
+    sd = domain.get_spatial_dimension()
+    basis = np.array(domain.basis_vectors(entity=trace_entity))
+    if spec == "tangent":
+        if trace_entity.dimension != 1:
+            raise ValueError('"tangent" direction requires a 1D (edge) entity')
+        return basis[0]
+    if spec == "normal":
+        if trace_entity.dimension != sd - 1:
+            raise ValueError('"normal" direction is only defined on facets (codimension 1 entities)')
+        if sd == 2:
+            return np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
+        if sd == 3:
+            return np.cross(basis[0], basis[1])
+        raise ValueError("normal direction not implemented in dimension > 3")
+    raise ValueError(f"Unknown direction keyword {spec!r}")
+
+
+def _directional_deriv_terms(directions, domain, trace_entity):
+    """Expand the order-k mixed directional derivative d/dv_1 ... d/dv_k into
+    FIAT-style [(coeff, alpha)] terms, by taking the outer product of the k
+    resolved direction vectors and accumulating entries that land on the same
+    multi-index - generalizing FIAT's own PointSecondDerivative
+    (FIAT/functional.py, which does exactly this for k=2 via numpy.outer and
+    a defaultdict keyed by alpha) to arbitrary k."""
+    sd = domain.get_spatial_dimension()
+    vectors = [_resolve_direction(s, domain, trace_entity) for s in directions]
+    tensor = reduce(np.multiply.outer, vectors)
+    tau = defaultdict(float)
+    for index in np.ndindex(tensor.shape):
+        alpha = [0] * sd
+        for i in index:
+            alpha[i] += 1
+        tau[tuple(alpha)] += tensor[index]
+    return [(coeff, alpha) for alpha, coeff in tau.items()]
 
 
 class Trace():
 
-    def __init__(self, cell):
+    def __init__(self, cell=None, alpha=None, directions=None):
         self.domain = cell
+        self.alpha = alpha
+        self.directions = directions
+
+    def add_cell(self, cell):
+        return type(self)(cell=cell, alpha=self.alpha, directions=self.directions)
 
     def __call__(self, trace_entity):
         raise NotImplementedError("Trace uninstanitated")
@@ -17,6 +67,15 @@ class Trace():
 
     def tabulate(self, Qwts, trace_entity):
         raise NotImplementedError("Tabulation uninstantiated")
+
+    def tabulate_derivs(self, Qwts, trace_entity):
+        if self.alpha is not None and self.directions is not None:
+            raise ValueError("Specify either alpha or directions, not both")
+        if self.directions is not None:
+            return _directional_deriv_terms(self.directions, self.domain, trace_entity)
+        if self.alpha is None:
+            return None
+        return [(1.0, self.alpha)]
 
     def _to_dict(self):
         return {"trace": str(self)}
@@ -42,9 +101,6 @@ class Trace():
 
 class TrH1(Trace):
 
-    def __init__(self, cell):
-        super(TrH1, self).__init__(cell)
-
     def __call__(self, v, trace_entity):
         return v
 
@@ -66,9 +122,6 @@ class TrH1(Trace):
 
 
 class TrHDiv(Trace):
-
-    def __init__(self, cell):
-        super(TrHDiv, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
         def apply(*x):
@@ -125,9 +178,6 @@ class TrHDiv(Trace):
 
 class TrHCurl(Trace):
 
-    def __init__(self, cell):
-        super(TrHCurl, self).__init__(cell)
-
     def __call__(self, v, trace_entity):
         def apply(*x):
             result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
@@ -162,31 +212,37 @@ class TrHCurl(Trace):
 
 class TrGrad(Trace):
 
-    def __init__(self, cell):
-        super(TrGrad, self).__init__(cell)
-
     def __call__(self, v, trace_entity):
         # Compute grad v and then dot with tangent rotated according to the group member
-        raise NotImplementedError("Gradient immersions are under development")
-        g = None
-        tangent = np.array(g(np.array(self.domain.basis_vectors())[0]))
-
+        # raise NotImplementedError("Gradient immersions are under development")
         def apply(*x):
-            X = sp.DeferredVector('x')
-            dX = tuple([X[i] for i in range(self.domain.dim())])
-            compute_v = v(*dX, sym=True)
-            grad_v = sp.Matrix([sp.diff(compute_v, dX[i]) for i in range(len(dX))])
-            eval_grad_v = sympy_to_numpy(grad_v, dX, v.attach_func(*x))
-            result = np.dot(tangent, np.array(eval_grad_v))
-
-            if not hasattr(result, "__iter__"):
+            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
+            if isinstance(result, np.float64):
                 return (result,)
             return tuple(result)
         return apply
 
+    def convert_to_fiat(self, qpts, pts, wts):
+        shp = (self.domain.get_spatial_dimension(),)
+        alphas = []
+        for i in range(pts.shape[0]):
+            new = np.zeros(shp, dtype=int)
+            new[i] = 1
+            alphas += [tuple(new)]
+        deriv_dicts = []
+        for alpha in alphas:
+            deriv_dicts += [{tuple(p): [(1.0, tuple(alpha), tuple())] for p in pts.T}]
+
+        # self.alpha = tuple(alpha)
+        # self.order = sum(self.alpha)
+        return [({}, d) for d in deriv_dicts]
+
     def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
+
+    def tabulate(self, Qpts, trace_entity):
+        return np.array([])
 
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
@@ -196,9 +252,6 @@ class TrGrad(Trace):
 
 
 class TrHess(Trace):
-
-    def __init__(self, cell):
-        super(TrHess, self).__init__(cell)
 
     def __call__(self, v, trace_entity):
         raise NotImplementedError("Hessian trace needs reviewing")
@@ -218,6 +271,9 @@ class TrHess(Trace):
                 return (result,)
             return tuple(result)
         return apply
+
+    def tabulate(self, Qpts, trace_entity):
+        return np.array([])
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)

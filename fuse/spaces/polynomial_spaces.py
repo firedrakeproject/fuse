@@ -230,6 +230,7 @@ P1 = PolynomialSpace(1)
 P2 = PolynomialSpace(2)
 P3 = PolynomialSpace(3)
 P4 = PolynomialSpace(4)
+P5 = PolynomialSpace(5)
 
 Q1 = PolynomialSpace(1, 2)
 Q2 = PolynomialSpace(2, 3)

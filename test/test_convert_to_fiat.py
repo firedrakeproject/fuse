@@ -1,12 +1,13 @@
 import pytest
 import numpy as np
 import sympy as sp
+from collections import defaultdict
 from fuse import *
 from fuse.element_construction import periodic_table
 from firedrake import *
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_hermite, construct_bfs, construct_argyris
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
@@ -902,12 +903,12 @@ def test_basis_funcs_gen(form_num):
         dofs = elem.generate()
         res = np.zeros(len(dofs))
         for i in range(len(dofs)):
-            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,)), vec)
+            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,))[0], vec)
         print(res)
         dofs = elem2.generate()
         res = np.zeros(len(dofs))
         for i in range(len(dofs)):
-            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,)), vec)
+            res[i] = evaluate_pt_dict(dofs[i].to_quadrature(3, (3,))[0], vec)
         print(res)
 
 
@@ -1170,3 +1171,116 @@ def test_scaling_mesh():
     print(res1.dat.data)
     res2 = assemble(interpolate(vec, V2))
     print(res2.dat.data)
+
+
+def test_convert_hermite():
+    her = construct_hermite()
+    for dof in her.generate():
+        dof.to_quadrature(1, tuple())
+    her.to_fiat()
+    # a vertex has no nontrivial automorphisms, so every dof group sharing a
+    # vertex (value, grad-x, grad-y) must see an identity transform there,
+    # regardless of how many dofs share that vertex+generator bucket.
+    for vals in her.matrices[0].values():
+        for mat in vals.values():
+            assert np.allclose(mat, np.eye(mat.shape[0]))
+
+
+def test_convert_bfs():
+    bfs = construct_bfs()
+    for dof in bfs.generate():
+        dof.to_quadrature(1, tuple())
+    # bfs.to_fiat() is blocked upstream of the derivative dofs: BFS lives on a
+    # bare quadrilateral (polygon(4)), whose Point.to_fiat() has no tensor-product
+    # decomposition to build the FIAT hypercube from. Quad cell conversion is a
+    # separate (currently xfail) area; the derivative dofs are exercised above via
+    # to_quadrature.
+
+
+def test_convert_argyris():
+    argyris = construct_argyris()
+    for dof in argyris.generate():
+        dof.to_quadrature(1, tuple())
+    argyris.to_fiat()
+    # vertices: no orientation ambiguity, so value/grad/hess groups sharing a
+    # vertex must all see the identity, exactly as for construct_hermite.
+    for vals in argyris.matrices[0].values():
+        for mat in vals.values():
+            assert np.allclose(mat, np.eye(mat.shape[0]))
+    # edges: the normal-derivative dof's value depends on the edge's own
+    # orientation (the normal flips sign when the edge's local vertex order
+    # is reversed), matching construct_rt's own single edge dof - identity
+    # when unflipped, a clean sign flip (isolated to that dof's own row/col)
+    # when flipped.
+    for e_id, vals in argyris.matrices[1].items():
+        identity_mat = vals[0]
+        assert np.allclose(identity_mat, np.eye(identity_mat.shape[0]))
+        flipped_mat = vals[1]
+        diff = flipped_mat - np.eye(flipped_mat.shape[0])
+        changed = np.flatnonzero(np.any(diff != 0, axis=0))
+        assert len(changed) == 1
+        col = changed[0]
+        assert np.isclose(flipped_mat[col, col], -1.0)
+
+
+def _accumulate_outer(vectors):
+    """Reference computation for the outer-product-and-accumulate identity
+    that _directional_deriv_terms is expected to implement, mirroring FIAT's
+    own PointSecondDerivative pattern generalized to len(vectors) directions."""
+    tensor = vectors[0]
+    for v in vectors[1:]:
+        tensor = np.outer(tensor, v).reshape(tensor.shape + v.shape)
+    expected = defaultdict(float)
+    for index in np.ndindex(tensor.shape):
+        alpha = [0, 0]
+        for i in index:
+            alpha[i] += 1
+        expected[tuple(alpha)] += tensor[index]
+    return expected
+
+
+def _edge_directional_dof(trace):
+    tri = polygon(3)
+    edge = tri.edges()[0]
+    dg0_edge = ElementTriple(edge, (P0, CellL2, C0),
+                             DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    e_xs = [immerse(tri, dg0_edge, trace)]
+    e_dofs = DOFGenerator(e_xs, C3, S1)
+    triple = ElementTriple(tri, (P1, CellH2, C0), [e_dofs])
+    dof = triple.generate()[0]
+    basis = np.array(tri.basis_vectors(entity=dof.cell_defined_on))
+    t = basis[0]
+    n = np.matmul(basis, np.array([[0, -1], [1, 0]]))[0]
+    return dof, t, n
+
+
+def test_convert_tangential_deriv():
+    dof, t, n = _edge_directional_dof(TrGrad(directions=["tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    assert np.isclose(got[(1, 0)], t[0])
+    assert np.isclose(got[(0, 1)], t[1])
+
+
+def test_convert_tangential_tangential_deriv():
+    dof, t, n = _edge_directional_dof(TrHess(directions=["tangent", "tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    expected = _accumulate_outer([t, t])
+    for alpha, val in expected.items():
+        assert np.isclose(got[alpha], val)
+
+
+def test_convert_normal_tangential_twist_deriv():
+    dof, t, n = _edge_directional_dof(TrHess(directions=["normal", "tangent"]))
+    pt_dict, deriv_dict = dof.to_quadrature(1, tuple())
+    assert pt_dict == {}
+    (terms,) = deriv_dict.values()
+    got = {alpha: w for w, alpha, comp in terms}
+    expected = _accumulate_outer([n, t])
+    for alpha, val in expected.items():
+        assert np.isclose(got[alpha], val)

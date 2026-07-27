@@ -32,28 +32,35 @@ def mass_solve(U):
     assemble(L)
     solve(a == L, out)
     assert np.allclose(out.dat.data, f.dat.data, rtol=1e-5)
+    return out.dat.data
 
 
 @pytest.mark.xfail(reason="tensor prod issues")
-@pytest.mark.parametrize("generator, code, deg", [(construct_cg1, "CG", 1), (construct_dg1, "DG", 1)])
-def test_tensor_product_ext_mesh(generator, code, deg):
+@pytest.mark.parametrize("generator1, generator2, code1, code2, deg1, deg2",
+                         [(construct_cg1, construct_cg1, "CG", "CG", 1, 1),
+                          (construct_dg1, construct_dg1, "DG", "DG", 1, 1),
+                          (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
+                          ])
+def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
     m = UnitIntervalMesh(2, use_fuse=True)
     mesh = ExtrudedMesh(m, 2)
 
     # manual method of creating tensor product elements
-    horiz_elt = FiniteElement(code, as_cell("interval"), deg)
-    vert_elt = FiniteElement(code, as_cell("interval"), deg)
+    horiz_elt = FiniteElement(code1, as_cell("interval"), deg1)
+    vert_elt = FiniteElement(code2, as_cell("interval"), deg2)
     elt = TensorProductElement(horiz_elt, vert_elt)
     U = FunctionSpace(mesh, elt)
-    mass_solve(U)
+    res1 = mass_solve(U)
 
     # fuseonic way of creating tensor product elements
-    A = generator()
-    B = generator()
+    A = generator1()
+    B = generator2()
     elem = tensor_product(A, B)
 
     U = FunctionSpace(mesh, elem.to_ufl())
-    mass_solve(U)
+    res2 = mass_solve(U)
+
+    assert np.allclose(res1, res2)
 
 
 @pytest.mark.xfail(reason="tensor prod issues")

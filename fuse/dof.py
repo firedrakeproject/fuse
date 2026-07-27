@@ -37,6 +37,10 @@ class DeltaPairing(Pairing):
     def tabulate(self):
         return 1
 
+    def get_pts(self, ref_el, total_degree):
+        entity = ref_el.construct_subelement(self.entity.dim())
+        return [(0,) * entity.get_spatial_dimension()], [1], 1
+
     def add_entity(self, entity):
         res = DeltaPairing()
         res.entity = entity
@@ -420,12 +424,13 @@ class DOF():
             self.sub_id = generator_id
 
     def convert_to_fiat(self, ref_el, interpolant_degree, value_shape=tuple()):
-        # TODO deriv dict needs implementing (currently {})
-        return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
+        pt_dict, deriv_dict = self.to_quadrature(interpolant_degree, value_shape)
+        return Functional(ref_el, value_shape, pt_dict, deriv_dict, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
         Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
+        deriv_terms = None
         dim = self.cell_defined_on.get_spatial_dimension()
         if dim > 0:
             bvs = np.array(self.cell_defined_on.basis_vectors())
@@ -439,23 +444,13 @@ class DOF():
                 basis = np.array(self.cell_defined_on.basis_vectors()).T
                 basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
                 J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
-                # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
-                # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
-                #     breakpoint()
                 return np.matmul(J, basis_coeffs)
         else:
             immersed = self.immersed
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            # if self.pairing.orientation is not None and
-            # self.pairing.orientation.numeric_rep() == 1:
-            #     breakpoint()
-            # print(self)
-            # print(self.cell_defined_on.cartesian_to_barycentric(Qpts))
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
-            # print(bary_pts)
-            # print(basis_change)
             pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
         else:
             pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
@@ -472,19 +467,32 @@ class DOF():
                 new_wts = wts
             else:
                 new_wts = np.outer(wts * J_det, immersion)
-                # shape is wrong for 2d face on tet
-            # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
-            #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
+
+            # a derivative dof is described as sum_i coeff_i * D^{alpha_i},
+            # already expressed w.r.t. the ambient cell's reference frame
+            # (matching FIAT's own PointDerivative/PointDirectionalDerivative)
+            deriv_terms = self.target_space.tabulate_derivs(pts, self.cell_defined_on)
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        # if self.cell_defined_on.dimension >= 2:
-        #     print(self)
-        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        #     for key, val in pt_dict.items():
-        #         print(np.array(key), ":", np.array([v[0] for v in val]))
-        return pt_dict
+        # a pure derivative dof has no point-value contribution, so FIAT expects
+        # those points to be absent from pt_dict entirely rather than mapped to [] if (list(zip(wt, cp)) ensures this
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps) if list(zip(wt, cp))}
+        # deriv dict is {pt: [(weight, alpha, component)]}
+        if deriv_terms is None:
+            deriv_dict = {}
+        else:
+            deriv_dict = {tuple(pt): [(w[0] * coeff * J_det, alpha, cp[0]) for coeff, alpha in deriv_terms]
+                          for pt, w, cp in zip(pts, wts, comps)}
+        # print(self)
+        # np.set_printoptions(linewidth=90, precision=4, suppress=True)
+        # print("pt")
+        # for key, val in pt_dict.items():
+        #     print(np.array(key), ":", np.array([v[0] for v in val]))
+        # print("deriv")
+        # for key, val in deriv_dict.items():
+        #     print(np.array(key), ":", np.array([v[0] for v in val]))
+        return pt_dict, deriv_dict
 
     def __repr__(self, fn="v"):
         return str(self.pairing).format(fn=fn, kernel=self.kernel)

@@ -11,6 +11,9 @@ docs:
 	# put -n back in when things are better documented
 	@(cd docs/ && (make html SPHINXOPTS="-W --keep-going"))
 
+clean:
+	@(cd docs/ && make clean)
+
 lint:
 	@echo "    Linting FUSE codebase"
 	@python3 -m flake8 $(FLAKE8_FORMAT) fuse
@@ -38,8 +41,6 @@ test_cells:
 	@firedrake-clean
 	@python3 -m pytest -rPx --run-cleared test/test_cells.py::test_ref_els[expect1]
 
-clean:
-	@(cd docs/ && make clean)
 
 prepush: lint tests
 	@rm .coverage.*
