@@ -337,36 +337,75 @@ class PolynomialKernel(BaseKernel):
 
 
 class ComponentKernel(BaseKernel):
+    """Selects a component of the value of the function the DOF acts on.
 
-    def __init__(self, comp):
-        self.comp = comp
+    Used bare, this is a moment against a single component. Wrapping another
+    kernel in ``base_kernel`` instead restricts that kernel to a component,
+    which is how a scalar functional is lifted to act on one component of a
+    vector valued function.
+
+    Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped. 
+    """
+
+    def __init__(self, comp, base_kernel=None):
+        self.comp = tuple(comp)
+        # The permitted types are dictated by the isinstance dispatches in
+        # DOF.to_quadrature, which cannot see through this wrapper.
+        if base_kernel is not None:
+            if isinstance(base_kernel, PointKernel):
+                pass
+            elif isinstance(base_kernel, PolynomialKernel) and base_kernel.shape == 0:
+                pass
+            else:
+                raise NotImplementedError(
+                    f"Cannot wrap {type(base_kernel).__name__} in a ComponentKernel. ")
+        self.base_kernel = base_kernel
         super(ComponentKernel, self).__init__()
 
     def __repr__(self):
-        return f"[{self.comp}]"
+        if self.base_kernel is None:
+            return f"[{self.comp}]"
+        return f"{self.base_kernel}[{self.comp}]"
 
     def degree(self, interpolant_degree):
-        return interpolant_degree
+        if self.base_kernel is None:
+            return interpolant_degree
+        return self.base_kernel.degree(interpolant_degree)
 
     def permute(self, g):
-        return self
+        if self.base_kernel is None:
+            return self
+        # The component index is unchanged by a cell symmetry, as each
+        # component transforms as a scalar under the identity pullback.
+        return ComponentKernel(self.comp, self.base_kernel.permute(g))
 
     def __call__(self, *args):
-        return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
+        if self.base_kernel is None:
+            return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
+        return self.base_kernel(*args)
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, Qwts, [[self.comp] for pt in Qpts]
-        # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+    def _shift(self, comp):
+        """Select ``self.comp`` of a scalar base, or offset a vector base by it."""
+        if len(comp) == 0:
+            return self.comp
+        return (self.comp[0] + comp[0],)
+
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if self.base_kernel is None:
+            return Qpts, Qwts, [[self.comp] for pt in Qpts]
+        pts, wts, comps = self.base_kernel.evaluate(Qpts, Qwts, basis_change,
+                                                    immersed, dim, tuple())
+        return pts, wts, [[self._shift(c) for c in cs] for cs in comps]
 
     def _to_dict(self):
-        o_dict = {"comp": self.comp}
+        o_dict = {"comp": self.comp, "base_kernel": self.base_kernel}
         return o_dict
 
     def dict_id(self):
         return "ComponentKernel"
 
     def _from_dict(obj_dict):
-        return ComponentKernel(obj_dict["comp"])
+        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict.get("base_kernel"))
 
 
 class DOF():

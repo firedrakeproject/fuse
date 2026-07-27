@@ -31,6 +31,19 @@ def test_unscaled_construction():
     assert isinstance(on_set, polynomial_set.PolynomialSet)
 
 
+def test_to_vector():
+    cell = polygon(3)
+
+    scalar_set = P2.to_ON_polynomial_set(cell)
+    vec_P2 = P2.to_vector()
+    assert vec_P2.set_shape
+    assert not P2.set_shape
+
+    vec_set = vec_P2.to_ON_polynomial_set(cell)
+    assert vec_set.get_shape() == (2,)
+    assert vec_set.get_num_members() == 2 * scalar_set.get_num_members()
+
+
 def test_restriction():
     cell = polygon(3)
     restricted = P3.restrict(2, 3)

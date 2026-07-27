@@ -126,6 +126,9 @@ class PolynomialSpace(object):
     def restrict(self, mindegree, maxdegree):
         return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, set_shape=self.set_shape)
 
+    def to_vector(self):
+        return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, set_shape=True)
+
     def _to_dict(self):
         return {"set_shape": self.set_shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
 
