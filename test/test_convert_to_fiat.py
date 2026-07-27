@@ -1190,7 +1190,11 @@ def test_convert_bfs():
     bfs = construct_bfs()
     for dof in bfs.generate():
         dof.to_quadrature(1, tuple())
-    # bfs.to_fiat() 
+    # bfs.to_fiat() is blocked upstream of the derivative dofs: BFS lives on a
+    # bare quadrilateral (polygon(4)), whose Point.to_fiat() has no tensor-product
+    # decomposition to build the FIAT hypercube from. Quad cell conversion is a
+    # separate (currently xfail) area; the derivative dofs are exercised above via
+    # to_quadrature.
 
 
 def test_convert_argyris():

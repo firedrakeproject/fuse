@@ -18,7 +18,7 @@ from fuse import (C0, CellH2, CellL2, DOF, DOFGenerator, DeltaPairing,
                   ElementTriple, P0, P3, P5, PointKernel, S1, S2, S3, C3,
                   TrGrad, TrH1, TrHess, immerse, polygon)
 
-from finat.fiat_elements import ScalarZanyFuseElement, is_scalar_zany
+from finat.zany import ScalarZanyFuseElement, is_scalar_zany
 from finat.physically_mapped import PhysicalGeometry
 
 
