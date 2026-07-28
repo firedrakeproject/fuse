@@ -23,6 +23,7 @@ ConstructedPolynomialSpace
       ~ConstructedPolynomialSpace.dict_id
       ~ConstructedPolynomialSpace.restrict
       ~ConstructedPolynomialSpace.to_ON_polynomial_set
+      ~ConstructedPolynomialSpace.to_vector
    
    
 

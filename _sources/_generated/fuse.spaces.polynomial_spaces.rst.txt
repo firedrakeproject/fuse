@@ -11,6 +11,16 @@ polynomial\_spaces
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        normalise_shape
+      
+        weighted_shape
+   
    
 
    

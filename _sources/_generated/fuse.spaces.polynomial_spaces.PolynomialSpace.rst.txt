@@ -23,6 +23,7 @@ PolynomialSpace
       ~PolynomialSpace.dict_id
       ~PolynomialSpace.restrict
       ~PolynomialSpace.to_ON_polynomial_set
+      ~PolynomialSpace.to_vector
    
    
 

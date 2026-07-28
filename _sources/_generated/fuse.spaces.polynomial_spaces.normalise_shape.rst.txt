@@ -1,0 +1,6 @@
+fuse.spaces.polynomial\_spaces.normalise\_shape
+===============================================
+
+.. currentmodule:: fuse.spaces.polynomial_spaces
+
+.. autofunction:: normalise_shape

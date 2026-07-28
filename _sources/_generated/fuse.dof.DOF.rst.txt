@@ -25,6 +25,7 @@ DOF
       ~DOF.immerse
       ~DOF.tabulate
       ~DOF.to_quadrature
+      ~DOF.with_kernel
    
    
 

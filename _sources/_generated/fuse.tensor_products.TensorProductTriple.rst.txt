@@ -48,5 +48,6 @@ TensorProductTriple
    .. autosummary::
    
       ~TensorProductTriple.degree
+      ~TensorProductTriple.form_degree
    
    

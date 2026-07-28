@@ -1,0 +1,51 @@
+:tocdepth: 0
+
+VectorTriple
+============
+
+.. currentmodule:: fuse.vectorisation
+
+.. autoclass:: VectorTriple
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~VectorTriple.__init__
+      ~VectorTriple.compute_dense_matrix
+      ~VectorTriple.dict_id
+      ~VectorTriple.generate
+      ~VectorTriple.get_dof_info
+      ~VectorTriple.get_value_shape
+      ~VectorTriple.make_dof_perms
+      ~VectorTriple.make_entity_dense_matrices
+      ~VectorTriple.make_overall_dense_matrices
+      ~VectorTriple.num_dofs
+      ~VectorTriple.orient_mat_perms
+      ~VectorTriple.plot
+      ~VectorTriple.reverse_dof_perms
+      ~VectorTriple.setup_ids_and_nodes
+      ~VectorTriple.setup_matrices
+      ~VectorTriple.sub_elements
+      ~VectorTriple.to_fiat
+      ~VectorTriple.to_tikz
+      ~VectorTriple.to_ufl
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~VectorTriple.degree
+      ~VectorTriple.form_degree
+   
+   

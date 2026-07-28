@@ -40,4 +40,5 @@ fuse
    traces
    triples
    utils
+   vectorisation
 

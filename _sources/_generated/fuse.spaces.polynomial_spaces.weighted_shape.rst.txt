@@ -1,0 +1,6 @@
+fuse.spaces.polynomial\_spaces.weighted\_shape
+==============================================
+
+.. currentmodule:: fuse.spaces.polynomial_spaces
+
+.. autofunction:: weighted_shape

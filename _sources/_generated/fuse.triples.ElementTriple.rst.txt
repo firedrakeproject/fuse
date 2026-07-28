@@ -45,5 +45,6 @@ ElementTriple
    .. autosummary::
    
       ~ElementTriple.degree
+      ~ElementTriple.form_degree
    
    

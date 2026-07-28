@@ -19,6 +19,7 @@ GroupMemberRep
    
       ~GroupMemberRep.__init__
       ~GroupMemberRep.compute_perm
+      ~GroupMemberRep.dict_id
       ~GroupMemberRep.lin_combination_form
       ~GroupMemberRep.matrix_form
       ~GroupMemberRep.matrix_form_subgroup

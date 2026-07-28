@@ -25,6 +25,7 @@ ImmersedDOF
       ~ImmersedDOF.immerse
       ~ImmersedDOF.tabulate
       ~ImmersedDOF.to_quadrature
+      ~ImmersedDOF.with_kernel
    
    
 
