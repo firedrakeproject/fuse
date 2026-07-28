@@ -3,7 +3,11 @@ from fuse.element_construction import (construct_tri_cgN, construct_tri_ndN, con
                                        construct_tet_cgN, construct_tet_ndN, construct_tet_rtN,
                                        construct_dgNminus)
 from fuse.dof import ImmersedDOF
+from fuse.tensor_products import TensorProductTriple
+from FIAT.lagrange import Lagrange
+from FIAT.quadrature_schemes import create_quadrature
 from recursivenodes import recursive_nodes
+import numpy as np
 import sympy as sp
 import pytest
 
@@ -126,7 +130,6 @@ def test_with_kernel_replaces_only_the_kernel():
 
 
 def test_component_dofs_ordering():
-    base = construct_tri_cgN(2).generate()
     base_triple = construct_tri_cgN(2)
     base = base_triple.generate()
     vector_triple = VectorTriple(base_triple)
@@ -198,30 +201,172 @@ def test_vector_triple_shape_degree_and_count(builder, sd, deg):
 @pytest.mark.parametrize("builder", [construct_tri_cgN, construct_tet_cgN])
 @pytest.mark.parametrize("deg", [1, 2])
 def test_vector_triple_entity_ids_scale(builder, deg):
-    """Pins the DOF ordering contract that the orientation matrix lift will rely on."""
+    """Pins the DOF ordering contract that the orientation matrix lift relies on."""
     base = builder(deg)
-    base.to_ufl()
     vec = VectorTriple(base)
+    vec.to_ufl()
     N = vec.N
 
-    # to_ufl is blocked until orientation matrices exist, so drive the parts directly
-    vec.ref_el = vec.cell.to_fiat()
-    vec.poly_set = vec.spaces[0].to_ON_polynomial_set(vec.ref_el)
-    entity_ids, nodes = vec.setup_ids_and_nodes()
-
-    assert len(nodes) == vec.poly_set.get_num_members()
-    for dim in entity_ids:
-        for entity in entity_ids[dim]:
-            assert len(entity_ids[dim][entity]) == N * len(base.entity_ids[dim][entity])
+    assert len(vec.nodes) == vec.poly_set.get_num_members()
+    for dim in vec.entity_ids:
+        for entity in vec.entity_ids[dim]:
+            assert len(vec.entity_ids[dim][entity]) == N * len(base.entity_ids[dim][entity])
 
     for vec_id, (base_id, comp) in vec.comp_map.items():
         assert vec.dof_id_to_fiat_id[vec_id] == N * base.dof_id_to_fiat_id[base_id] + comp
 
 
-def test_vector_triple_conversion_blocked():
-    """The guard must fail loudly rather than yield identity orientation matrices."""
+def block_lagrange(ref_el, deg, N, pts):
+    """Vector Lagrange laid out to match: row N*i+c is scalar basis fn i in component c."""
+    sd = ref_el.get_spatial_dimension()
+    scalar = Lagrange(ref_el, deg).tabulate(0, pts)[(0,) * sd]
+    basis = np.zeros((N * scalar.shape[0], N, len(pts)))
+    for i in range(scalar.shape[0]):
+        for c in range(N):
+            basis[N * i + c, c, :] = scalar[i, :]
+    return basis
+
+
+def tabulate_vector_cg(builder, deg):
+    elem = VectorTriple(builder(deg)).to_fiat()
+    sd = elem.ref_el.get_spatial_dimension()
+    pts = create_quadrature(elem.ref_el, 2 * deg + 2).get_points()
+    return elem, pts, elem.tabulate(0, pts)[(0,) * sd]
+
+
+VECTOR_CG = [(construct_tri_cgN, 2, 1), (construct_tri_cgN, 2, 2),
+             (construct_tri_cgN, 2, 3), (construct_tet_cgN, 3, 1),
+             (construct_tet_cgN, 3, 2)]
+
+
+@pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
+def test_vector_cg_spans_block_lagrange(builder, sd, deg):
+    """The two bases must span the same space, up to an invertible change of basis."""
+    elem, pts, mine = tabulate_vector_cg(builder, deg)
+    ref = block_lagrange(elem.ref_el, deg, sd, pts)
+
+    flat_mine = mine.reshape(mine.shape[0], -1).T
+    flat_ref = ref.reshape(ref.shape[0], -1).T
+    change, _, _, _ = np.linalg.lstsq(flat_ref, flat_mine, rcond=None)
+
+    assert np.allclose(flat_mine, flat_ref @ change)
+    assert np.allclose(flat_ref, flat_mine @ np.linalg.inv(change))
+
+
+@pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
+def test_vector_cg_component_block(builder, sd, deg):
+    """Basis function N*i+c lives entirely in component c, pinning component innermost.
+
+    Insensitive to the order of the DOFs within an entity, which FUSE and FIAT do not
+    share at degree 3, so unlike an exact comparison this holds at every degree.
+    """
+    _, _, mine = tabulate_vector_cg(builder, deg)
+
+    for i in range(mine.shape[0] // sd):
+        for c in range(sd):
+            for other in range(sd):
+                if other != c:
+                    assert np.allclose(mine[sd * i + c, other, :], 0)
+
+
+@pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
+def test_vector_cg_component_slices_span_scalar(builder, sd, deg):
+    """Fixed component slices reproduce the scalar space, whatever order they arrive in."""
+    elem, pts, mine = tabulate_vector_cg(builder, deg)
+    scalar = Lagrange(elem.ref_el, deg).tabulate(0, pts)[(0,) * elem.ref_el.get_spatial_dimension()]
+
+    for c in range(sd):
+        component = np.array([mine[sd * i + c, c, :] for i in range(mine.shape[0] // sd)])
+        change, _, _, _ = np.linalg.lstsq(scalar.T, component.T, rcond=None)
+        assert np.allclose(component.T, scalar.T @ change)
+
+
+@pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
+def test_vector_cg_fiat_metadata(builder, sd, deg):
+    base = builder(deg).to_fiat()
+    elem = VectorTriple(builder(deg)).to_fiat()
+
+    assert elem.value_shape() == (sd,)
+    assert elem.get_formdegree() == 0
+    assert elem.space_dimension() == sd * base.space_dimension()
+
+
+@pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
+def test_vector_cg_matrices_are_kron(builder, sd, deg):
+    base = builder(deg)
+    vec = VectorTriple(base)
+    vec.to_ufl()
+    size = sd * base.num_dofs()
+
+    for dim in vec.matrices:
+        for entity in vec.matrices[dim]:
+            for orientation, matrix in vec.matrices[dim][entity].items():
+                expected = np.kron(base.matrices[dim][entity][orientation], np.eye(sd))
+                assert np.allclose(matrix, expected)
+                reverse = vec.reversed_matrices[dim][entity][orientation]
+                assert np.allclose(matrix @ reverse, np.eye(size))
+
+
+def test_vector_cg_dof_ordering_is_asserted():
+    base = construct_tri_cgN(2)
+    vec = VectorTriple(base)
+    vec.ref_el = vec.cell.to_fiat()
+    vec.poly_set = vec.spaces[0].to_ON_polynomial_set(vec.ref_el)
+    vec.entity_ids, vec.nodes = vec.setup_ids_and_nodes()
+
+    first = next(iter(vec.comp_map))
+    vec.comp_map[first] = (vec.comp_map[first][0], vec.comp_map[first][1] + 1)
+    with pytest.raises(ValueError, match="Kronecker"):
+        vec.setup_matrices()
+
+
+def test_make_dof_perms_blocked():
+    """It would silently return identity matrices, so it must refuse instead."""
     vec = VectorTriple(construct_tri_cgN(1))
-    with pytest.raises(NotImplementedError, match="Orientation matrices"):
-        vec.to_ufl()
-    with pytest.raises(NotImplementedError, match="Orientation matrices"):
-        vec.to_fiat()
+    with pytest.raises(NotImplementedError, match="make_dof_perms"):
+        vec.make_dof_perms(None, None, None, None)
+
+
+@pytest.mark.parametrize("flat", [False, True])
+def test_vector_triple_rejects_tensor_product(flat):
+    """Fails with a clear message rather than an AttributeError from generate()."""
+    cell = polygon(3)
+    edge = cell.edges()[0]
+    vert = cell.vertices()[0]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0),
+                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1, S1))
+    interval = ElementTriple(edge, (P1, CellH1, C0),
+                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)])
+    tp = TensorProductTriple(interval, interval)
+    if flat:
+        tp = tp.flatten()
+
+    with pytest.raises(ValueError, match="tensor product"):
+        VectorTriple(tp)
+
+
+@pytest.mark.parametrize("deg", [1, 2, 3])
+def test_vector_cg_matches_firedrake_vector_cg(deg):
+    """End to end check that exercises Firedrake's fuse_orientations.
+
+    Imported inside the test so the rest of this module stays Firedrake free.
+    """
+    from firedrake import (UnitSquareMesh, FunctionSpace, VectorFunctionSpace, Function,
+                           SpatialCoordinate, as_vector, assemble, dot, dx, project)
+
+    mesh = UnitSquareMesh(4, 4, use_fuse=True)
+    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg)).to_ufl())
+    W = VectorFunctionSpace(mesh, "CG", deg)
+    assert V.dim() == W.dim()
+
+    x, y = SpatialCoordinate(mesh)
+    expr = as_vector([x**deg + 2 * y, 3 * x - y**deg])
+
+    # an expression of this degree lies in the space, so interpolation is exact
+    interpolated = Function(V).interpolate(expr)
+    residual = interpolated - expr
+    assert assemble(dot(residual, residual) * dx) < 1e-20
+
+    # and projecting agrees with Firedrake's own vector CG, which spans the same space
+    difference = project(expr, V) - project(expr, W)
+    assert assemble(dot(difference, difference) * dx) < 1e-20

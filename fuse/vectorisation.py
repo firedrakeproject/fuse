@@ -1,5 +1,7 @@
 from fuse.dof import ComponentKernel
 from fuse.triples import ElementTriple
+from fuse.tensor_products import TensorProductTriple
+import numpy as np
 
 
 class VectorTriple(ElementTriple):
@@ -17,11 +19,11 @@ class VectorTriple(ElementTriple):
                 "components, so the components do not transform independently.")
         if base.spaces[0].set_shape:
             raise ValueError("Cannot vectorise an element that is already vector valued.")
-        if base.flat:
-            raise ValueError("Cannot vectorise a flattened element.")
+        if isinstance(base, TensorProductTriple) or base.flat:
+            raise ValueError("Cannot vectorise a tensor product element.")
 
-        # ElementTriple.__init__ is deliberately not called: it adds the cell to
-        # each DOFGenerator, which would modify the base element's generators.
+        # ensure base is fully set up
+        base.to_ufl()
         self.base = base
         self.N = base.cell.get_spatial_dimension()
         self.cell = base.cell
@@ -64,17 +66,37 @@ class VectorTriple(ElementTriple):
     def sub_elements(self):
         return [self.base]
 
-    def setup_matrices(self):
-        raise NotImplementedError(
-            "Orientation matrices for a VectorTriple are not implemented yet. They "
-            "cannot be produced by make_dof_perms, which sizes its blocks from the "
-            "generating groups and so would silently return identity matrices.")
+    def _check_dof_ordering(self):
+        """Confirm the component innermost numbering the matrix lift relies on.
 
-    def to_ufl(self):
-        # Guarded here as well as in setup_matrices because ElementTriple.to_ufl
-        # assigns ref_el before building the matrices, so failing partway through
-        # would leave a half set up element that a second call would accept.
-        return self.setup_matrices()
+        setup_ids_and_nodes visits entities in sorted order and keeps the order of
+        self.dofs within each entity, which places component c of base DOF i at
+        N*i + c. The lift below is only correct while that holds.
+        """
+        for vec_id, (base_id, comp) in self.comp_map.items():
+            expected = self.N * self.base.dof_id_to_fiat_id[base_id] + comp
+            if self.dof_id_to_fiat_id[vec_id] != expected:
+                raise ValueError(
+                    f"DOF {vec_id} is numbered {self.dof_id_to_fiat_id[vec_id]} rather than "
+                    f"{expected}, so the orientation matrices cannot be built by a Kronecker "
+                    "product with the identity.")
+
+    def setup_matrices(self):
+        # Each component of a vector triple transforms as a scalar under the
+        # identity pullback, and an orientation acts on every component alike, so the
+        # matrices of the base element lift by a Kronecker product with the identity.
+        self._check_dof_ordering()
+
+        identity = np.eye(self.N)
+        matrices = {dim: {e_id: {val: np.kron(mat, identity) for val, mat in by_val.items()}
+                          for e_id, by_val in by_entity.items()}
+                    for dim, by_entity in self.base.matrices.items()}
+        reversed_matrices = self.reverse_dof_perms(matrices)
+
+        self.pure_perm = False
+        self.entity_perms = None
+        self.apply_matrices = True
+        return matrices, reversed_matrices
 
     def __repr__(self):
         return "Vector(%s)" % repr(self.base)
