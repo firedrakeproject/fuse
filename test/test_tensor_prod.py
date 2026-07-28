@@ -76,7 +76,7 @@ def test_helmholtz():
     print("convergence order:", conv)
     assert (np.array(conv) > 1.8).all()
 
-
+@pytest.mark.xfail(reason="Needs updated FIAT tensor branch")
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
@@ -92,6 +92,7 @@ def test_on_quad_mesh():
     mass_solve(U)
 
 
+@pytest.mark.xfail(reason="Needs updated FIAT tensor branch")
 def test_quad_mesh_helmholtz():
     quadrilateral = True
     vals = range(3, 6)
