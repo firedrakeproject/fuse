@@ -195,8 +195,8 @@ def test_vector_triple_shape_degree_and_count(builder, sd, deg):
     assert vec.form_degree == base.form_degree == 0
     assert vec.num_dofs() == sd * base.num_dofs()
     assert len(vec.generate()) == sd * len(base.generate())
-    assert vec.spaces[0].set_shape
-    assert not base.spaces[0].set_shape
+    assert vec.spaces[0].shape
+    assert not base.spaces[0].shape
 
 
 @pytest.mark.parametrize("builder", [construct_tri_cgN, construct_tet_cgN])
@@ -228,8 +228,8 @@ def block_lagrange(ref_el, deg, N, pts):
     return basis
 
 
-def tabulate_vector_cg(builder, deg):
-    elem = VectorTriple(builder(deg)).to_fiat()
+def tabulate_vector_cg(builder, deg, dim=None):
+    elem = VectorTriple(builder(deg), dim).to_fiat()
     sd = elem.ref_el.get_spatial_dimension()
     pts = create_quadrature(elem.ref_el, 2 * deg + 2).get_points()
     return elem, pts, elem.tabulate(0, pts)[(0,) * sd]
@@ -423,3 +423,216 @@ def test_vector_cg_matches_firedrake_vector_cg(deg):
     # and projecting agrees with Firedrake's own vector CG, which spans the same space
     difference = project(expr, V) - project(expr, W)
     assert assemble(dot(difference, difference) * dx) < 1e-20
+
+
+@pytest.mark.parametrize("dim", [1, 4])
+def test_vector_cg_matches_firedrake_at_non_gdim(dim):
+    """A value dimension unrelated to the mesh, against Firedrake's own dim= form.
+
+    This is the only path that exercises fuse_orientations, so it is what confirms
+    the Kronecker lift survives a component count that is not the cell dimension.
+    """
+    from firedrake import (UnitSquareMesh, FunctionSpace, VectorFunctionSpace, Function,
+                           SpatialCoordinate, as_vector, assemble, dot, dx, project)
+
+    deg = 2
+    mesh = UnitSquareMesh(4, 4, use_fuse=True)
+    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg), dim).to_ufl())
+    W = VectorFunctionSpace(mesh, "CG", deg, dim=dim)
+    assert V.dim() == W.dim()
+
+    x, y = SpatialCoordinate(mesh)
+    expr = as_vector([(i + 1) * x**deg - i * y for i in range(dim)])
+
+    interpolated = Function(V).interpolate(expr)
+    residual = interpolated - expr
+    assert assemble(dot(residual, residual) * dx) < 1e-20
+
+    difference = project(expr, V) - project(expr, W)
+    assert assemble(dot(difference, difference) * dx) < 1e-20
+
+
+# ---------------------------------------------------------------------------
+# Value shapes that are not the geometric dimension.
+#
+# The number of components is a modelling choice - one scalar per chemical
+# species, energy group or Fourier mode - so it need not match the cell.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("given,expected", [
+    (False, ()), (None, ()), (0, ()), ((), ()), ([], ()),
+    (1, (1,)), (4, (4,)), ((4,), (4,)), ([3], (3,)),
+    ((2, 2), (2, 2)), ([2, 3], (2, 3)),
+])
+def test_shape_normalisation(given, expected):
+    assert PolynomialSpace(2, shape=given).shape == expected
+
+
+@pytest.mark.parametrize("given", [True, -1, 0.5, (2, 0), (2, -1), ("2",)])
+def test_shape_rejects_invalid(given):
+    """True is rejected explicitly: the shape can no longer be inferred from the cell."""
+    with pytest.raises(ValueError):
+        PolynomialSpace(2, shape=given)
+
+
+@pytest.mark.parametrize("shape", [(), (4,), (2, 2)])
+def test_shape_round_trips(shape):
+    """A tuple decodes from JSON as a list, so the space must renormalise it."""
+    space = PolynomialSpace(2, shape=shape)
+    serialiser = ElementSerialiser()
+    decoded = serialiser.decode(serialiser.encode(space))
+
+    assert decoded.shape == shape
+    assert decoded == space
+    assert hash(decoded) == hash(space)
+
+
+@pytest.mark.parametrize("shape,members", [((4,), 4), ((2, 2), 4), ((3,), 3)])
+def test_polynomial_set_takes_any_shape(shape, members):
+    cell = polygon(3)
+    scalar = PolynomialSpace(2).to_ON_polynomial_set(cell)
+    shaped = PolynomialSpace(2, shape=shape).to_ON_polynomial_set(cell)
+
+    assert shaped.get_shape() == shape
+    assert shaped.get_num_members() == members * scalar.get_num_members()
+
+
+def test_constructed_space_rejects_disagreeing_shapes():
+    with pytest.raises(ValueError, match="differing value shapes"):
+        PolynomialSpace(1, shape=2) + PolynomialSpace(1, shape=3)
+
+
+def test_constructed_space_rejects_mismatched_weight_width():
+    """The weight is what gives a scalar space its components, so its width must agree.
+
+    Caught when the combination is built rather than when it is tabulated, because
+    the weight width is what the combined shape is derived from.
+    """
+    x, y = sp.Symbol("x"), sp.Symbol("y")
+    with pytest.raises(ValueError, match=r"differing value shapes: \[\(2,\), \(3,\)\]"):
+        PolynomialSpace(1, shape=3) + PolynomialSpace(1)*sp.Matrix([[x, y]])
+
+
+def test_constructed_space_rejects_non_row_weight():
+    """tabulate_sympy only reads a weight's first row, so a matrix weight must be one.
+
+    The combined shape is counted from every entry, so the two disagree here and the
+    tabulation-time guard is what catches it.
+    """
+    x, y = sp.Symbol("x"), sp.Symbol("y")
+    space = PolynomialSpace(1) * sp.Matrix([[x, y], [y, x]])
+    with pytest.raises(ValueError, match="components but the space"):
+        space.to_ON_polynomial_set(polygon(3))
+
+
+def test_constructed_space_rejects_weighting_a_shaped_space():
+    x, y = sp.Symbol("x"), sp.Symbol("y")
+    with pytest.raises(ValueError, match="only scalar spaces"):
+        PolynomialSpace(1, shape=2) * sp.Matrix([[x, y]])
+
+
+# dim is independent of the cell, so the same value is used on tri and tet
+NON_GDIM = [(construct_tri_cgN, 4), (construct_tri_cgN, 1), (construct_tet_cgN, 4),
+            (construct_tri_cgN, (2, 2)), (construct_tet_cgN, (2, 2))]
+
+
+@pytest.mark.parametrize("builder,dim", NON_GDIM)
+@pytest.mark.parametrize("deg", [1, 2])
+def test_vector_triple_honours_dim(builder, dim, deg):
+    base = builder(deg)
+    vec = VectorTriple(base, dim)
+    shape = (dim,) if isinstance(dim, int) else dim
+    N = int(np.prod(shape))
+
+    assert vec.shape == shape
+    assert vec.get_value_shape() == shape
+    assert vec.N == N
+    assert vec.num_dofs() == N * base.num_dofs()
+    # components of a 0-form are still 0-forms, whatever the cell
+    assert vec.form_degree == base.form_degree == 0
+
+    elem = vec.to_fiat()
+    assert elem.value_shape() == shape
+    assert elem.space_dimension() == N * base.to_fiat().space_dimension()
+
+
+def test_vector_triple_rejects_scalar_dim():
+    with pytest.raises(ValueError, match="must have a component"):
+        VectorTriple(construct_tri_cgN(1), 0)
+
+
+@pytest.mark.parametrize("builder,dim", NON_GDIM)
+@pytest.mark.parametrize("deg", [1, 2])
+def test_non_gdim_component_block(builder, dim, deg):
+    """Each basis function is supported in exactly one component, at any rank.
+
+    This is what pins FUSE's component ordering to FIAT's ndindex layout: were the
+    two to disagree, the support would land in the wrong component.
+    """
+    _, _, mine = tabulate_vector_cg(builder, deg, dim)
+    shape = (dim,) if isinstance(dim, int) else dim
+    components = list(np.ndindex(shape))
+    N = len(components)
+
+    for i in range(mine.shape[0]):
+        for j, other in enumerate(components):
+            if j != i % N:
+                assert np.allclose(mine[(i,) + other], 0)
+        assert not np.allclose(mine[(i,) + components[i % N]], 0)
+
+
+@pytest.mark.parametrize("builder,dim", NON_GDIM)
+@pytest.mark.parametrize("deg", [1, 2])
+def test_non_gdim_component_slices_span_scalar(builder, dim, deg):
+    """Fixed component slices still reproduce the scalar space."""
+    elem, pts, mine = tabulate_vector_cg(builder, deg, dim)
+    sd = elem.ref_el.get_spatial_dimension()
+    scalar = Lagrange(elem.ref_el, deg).tabulate(0, pts)[(0,) * sd]
+    shape = (dim,) if isinstance(dim, int) else dim
+    components = list(np.ndindex(shape))
+    N = len(components)
+
+    for c, comp in enumerate(components):
+        block = np.array([mine[(N * i + c,) + comp] for i in range(mine.shape[0] // N)])
+        change, _, _, _ = np.linalg.lstsq(scalar.T, block.T, rcond=None)
+        assert np.allclose(block.T, scalar.T @ change)
+
+
+@pytest.mark.parametrize("builder,dim", NON_GDIM)
+def test_non_gdim_matrices_are_kron(builder, dim):
+    base = builder(2)
+    base.to_ufl()
+    vec = VectorTriple(base, dim)
+    vec.to_ufl()
+
+    for d, by_entity in vec.matrices.items():
+        for e_id, by_val in by_entity.items():
+            for val, mat in by_val.items():
+                assert np.allclose(mat, np.kron(base.matrices[d][e_id][val], np.eye(vec.N)))
+                assert np.allclose(vec.reversed_matrices[d][e_id][val] @ mat,
+                                   np.eye(mat.shape[0]))
+
+
+@pytest.mark.parametrize("builder,dim", NON_GDIM)
+def test_non_gdim_round_trip(builder, dim):
+    """VectorTriple stores only its base, so dim needs its own serialisation cover."""
+    vec = VectorTriple(builder(1), dim)
+    serialiser = ElementSerialiser()
+    decoded = serialiser.decode(serialiser.encode(vec))
+
+    assert isinstance(decoded, VectorTriple)
+    assert decoded.shape == vec.shape
+    assert decoded.get_value_shape() == vec.get_value_shape()
+
+    pts = create_quadrature(vec.to_fiat().ref_el, 4).get_points()
+    sd = vec.to_fiat().ref_el.get_spatial_dimension()
+    assert np.allclose(decoded.to_fiat().tabulate(0, pts)[(0,) * sd],
+                       vec.to_fiat().tabulate(0, pts)[(0,) * sd])
+    assert decoded.entity_ids == vec.entity_ids
+
+
+def test_round_trip_without_dim_defaults_to_cell_dimension():
+    """Elements serialised before dim was explicit carry no dim key."""
+    decoded = VectorTriple._from_dict({"base": construct_tri_cgN(1)})
+    assert decoded.get_value_shape() == (2,)

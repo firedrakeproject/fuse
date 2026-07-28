@@ -250,7 +250,7 @@ class BarycentricPolynomialKernel(BaseKernel):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
-            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+            comps = [list(np.ndindex(value_shape)) for pt in Qpts]
         if self.shape != 0 and not immersed:
             wts = [wt*np.matmul(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
         elif self.shape == 0:
@@ -313,7 +313,7 @@ class PolynomialKernel(BaseKernel):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
-            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+            comps = [list(np.ndindex(value_shape)) for pt in Qpts]
         # if not immersed or self.shape == 0:
         #     return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
         # return Qpts, np.array([wt*immersed(np.matmul(basis_change, self(*(np.matmul(basis_change, pt))))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
@@ -385,10 +385,12 @@ class ComponentKernel(BaseKernel):
         return self.base_kernel(*args)
 
     def _shift(self, comp):
-        """Select ``self.comp`` of a scalar base, or offset a vector base by it."""
+        """Select ``self.comp`` of a scalar base, or offset a shaped base by it."""
         if len(comp) == 0:
             return self.comp
-        return (self.comp[0] + comp[0],)
+        if len(comp) != len(self.comp):
+            raise ValueError(f"Cannot offset a component of rank {len(comp)} by one of rank {len(self.comp)}.")
+        return tuple(a + b for a, b in zip(self.comp, comp))
 
     def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
         if self.base_kernel is None:
@@ -517,6 +519,8 @@ class DOF():
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
+        if len(comps) > 0 and len(new_wts) > 0 and len(new_wts[0]) != len(comps[0]):
+            raise ValueError(f"{self} produced {len(new_wts[0])} weights for {len(comps[0])} components. The kernel and the value shape disagree.")
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
         # if self.cell_defined_on.dimension >= 2:
         #     print(self)

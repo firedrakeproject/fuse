@@ -61,7 +61,7 @@ def test_nd_perms(cell):
     tri_dofs = DOFGenerator(xs, C3, S3)
 
     M = sp.Matrix([[y, -x]])
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
