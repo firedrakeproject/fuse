@@ -461,7 +461,7 @@ def test_vector_cg_matches_firedrake_at_non_gdim(dim):
 
 
 @pytest.mark.parametrize("given,expected", [
-    (False, ()), (None, ()), (0, ()), ((), ()), ([], ()),
+    (False, ()), (0, ()), ((), ()), ([], ()),
     (1, (1,)), (4, (4,)), ((4,), (4,)), ([3], (3,)),
     ((2, 2), (2, 2)), ([2, 3], (2, 3)),
 ])
@@ -469,7 +469,7 @@ def test_shape_normalisation(given, expected):
     assert PolynomialSpace(2, shape=given).shape == expected
 
 
-@pytest.mark.parametrize("given", [True, -1, 0.5, (2, 0), (2, -1), ("2",)])
+@pytest.mark.parametrize("given", [True, -1, 0.5, (2, 0), (2, -1), ("2",), None])
 def test_shape_rejects_invalid(given):
     """True is rejected explicitly: the shape can no longer be inferred from the cell."""
     with pytest.raises(ValueError):
