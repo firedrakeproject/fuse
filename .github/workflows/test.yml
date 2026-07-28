@@ -174,7 +174,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/vectorisation
+          ref: refs/heads/indiamai/fuse
         
       - name: Install checked out FIAT
         run: |

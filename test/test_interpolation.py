@@ -2,10 +2,12 @@ from firedrake import *
 from firedrake.ufl_expr import extract_unique_domain
 from fuse import *
 import numpy as np
+import pytest
 from test_2d_examples_docs import construct_cg3
 from test_convert_to_fiat import create_cg2, create_cg2_tri
 
 
+@pytest.mark.xfail(reason="Needs updated FIAT tensor branch")
 def test_cross_mesh_tri_to_quad():
     mesh1 = UnitSquareMesh(10, 10, use_fuse=True)
     mesh2 = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)

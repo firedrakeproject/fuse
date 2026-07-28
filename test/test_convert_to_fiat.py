@@ -546,7 +546,8 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [(create_cg1_quad_tensor,), pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
+                         [pytest.param(create_cg1_quad_tensor, marks=pytest.mark.xfail(reason="Needs tensor prod fiat branch")),
+                          pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
