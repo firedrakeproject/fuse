@@ -184,7 +184,7 @@ def test_permute_nodes():
 #     xs = [immerse(tri, int_ned1, TrHCurl)]
 #     tri_dofs = DOFGenerator(xs, C3, S1)
 #
-#     vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+#     vec_Pk = PolynomialSpace(deg - 1, shape=2)
 #     Pk = PolynomialSpace(deg - 1)
 #     M = sp.Matrix([[y, -x]])
 #     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M

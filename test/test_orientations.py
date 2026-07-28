@@ -21,7 +21,7 @@ def construct_nd2(tri=None):
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
 
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, set_shape=True), CellHCurl, C0), dofs)
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHCurl, C0), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
@@ -30,7 +30,7 @@ def construct_nd2(tri=None):
     xs = [immerse(tri, int_ned1, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
@@ -51,7 +51,7 @@ def construct_rt2(tri=None):
     deg = 2
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    vecP1 = PolynomialSpace(1, set_shape=True)
+    vecP1 = PolynomialSpace(1, shape=2)
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
@@ -65,7 +65,7 @@ def construct_rt2(tri=None):
     i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
     i_dofs = DOFGenerator(i_xs, S2, S3)
 
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[x, y]])
     rt_space = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
@@ -105,7 +105,7 @@ def construct_nd2_for_fiat(tri=None):
     xs += [immerse(tri, int_ned3, TrHCurl, node=2)]
     tri_dofs = DOFGenerator(xs, S1, S1)
 
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
@@ -285,7 +285,7 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
         # V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
-        expr = as_vector([expr, expr])
+        expr = as_vector([expr] * elem.get_value_shape()[0])
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
 

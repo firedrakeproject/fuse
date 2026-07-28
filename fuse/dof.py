@@ -250,7 +250,7 @@ class BarycentricPolynomialKernel(BaseKernel):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
-            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+            comps = [list(np.ndindex(value_shape)) for pt in Qpts]
         if self.shape != 0 and not immersed:
             wts = [wt*np.matmul(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
         elif self.shape == 0:
@@ -313,7 +313,7 @@ class PolynomialKernel(BaseKernel):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
-            comps = [[(i,) for v in value_shape for i in range(v)] for pt in Qpts]
+            comps = [list(np.ndindex(value_shape)) for pt in Qpts]
         # if not immersed or self.shape == 0:
         #     return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
         # return Qpts, np.array([wt*immersed(np.matmul(basis_change, self(*(np.matmul(basis_change, pt))))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
@@ -337,36 +337,77 @@ class PolynomialKernel(BaseKernel):
 
 
 class ComponentKernel(BaseKernel):
+    """Selects a component of the value of the function the DOF acts on.
 
-    def __init__(self, comp):
-        self.comp = comp
+    Used bare, this is a moment against a single component. Wrapping another
+    kernel in ``base_kernel`` instead restricts that kernel to a component,
+    which is how a scalar functional is lifted to act on one component of a
+    vector valued function.
+
+    Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped.
+    """
+
+    def __init__(self, comp, base_kernel=None):
+        self.comp = tuple(comp)
+        # The permitted types are dictated by the isinstance dispatches in
+        # DOF.to_quadrature, which cannot see through this wrapper.
+        if base_kernel is not None:
+            if isinstance(base_kernel, PointKernel):
+                pass
+            elif isinstance(base_kernel, PolynomialKernel) and base_kernel.shape == 0:
+                pass
+            else:
+                raise NotImplementedError(
+                    f"Cannot wrap {type(base_kernel).__name__} in a ComponentKernel. ")
+        self.base_kernel = base_kernel
         super(ComponentKernel, self).__init__()
 
     def __repr__(self):
-        return f"[{self.comp}]"
+        if self.base_kernel is None:
+            return f"[{self.comp}]"
+        return f"{self.base_kernel}[{self.comp}]"
 
     def degree(self, interpolant_degree):
-        return interpolant_degree
+        if self.base_kernel is None:
+            return interpolant_degree
+        return self.base_kernel.degree(interpolant_degree)
 
     def permute(self, g):
-        return self
+        if self.base_kernel is None:
+            return self
+        # The component index is unchanged by a cell symmetry, as each
+        # component transforms as a scalar under the identity pullback.
+        return ComponentKernel(self.comp, self.base_kernel.permute(g))
 
     def __call__(self, *args):
-        return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
+        if self.base_kernel is None:
+            return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
+        return self.base_kernel(*args)
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim):
-        return Qpts, Qwts, [[self.comp] for pt in Qpts]
-        # return Qpts, np.array([self(*pt) for pt in Qpts]).astype(np.float64)
+    def _shift(self, comp):
+        """Select ``self.comp`` of a scalar base, or offset a shaped base by it."""
+        if len(comp) == 0:
+            return self.comp
+        if len(comp) != len(self.comp):
+            raise ValueError(f"Cannot offset a component of rank {len(comp)} by one of rank {len(self.comp)}.")
+        return tuple(a + b for a, b in zip(self.comp, comp))
+
+    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+        if self.base_kernel is None:
+            return Qpts, Qwts, [[self.comp] for pt in Qpts]
+        pts, wts, comps = self.base_kernel.evaluate(Qpts, Qwts, basis_change,
+                                                    immersed, dim, tuple())
+        return pts, wts, [[self._shift(c) for c in cs] for cs in comps]
 
     def _to_dict(self):
-        o_dict = {"comp": self.comp}
+        o_dict = {"comp": self.comp, "base_kernel": self.base_kernel}
         return o_dict
 
     def dict_id(self):
         return "ComponentKernel"
 
     def _from_dict(obj_dict):
-        return ComponentKernel(obj_dict["comp"])
+        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict.get("base_kernel"))
 
 
 class DOF():
@@ -478,6 +519,8 @@ class DOF():
         else:
             new_wts = wts
         # pt dict is { pt: [(weight, component)]}
+        if len(comps) > 0 and len(new_wts) > 0 and len(new_wts[0]) != len(comps[0]):
+            raise ValueError(f"{self} produced {len(new_wts[0])} weights for {len(comps[0])} components. The kernel and the value shape disagree.")
         pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
         # if self.cell_defined_on.dimension >= 2:
         #     print(self)
@@ -492,6 +535,14 @@ class DOF():
     def immerse(self, entity, attachment, target_space, g, triple):
         new_generation = self.generation.copy()
         return ImmersedDOF(self.pairing, self.kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
+
+    def with_kernel(self, kernel):
+        """A copy of this DOF acting through a different kernel.
+
+        The generation dict is copied but its generators are shared, so the
+        copy is grouped with the original by ``_entity_associations``.
+        """
+        return DOF(self.pairing, kernel, self.cell_defined_on, self.attachment, self.target_space, self.g, self.immersed, self.generation.copy(), self.sub_id, self.cell, self.entity_o)
 
     def _to_dict(self):
         """ almost certainly needs more things"""
@@ -541,6 +592,9 @@ class ImmersedDOF(DOF):
 
     def immerse(self, entity, attachment, trace, g):
         raise RuntimeError("Error: Immersing twice not supported")
+
+    def with_kernel(self, kernel):
+        return ImmersedDOF(self.pairing, kernel, self.cell_defined_on, self.attachment, self.target_space, self.g, self.triple, self.generation.copy(), self.sub_id, self.cell, self.entity_o)
 
 
 class FuseFunction():

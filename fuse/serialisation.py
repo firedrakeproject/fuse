@@ -1,5 +1,6 @@
 import json
 from fuse import *
+from fuse.groups import GroupMemberRep
 from fuse.spaces.polynomial_spaces import ConstructedPolynomialSpace
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.spaces.interpolation_spaces import InterpolationSpace
@@ -30,7 +31,9 @@ class ElementSerialiser():
         self.obj_types = {"Cell": Point,
                           "Edge": Edge,
                           "Triple": ElementTriple,
+                          "VectorTriple": VectorTriple,
                           "Group": GroupRepresentation,
+                          "GroupMember": GroupMemberRep,
                           "PermutationSet": PermutationSetRepresentation,
                           "SobolevSpace": ElementSobolevSpace,
                           "InterpolationSpace": InterpolationSpace,

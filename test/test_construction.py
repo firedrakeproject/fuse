@@ -37,8 +37,9 @@ def test_convergence(col, k, deg, conv_rate):
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
-        if len(elem.get_value_shape()) > 0:
-            expr = as_vector([expr, expr])
+        shape = elem.get_value_shape()
+        if len(shape) > 0:
+            expr = as_vector([expr] * shape[0])
         _, exact = get_expression(V)
         _, diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
 
@@ -70,8 +71,9 @@ def test_convergence3d(col, k, deg, conv_rate):
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y, z = SpatialCoordinate(mesh)
         expr = cos(x*pi*2)*sin(y*pi*2)
-        if len(elem.get_value_shape()) > 0:
-            expr = as_vector([expr, expr, expr])
+        shape = elem.get_value_shape()
+        if len(shape) > 0:
+            expr = as_vector([expr] * shape[0])
         diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
 
     print("projection l2 error norms:", diff_proj)
