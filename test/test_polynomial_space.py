@@ -18,17 +18,30 @@ def test_instantiation():
 def test_unscaled_construction():
     cell = polygon(3)
     composite = P0 + P1
-    assert not composite.set_shape
+    assert not composite.shape
     on_set = composite.to_ON_polynomial_set(cell)
     assert isinstance(on_set, polynomial_set.PolynomialSet)
 
-    vec_P0 = PolynomialSpace(0, set_shape=True)
-    vec_P1 = PolynomialSpace(1, set_shape=True)
+    vec_P0 = PolynomialSpace(0, shape=2)
+    vec_P1 = PolynomialSpace(1, shape=2)
 
     composite = vec_P0 + vec_P1
-    assert composite.set_shape
+    assert composite.shape
     on_set = composite.to_ON_polynomial_set(cell)
     assert isinstance(on_set, polynomial_set.PolynomialSet)
+
+
+def test_to_vector():
+    cell = polygon(3)
+
+    scalar_set = P2.to_ON_polynomial_set(cell)
+    vec_P2 = P2.to_vector(2)
+    assert vec_P2.shape
+    assert not P2.shape
+
+    vec_set = vec_P2.to_ON_polynomial_set(cell)
+    assert vec_set.get_shape() == (2,)
+    assert vec_set.get_num_members() == 2 * scalar_set.get_num_members()
 
 
 def test_restriction():
@@ -95,11 +108,11 @@ def test_rt_construction(deg):
     y = sp.Symbol("y")
     M = sp.Matrix([[x, y]])
 
-    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pd = PolynomialSpace(deg - 1, shape=2)
     Pd = PolynomialSpace(deg - 1)
     composite = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    assert composite.set_shape
+    assert composite.shape
     assert isinstance(composite, ConstructedPolynomialSpace)
     on_set = composite.to_ON_polynomial_set(cell)
 
@@ -130,10 +143,10 @@ def test_nedelec_construction(deg):
     y = sp.Symbol("y")
     M = sp.Matrix([[y, -x]])
 
-    vec_Pk = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
-    assert nd.set_shape
+    assert nd.shape
     assert isinstance(nd, ConstructedPolynomialSpace)
 
     from FIAT.nedelec import NedelecSpace2D
@@ -176,11 +189,11 @@ def test_3d_nd_construction(deg):
     M2 = sp.Matrix([[z, 0, -x]])
     M3 = sp.Matrix([[y, -x, 0]])
 
-    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pd = PolynomialSpace(deg - 1, shape=3)
     Pd = PolynomialSpace(deg - 1)
     composite = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M1 + (Pd.restrict(deg - 2, deg - 1))*M2 + (Pd.restrict(deg - 2, deg - 1))*M3
 
-    assert composite.set_shape
+    assert composite.shape
     assert isinstance(composite, ConstructedPolynomialSpace)
     on_set = composite.to_ON_polynomial_set(ref_el)
 
@@ -211,11 +224,11 @@ def test_3d_rt_construction(deg):
     z = sp.Symbol("z")
     M = sp.Matrix([[x, y, z]])
 
-    vec_Pd = PolynomialSpace(deg - 1, set_shape=True)
+    vec_Pd = PolynomialSpace(deg - 1, shape=3)
     Pd = PolynomialSpace(deg - 1)
     composite = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    assert composite.set_shape
+    assert composite.shape
     assert isinstance(composite, ConstructedPolynomialSpace)
     on_set = composite.to_ON_polynomial_set(ref_el)
 

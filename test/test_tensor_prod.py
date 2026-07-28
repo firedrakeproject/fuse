@@ -299,6 +299,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     # assert (np.array(conv_ufc) > conv_rate).all()
 
 
+@pytest.mark.xfail(reason="Needs updated FIAT tensor branch")
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3

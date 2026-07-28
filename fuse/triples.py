@@ -19,20 +19,6 @@ import numpy as np
 import scipy
 
 
-def compute_form_degree(cell, spaces):
-    if str(spaces[1]) == "L2":
-        return cell.dimension
-    elif str(spaces[1]) == "H1":
-        return 0
-    if cell.dimension < 2:
-        raise ValueError(f"Cells of dimension {cell.dimension} can only be 0 or 1 forms")
-    if cell.dimension == 2:
-        return 1
-    elif str(spaces[1]) == "HDiv":
-        return 1
-    elif str(spaces[1]) == "HCurl":
-        return 2
-
 
 class ElementTriple():
     """
@@ -144,6 +130,16 @@ class ElementTriple():
         # TODO this isn't really correct
         return self.spaces[0].degree() + 1
 
+    @property
+    def form_degree(self):
+        """The degree of differential form this element represents.
+
+        The DOFs of a k-form are integrals over k-dimensional entities, so the
+        form degree is the dimension of the lowest dimensional entity carrying
+        a DOF.
+        """
+        return min(dof.cell_defined_on.dim() for dof in self.generate())
+
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},
                    True: {0: "blue", 1: "red", 2: "green", 3: "black"}}
@@ -159,11 +155,7 @@ class ElementTriple():
         return center, colours[tikz][dof.cell_defined_on.dimension]
 
     def get_value_shape(self):
-        # TODO Shape should be specified somewhere else probably
-        if self.spaces[0].set_shape:
-            return (self.cell.get_spatial_dimension(),)
-        else:
-            return ()
+        return self.spaces[0].shape
 
     def to_ufl(self):
         if self.ref_el is None:
@@ -177,8 +169,7 @@ class ElementTriple():
     def to_fiat(self):
         # call this to ensure set up is complete
         self.to_ufl()
-        # form_degree = 1 if self.spaces[0].set_shape else 0
-        form_degree = compute_form_degree(self.cell, self.spaces)
+        form_degree = self.form_degree
         degree = self.spaces[0].degree()
         # sanity check that the dofs span the space
         original_V, original_basis = self.compute_dense_matrix(self.ref_el, self.entity_dofs, self.nodes, self.poly_set)

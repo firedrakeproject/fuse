@@ -103,6 +103,15 @@ class GroupMemberRep(object):
             return self.group.group_rep_numbering[val]
         return val
 
+    def _to_dict(self):
+        return {"perm": self.perm.array_form, "M": self.transform_matrix.tolist(), "group": self.group}
+
+    def dict_id(self):
+        return "GroupMember"
+
+    def _from_dict(o_dict):
+        return GroupMemberRep(Permutation(o_dict["perm"]), o_dict["M"], o_dict["group"])
+
     def __eq__(self, x):
         assert isinstance(x, GroupMemberRep)
         return self.perm == x.perm and self.group.cell.dim() == x.group.cell.dim()

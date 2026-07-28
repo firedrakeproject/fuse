@@ -12,6 +12,40 @@ from functools import total_ordering
 morton_index = {2: morton_index2, 3: morton_index3}
 
 
+def normalise_shape(shape):
+    """Canonicalise a declared value shape to a tuple of positive ints.
+
+    Scalar is the empty tuple.
+    """
+    if shape is True:
+        raise ValueError("shape=True is no longer supported: the value shape must be given explicitly.")
+    if isinstance(shape, (int, np.integer)):
+        shape = () if shape == 0 else (shape,)
+    else:
+        try:
+            shape = tuple(shape)
+        except TypeError:
+            raise ValueError(f"Value shape {shape!r} must be an integer or a sequence of integers.")
+    for extent in shape:
+        if not isinstance(extent, (int, np.integer)) or extent < 1:
+            raise ValueError(f"Value shape {shape} must contain positive integers only.")
+    return tuple(int(extent) for extent in shape)
+
+
+def weighted_shape(weight, space):
+    """The value shape contributed by one weighted space of a combination.
+
+    A matrix weight is what gives a scalar space its components, so it sets the
+    shape; any other weight leaves the space's own shape alone.
+    """
+    if isinstance(weight, sp.Matrix):
+        if space.shape:
+            raise ValueError(
+                f"Cannot weight a space of value shape {space.shape} by the matrix {weight}: only scalar spaces have matrix valued weights.")
+        return (len(weight),)
+    return space.shape
+
+
 @total_ordering
 class PolynomialSpace(object):
     """
@@ -25,12 +59,15 @@ class PolynomialSpace(object):
 
     mindegree: the degree of the polynomial in the space with the lowest degree.
 
+    shape: the value shape of the space, as a tuple. The empty tuple is scalar valued. This is
+    the shape of the value, not of the cell, so it is independent of the spatial dimension.
+
     Note that on a simplex cells, the polynomial space of Lagrange space is a complete polynomial
     space, but on other cells this is not true. For example, on quadrilateral cells, the degree 1
     Lagrange space includes the degree 2 polynomial xy.
     """
 
-    def __init__(self, maxdegree, contains=None, mindegree=0, set_shape=False):
+    def __init__(self, maxdegree, contains=None, mindegree=0, shape=()):
         self.maxdegree = maxdegree
         self.mindegree = mindegree
 
@@ -41,7 +78,7 @@ class PolynomialSpace(object):
         else:
             self.contains = contains
 
-        self.set_shape = set_shape
+        self.shape = normalise_shape(shape)
 
     def complete(self):
         return self.mindegree == self.maxdegree
@@ -52,20 +89,17 @@ class PolynomialSpace(object):
     def to_ON_polynomial_set(self, ref_el, k=None):
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
-        sd = ref_el.get_spatial_dimension()
         ref_el = cell_to_simplex(ref_el)
-        if self.set_shape:
-            shape = (sd,)
-        else:
-            shape = tuple()
         base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
         indices = None
+        shape = self.shape
 
         if self.mindegree > 0:
             dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
             dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
-            if self.set_shape:
-                indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(sd))))
+            if shape:
+                num_components = int(np.prod(shape))
+                indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(num_components))))
             else:
                 indices = list(range(dimPmin, dimPmax))
 
@@ -86,8 +120,8 @@ class PolynomialSpace(object):
             res = "P" + "(min " + str(self.mindegree) + " max " + str(self.maxdegree) + ")"
         else:
             res += "Psub" + str(self.contains) + "sup" + str(self.maxdegree)
-        if self.set_shape:
-            res += "^d"
+        if self.shape:
+            res += "^" + "x".join(str(extent) for extent in self.shape)
         return res
 
     def __mul__(self, x):
@@ -113,7 +147,7 @@ class PolynomialSpace(object):
         max_bool = self.maxdegree == other.maxdegree
         min_bool = self.mindegree == other.mindegree
         contains = self.contains == other.contains
-        shape = self.set_shape == other.set_shape
+        shape = self.shape == other.shape
         return max_bool and min_bool and contains and shape
 
     def __lt__(self, other):
@@ -128,22 +162,26 @@ class PolynomialSpace(object):
 
     def __hash__(self):
         """Hash."""
-        return hash((self.set_shape, self.mindegree, self.contains, self.maxdegree))
+        return hash((self.shape, self.mindegree, self.contains, self.maxdegree))
 
     def restrict(self, mindegree, maxdegree):
-        return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, set_shape=self.set_shape)
+        return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, shape=self.shape)
+
+    def to_vector(self, shape):
+        return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, shape=shape)
 
     def to_vector(self):
         return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, set_shape=True)
 
     def _to_dict(self):
-        return {"set_shape": self.set_shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
+        return {"shape": self.shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
 
     def dict_id(self):
         return "PolynomialSpace"
 
     def _from_dict(obj_dict):
-        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], obj_dict["set_shape"])
+        shape = obj_dict["shape"] if "shape" in obj_dict else obj_dict["set_shape"]
+        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], shape)
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):
@@ -162,9 +200,17 @@ class ConstructedPolynomialSpace(PolynomialSpace):
 
         maxdegree = max([space.maxdegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
         mindegree = min([space.mindegree + w_deg for space, w_deg in zip(spaces, weight_degrees)])
-        vec = any([s.set_shape for s in spaces])
 
-        super(ConstructedPolynomialSpace, self).__init__(maxdegree, -1, mindegree, set_shape=vec)
+        # A combination is scalar only if every part is. Where more than one part
+        # carries a shape they must agree, as the sum lives in a single space.
+        shapes = set(s for s in map(weighted_shape, self.weights, self.spaces) if s)
+        if len(shapes) > 1:
+            raise ValueError(
+                "Cannot combine polynomial spaces of differing value shapes: "
+                f"{sorted(shapes)}.")
+        shape = shapes.pop() if shapes else ()
+
+        super(ConstructedPolynomialSpace, self).__init__(maxdegree, -1, mindegree, shape=shape)
 
     def __repr__(self):
         return "+".join([str(w) + "*" + str(x) for (w, x) in zip(self.weights, self.spaces)])
@@ -182,10 +228,6 @@ class ConstructedPolynomialSpace(PolynomialSpace):
 
         for (s, w) in zip(self.spaces, self.weights):
             space = s.to_ON_polynomial_set(ref_el)
-            if s.set_shape:
-                shape = (sd,)
-            else:
-                shape = tuple()
             if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)):
                 weighted_sets.append(space)
             else:
@@ -197,17 +239,18 @@ class ConstructedPolynomialSpace(PolynomialSpace):
                 w_deg = max_deg_sp_expr(w)
                 Q = create_quadrature(ref_el, 2 * (k + w_deg + 1))
                 Qpts, Qwts = Q.get_points(), Q.get_weights()
-                Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, shape, scale="orthonormal")
-                # vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, (sd,), scale="orthonormal")
+                Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, s.shape, scale="orthonormal")
 
                 space_at_Qpts = space.tabulate(Qpts)[(0,) * sd]
                 Pkpw_at_Qpts = Pkpw.tabulate(Qpts)[(0,) * sd]
 
                 tabulated_expr = tabulate_sympy(w, Qpts).T
-                if s.set_shape or vec:
-                    scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
-                else:
-                    scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+
+                if tabulated_expr.shape[0] != int(np.prod(self.shape)):
+                    raise ValueError(f"Weight {w} has {tabulated_expr.shape[0]} components but the space has value shape {self.shape}.")
+
+                scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                if not (vec and len(s.shape) > 0):
                     scaled_at_Qpts = scaled_at_Qpts.squeeze()
                 PkHw_coeffs = np.dot(np.multiply(scaled_at_Qpts, Qwts), Pkpw_at_Qpts.T)
                 if len(PkHw_coeffs.shape) == 1:
