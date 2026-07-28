@@ -1,5 +1,6 @@
 import json
 from fuse import *
+from fuse.groups import GroupMemberRep
 from fuse.spaces.polynomial_spaces import ConstructedPolynomialSpace
 from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.spaces.interpolation_spaces import InterpolationSpace
@@ -32,6 +33,7 @@ class ElementSerialiser():
                           "Triple": ElementTriple,
                           "VectorTriple": VectorTriple,
                           "Group": GroupRepresentation,
+                          "GroupMember": GroupMemberRep,
                           "PermutationSet": PermutationSetRepresentation,
                           "SobolevSpace": ElementSobolevSpace,
                           "InterpolationSpace": InterpolationSpace,
@@ -69,6 +71,7 @@ class ElementSerialiser():
                 dfs_res = self.encode_traverse(obj[i], path + [i])
                 res_array[i] = dfs_res
             return res_array
+
 
         # Some sympy objects are not hashable, so we must accept we may serialise them twice.
         if isinstance(obj, sp.core.containers.Tuple) or isinstance(obj, sp.Expr) or isinstance(obj, sp.Matrix) or isinstance(obj, sp.Poly):
