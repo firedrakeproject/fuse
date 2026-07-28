@@ -72,7 +72,6 @@ class ElementSerialiser():
                 res_array[i] = dfs_res
             return res_array
 
-
         # Some sympy objects are not hashable, so we must accept we may serialise them twice.
         if isinstance(obj, sp.core.containers.Tuple) or isinstance(obj, sp.Expr) or isinstance(obj, sp.Matrix) or isinstance(obj, sp.Poly):
             return "Sympy/" + sp.srepr(obj)
