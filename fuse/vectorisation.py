@@ -100,3 +100,13 @@ class VectorTriple(ElementTriple):
 
     def __repr__(self):
         return "Vector(%s)" % repr(self.base)
+
+    def _to_dict(self):
+        o_dict = {"base": self.base}
+        return o_dict
+
+    def dict_id(self):
+        return "VectorTriple"
+
+    def _from_dict(o_dict):
+        return VectorTriple(o_dict["base"])

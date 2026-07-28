@@ -30,6 +30,7 @@ class ElementSerialiser():
         self.obj_types = {"Cell": Point,
                           "Edge": Edge,
                           "Triple": ElementTriple,
+                          "VectorTriple": VectorTriple,
                           "Group": GroupRepresentation,
                           "PermutationSet": PermutationSetRepresentation,
                           "SobolevSpace": ElementSobolevSpace,

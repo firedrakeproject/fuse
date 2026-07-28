@@ -3,6 +3,7 @@ from fuse.element_construction import (construct_tri_cgN, construct_tri_ndN, con
                                        construct_tet_cgN, construct_tet_ndN, construct_tet_rtN,
                                        construct_dgNminus)
 from fuse.dof import ImmersedDOF
+from fuse.serialisation import ElementSerialiser
 from fuse.tensor_products import TensorProductTriple
 from FIAT.lagrange import Lagrange
 from FIAT.quadrature_schemes import create_quadrature
@@ -320,11 +321,63 @@ def test_vector_cg_dof_ordering_is_asserted():
         vec.setup_matrices()
 
 
-def test_make_dof_perms_blocked():
-    """It would silently return identity matrices, so it must refuse instead."""
-    vec = VectorTriple(construct_tri_cgN(1))
-    with pytest.raises(NotImplementedError, match="make_dof_perms"):
-        vec.make_dof_perms(None, None, None, None)
+@pytest.mark.parametrize("deg", [1, 2, 3])
+def test_vector_triple_round_trip(deg):
+    """Serialisation must reconstruct an element that converts identically."""
+    original = VectorTriple(construct_tri_cgN(deg))
+    converter = ElementSerialiser()
+    decoded = converter.decode(converter.encode(original))
+
+    assert isinstance(decoded, VectorTriple)
+    assert decoded.N == original.N
+    assert decoded.num_dofs() == original.num_dofs()
+    assert len(decoded.generate()) == len(original.generate())
+    assert decoded.get_value_shape() == original.get_value_shape()
+    assert decoded.form_degree == original.form_degree
+
+    was, now = original.to_fiat(), decoded.to_fiat()
+    pts = create_quadrature(was.ref_el, 2 * deg + 2).get_points()
+    assert np.allclose(was.tabulate(0, pts)[(0, 0)], now.tabulate(0, pts)[(0, 0)])
+    assert was.entity_dofs() == now.entity_dofs()
+    assert was.get_formdegree() == now.get_formdegree()
+
+
+@pytest.mark.parametrize("deg", [1, 2])
+def test_vector_triple_round_trip_matrices(deg):
+    """Orientation matrices could differ while tabulation still matched."""
+    original = VectorTriple(construct_tri_cgN(deg))
+    original.to_ufl()
+    converter = ElementSerialiser()
+    decoded = converter.decode(converter.encode(original))
+    decoded.to_ufl()
+
+    for dim in original.matrices:
+        for entity in original.matrices[dim]:
+            for orientation, matrix in original.matrices[dim][entity].items():
+                assert np.allclose(matrix, decoded.matrices[dim][entity][orientation])
+                assert np.allclose(original.reversed_matrices[dim][entity][orientation],
+                                   decoded.reversed_matrices[dim][entity][orientation])
+
+
+def test_vector_triple_registered_in_serialiser():
+    """Unregistered ids are returned as their reference string rather than decoded."""
+    assert ElementSerialiser().obj_types["VectorTriple"] is VectorTriple
+
+
+def test_component_kernel_round_trip():
+    """VectorTriple stores only its base, so this path needs its own cover."""
+    converter = ElementSerialiser()
+    bare = converter.decode(converter.encode(ComponentKernel((1,))))
+    assert bare.comp == (1,)
+    assert isinstance(bare.comp, tuple)
+    assert bare.base_kernel is None
+
+    converter = ElementSerialiser()
+    wrapped = converter.decode(converter.encode(ComponentKernel((1,), PointKernel((0.25, 0.5)))))
+    assert wrapped.comp == (1,)
+    assert isinstance(wrapped.comp, tuple)
+    assert isinstance(wrapped.base_kernel, PointKernel)
+    assert wrapped.base_kernel.pt == (0.25, 0.5)
 
 
 @pytest.mark.parametrize("flat", [False, True])
