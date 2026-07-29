@@ -90,15 +90,14 @@ class PolynomialSpace(object):
         if not isinstance(ref_el, reference_element.Cell):
             ref_el = ref_el.to_fiat()
         ref_el = cell_to_simplex(ref_el)
-        base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+        base_ON = ONPolynomialSet(ref_el, self.maxdegree, self.shape, scale="orthonormal")
         indices = None
-        shape = self.shape
 
         if self.mindegree > 0:
             dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
             dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
-            if shape:
-                num_components = int(np.prod(shape))
+            if self.shape:
+                num_components = int(np.prod(self.shape))
                 indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(num_components))))
             else:
                 indices = list(range(dimPmin, dimPmax))
@@ -170,9 +169,6 @@ class PolynomialSpace(object):
     def to_vector(self, shape):
         return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, shape=shape)
 
-    def to_vector(self):
-        return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, set_shape=True)
-
     def _to_dict(self):
         return {"shape": self.shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
 
@@ -180,8 +176,7 @@ class PolynomialSpace(object):
         return "PolynomialSpace"
 
     def _from_dict(obj_dict):
-        shape = obj_dict["shape"] if "shape" in obj_dict else obj_dict["set_shape"]
-        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], shape)
+        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], obj_dict["shape"])
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):

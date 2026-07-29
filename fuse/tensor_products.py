@@ -1,4 +1,4 @@
-from fuse.triples import ElementTriple, compute_form_degree
+from fuse.triples import ElementTriple
 from fuse.traces import TrHCurl, TrHDiv
 from fuse.spaces.element_sobolev_spaces import CellHDiv, CellHCurl
 from fuse.cells import TensorProductPoint
@@ -65,6 +65,11 @@ class TensorProductTriple(ElementTriple):
     @property
     def sub_elements(self):
         return self.factors
+    
+    @property
+    def form_degree(self):
+        # Using lowest dimension dof to define form degree, tensor product dims are additive
+        return min(sum(comp.cell_defined_on.dim() for comp in dof) for dof in self.generate())
 
     def __repr__(self):
         return f"TensorProd({','.join(['{}' for f in self.factors])})".format(*(repr(f) for f in self.factors))
@@ -183,6 +188,7 @@ class TensorProductTriple(ElementTriple):
             swap_key = 4 + io
             if io in sub_mat and swap_key in sub_mat:
                 sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], P_T)
+        breakpoint()
 
     def generate(self):
         dofs = [f.generate() for f in self.factors]
@@ -232,7 +238,7 @@ class TensorProductTriple(ElementTriple):
 
     def __add__(self, other):
         # assert self.cell == other.cell
-        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert self.spaces[0].shape == other.spaces[0].shape
         assert str(self.spaces[1]) == str(other.spaces[1])
 
         return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric, matrices=self.apply_matrices or other.apply_matrices)
@@ -290,7 +296,7 @@ class HDiv(TensorProductTriple):
         import gem
         assert len(element.sub_elements) == 2
         assert element.sub_elements[1].cell.get_shape() == 1
-        ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
+        ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
         if ks == (0, 1) and dims == (1, 1):
@@ -361,7 +367,7 @@ class HCurl(TensorProductTriple):
         assert element.sub_elements[1].cell.get_shape() == 1
 
         dim = element.cell.get_spatial_dimension()
-        ks = tuple(compute_form_degree(fe.cell, fe.spaces) for fe in element.sub_elements)
+        ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
         if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)

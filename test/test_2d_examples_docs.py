@@ -429,8 +429,7 @@ def test_rt_example():
                                                   (construct_rt(), 1),
                                                   (construct_dg1_tri(), 2)])
 def test_form_degree(triple, expected):
-    from fuse.triples import compute_form_degree
-    assert compute_form_degree(triple.cell, triple.spaces) == expected
+    assert triple.form_degree == expected
 
 
 def construct_hermite():

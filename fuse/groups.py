@@ -29,6 +29,22 @@ def perm_list_to_matrix(identity, perm):
     return res
 
 
+def is_hypercube_cell(cell):
+    """True for interval-product entities (quad, hex, ...), i.e. cells with
+    ``2**dim`` vertices and ``dim >= 2``. Simplices never satisfy this, so
+    their numbering is untouched."""
+    if cell is None:
+        return False
+    dim = getattr(cell, "dimension", None)
+    if dim is None or dim < 2:
+        return False
+    try:
+        nverts = len(cell.vertices())
+    except (AttributeError, TypeError):
+        return False
+    return nverts == 2 ** dim
+
+
 def signed_axis_permutation(member, d):
     """Decompose a hypercube symmetry into ``(axis_perm, flips)``.
 
@@ -241,7 +257,7 @@ class PermutationSetRepresentation():
             # self._members = sorted(self._members, key=lambda g: g.numeric_rep())
 
             self.group_rep_numbering = None
-            if cells.is_hypercube(self.cell):
+            if is_hypercube_cell(self.cell):
                 self.group_rep_numbering = canonical_hypercube_numbering(self.members(), self.cell)
             else:
                 numeric_reps = [m.numeric_rep() for m in self.members()]
@@ -268,8 +284,8 @@ class PermutationSetRepresentation():
             coset = []
             for h in subset.members():
                 try:
-                    coset += [g*h]
-                    seen.remove(g*h)
+                    coset += [h*g]
+                    seen.remove(h*g)
                 except ValueError:
                     # member of subset not a member of superset
                     pass
@@ -398,7 +414,7 @@ class GroupRepresentation(PermutationSetRepresentation):
                 counter += 1
 
             self.group_rep_numbering = None
-            if cells.is_hypercube(self.cell):
+            if is_hypercube_cell(self.cell):
                 self.group_rep_numbering = canonical_hypercube_numbering(self.members(), self.cell)
             else:
                 numeric_reps = [m.numeric_rep() for m in self.members()]

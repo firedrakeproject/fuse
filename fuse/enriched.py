@@ -49,7 +49,7 @@ class EnrichedElement(ElementTriple):
         return "Enriched(%s, %s)" % (repr(self.A), repr(self.B))
 
     def __add__(self, other):
-        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert self.spaces[0].shape == other.spaces[0].shape
         assert str(self.spaces[1]) == str(other.spaces[1])
         return EnrichedElement(self, other, symmetric=self.symmetric and other.symmetric,
                                matrices=self.apply_matrices or other.apply_matrices)

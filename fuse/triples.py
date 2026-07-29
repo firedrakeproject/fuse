@@ -624,7 +624,7 @@ class ElementTriple():
         Elements being adding must be defined over the same cell and have the same
         value shape and mapping"""
         assert self.cell == other.cell
-        assert self.spaces[0].set_shape == other.spaces[0].set_shape
+        assert self.spaces[0].shape == other.spaces[0].shape
         assert str(self.spaces[1]) == str(other.spaces[1])
 
         spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], max([self.spaces[2], other.spaces[2]]))
