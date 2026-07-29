@@ -100,7 +100,7 @@ class TensorProductTriple(ElementTriple):
     @property
     def sub_elements(self):
         return self.factors
-    
+
     @property
     def form_degree(self):
         # Using lowest dimension dof to define form degree, tensor product dims are additive
