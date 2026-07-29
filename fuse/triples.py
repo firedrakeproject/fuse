@@ -169,6 +169,13 @@ class ElementTriple():
     def to_fiat(self):
         # call this to ensure set up is complete
         self.to_ufl()
+        if self.flat and not self.symmetric:
+            # A flattened cell's group contains axis permutations, so every
+            # orientation must be available. Only an element whose DOFs are
+            # closed under those permutations can supply them.
+            raise NotImplementedError(
+                "%r is not symmetric, so it cannot supply the axis-permuting "
+                "orientations a flattened cell requires" % (self,))
         form_degree = self.form_degree
         degree = self.spaces[0].degree()
         # sanity check that the dofs span the space
@@ -615,6 +622,15 @@ class ElementTriple():
                     # perms_copy[m.numeric_rep()] = inv_mat
                 reversed_mats[dim][e_id] = perms_copy
         return reversed_mats
+
+    def generation_order_matrices(self):
+        """Orientation matrices indexed to match ``self.entity_dofs``.
+
+        Equal to ``self.matrices`` unless a subclass has reindexed those into
+        Firedrake's dimension-grouped closure order, in which case the
+        generation-order copy taken before reindexing is returned.
+        """
+        return getattr(self, "_gen_order_matrices", self.matrices)
 
     def __add__(self, other):
         """ Construct a new element triple by combining the degrees of freedom

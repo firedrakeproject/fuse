@@ -709,36 +709,35 @@ def construct_dgNminus(dim):
     return construct_dim_dgNminus
 
 
+# The factors below are deliberately shared rather than rebuilt per axis:
+# an axis permutation is resolved by matching DOFs across axes, and DOFs
+# compare by identity, so axes built from separate calls never match.
+
+
 def construct_quad_cgN(deg):
     A = construct_interval_cgN(deg)
-    B = construct_interval_cgN(deg)
-    elem = tensor_product(A, B).flatten()
+    elem = tensor_product(A, A).flatten()
     assert len(elem.generate()) == (deg + 1)**2
     return elem
 
 
 def construct_hex_cgN(deg):
     A = construct_interval_cgN(deg)
-    B = construct_interval_cgN(deg)
-    C = construct_interval_cgN(deg)
-    elem = symmetric_tensor_product(A, B, C).flatten()
+    elem = symmetric_tensor_product(A, A, A).flatten()
     assert len(elem.generate()) == (deg + 1)**3
     return elem
 
 
 def construct_quad_dgN(deg):
     A = construct_interval_dgN_integral(deg)
-    B = construct_interval_dgN_integral(deg)
-    elem = tensor_product(A, B).flatten()
+    elem = tensor_product(A, A).flatten()
     assert len(elem.generate()) == (deg + 1)**2
     return elem
 
 
 def construct_hex_dgN(deg):
     A = construct_interval_dgN_integral(deg)
-    B = construct_interval_dgN_integral(deg)
-    C = construct_interval_dgN_integral(deg)
-    elem = symmetric_tensor_product(A, B, C).flatten()
+    elem = symmetric_tensor_product(A, A, A).flatten()
     assert len(elem.generate()) == (deg + 1)**3
     return elem
 
@@ -746,7 +745,10 @@ def construct_hex_dgN(deg):
 def construct_quad_rtN(deg):
     cgN = construct_interval_cgN(deg)
     dgNm1 = construct_interval_dgN_integral(deg - 1)
-    elem = HDivTP(tensor_product(cgN, dgNm1).flatten()) + HDivTP(tensor_product(dgNm1, cgN).flatten())
+    # Enriched first, then flattened: the sum is the smallest object whose
+    # DOF set is closed under the axis swap, so flattening a component on
+    # its own would bury a non-symmetric flat element inside the sum.
+    elem = (HDivTP(tensor_product(cgN, dgNm1)) + HDivTP(tensor_product(dgNm1, cgN))).flatten()
     assert len(elem.generate()) == 2 * deg * (deg + 1)
     return elem
 
@@ -754,7 +756,8 @@ def construct_quad_rtN(deg):
 def construct_quad_ndN(deg):
     cgN = construct_interval_cgN(deg)
     dgNm1 = construct_interval_dgN_integral(deg - 1)
-    elem = HCurlTP(tensor_product(cgN, dgNm1).flatten()) + HCurlTP(tensor_product(dgNm1, cgN).flatten())
+    # See construct_quad_rtN: enriched first, then flattened.
+    elem = (HCurlTP(tensor_product(cgN, dgNm1)) + HCurlTP(tensor_product(dgNm1, cgN))).flatten()
     assert len(elem.generate()) == 2 * deg * (deg + 1)
     return elem
 
@@ -762,12 +765,14 @@ def construct_quad_ndN(deg):
 def construct_hex_rtN(deg):
     # In-plane RT_deg-on-quad pieces, extruded by a discontinuous
     # interval, following the same structure as rt1_hex (deg=1 case).
-    h1 = HDivTP(tensor_product(construct_interval_cgN(deg), construct_interval_dgN_integral(deg - 1)).flatten())
-    h2 = HDivTP(tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_cgN(deg)).flatten())
-    x_component = HDivTP(tensor_product(h1, construct_interval_dgN_integral(deg - 1)))
-    y_component = HDivTP(tensor_product(h2, construct_interval_dgN_integral(deg - 1)))
-    dg_quad = tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_dgN_integral(deg - 1)).flatten()
-    z_component = HDivTP(tensor_product(dg_quad, construct_interval_cgN(deg)))
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    h1 = HDivTP(tensor_product(cgN, dgNm1).flatten())
+    h2 = HDivTP(tensor_product(dgNm1, cgN).flatten())
+    x_component = HDivTP(tensor_product(h1, dgNm1))
+    y_component = HDivTP(tensor_product(h2, dgNm1))
+    dg_quad = tensor_product(dgNm1, dgNm1).flatten()
+    z_component = HDivTP(tensor_product(dg_quad, cgN))
     elem = x_component + y_component + z_component
     assert len(elem.generate()) == 3 * deg**2 * (deg + 1)
     # Unlike the quad case, the outer tensor_product here combines an
@@ -782,12 +787,14 @@ def construct_hex_ndN(deg):
     # In-plane Nedelec-1st-kind-deg-on-quad pieces, extruded by a
     # continuous interval, following the same structure as ned1_hex
     # (deg=1 case).
-    ex = HCurlTP(tensor_product(construct_interval_dgN_integral(deg - 1), construct_interval_cgN(deg)).flatten())
-    ey = HCurlTP(tensor_product(construct_interval_cgN(deg), construct_interval_dgN_integral(deg - 1)).flatten())
-    x_component = HCurlTP(tensor_product(ex, construct_interval_cgN(deg)))
-    y_component = HCurlTP(tensor_product(ey, construct_interval_cgN(deg)))
-    cg_quad = tensor_product(construct_interval_cgN(deg), construct_interval_cgN(deg)).flatten()
-    z_component = HCurlTP(tensor_product(cg_quad, construct_interval_dgN_integral(deg - 1)))
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    ex = HCurlTP(tensor_product(dgNm1, cgN).flatten())
+    ey = HCurlTP(tensor_product(cgN, dgNm1).flatten())
+    x_component = HCurlTP(tensor_product(ex, cgN))
+    y_component = HCurlTP(tensor_product(ey, cgN))
+    cg_quad = tensor_product(cgN, cgN).flatten()
+    z_component = HCurlTP(tensor_product(cg_quad, dgNm1))
     elem = x_component + y_component + z_component
     assert len(elem.generate()) == 3 * (deg + 1)**2 * deg
     # See construct_hex_rtN: flatten here so callers get a directly-usable

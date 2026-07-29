@@ -49,6 +49,9 @@ dev = [
 testpaths = [
     "tests",
 ]
+markers = [
+    "slow: builds that take minutes (deselect with '-m \"not slow\"')",
+]
 
 [tool.coverage.run]
 include=[

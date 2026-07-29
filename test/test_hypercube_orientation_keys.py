@@ -7,10 +7,8 @@ tensor-product orientation convention ``o = (2**d) * eo + io``.
 """
 import itertools
 import pytest
-import numpy as np
 from fuse.cells import line, TensorProductPoint
-from fuse.utils import (canonical_tensor_orientation_key,
-                        inverse_canonical_tensor_orientation_key)
+from fuse.utils import canonical_tensor_orientation_key
 from FIAT.reference_element import UFCInterval
 from FIAT.orientation_utils import make_entity_permutations_tensorproduct
 
