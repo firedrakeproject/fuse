@@ -103,7 +103,7 @@ class PolynomialSpace(object):
                 indices = list(range(dimPmin, dimPmax))
 
         if self.contains != self.maxdegree and self.contains != -1:
-            indices = [morton_index[sd](p, q) for p in range(self.contains + 1) for q in range(self.contains + 1)]
+            indices = [morton_index[ref_el.get_spatial_dimension()](p, q) for p in range(self.contains + 1) for q in range(self.contains + 1)]
 
         if indices is None:
             return base_ON

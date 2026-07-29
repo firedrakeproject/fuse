@@ -19,7 +19,6 @@ import numpy as np
 import scipy
 
 
-
 class ElementTriple():
     """
     Class to represent the three core parts of the element
