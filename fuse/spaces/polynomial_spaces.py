@@ -245,7 +245,8 @@ class ConstructedPolynomialSpace(PolynomialSpace):
                     raise ValueError(f"Weight {w} has {tabulated_expr.shape[0]} components but the space has value shape {self.shape}.")
 
                 scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
-                if not (vec and len(s.shape) > 0):
+                if not vec and len(s.shape) == 0:
+                    # remove extra dimensions if we don't have a vector valued space
                     scaled_at_Qpts = scaled_at_Qpts.squeeze()
                 PkHw_coeffs = np.dot(np.multiply(scaled_at_Qpts, Qwts), Pkpw_at_Qpts.T)
                 if len(PkHw_coeffs.shape) == 1:
