@@ -174,26 +174,15 @@ def entity_orientation_matrices(elem, dim, entity=0):
     param(construct_tet_cg4, id="CG-4"),
     param(construct_tet_rt2, id="RT-2"),
     param(construct_tet_ned_2nd_kind_2, id="N2curl-2"),
-    param(construct_tet_cg6, id="CG-6",
-          marks=mark.xfail(strict=True,
-                           reason="the six member branch of matrix_form_subgroup relabels the "
-                                  "rotation orientations, swapping the labels 0 and 3. The "
-                                  "relabelling is required for facet matching - removing it "
-                                  "breaks test_two_tet_one_form_orientation_invariance[CG-6] - "
-                                  "but the reason it is needed is not yet understood")),
-    param(construct_tet_ned_2nd_kind_3, id="N2curl-3",
-          marks=mark.xfail(strict=True,
-                           reason="the six member branch of matrix_form_subgroup relabels the "
-                                  "rotation orientations, swapping the labels 0 and 3. The "
-                                  "relabelling is required for facet matching - removing it "
-                                  "breaks test_two_tet_one_form_orientation_invariance[CG-6] - "
-                                  "but the reason it is needed is not yet understood")),
+    param(construct_tet_cg6, id="CG-6"),
+    param(construct_tet_ned_2nd_kind_3, id="N2curl-3"),
 ])
 def test_orientation_matrix_is_representation(elem_gen):
-    # Most entities carry a genuine representation of their symmetry group: the
-    # identity orientation does not move DOFs, and composing two orientations
-    # composes their matrices. The six member branch deliberately breaks this
-    # and is needed to do so, so those cases are marked xfail rather than fixed.
+    # Every entity carries a representation of its symmetry group: the identity
+    # orientation does not move DOFs, and composing two orientations composes their
+    # matrices. Without this two cells cannot agree on a shared entity. CG-6 and
+    # N2curl-3 exercise the six member branch, which only satisfies this once the
+    # orientation is conjugated into the vertex frame to_fiat uses.
     elem = elem_gen()
     elem.to_ufl()
 

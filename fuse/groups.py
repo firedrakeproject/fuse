@@ -29,6 +29,16 @@ def perm_list_to_matrix(identity, perm):
     return res
 
 
+def vertex_frame_relabelling(cell):
+    """Permutation from the group's vertex ordering to the one to_fiat uses.
+
+    Group representations are built on ordered_vertex_coords, while to_fiat and the
+    orientation values that index the matrices use vertices(). The two differ.
+    """
+    ids = [v.id for v in cell.vertices()]
+    return Permutation([ids.index(v) for v in cell.ordered_vertices()])
+
+
 class GroupMemberRep(object):
 
     def __init__(self, perm, M, group):
@@ -118,13 +128,14 @@ class GroupMemberRep(object):
             # Trivial case
             return np.array([1])
         if group.size() == 6 and self.group.size() == 6:
-            # horrible hack for S3
+            # A free orbit of the full symmetry group is translated by the orientation
+            # itself, so the frame the orientation value is expressed in matters. Move it
+            # into the vertex ordering to_fiat uses before translating. The coset branch
+            # below does not need this - conjugating there breaks it.
+            c = vertex_frame_relabelling(self.group.cell)
+            oriented = self.group.get_member(c * (~self).perm * (~c))
             members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
-            mapping = {4: 4, 3: 0, 0: 3}
-            if (~self).numeric_rep() in mapping.keys():
-                n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
+            permuted_members = [(m*oriented).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.group.size():
             members = [m.numeric_rep() for m in group.members()]
