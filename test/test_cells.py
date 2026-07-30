@@ -220,6 +220,70 @@ def test_tensor_connectivity():
         assert all(connectivity[i] == t for i, t in topology.items())
 
 
+@pytest.mark.parametrize(["cell"], [(polygon(3),), (make_tetrahedron(),)])
+def test_fiat_topology_vertex_frame(cell):
+    # The vertex coordinates handed to FIAT and the vertex labels in the topology have
+    # to be in the same frame. get_topology(renumber=False) labels vertices by id, so
+    # verts must be in id order too. Mixing the frames silently attaches entities to
+    # the wrong vertices rather than raising.
+    fiat_cell = cell.to_fiat()
+    verts = np.array(fiat_cell.get_vertices(), dtype=float)
+    topology = fiat_cell.get_topology()
+
+    assert all(key == label for key, (label,) in topology[0].items())
+
+    min_ids = cell.get_starter_ids()
+    for dim in range(1, cell.get_spatial_dimension() + 1):
+        for entity in cell.d_entities(dim):
+            labels = topology[dim][entity.id - min_ids[dim]]
+            expected = np.array([cell.get_node(v, return_coords=True)
+                                 for v in entity.ordered_vertices()], dtype=float)
+            assert np.allclose(np.sort(verts[list(labels)], axis=0),
+                               np.sort(expected, axis=0))
+
+
+def test_vertex_frames_differ():
+    # ordered_vertices() is a connectivity traversal, vertices() is id sorted. They are
+    # not the same on the tetrahedron, so anything consuming one of them is committed to
+    # that frame. The group representations use ordered_vertices, to_fiat uses vertices.
+    cell = make_tetrahedron()
+    ids = [v.id for v in cell.vertices()]
+    ordered = cell.ordered_vertices()
+
+    assert sorted(ordered) == ids
+    assert ordered != ids
+    assert [ids.index(v) for v in ordered] == [2, 0, 1, 3]
+
+    assert np.allclose(cell.to_fiat().get_vertices(), cell.vertices(return_coords=True))
+
+
+@pytest.mark.xfail(strict=True,
+                   reason="construct_subelement builds sub entities with renumber=True "
+                          "(ordered vertex labels) while the cell uses renumber=False (id "
+                          "labels) and verts never follows renumber, so get_entity_transform "
+                          "maps a sub entity's vertices onto a permutation of the parent's "
+                          "view of them. The vertex set is right, the correspondence is not.")
+@pytest.mark.parametrize(["cell"], [(polygon(3),), (make_tetrahedron(),)])
+def test_entity_transform_preserves_vertex_order(cell):
+    # get_entity_transform maps a sub entity's reference vertices into the parent. It has
+    # to land on the parent's own view of that entity in the same order, otherwise the two
+    # disagree about which vertex is which.
+    fiat_cell = cell.to_fiat()
+    topology = fiat_cell.get_topology()
+    disagree = []
+    for dim in range(1, cell.get_spatial_dimension()):
+        for entity in range(len(topology[dim])):
+            sub = fiat_cell.construct_subelement(dim, entity)
+            transform = fiat_cell.get_entity_transform(dim, entity)
+            mapped = np.array([transform(v) for v in sub.get_vertices()], dtype=float)
+            parent = np.array(fiat_cell.get_vertices_of_subcomplex(topology[dim][entity]),
+                              dtype=float)
+            assert np.allclose(np.sort(mapped, axis=0), np.sort(parent, axis=0))
+            if not np.allclose(mapped, parent):
+                disagree.append((dim, entity))
+    assert disagree == []
+
+
 @pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(), ), (make_tetrahedron(), )])
 def test_new_connectivity(cell):
     cell = cell.to_fiat()
