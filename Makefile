@@ -5,7 +5,7 @@ ifeq ($(GITHUB_ACTIONS_FORMATTING), 1)
 else
 	FLAKE8_FORMAT=
 endif
-.PHONY: test docs
+.PHONY: test docs smoke
 
 docs:
 	# put -n back in when things are better documented
@@ -21,6 +21,10 @@ test_examples:
 	@echo "    Running examples"
 	@python3 -m pytest test/test_2d_examples_docs.py
 	@python3 -m pytest test/test_3d_examples_docs.py
+
+smoke:
+	@echo "    Running fast tests (no Firedrake)"
+	@python3 -m pytest -m smoke -rx test
 
 tests:
 	@echo "    Running all tests"

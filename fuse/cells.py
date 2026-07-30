@@ -799,28 +799,34 @@ class Point():
             # return x
             return lambda *x: x
 
-        paths = nx.all_simple_edge_paths(self.G, source, dst)
-        attachments = [[self.G[s][d]["edge_class"]
-                        for (s, d) in path] for path in paths]
+        # Cached edge chain as it is fixed once cell is built.
+        cache = self.__dict__.setdefault("_attachment_chains", {})
+        if (source, dst) not in cache:
+            paths = nx.all_simple_edge_paths(self.G, source, dst)
+            attachments = [[self.G[s][d]["edge_class"]
+                            for (s, d) in path] for path in paths]
 
-        if len(attachments) == 0:
-            raise ValueError("No paths from node {} to node {}"
-                             .format(source, dst))
+            if len(attachments) == 0:
+                raise ValueError("No paths from node {} to node {}"
+                                 .format(source, dst))
 
-        # check all attachments resolve to the same function
-        if len(attachments) > 1:
-            dst_dim = self.dim_of_node(dst)
-            basis = np.eye(dst_dim)
-            if dst_dim == 0:
-                vals = [fold_reduce(attachment) for attachment in attachments]
-                assert all(np.isclose(val, vals[0]).all() for val in vals)
-            else:
-                for i in range(dst_dim):
-                    vals = [fold_reduce(attachment, *tuple(basis[i].tolist()))
-                            for attachment in attachments]
+            # check all attachments resolve to the same function
+            if len(attachments) > 1:
+                dst_dim = self.dim_of_node(dst)
+                basis = np.eye(dst_dim)
+                if dst_dim == 0:
+                    vals = [fold_reduce(attachment) for attachment in attachments]
                     assert all(np.isclose(val, vals[0]).all() for val in vals)
+                else:
+                    for i in range(dst_dim):
+                        vals = [fold_reduce(attachment, *tuple(basis[i].tolist()))
+                                for attachment in attachments]
+                        assert all(np.isclose(val, vals[0]).all() for val in vals)
 
-        return lambda *x: fold_reduce(attachments[0], *x)
+            cache[(source, dst)] = attachments[0]
+
+        chain = cache[(source, dst)]
+        return lambda *x: fold_reduce(chain, *x)
 
     def attachment_J(self, source, dst):
         attachment = self.attachment(source, dst)
