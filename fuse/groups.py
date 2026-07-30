@@ -142,14 +142,8 @@ class GroupMemberRep(object):
             # Trivial case
             return np.array([1])
         if group.size() == self.group.size():
-            # A free orbit of the full symmetry group is translated by the orientation
-            # itself, so the orientation has to be expressed in the convention the
-            # orientation value was computed in. That value comes from comparing cones of
-            # sub entities while numeric_rep labels by vertex order, and the two differ by
-            # the cone offset. On an interval the offset is an involution in an abelian
-            # group, so this is exactly the identity there. The coset branch below reduces
-            # through a subgroup, which already fixes the labelling, and must not be
-            # corrected.
+            # A free orbit of the full symmetry group
+            # Uses sub_entity_cone_offset to reconcile FUSE facet numbering with FIAT.
             w = self.group.get_member(sub_entity_cone_offset(self.group.cell))
             oriented = w * (~self) * w
             members = [m.numeric_rep() for m in group.members()]
@@ -159,15 +153,12 @@ class GroupMemberRep(object):
             if is_normal_subgroup(group, self.group):
                 # Products leave the orbit group, so they are projected back through the
                 # coset section. That section commutes with the translation only when the
-                # subgroup is normal - for a non normal one it is not even a bijection, so
-                # perm_list_to_matrix would reject it.
+                # subgroup is normal
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
             else:
-                # No usable section. This is only reached for DOFs on the cell itself,
-                # which do not take part in facet agreement.
                 mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         elif group.size() < self.group.size():
             members = [m.numeric_rep() for m in group.members()]
