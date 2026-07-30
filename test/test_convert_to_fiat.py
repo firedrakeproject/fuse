@@ -1122,6 +1122,54 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     assert all([res < max_err for res in errors])
 
 
+def _one_form_norm_spread(ufl_elem, is_vector, mesh_factory, perms):
+    # For a transformation that is a signed permutation, the norm of the assembled
+    # vector should be fixed.
+    norms = []
+    for g in perms:
+        mesh = mesh_factory(g)
+        V = FunctionSpace(mesh, ufl_elem)
+        v = TestFunction(V)
+        x = SpatialCoordinate(mesh)
+        f = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        b = assemble(inner(f, v)*dx)
+        norms.append(float(np.linalg.norm(np.asarray(b.dat.data_ro).reshape(-1))))
+        print(g, norms[-1])
+    norms = np.array(norms)
+    return norms, norms.max() - norms.min()
+
+
+_TET_ONE_FORM_PERMS = [
+    Permutation([0, 1, 2, 3]),
+    Permutation([0, 2, 3, 1]),
+    Permutation([0, 3, 1, 2]),
+    Permutation([0, 1, 3, 2]),
+    Permutation([0, 3, 2, 1]),
+    Permutation([0, 2, 1, 3]),
+]
+
+
+@pytest.mark.parametrize("elem_gen", [
+    pytest.param(construct_tet_cg4, id="CG-4"),
+    pytest.param(construct_tet_rt2, id="RT-2"),
+    pytest.param(construct_tet_ned_2nd_kind_2, id="N2curl-2"),
+    # CG-6 is the cheapest element reaching the six member branch of
+    # matrix_form_subgroup, which the three above do not exercise.
+    pytest.param(construct_tet_cg6, id="CG-6"),
+])
+def test_two_tet_one_form_orientation_invariance(elem_gen):
+    # construct_tet_ned2 (1st-kind Nedelec deg 2) and construct_tet_ned_2nd_kind_3
+    # are deliberately excluded: their face orientation matrices are not signed
+    # permutations, so the norm is not expected to be fixed
+    from firedrake.utility_meshes import TwoTetMesh
+    elem = elem_gen()
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+    _, spread = _one_form_norm_spread(
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+    assert spread < 1e-10
+
+
 @pytest.mark.parametrize("elem_gen,elem_code,deg",
                          [(construct_tet_cg4, "CG", 4), (construct_tet_rt2, "RT", 2), (construct_tet_ned2, "N1curl", 2), (construct_tet_bdm2, "BDM", 2),
                           ])

@@ -135,11 +135,6 @@ class GroupMemberRep(object):
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-                mapping = {4: 3, 3: 4, 0: 0}
-                # mapping = {4: 4, 3: 0, 0: 3}
-                if (~self).numeric_rep() in mapping.keys():
-                    n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                    permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
             else:
                 mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
@@ -217,7 +212,9 @@ class PermutationSetRepresentation():
         return conj_class
 
     def cosets(self, subset):
-        # Divides current group by given subset
+        # Divides current group by given subset into left cosets gH.
+        # The g*h order is load bearing: cosets_by_submember relies on it to
+        # recover the right factor h, and reversing it is not a relabelling.
         # can be modified to allow members of given subset not to exist in group self
         seen = self.members().copy()
         cosets = []
@@ -235,6 +232,7 @@ class PermutationSetRepresentation():
         return cosets
 
     def cosets_by_submember(self, subset):
+        # Maps each member x = g*h of self to the right factor h in subset.
         cosets = self.cosets(subset)
         cosets_by_submember = {}
         for i, m in enumerate(subset.members()):

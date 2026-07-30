@@ -3,6 +3,9 @@ from fuse import *
 from fuse.groups import perm_matrix_to_perm_array
 from sympy.combinatorics import Permutation
 from test_convert_to_fiat import create_dg1
+from test_3d_examples_docs import (construct_tet_cg4, construct_tet_cg6, construct_tet_rt2,
+                                   construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_3)
+from FIAT.orientation_utils import make_entity_permutations_simplex
 import numpy as np
 
 
@@ -117,3 +120,91 @@ def test_perm_mat_conversion():
         mat_form = g.matrix_form()
         array_form = perm_matrix_to_perm_array(mat_form)
         assert np.allclose(g.perm.array_form, array_form)
+
+
+def test_coset_convention():
+    # Cosets are the left cosets gH, and cosets_by_submember recovers the right
+    # factor h of x = g*h. matrix_form_subgroup depends on this order, so it is
+    # pinned here: reversing the product is not a relabelling.
+    cell = polygon(3)
+    cS3 = S3.add_cell(cell)
+    cC3 = C3.add_cell(cell)
+
+    sub_members = cC3.members()
+    assert sub_members[0].perm.is_Identity
+
+    cosets = cS3.cosets(cC3)
+    by_submember = cS3.cosets_by_submember(cC3)
+
+    seen = []
+    for coset in cosets:
+        assert len(coset) == len(sub_members)
+        for i, h in enumerate(sub_members):
+            assert coset[i] == coset[0] * h
+            assert by_submember[coset[i].array_form] == h
+        seen += [m.array_form for m in coset]
+    assert sorted(seen) == sorted([m.array_form for m in cS3.members()])
+
+    assert {k: v.array_form for k, v in by_submember.items()} == {
+        (0, 1, 2): (0, 1, 2), (0, 2, 1): (0, 1, 2),
+        (1, 2, 0): (1, 2, 0), (1, 0, 2): (1, 2, 0),
+        (2, 0, 1): (2, 0, 1), (2, 1, 0): (2, 0, 1)}
+
+
+def test_face_matrices_match_fiat():
+    # The orientation numbering FUSE produces for a triangular face has to agree
+    # with the one FIAT indexes its entity permutations by.
+    elem = construct_tet_cg4()
+    elem.to_ufl()
+    fiat_perms = make_entity_permutations_simplex(2, 2)
+
+    for face, dof_ids in elem.entity_ids[2].items():
+        for o, mat in elem.matrices[2][face].items():
+            block = np.asarray(mat)[np.ix_(dof_ids, dof_ids)]
+            assert perm_matrix_to_perm_array(block) == fiat_perms[o]
+
+
+def entity_orientation_matrices(elem, dim, entity=0):
+    dof_ids = elem.entity_ids[dim][entity]
+    return {o: np.asarray(mat)[np.ix_(dof_ids, dof_ids)]
+            for o, mat in elem.matrices[dim][entity].items()}
+
+
+@mark.parametrize("elem_gen", [
+    param(construct_tet_cg4, id="CG-4"),
+    param(construct_tet_rt2, id="RT-2"),
+    param(construct_tet_ned_2nd_kind_2, id="N2curl-2"),
+    param(construct_tet_cg6, id="CG-6",
+          marks=mark.xfail(strict=True,
+                           reason="the six member branch of matrix_form_subgroup relabels the "
+                                  "rotation orientations, swapping the labels 0 and 3. The "
+                                  "relabelling is required for facet matching - removing it "
+                                  "breaks test_two_tet_one_form_orientation_invariance[CG-6] - "
+                                  "but the reason it is needed is not yet understood")),
+    param(construct_tet_ned_2nd_kind_3, id="N2curl-3",
+          marks=mark.xfail(strict=True,
+                           reason="the six member branch of matrix_form_subgroup relabels the "
+                                  "rotation orientations, swapping the labels 0 and 3. The "
+                                  "relabelling is required for facet matching - removing it "
+                                  "breaks test_two_tet_one_form_orientation_invariance[CG-6] - "
+                                  "but the reason it is needed is not yet understood")),
+])
+def test_orientation_matrix_is_representation(elem_gen):
+    # Most entities carry a genuine representation of their symmetry group: the
+    # identity orientation does not move DOFs, and composing two orientations
+    # composes their matrices. The six member branch deliberately breaks this
+    # and is needed to do so, so those cases are marked xfail rather than fixed.
+    elem = elem_gen()
+    elem.to_ufl()
+
+    for dim in range(1, elem.cell.dim()):
+        if not elem.entity_ids[dim][0]:
+            continue
+        mats = entity_orientation_matrices(elem, dim)
+        assert np.allclose(mats[0], np.eye(mats[0].shape[0]))
+
+        members = elem.cell.d_entities(dim)[0].group.members()
+        for a in members:
+            for b in members:
+                composed = mats[(a * b).numeric_rep()]
+                assert np.allclose(composed, mats[b.numeric_rep()] @ mats[a.numeric_rep()])
