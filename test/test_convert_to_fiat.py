@@ -668,7 +668,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
                                                               (construct_tet_ned, "N1curl", 1, 0.8),
                                                               (construct_tet_rt2, "RT", 2, 1.8),
                                                               (construct_tet_ned2, "N1curl", 2, 1.8),
-                                                              (lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 3.8)])
+                                                              pytest.param(lambda cell: periodic_table(1, 3, 1, 3), "N2curl", 3, 3.8, id="N1-3"),])
 def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
@@ -1161,6 +1161,12 @@ def test_two_tet_one_form_orientation_invariance(elem_gen):
     # construct_tet_ned2 (1st-kind Nedelec deg 2) and construct_tet_ned_2nd_kind_3
     # are deliberately excluded: their face orientation matrices are not signed
     # permutations, so the norm is not expected to be fixed
+    #
+    # Blind spot worth knowing: TwoTetMesh shares only face 0, whatever the permutation,
+    # so this test and test_two_tet_projection cannot see a face dependent orientation
+    # error. They also only check that two cells agree, which fixes the orientation
+    # family up to a constant. test_const_vec[N1-3] interpolates a constant on
+    # UnitCubeMesh and does catch both.
     from firedrake.utility_meshes import TwoTetMesh
     elem = elem_gen()
     ufl_elem = elem.to_ufl()

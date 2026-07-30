@@ -29,14 +29,22 @@ def perm_list_to_matrix(identity, perm):
     return res
 
 
-def vertex_frame_relabelling(cell):
-    """Permutation from the group's vertex ordering to the one to_fiat uses.
+def sub_entity_cone_offset(cell):
+    """Offset between how a cell lists its sub entities and the convention that sub
+    entity k is the one opposite vertex k.
 
-    Group representations are built on ordered_vertex_coords, while to_fiat and the
-    orientation values that index the matrices use vertices(). The two differ.
+    An orientation value is computed by comparing a cell's cone of sub entities, while
+    numeric_rep labels group members by vertex order. The two agree only under the
+    opposite-vertex convention, so this offset relates them.
     """
-    ids = [v.id for v in cell.vertices()]
-    return Permutation([ids.index(v) for v in cell.ordered_vertices()])
+    verts = cell.ordered_vertices()
+    opposite = []
+    for connection in cell.connections:
+        missing = [v for v in verts if v not in set(connection.ordered_vertices())]
+        if len(missing) != 1:
+            raise ValueError("Cone offset is only defined for a simplex")
+        opposite.append(verts.index(missing[0]))
+    return Permutation(opposite)
 
 
 class GroupMemberRep(object):
@@ -129,11 +137,13 @@ class GroupMemberRep(object):
             return np.array([1])
         if group.size() == 6 and self.group.size() == 6:
             # A free orbit of the full symmetry group is translated by the orientation
-            # itself, so the frame the orientation value is expressed in matters. Move it
-            # into the vertex ordering to_fiat uses before translating. The coset branch
-            # below does not need this - conjugating there breaks it.
-            c = vertex_frame_relabelling(self.group.cell)
-            oriented = self.group.get_member(c * (~self).perm * (~c))
+            # itself, so the orientation has to be expressed in the same convention the
+            # orientation value was computed in. That value comes from comparing cones of
+            # sub entities, numeric_rep labels by vertex order, and the two differ by the
+            # cone offset. The coset branch below reduces through a subgroup and does not
+            # need this.
+            w = self.group.get_member(sub_entity_cone_offset(self.group.cell))
+            oriented = w * (~self) * w
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*oriented).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
