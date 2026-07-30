@@ -912,6 +912,49 @@ class Point():
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
 
+def _attachment_symbols(nvals):
+    return tuple(sp.Symbol(s) for s in ["x", "y", "z"][:nvals])
+
+
+@cache
+def _component_evaluator(expr, nvals):
+    """
+    Compile one scalar attachment component for numeric evaluation.
+
+    Returns None if the component cannot be evaluated numerically, in which
+    case the caller must fall back to the symbolic path. Cells are rebuilt
+    frequently from the same attachment polynomials, so this is cached on the
+    expression rather than on the edge holding it.
+    """
+    free = len(expr.atoms(sp.Symbol))
+    if free == nvals:
+        fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
+        return lambda *x: float(fn(*x))
+    if free == 0:
+        return lambda *x: expr
+    return None
+
+
+@cache
+def _matrix_evaluator(expr, nvals):
+    """
+    Compile a matrix valued attachment for numeric evaluation.
+    """
+    if len(expr.atoms(sp.Symbol)) != nvals:
+        return None
+    fn = sp.lambdify(_attachment_symbols(nvals), expr, "numpy")
+
+    def evaluate(*x):
+        res = np.array(fn(*x)).astype(np.float64)
+        if len(res.shape) > 1:
+            return res.squeeze()
+        if len(res.shape) == 0:
+            return res.item()
+        return res
+
+    return evaluate
+
+
 class Edge():
     """
     Representation of the connections in a cell complex.
@@ -926,10 +969,37 @@ class Edge():
         self.point = point
         self.o = o
 
+    def _evaluator(self, nvals):
+        """
+        Compiled form of the attachment, or None if it must stay symbolic.
+
+        Compilation depends only on the attachment, so it is cached per edge.
+        """
+        cache = self.__dict__.setdefault("_evaluator_cache", {})
+        if nvals not in cache:
+            if hasattr(self.attachment, '__iter__'):
+                parts = [_component_evaluator(c, nvals) for c in self.attachment]
+                built = None if any(p is None for p in parts) else \
+                    (lambda *x: tuple(p(*x) for p in parts))
+            else:
+                built = _matrix_evaluator(sp.ImmutableMatrix(self.attachment), nvals)
+            cache[nvals] = built
+        return cache[nvals]
+
+    def __getstate__(self):
+        # Compiled evaluators cannot be pickled, and are rebuilt on demand.
+        state = self.__dict__.copy()
+        state.pop("_evaluator_cache", None)
+        return state
+
     def __call__(self, *x):
         if self.o:
             x = self.o(x)
         if self.attachment:
+            if not any(isinstance(v, sp.Expr) for v in x):
+                evaluate = self._evaluator(len(x))
+                if evaluate is not None:
+                    return evaluate(*x)
             syms = ["x", "y", "z"]
             if hasattr(self.attachment, '__iter__'):
                 res = []

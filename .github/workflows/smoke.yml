@@ -1,0 +1,49 @@
+name: Run fast tests
+
+# The full test suite needs a from-source Firedrake build and takes hours.
+# This runs the Firedrake-free subset in the prebuilt container instead, so
+# pull requests get feedback in minutes.
+
+on:
+  # Run on pushes to main
+  push:
+    branches:
+      - main
+  # And all pull requests
+  pull_request:
+
+jobs:
+  smoke:
+    name: Run fast tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: firedrakeproject/firedrake-vanilla-default:latest
+    steps:
+      - name: Fix HOME
+        # For unknown reasons GitHub actions overwrite HOME to /github/home
+        # which will break everything unless fixed
+        # (https://github.com/actions/runner/issues/863)
+        run: echo "HOME=/root" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v5
+        with:
+          path: fuse-repo
+
+      - uses: actions/checkout@v5
+        with:
+          repository: firedrakeproject/fiat
+          path: fiat-repo
+          ref: refs/heads/indiamai/fuse
+
+      - name: Install checked out FIAT
+        # Needed for finat.ufl.FuseElement, which is not available upstream
+        run: python3 -m pip install --break-system-packages -e ./fiat-repo
+
+      - name: Install checked out fuse
+        run: python3 -m pip install --break-system-packages -e './fuse-repo[dev]'
+
+      - name: Run fast tests
+        run: |
+          cd ./fuse-repo
+          make smoke

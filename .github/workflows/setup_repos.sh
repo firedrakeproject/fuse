@@ -1,3 +1,8 @@
+# NOTE: the branches below differ from those the test suite runs against in
+# test.yml (firedrake indiamai/fuse_mesh_cell, fiat indiamai/fuse). The docs
+# are therefore built against a different dependency set from the one that is
+# tested. Unify these once it is confirmed the docs build on the tested pair.
+
 /usr/bin/git config --global --add safe.directory /opt/firedrake/
 cd /opt/firedrake/
 git fetch

@@ -9,6 +9,10 @@ class InterpolationSpace(object):
     other spaces can be tested for inclusion.
     """
 
+    # Subclasses set an instance attribute that shadows this. Deserialised
+    # spaces are built from the base class, so the default keeps __eq__ total.
+    shape = None
+
     def __init__(self, name, shape=None, parents=None):
         """Instantiate a InterpolationSpace object.
 
