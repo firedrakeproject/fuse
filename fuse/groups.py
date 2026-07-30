@@ -29,6 +29,12 @@ def perm_list_to_matrix(identity, perm):
     return res
 
 
+def is_normal_subgroup(subgroup, group):
+    members = {h.perm for h in subgroup.members()}
+    return all(((~x) * h * x).perm in members
+               for x in group.members() for h in subgroup.members())
+
+
 def sub_entity_cone_offset(cell):
     """Offset between how a cell lists its sub entities and the convention that sub
     entity k is the one opposite vertex k.
@@ -135,38 +141,38 @@ class GroupMemberRep(object):
         if group.size() == 1:
             # Trivial case
             return np.array([1])
-        if group.size() == 6 and self.group.size() == 6:
+        if group.size() == self.group.size():
             # A free orbit of the full symmetry group is translated by the orientation
-            # itself, so the orientation has to be expressed in the same convention the
+            # itself, so the orientation has to be expressed in the convention the
             # orientation value was computed in. That value comes from comparing cones of
-            # sub entities, numeric_rep labels by vertex order, and the two differ by the
-            # cone offset. The coset branch below reduces through a subgroup and does not
-            # need this.
+            # sub entities while numeric_rep labels by vertex order, and the two differ by
+            # the cone offset. On an interval the offset is an involution in an abelian
+            # group, so this is exactly the identity there. The coset branch below reduces
+            # through a subgroup, which already fixes the labelling, and must not be
+            # corrected.
             w = self.group.get_member(sub_entity_cone_offset(self.group.cell))
             oriented = w * (~self) * w
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*oriented).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
-            if self.perm.size == 3:
+            if is_normal_subgroup(group, self.group):
+                # Products leave the orbit group, so they are projected back through the
+                # coset section. That section commutes with the translation only when the
+                # subgroup is normal - for a non normal one it is not even a bijection, so
+                # perm_list_to_matrix would reject it.
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
             else:
+                # No usable section. This is only reached for DOFs on the cell itself,
+                # which do not take part in facet agreement.
                 mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         elif group.size() < self.group.size():
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
-            # cosets = self.group.cosets_by_submember(group)
-            # members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            # permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-            # mat = perm_list_to_matrix(members, permuted_members)
         else:
             raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
         return mat

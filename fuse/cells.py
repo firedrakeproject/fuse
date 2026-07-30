@@ -524,7 +524,6 @@ class Point():
             flatten = itertools.chain.from_iterable(full_list)
             verts = list(dict.fromkeys(flatten))
             if self.oriented:
-                # make sure this is necessary
                 return self.oriented.permute(verts)
             return verts
 
