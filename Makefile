@@ -22,9 +22,13 @@ test_examples:
 	@python3 -m pytest test/test_2d_examples_docs.py
 	@python3 -m pytest test/test_3d_examples_docs.py
 
+# Collecting the whole suite would import Firedrake, so name the files instead.
+# conftest stays the single source of truth for which ones they are.
+SMOKE_FILES = $(shell python3 -c "import conftest; print(' '.join(sorted('test/%s.py' % m for m in conftest.SMOKE_MODULES)))")
+
 smoke:
 	@echo "    Running fast tests (no Firedrake)"
-	@python3 -m pytest -m smoke -rx test
+	@python3 -m pytest -m smoke -rx $(SMOKE_FILES)
 
 tests:
 	@echo "    Running all tests"

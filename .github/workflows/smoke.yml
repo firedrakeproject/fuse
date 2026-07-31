@@ -37,11 +37,26 @@ jobs:
           ref: refs/heads/indiamai/fuse
 
       - name: Install checked out FIAT
-        # Needed for finat.ufl.FuseElement, which is not available upstream
-        run: python3 -m pip install --break-system-packages -e ./fiat-repo
+        # Needed for finat.ufl.FuseElement, which is not available upstream.
+        # The container ships its own FIAT/FInAT/gem in dist-packages, which
+        # otherwise shadows the checkout, so remove it before installing.
+        run: |
+          python3 -m pip uninstall -y --break-system-packages firedrake-fiat || true
+          python3 -m pip install --break-system-packages --force-reinstall --no-deps ./fiat-repo
 
       - name: Install checked out fuse
         run: python3 -m pip install --break-system-packages -e './fuse-repo[dev]'
+
+      - name: Check FInAT resolves to the checkout
+        # Fail here with a clear message rather than during test collection
+        run: |
+          python3 -c "
+          import finat, FIAT
+          print('finat:', finat.__file__)
+          print('FIAT: ', FIAT.__file__)
+          from finat.ufl import FuseElement
+          print('FuseElement imported OK')
+          "
 
       - name: Run fast tests
         run: |
