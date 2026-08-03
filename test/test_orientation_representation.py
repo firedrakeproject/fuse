@@ -202,11 +202,13 @@ def test_quad_axis_swap_crosses_enriched_components():
     interior = [positions[i] for i in elem.entity_dofs[2][0]]
     assert len(interior) == 4
 
-    # Key 4 is the pure axis swap: eo == 1, no reflections.
+    # Key 4 is the pure axis swap: eo == 1, no reflections. Swapping two axes
+    # is an odd permutation, so it reverses orientation and an H(div) DOF
+    # changes sign on top of being moved.
     swap = elem.matrices[2][0][4][np.ix_(interior, interior)]
     half = len(interior) // 2
-    expected = np.block([[np.zeros((half, half)), np.eye(half)],
-                         [np.eye(half), np.zeros((half, half))]])
+    expected = -np.block([[np.zeros((half, half)), np.eye(half)],
+                          [np.eye(half), np.zeros((half, half))]])
     assert np.allclose(swap, expected)
 
 

@@ -179,6 +179,26 @@ class TensorProductTriple(ElementTriple):
                 "%r was declared symmetric but its DOFs are not closed under "
                 "axis permutation %r" % (self, sorted(self._closure_failures)))
 
+    def _axis_permutation_sign(self, tau):
+        """Value change an H(div) DOF picks up from permuting axes.
+
+        Reordering an entity's axes by an odd permutation reverses its
+        orientation, so the normal an H(div) DOF integrates against flips.
+        Nothing downstream supplies this: Firedrake's assembly selects one of
+        these matrices and multiplies by it once (``FuseMatrixApplyBuilder``
+        in ``firedrake/pack.py``), so the sign has to be carried here.
+
+        The reflection part of an orientation already carries its own sign
+        through the matrix being composed with, leaving only the
+        permutation's parity. Tangential (H(curl)) and scalar DOFs are
+        unaffected by the reversal itself.
+        """
+        if str(self.spaces[1]) != "HDiv":
+            return 1
+        inversions = sum(1 for i in range(len(tau))
+                         for j in range(i + 1, len(tau)) if tau[i] > tau[j])
+        return -1 if inversions % 2 else 1
+
     def _axis_key_maps(self, dofs):
         """Per-axis leaf keys for ``dofs``, indexed both ways.
 
@@ -298,7 +318,7 @@ class TensorProductTriple(ElementTriple):
             if perm is None:
                 self._closure_failures.add((ed, eo))
                 continue
-            P = np.eye(len(ent_dofs))[perm]
+            P = self._axis_permutation_sign(tau) * np.eye(len(ent_dofs))[perm]
             for io in range(2 ** ed):
                 swap_key = 2 ** ed * eo + io
                 if io in sub_mat and swap_key in sub_mat:
