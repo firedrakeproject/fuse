@@ -211,22 +211,25 @@ class TensorProductTriple(ElementTriple):
                                     for dim, ents in self.matrices.items()}
 
     def _regroup_matrices(self):
-        """Re-express the orientation matrices in dimension-grouped DOF order.
+        """Re-express the orientation matrices in closure DOF order.
 
-        FUSE generates tensor-product and enriched DOFs in an interleaved order.
+        FUSE generates tensor-product and enriched DOFs in an interleaved
+        order. Firedrake packs each cell's closure DOFs by entity dimension
+        and, within a dimension, by entity number, and applies these matrices
+        in that order.
 
-        Firedrake packs each cell's closure DOFs grouped by entity
-        dimension (vertices, then edges, then faces, ...), keeping the
-        element's own relative order within each group, and applies these
-        matrices in that order.
+        Ordering by dimension alone is not enough. An entity's matrix is the
+        identity apart from a block sitting at that entity's own DOFs, so if
+        the entities within a dimension come out in the wrong order the block
+        lands on a different entity's DOFs -- the right transformation applied
+        to the wrong DOF. That stays invisible while every orientation is the
+        identity and only bites once an entity is actually reversed.
         """
-        dim_of = {}
-        for total_dim, ents in self.entity_dofs.items():
-            for dofs in ents.values():
-                for d in dofs:
-                    dim_of[d] = total_dim
-        n = len(dim_of)
-        grouped = sorted(range(n), key=lambda i: (dim_of[i], i))
+        grouped = [dof
+                   for total_dim in sorted(self.entity_dofs)
+                   for ent in sorted(self.entity_dofs[total_dim])
+                   for dof in self.entity_dofs[total_dim][ent]]
+        n = len(grouped)
         if grouped == list(range(n)):
             return
         ix = np.ix_(grouped, grouped)

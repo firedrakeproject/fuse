@@ -207,7 +207,6 @@ def test_quad_axis_swap_crosses_enriched_components():
     half = len(interior) // 2
     expected = np.block([[np.zeros((half, half)), np.eye(half)],
                          [np.eye(half), np.zeros((half, half))]])
-    breakpoint()
     assert np.allclose(swap, expected)
 
 
