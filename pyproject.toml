@@ -24,14 +24,19 @@ dependencies = [
   "scipy",
   "matplotlib",
   "recursivenodes",
-  "fenics-ufl",
-  "firedrake-fiat",
 ]
 
 [project.urls]
 Repository = "https://github.com/firedrakeproject/fuse.git"
 
 [project.optional-dependencies]
+# FIAT and UFL are imported directly, but come from the Firedrake stack and are
+# installed alongside it. Kept as an extra so that installing FUSE cannot pull
+# in a conflicting copy, and to avoid a cycle with firedrake-fiat.
+firedrake = [
+  "fenics-ufl",
+  "firedrake-fiat",
+]
 docs = [
   "sphinx",
   "numpydoc",
