@@ -63,7 +63,7 @@ def leaf_dof_keys(elem, out=None):
     Each axis contributes ``(signature, position, entity_dimension)`` rather
     than the DOF itself, so that axes built separately but describing the same
     space match -- while axes describing different spaces still do not,
-    leaving such a product correctly asymmetric. The dimension traances along
+    leaving such a product correctly asymmetric. The dimension travels along
     so callers can still tell which axes an entity extends along.
     """
     if out is None:
@@ -355,8 +355,8 @@ class TensorProductTriple(ElementTriple):
         # Which leaf axes this entity actually extends along. Taking these
         # from the DOFs rather than from `dim` is what lets one code path
         # serve hex cells, hex faces, and factors that are themselves
-        # flattened quads.
-        active = {tuple(j for j, c in enumerate(k) if c.cell_defined_on.dim() == 1) for k in keys}
+        # flattened quads. Each key entry is (signature, position, dimension).
+        active = {tuple(j for j, c in enumerate(k) if c[2] == 1) for k in keys}
         if len(active) != 1 or len(next(iter(active))) != ed:
             # The entity's DOFs disagree about which axes it extends along,
             # so there is no well-defined action to build.
