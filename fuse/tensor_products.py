@@ -35,13 +35,36 @@ def flatten_dictionary(tensor_dict):
     return flat_dict
 
 
+def leaf_signature(elem):
+    """What makes two one-dimensional elements interchangeable as axes.
+
+    Axes may be swapped only between factors describing the same space. That
+    cannot be decided by identity: an axis is often built by calling the same
+    constructor twice, giving equal elements on distinct cells. Compare what
+    determines the space instead -- its polynomial and Sobolev spaces, and how
+    its DOFs are distributed over entities. The last of these is what
+    separates, say, CG2 from DG2, whose spaces print the same but which place
+    their DOFs differently.
+    """
+    entity_assoc = elem._entity_associations(elem.generate(), overall=False)[0]
+    return (str(elem.spaces[0]), str(elem.spaces[1]), str(elem.spaces[2]),
+            tuple(sorted((d, tuple(len(v) for v in ents.values()))
+                         for d, ents in entity_assoc.items())))
+
+
 def leaf_dof_keys(elem, out=None):
-    """Map each of ``elem``'s generated DOFs to a tuple of per-axis leaf DOFs.
+    """Map each of ``elem``'s generated DOFs to a per-axis key.
 
     A tensor product DOF is a tuple with one component per factor, but a
     factor may itself be a product, so a component can be a nested tuple.
     Descending to the one-dimensional leaves gives every DOF a flat key with
     one entry per spatial axis, which is what an axis permutation acts on.
+
+    Each axis contributes ``(signature, position, entity_dimension)`` rather
+    than the DOF itself, so that axes built separately but describing the same
+    space match -- while axes describing different spaces still do not,
+    leaving such a product correctly asymmetric. The dimension traances along
+    so callers can still tell which axes an entity extends along.
     """
     if out is None:
         out = {}
@@ -55,16 +78,17 @@ def leaf_dof_keys(elem, out=None):
         for dof in elem.generate():
             out[dof] = sum((sub_keys[i][comp] for i, comp in enumerate(dof)), ())
     else:
-        for dof in elem.generate():
-            out[dof] = (dof,)
+        # for dof in elem.generate():
+        #     out[dof] = (dof,)
+        signature = leaf_signature(elem)
+        for position, dof in enumerate(elem.generate()):
+            out[dof] = ((signature, position, dof.cell_defined_on.dim()),)
     return out
 
 
 class TensorProductTriple(ElementTriple):
 
-    # Axis permutations the DOF set turned out not to be closed under.
-    # Populated by ``_fill_face_axis_swaps``; stays empty when matrices are
-    # not built at all.
+    # Axis permutations the DOF set is not closed under built by _fill_facet_axis_swaps
     _closure_failures = frozenset()
 
     def __init__(self, *factors, flat=False, symmetric=None, matrices=True):
@@ -88,9 +112,8 @@ class TensorProductTriple(ElementTriple):
             self.cell = self.cell.flatten()
         self.dofs = self.generate()
 
-        # Subclasses (HDiv, HCurl) set self.mat_transformer before calling
-        # this constructor; only default it here if they haven't.
         self.mat_transformer = getattr(self, "mat_transformer", None)
+        self.trace = getattr(self, "trace", None)
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
@@ -103,7 +126,6 @@ class TensorProductTriple(ElementTriple):
 
     @property
     def form_degree(self):
-        # Using lowest dimension dof to define form degree, tensor product dims are additive
         return min(sum(comp.cell_defined_on.dim() for comp in dof) for dof in self.generate())
 
     def __repr__(self):
@@ -149,7 +171,8 @@ class TensorProductTriple(ElementTriple):
                             sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                         # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
                     if self.flat:
-                        self._fill_face_axis_swaps(dim, ent_dofs, sub_mat, dof_keys, key_to_index)
+                        entity = self.cell.d_entities(total_dim)[self.ent_mapping[dim][sub_ents]]
+                        self._fill_face_axis_swaps(entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index)
 
         if self.flat:
             oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
@@ -164,12 +187,10 @@ class TensorProductTriple(ElementTriple):
         self._resolve_symmetry()
 
     def _resolve_symmetry(self):
-        """Settle ``self.symmetric`` against the closure the fill observed.
+        """Reconcile ``self.symmetric`` with observed matrix construction.
 
         A flat element is symmetric exactly when every entity's DOFs are
-        closed under permutation of that entity's axes, which is what
-        ``_fill_face_axis_swaps`` needs in order to produce the axis-swap
-        orientations at all.
+        closed under permutation of that entity's axes
         """
         closed = not self._closure_failures
         if self.requested_symmetric is None:
@@ -179,25 +200,59 @@ class TensorProductTriple(ElementTriple):
                 "%r was declared symmetric but its DOFs are not closed under "
                 "axis permutation %r" % (self, sorted(self._closure_failures)))
 
-    def _axis_permutation_sign(self, tau):
-        """Value change an H(div) DOF picks up from permuting axes.
+    def _orientation_value_change(self, entity, key):
+        """Change of value an orientation induces on this element's DOFs.
 
-        Reordering an entity's axes by an odd permutation reverses its
-        orientation, so the normal an H(div) DOF integrates against flips.
-        Nothing downstream supplies this: Firedrake's assembly selects one of
-        these matrices and multiplies by it once (``FuseMatrixApplyBuilder``
-        in ``firedrake/pack.py``), so the sign has to be carried here.
+        Reorienting an entity moves its basis vectors, and how a DOF responds
+        depends on what it measures: an H(div) DOF integrates against a
+        normal, an H(curl) DOF against a tangent, a scalar DOF against
+        nothing. The trace knows that, so ask it rather than special-casing
+        the family here. Nothing downstream supplies this either -- Firedrake
+        selects one of these matrices and multiplies by it once
+        (``FuseMatrixApplyBuilder`` in ``firedrake/pack.py``).
 
-        The reflection part of an orientation already carries its own sign
-        through the matrix being composed with, leaving only the
-        permutation's parity. Tangential (H(curl)) and scalar DOFs are
-        unaffected by the reversal itself.
+        Only a *scalar* value change is returned. When the trace reports a
+        direction instead, the orientation has carried this DOF's measuring
+        direction onto a different DOF's, and the transport permutation being
+        built alongside has already accounted for it -- an H(curl) axis swap
+        exchanges the two tangential components, and transport finds the
+        exchanged DOF. H(div) is the opposite case: every DOF on a facet
+        shares its normal, so the permutation has nowhere to put the flip and
+        it has to surface here.
         """
-        if str(self.spaces[1]) != "HDiv":
+        if self.trace is None:
             return 1
-        inversions = sum(1 for i in range(len(tau))
-                         for j in range(i + 1, len(tau)) if tau[i] > tau[j])
-        return -1 if inversions % 2 else 1
+        try:
+            member = entity.group.get_member_by_val(key)
+        except ValueError:
+            return 1
+        trace = self.trace(self.cell)
+
+        def direction(ent):
+            # The vectors spanning the entity, in the containing cell's frame;
+            # the trace turns them into whatever it measures against (a normal
+            # for H(div), a tangent for H(curl)).
+            bvs = np.array(self.cell.basis_vectors(entity=ent), dtype=float)
+            return np.asarray(trace.manipulate_basis(bvs[:ent.dimension]), dtype=float).ravel()
+
+        try:
+            ref = direction(entity)
+            new = direction(entity.orient(~member))
+        except (ValueError, TypeError):
+            # The trace does not define a direction on an entity of this
+            # dimension. Only cell interiors reach this, and Firedrake never
+            # consumes their matrices.
+            return 1
+        norm = ref.dot(ref)
+        if norm == 0:
+            return 1
+        ratio = new.dot(ref) / norm
+        if not np.isclose(abs(ratio), 1.0):
+            # The direction this DOF measures has been carried onto a
+            # different DOF's rather than merely rescaled; the transport
+            # permutation built alongside already accounts for that.
+            return 1
+        return 1 if ratio > 0 else -1
 
     def _axis_key_maps(self, dofs):
         """Per-axis leaf keys for ``dofs``, indexed both ways.
@@ -250,6 +305,9 @@ class TensorProductTriple(ElementTriple):
                    for ent in sorted(self.entity_dofs[total_dim])
                    for dof in self.entity_dofs[total_dim][ent]]
         n = len(grouped)
+        # Kept so callers can map a generated DOF to the row it ends up in,
+        # rather than reproducing this ordering and drifting out of step.
+        self.closure_order = grouped
         if grouped == list(range(n)):
             return
         ix = np.ix_(grouped, grouped)
@@ -259,7 +317,7 @@ class TensorProductTriple(ElementTriple):
                     for k in list(os.keys()):
                         os[k] = os[k][ix].copy()
 
-    def _fill_face_axis_swaps(self, dim, ent_dofs, sub_mat, dof_keys, key_to_index):
+    def _fill_face_axis_swaps(self, entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index):
         """Populate the axis-permuting orientations of an entity.
 
         The per-entity loop in ``setup_matrices`` fills only the reflection
@@ -270,13 +328,14 @@ class TensorProductTriple(ElementTriple):
         even express a permutation that maps one summand's DOFs onto
         another's.
 
-        The remaining members compose those reflections with a pure DOF
-        permutation. An axis permutation ``tau`` sends the DOF whose per-axis
-        leaf key is ``k`` to the DOF with key ``tau(k)``, so looking that key
-        up gives the permutation directly, for any number of axes and across
-        summand blocks. The canonical key ``2**d * eo + io`` (see
+        The remaining members compose those reflections with a DOF
+        permutation and a change of value. An axis permutation ``tau`` sends
+        the DOF whose per-axis leaf key is ``k`` to the DOF with key
+        ``tau(k)``, so looking that key up gives the permutation directly, for
+        any number of axes and across summand blocks; the value change comes
+        from the element's trace. The canonical key ``2**d * eo + io`` (see
         ``fuse.utils.canonical_tensor_orientation_key``) is then
-        ``M[io] @ P_tau``.
+        ``M[io] @ (value_change * P_tau)``.
 
         Skipped when the entity's DOFs are not closed under ``tau``; the
         caller records that as a failure of symmetry.
@@ -318,7 +377,11 @@ class TensorProductTriple(ElementTriple):
             if perm is None:
                 self._closure_failures.add((ed, eo))
                 continue
-            P = self._axis_permutation_sign(tau) * np.eye(len(ent_dofs))[perm]
+            # The matrix being composed with already carries the reflection's
+            # own change of value, so only the permutation's part is owed
+            # here: that is the change induced by the pure axis permutation,
+            # canonical key ``2**ed * eo``.
+            P = self._orientation_value_change(entity, 2 ** ed * eo) * np.eye(len(ent_dofs))[perm]
             for io in range(2 ** ed):
                 swap_key = 2 ** ed * eo + io
                 if io in sub_mat and swap_key in sub_mat:

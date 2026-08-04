@@ -319,12 +319,8 @@ def test_cg3():
     r = 1
     mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True, use_fuse=True)
     res_fuse = []
-    A = create_cg3_interval()
-    B = create_cg3_interval()
-    # elem = symmetric_tensor_product(A, B, matrices=False).flatten()
-    # U = FunctionSpace(mesh, elem.to_ufl())
-    # res_fuse += [helmholtz_solve(mesh, U)]
-    elem = symmetric_tensor_product(A, B).flatten()
+    int_elem = create_cg3_interval()
+    elem = symmetric_tensor_product(int_elem, int_elem).flatten()
     U = FunctionSpace(mesh, elem.to_ufl())
     res_fuse += [helmholtz_solve(mesh, U)]
     assert all(np.array(res_fuse) < 0.003)
@@ -340,9 +336,8 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res_fiat = []
     for r in vals:
         mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
-        A = elem_gen()
-        B = elem_gen()
-        elem = symmetric_tensor_product(A, B).flatten()
+        int_elem = elem_gen()
+        elem = symmetric_tensor_product(int_elem, int_elem).flatten()
         U = FunctionSpace(mesh_fuse, elem.to_ufl())
         res_fuse += [helmholtz_solve(mesh_fuse, U)]
 
@@ -403,10 +398,8 @@ def test_quad_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     res_fiat = []
     for r in vals:
         mesh_fuse = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r, hexahedral=True, use_fuse=True)
-        A = elem_gen()
-        B = elem_gen()
-        C = elem_gen()
-        elem = symmetric_tensor_product(A, B, C).flatten()
+        int_elem = elem_gen()
+        elem = symmetric_tensor_product(int_elem, int_elem, int_elem).flatten()
         U = FunctionSpace(mesh_fuse, elem.to_ufl())
         res_fuse += [helmholtz_solve2(U, mesh_fuse)]
 
@@ -643,9 +636,8 @@ def test_sum_fac():
     elem = tensor_product(A, B)
     mesh3 = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
     mesh4 = UnitSquareMesh(10, 10, quadrilateral=True)
-    C = create_cg3_interval()
-    D = create_cg3_interval()
-    elem2 = symmetric_tensor_product(C, D).flatten()
+    int_elem = create_cg3_interval()
+    elem2 = symmetric_tensor_product(int_elem, int_elem).flatten()
     V = FunctionSpace(mesh1, elem.to_ufl())
     V1 = FunctionSpace(mesh2, "CG", 3)
     V2 = FunctionSpace(mesh3, elem2.to_ufl())
@@ -677,7 +669,8 @@ def test_sum_fac_3d():
     elem = tensor_product(tensor_product(A, B).flatten(), C)
     mesh3 = UnitCubeMesh(10, 10, 10, hexahedral=True, use_fuse=True)
     mesh4 = UnitCubeMesh(10, 10, 10, hexahedral=True)
-    elem2 = symmetric_tensor_product(A, B, C).flatten()
+    int_elem = create_cg3_interval()
+    elem2 = symmetric_tensor_product(int_elem, int_elem, int_elem).flatten()
     V = FunctionSpace(mesh, elem.to_ufl())
     V1 = FunctionSpace(mesh2, "CG", 3)
     V2 = FunctionSpace(mesh3, elem2.to_ufl())
