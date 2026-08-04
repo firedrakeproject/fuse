@@ -25,12 +25,12 @@ class EnrichedElement(TensorProductTriple):
         if A.cell.flat != B.cell.flat:
             raise ValueError("Tensor products must both be flat or both not flat for enrichment.")
         self.cell = A.cell
-        # Derived, not trusted: an enriched element whose cell is flat but
-        # which reports flat=False silently skips the axis-swap fill and the
-        # DOF regrouping.
         self.flat = flat or self.cell.flat
         if hasattr(A, "unflat_cell"):
             self.unflat_cell = A.unflat_cell
+        if getattr(A, "trace", None) is not getattr(B, "trace", None):
+            raise ValueError("Cannot enrich elements with different traces.")
+        self.trace = getattr(A, "trace", None)
         # See TensorProductTriple.__init__ for the meaning of ``symmetric``.
         self.requested_symmetric = symmetric
         self.symmetric = True if symmetric is None else symmetric
@@ -95,7 +95,8 @@ class EnrichedElement(TensorProductTriple):
                                                     [np.zeros((b_sub_mat.shape[0], a_sub_mat.shape[1])), b_sub_mat]])
                         sub_mat[o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                     if self.flat:
-                        self._fill_face_axis_swaps(dim, ent_dofs, sub_mat, dof_keys, key_to_index)
+                        entity = self.cell.d_entities(total_dim)[e]
+                        self._fill_face_axis_swaps(entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index)
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
