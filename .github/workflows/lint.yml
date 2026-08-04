@@ -12,16 +12,16 @@ jobs:
     name: "Run linter"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.8
+          python-version: '3.12'
       - name: Setup flake8 annotations
         uses: rbialon/flake8-annotations@v1
       - name: Install linter
         run: |
-          pip install flake8 pylint
+          pip install flake8
       - name: Lint codebase
         run: |
           make lint GITHUB_ACTIONS_FORMATTING=1

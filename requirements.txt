@@ -1,4 +1,0 @@
-networkx
-sympy
-sphinx
-matplotlib

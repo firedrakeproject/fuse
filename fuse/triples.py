@@ -282,8 +282,9 @@ class ElementTriple():
             try:
                 new_coeffs_flat = scipy.linalg.solve(V, B, transposed=True)
             except (scipy.linalg.LinAlgWarning, scipy.linalg.LinAlgError):
-                print(np.linalg.matrix_rank(V))
-                raise np.linalg.LinAlgError("Singular Vandermonde matrix")
+                raise np.linalg.LinAlgError(
+                    "Singular Vandermonde matrix (shape %s, rank %d)"
+                    % (V.shape, np.linalg.matrix_rank(V)))
         return A, new_coeffs_flat
 
     def make_entity_dense_matrices(self, ref_el, entity_ids, nodes, poly_set):

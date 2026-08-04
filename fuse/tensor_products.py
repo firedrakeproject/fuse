@@ -29,16 +29,6 @@ class TensorProductTriple(ElementTriple):
     def __repr__(self):
         return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
 
-    def setup_matrices(self):
-        oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(self.A.generate() + self.B.generate())
-        breakpoint()
-        for dim in range(self.cell.dimension):
-            for dimA in range(self.A.cell.dimension):
-                pass
-            for dimB in range(self.B.cell_dimension):
-                pass
-        return super().setup_matrices()
-
     def to_ufl(self):
         if self.flat:
             return FuseElement(self, self.cell.flatten().to_ufl())
