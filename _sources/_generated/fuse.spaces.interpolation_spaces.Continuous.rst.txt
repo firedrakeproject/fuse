@@ -24,4 +24,10 @@ Continuous
 
    
    
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Continuous.shape
+   
    

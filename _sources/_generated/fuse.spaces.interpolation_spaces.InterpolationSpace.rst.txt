@@ -24,4 +24,10 @@ InterpolationSpace
 
    
    
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~InterpolationSpace.shape
+   
    

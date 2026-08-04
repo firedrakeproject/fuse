@@ -129,12 +129,12 @@
 </pre></div>
 </div>
 <p>The current main branch version can be installed with</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/indiamai/fuse.git
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/firedrakeproject/fuse.git
 </pre></div>
 </div>
-<p>In order for this version of FUSE to function fully, it is necessary to use the correct branches for certain packages:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git+https://github.com/firedrakeproject/fiat.git@indiamai/integrate_fuse
-git+https://github.com/firedrakeproject/firedrake.git@indiamai/new_def_integration
+<p>In order for this version of FUSE to function fully, it is necessary to use the correct branches for certain packages. These are the branches the test suite runs against, and are kept in step with <code class="docutils literal notranslate"><span class="pre">.github/workflows/test.yml</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git+https://github.com/firedrakeproject/fiat.git@indiamai/fuse
+git+https://github.com/firedrakeproject/firedrake.git@indiamai/fuse_mesh_cell
 </pre></div>
 </div>
 </section>

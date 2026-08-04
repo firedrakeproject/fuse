@@ -24,4 +24,10 @@ Sobolev
 
    
    
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Sobolev.shape
+   
    
