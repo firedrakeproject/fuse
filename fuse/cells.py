@@ -978,27 +978,21 @@ class Point():
         return self.get_topology() == other.get_topology()
 
 
-def _attachment_symbols(nvals):
-    return tuple(sp.Symbol(s) for s in ["x", "y", "z"][:nvals])
-
-
 @cache
 def _component_evaluator(expr, nvals):
     """
     Compile one scalar attachment component for numeric evaluation.
 
-    Returns None if the component cannot be evaluated numerically, in which
-    case the caller must fall back to the symbolic path. Cells are rebuilt
-    frequently from the same attachment polynomials, so this is cached on the
+    Only components fully determined by the given values are compiled;
+    everything else defers to sympy_to_numpy, which decides how partially
+    substituted expressions are represented. Cells are rebuilt frequently
+    from the same attachment polynomials, so this is cached on the
     expression rather than on the edge holding it.
     """
-    free = len(expr.atoms(sp.Symbol))
-    if free == nvals:
-        fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
+    if len(expr.atoms(sp.Symbol)) == nvals:
+        fn = sp.lambdify(_SYMBOLS[:nvals], expr, "math")
         return lambda *x: float(fn(*x))
-    if free == 0:
-        return lambda *x: expr
-    return None
+    return lambda *x: sympy_to_numpy(expr, _SYMBOLS, x)
 
 
 @cache
@@ -1008,7 +1002,7 @@ def _matrix_evaluator(expr, nvals):
     """
     if len(expr.atoms(sp.Symbol)) != nvals:
         return None
-    fn = sp.lambdify(_attachment_symbols(nvals), expr, "numpy")
+    fn = sp.lambdify(_SYMBOLS[:nvals], expr, "numpy")
 
     def evaluate(*x):
         res = np.array(fn(*x)).astype(np.float64)
@@ -1045,8 +1039,9 @@ class Edge():
         if nvals not in cache:
             if hasattr(self.attachment, '__iter__'):
                 parts = [_component_evaluator(c, nvals) for c in self.attachment]
-                built = None if any(p is None for p in parts) else \
-                    (lambda *x: tuple(p(*x) for p in parts))
+
+                def built(*x):
+                    return tuple(p(*x) for p in parts)
             else:
                 built = _matrix_evaluator(sp.ImmutableMatrix(self.attachment), nvals)
             cache[nvals] = built
