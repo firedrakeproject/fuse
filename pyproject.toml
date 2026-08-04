@@ -60,8 +60,6 @@ testpaths = [
 ]
 markers = [
     "smoke: fast tests that do not require Firedrake (see conftest.SMOKE_MODULES)",
-]
-markers = [
     "slow: builds that take minutes (deselect with '-m \"not slow\"')",
 ]
 
