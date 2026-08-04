@@ -16,19 +16,27 @@ classifiers = [
   "Programming Language :: Python",
   "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
 ]
+requires-python = ">=3.10"
 dependencies = [
   "numpy",
   "networkx",
   "sympy",
-  "sphinx",
+  "scipy",
   "matplotlib",
   "recursivenodes",
 ]
 
 [project.urls]
-Repository = "https://github.com/indiamai/fuse.git"
+Repository = "https://github.com/firedrakeproject/fuse.git"
 
 [project.optional-dependencies]
+# FIAT and UFL are imported directly, but come from the Firedrake stack and are
+# installed alongside it. Kept as an extra so that installing FUSE cannot pull
+# in a conflicting copy, and to avoid a cycle with firedrake-fiat.
+firedrake = [
+  "fenics-ufl",
+  "firedrake-fiat",
+]
 docs = [
   "sphinx",
   "numpydoc",
@@ -40,6 +48,7 @@ docs = [
 dev = [
   "pytest",
   "pytest-mock",
+  "pytest-timeout",
   "coverage",
   "flake8",
 ]
@@ -47,7 +56,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = [
-    "tests",
+    "test",
+]
+markers = [
+    "smoke: fast tests that do not require Firedrake (see conftest.SMOKE_MODULES)",
 ]
 markers = [
     "slow: builds that take minutes (deselect with '-m \"not slow\"')",

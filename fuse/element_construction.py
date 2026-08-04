@@ -282,7 +282,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                         xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols))]
                         dofs += [DOFGenerator(xs1, pf_grp, S1)]
                         counter += (pf_grp).size()
-    # print("facet dofs: ", counter)
     counter = 0
     interior_deg = deg - 2
 
@@ -295,7 +294,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 counter += len(new_dofs)
                 dofs += [DOFGenerator(new_dofs, S1, S1)]
         interior_deg = deg - 3
-        # print("interior facet dofs:", counter)
         counter = 0
 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), interior_deg)
@@ -330,8 +328,6 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False):
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols))]
                 dofs += [DOFGenerator(xs1, grp, g2)]
                 counter += (grp).size()
-    # print("interior dofs:", counter)
-    # print("end cell", cell)
     return dofs
 
 
@@ -416,7 +412,6 @@ def construct_tri_cgN(deg):
 
 
 def construct_tet_cgN(deg):
-    print(deg)
     cell = make_tetrahedron()
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -676,8 +671,6 @@ def construct_tet_bdmN(deg):
     vec_Pd = PolynomialSpace(deg, shape=3)
 
     bdm = ElementTriple(cell, (vec_Pd, CellHDiv, C0), face_dofs + center_dofs)
-    print("FUSE", len(bdm.generate()))
-    print("True", (1/2)*(deg + 1)*(deg + 2)*(deg + 3))
     assert len(bdm.generate()) == (1/2)*(deg + 1)*(deg + 2)*(deg + 3)
     bdm.to_fiat()
     return bdm

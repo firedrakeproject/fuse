@@ -830,28 +830,34 @@ class Point():
             # return x
             return lambda *x: x
 
-        paths = nx.all_simple_edge_paths(self.G, source, dst)
-        attachments = [[self.G[s][d]["edge_class"]
-                        for (s, d) in path] for path in paths]
+        # Cached edge chain as it is fixed once cell is built.
+        cache = self.__dict__.setdefault("_attachment_chains", {})
+        if (source, dst) not in cache:
+            paths = nx.all_simple_edge_paths(self.G, source, dst)
+            attachments = [[self.G[s][d]["edge_class"]
+                            for (s, d) in path] for path in paths]
 
-        if len(attachments) == 0:
-            raise ValueError("No paths from node {} to node {}"
-                             .format(source, dst))
+            if len(attachments) == 0:
+                raise ValueError("No paths from node {} to node {}"
+                                 .format(source, dst))
 
-        # check all attachments resolve to the same function
-        if len(attachments) > 1:
-            dst_dim = self.dim_of_node(dst)
-            basis = np.eye(dst_dim)
-            if dst_dim == 0:
-                vals = [fold_reduce(attachment) for attachment in attachments]
-                assert all(np.isclose(val, vals[0]).all() for val in vals)
-            else:
-                for i in range(dst_dim):
-                    vals = [fold_reduce(attachment, *tuple(basis[i].tolist()))
-                            for attachment in attachments]
+            # check all attachments resolve to the same function
+            if len(attachments) > 1:
+                dst_dim = self.dim_of_node(dst)
+                basis = np.eye(dst_dim)
+                if dst_dim == 0:
+                    vals = [fold_reduce(attachment) for attachment in attachments]
                     assert all(np.isclose(val, vals[0]).all() for val in vals)
+                else:
+                    for i in range(dst_dim):
+                        vals = [fold_reduce(attachment, *tuple(basis[i].tolist()))
+                                for attachment in attachments]
+                        assert all(np.isclose(val, vals[0]).all() for val in vals)
 
-        return lambda *x: fold_reduce(attachments[0], *x)
+            cache[(source, dst)] = attachments[0]
+
+        chain = cache[(source, dst)]
+        return lambda *x: fold_reduce(chain, *x)
 
     def attachment_J_det(self, source, dst):
         attachment = self.attachment(source, dst)
@@ -972,6 +978,49 @@ class Point():
         return self.get_topology() == other.get_topology()
 
 
+def _attachment_symbols(nvals):
+    return tuple(sp.Symbol(s) for s in ["x", "y", "z"][:nvals])
+
+
+@cache
+def _component_evaluator(expr, nvals):
+    """
+    Compile one scalar attachment component for numeric evaluation.
+
+    Returns None if the component cannot be evaluated numerically, in which
+    case the caller must fall back to the symbolic path. Cells are rebuilt
+    frequently from the same attachment polynomials, so this is cached on the
+    expression rather than on the edge holding it.
+    """
+    free = len(expr.atoms(sp.Symbol))
+    if free == nvals:
+        fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
+        return lambda *x: float(fn(*x))
+    if free == 0:
+        return lambda *x: expr
+    return None
+
+
+@cache
+def _matrix_evaluator(expr, nvals):
+    """
+    Compile a matrix valued attachment for numeric evaluation.
+    """
+    if len(expr.atoms(sp.Symbol)) != nvals:
+        return None
+    fn = sp.lambdify(_attachment_symbols(nvals), expr, "numpy")
+
+    def evaluate(*x):
+        res = np.array(fn(*x)).astype(np.float64)
+        if len(res.shape) > 1:
+            return res.squeeze()
+        if len(res.shape) == 0:
+            return res.item()
+        return res
+
+    return evaluate
+
+
 class Edge():
     """
     Representation of the connections in a cell complex.
@@ -986,10 +1035,37 @@ class Edge():
         self.point = point
         self.o = o
 
+    def _evaluator(self, nvals):
+        """
+        Compiled form of the attachment, or None if it must stay symbolic.
+
+        Compilation depends only on the attachment, so it is cached per edge.
+        """
+        cache = self.__dict__.setdefault("_evaluator_cache", {})
+        if nvals not in cache:
+            if hasattr(self.attachment, '__iter__'):
+                parts = [_component_evaluator(c, nvals) for c in self.attachment]
+                built = None if any(p is None for p in parts) else \
+                    (lambda *x: tuple(p(*x) for p in parts))
+            else:
+                built = _matrix_evaluator(sp.ImmutableMatrix(self.attachment), nvals)
+            cache[nvals] = built
+        return cache[nvals]
+
+    def __getstate__(self):
+        # Compiled evaluators cannot be pickled, and are rebuilt on demand.
+        state = self.__dict__.copy()
+        state.pop("_evaluator_cache", None)
+        return state
+
     def __call__(self, *x):
         if self.o:
             x = self.o(x)
         if self.attachment:
+            if not any(isinstance(v, sp.Expr) for v in x):
+                evaluate = self._evaluator(len(x))
+                if evaluate is not None:
+                    return evaluate(*x)
             syms = ["x", "y", "z"]
             if hasattr(self.attachment, '__iter__'):
                 res = []

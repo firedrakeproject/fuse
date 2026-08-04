@@ -46,6 +46,7 @@ class ElementSobolevSpace(object):
             return CellHCurl
         elif space_name == "H2":
             return CellH2
+        raise ValueError("Sobolev space not found")
 
 
 class CellH1(ElementSobolevSpace):

@@ -13,7 +13,16 @@ PKG-INFO
 
 settings.json
 *.json
+# CI writes this and --durations-path reads it back
+!test/test_durations.json
+
+# Scratch figures land all over the tree, so images are ignored by default.
+# Documentation figures are kept, and are the exception.
 *.svg
 *.png
 *.dot
+!docs/source/**/*.svg
+!docs/source/**/*.png
 
+.DS_Store
+.mypy_cache
