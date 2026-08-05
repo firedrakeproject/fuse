@@ -65,6 +65,8 @@ class EnrichedElement(TensorProductTriple):
         self.B.to_ufl()
         dofs = self.generate()
         dof_keys, key_to_index = self._axis_key_maps(dofs)
+        # Reset closure failures
+        self._closure_failures = set()
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs, tensor=(not self.flat))
         if self.flat:
             cell = self.A.unflat_cell
@@ -96,7 +98,7 @@ class EnrichedElement(TensorProductTriple):
                         sub_mat[o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                     if self.flat:
                         entity = self.cell.d_entities(total_dim)[e]
-                        self._fill_face_axis_swaps(entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index)
+                        self._fill_axis_permutations(entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index)
 
         self.matrices = oriented_mats_by_entity
         self.reversed_matrices = self.reverse_dof_perms(self.matrices)
