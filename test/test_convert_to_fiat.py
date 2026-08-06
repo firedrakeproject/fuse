@@ -22,7 +22,7 @@ np.set_printoptions(linewidth=120, precision=4, suppress=True)
 def create_dg0(cell):
     xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
     Pk = PolynomialSpace(0)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    dg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return dg
 
 
@@ -33,7 +33,7 @@ def create_dg1(cell):
     else:
         xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
     Pk = PolynomialSpace(1)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    dg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return dg
 
 
@@ -43,7 +43,7 @@ def create_dg2(cell):
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
 
     Pk = PolynomialSpace(2)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+    dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
                                                 DOFGenerator(center, S1, S1)])
     return dg
 
@@ -52,56 +52,56 @@ def create_dg1_uneven(cell):
     xs = [DOF(DeltaPairing(), PointKernel(-0.75,))]
     center = [DOF(DeltaPairing(), PointKernel((0.25,)))]
     Pk = PolynomialSpace(1)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, S1, S2),
+    dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, S1, S2),
                                                 DOFGenerator(center, S1, S2)])
     return dg
 
 
 def create_dg1_tet(cell):
     xs = [DOF(DeltaPairing(), PointKernel(tuple(cell.vertices(return_coords=True)[0])))]
-    dg1 = ElementTriple(cell, (P1, CellL2, C0), DOFGenerator(xs, Z4, S1))
+    dg1 = ElementTriple(cell, (P1, C0, Fid), DOFGenerator(xs, Z4, S1))
 
     return dg1
 
 
 def create_cr(cell):
     Pk = PolynomialSpace(1)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1)])
 
 
 def create_cr3(cell):
     Pk = PolynomialSpace(3)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
                                                                                DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
 
 
 def create_fortin_soulie(cell):
     Pk = PolynomialSpace(2)
-    edge_2 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/3,)))], S2, S1)])
-    edge_1 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+    edge_2 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/3,)))], S2, S1)])
+    edge_1 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_2xs = [immerse(cell, edge_2, TrH1)]
     edge_1xs = [immerse(cell, edge_1, TrH1, node=1)]
 
     group_2 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2])])
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_2xs, group_2, S1), DOFGenerator(edge_1xs, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_2xs, group_2, S1), DOFGenerator(edge_1xs, S1, S1)])
 
 
 def create_cf(cell):
     Pk = PolynomialSpace(3)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0),
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid),
                              [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/2,)))], S2, S1),
                               DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
 
 
 def create_cg1(cell):
@@ -110,7 +110,7 @@ def create_cg1(cell):
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return cg
 
 
@@ -123,7 +123,7 @@ def create_cg1_quad():
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg, deg + 1)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg
 
@@ -141,7 +141,7 @@ def create_cg1_flipped(cell):
     xs = [immerse(cell, vert_dg, TrH1, node=1)]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     for dof in cg.generate():
         print(dof)
@@ -159,7 +159,7 @@ def create_cg2(cell=None):
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
                                                 DOFGenerator(center, S1, S1)])
     return cg
 
@@ -173,10 +173,10 @@ def create_cg2_tri(cell=None):
     vert_dg0 = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg0, TrH1)]
 
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), C0, Fid), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
-    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
                                                 DOFGenerator(edge_xs, C3, S1)])
     return cg
 
@@ -186,13 +186,13 @@ def create_cg1_tet(cell):
     vert = cell.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
     cgverts = DOFGenerator(v_xs, Z4, S1)
 
-    cg1 = ElementTriple(cell, (P1, CellH1, "C0"),
+    cg1 = ElementTriple(cell, (P1, "C0", Fid),
                         [cgverts])
 
     return cg1
@@ -204,11 +204,11 @@ def create_cg2_tet(cell):
     edge = cell.edges()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0,)))]
-    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+    dg1_int = ElementTriple(edge, (P1, "C0", Fid),
                             DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
@@ -217,7 +217,7 @@ def create_cg2_tet(cell):
     e_xs = [immerse(cell, dg1_int, TrH1)]
     cgedges = DOFGenerator(e_xs, tet_edges, S1)
 
-    cg2 = ElementTriple(cell, (P2, CellH1, "C0"),
+    cg2 = ElementTriple(cell, (P2, "C0", Fid),
                         [cgverts, cgedges])
 
     return cg2
@@ -232,15 +232,15 @@ def create_cg3_tet(cell=None, perm=True):
     face = cell.d_entities(2)[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
-    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+    dg1_int = ElementTriple(edge, (P1, "C0", Fid),
                             DOFGenerator(xs, S2, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
-    dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+    dg0_face = ElementTriple(face, (P0, "C0", Fid),
                              DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
@@ -252,7 +252,7 @@ def create_cg3_tet(cell=None, perm=True):
     f_xs = [immerse(cell, dg0_face, TrH1)]
     cgfaces = DOFGenerator(f_xs, tet_faces, S1)
 
-    cg3 = ElementTriple(cell, (P3, CellH1, "C0"),
+    cg3 = ElementTriple(cell, (P3, "C0", Fid),
                         [cgverts, cgedges, cgfaces], perm)
 
     return cg3

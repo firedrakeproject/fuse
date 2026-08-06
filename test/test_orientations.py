@@ -22,7 +22,7 @@ def construct_nd2(tri=None):
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
 
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHCurl, C0), dofs)
+    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
@@ -36,7 +36,7 @@ def construct_nd2(tri=None):
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 
-    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
+    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs, center_dofs])
     return ned
 
 
@@ -56,7 +56,7 @@ def construct_rt2(tri=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt2 = ElementTriple(edge, (vecP1, CellHDiv, C0), dofs)
+    int_rt2 = ElementTriple(edge, (vecP1, C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt2, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -70,7 +70,7 @@ def construct_rt2(tri=None):
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[x, y]])
     rt_space = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
-    rt2 = ElementTriple(tri, (rt_space, CellHDiv, C0), [tri_dofs, i_dofs])
+    rt2 = ElementTriple(tri, (rt_space, C0, Fdiv), [tri_dofs, i_dofs])
     return rt2
 
 
@@ -86,17 +86,17 @@ def construct_nd2_for_fiat(tri=None):
           DOF(L2Pairing(), PolynomialKernel((3*x*np.sqrt(2)/np.sqrt(3)), symbols=[x]))]
 
     dofs = DOFGenerator(xs, S1, S2)
-    int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+    int_ned1 = ElementTriple(edge, (P1, C0, Fcurl), dofs)
 
     xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
           DOF(L2Pairing(), PolynomialKernel((-np.sqrt(2)/np.sqrt(3))*(6*x + 3), symbols=[x]))]
     dofs = DOFGenerator(xs, S1, S2)
-    int_ned2 = ElementTriple(tri.edges()[0], (P1, CellHCurl, C0), dofs)
+    int_ned2 = ElementTriple(tri.edges()[0], (P1, C0, Fcurl), dofs)
 
     xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
           DOF(L2Pairing(), PolynomialKernel((-np.sqrt(2)/np.sqrt(3))*(6*x - 3), symbols=[x]))]
     dofs = DOFGenerator(xs, S1, S2)
-    int_ned3 = ElementTriple(tri.edges()[0], (P1, CellHCurl, C0), dofs)
+    int_ned3 = ElementTriple(tri.edges()[0], (P1, C0, Fcurl), dofs)
 
     xs = [DOF(L2Pairing(), ComponentKernel((0,))),
           DOF(L2Pairing(), ComponentKernel((1,)))]
@@ -111,7 +111,7 @@ def construct_nd2_for_fiat(tri=None):
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 
-    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
+    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs, center_dofs])
     return ned
 
 

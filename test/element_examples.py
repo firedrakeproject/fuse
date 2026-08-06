@@ -84,10 +84,10 @@ def CR_n(cell, deg):
     Pk = PolynomialSpace(deg)
     sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
     if 0 in points:
-        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator(sym_points, S2, S1),
+        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2, S1),
                                                                                    DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     else:
-        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator(sym_points, S2, S1)])
+        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     interior_coords = triangle_coords(triangle_nums[deg - 3])
@@ -97,7 +97,7 @@ def CR_n(cell, deg):
     c3 = [DOF(DeltaPairing(), PointKernel(c)) for c in c3]
     s3 = [DOF(DeltaPairing(), PointKernel(c)) for c in s3]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(s1, S1, S1), DOFGenerator(c3, C3, S1), DOFGenerator(s3, S3, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(s1, S1, S1), DOFGenerator(c3, C3, S1), DOFGenerator(s3, S3, S1)])
 
 
 # coords = triangle_coords(21)
