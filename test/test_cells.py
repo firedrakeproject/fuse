@@ -3,7 +3,7 @@ from firedrake import *
 from fuse.cells import ufc_triangle, ufc_tetrahedron
 import pytest
 import numpy as np
-from FIAT.reference_element import default_simplex, ufc_simplex
+from FIAT.reference_element import default_simplex, ufc_simplex, Simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
@@ -234,63 +234,78 @@ def test_new_connectivity(cell):
 
 
 def test_compare_tris():
-    fuse_tet = polygon(3)
-    ufc_tet = ufc_triangle()
-    fiat_tet = ufc_simplex(2)
+    fuse_tri = polygon(3)
+    ufc_tri = ufc_triangle()
+    fiat_tri = ufc_simplex(2)
 
-    print(fiat_tet.get_topology())
-    print(fuse_tet.get_topology())
-    print(ufc_tet.get_topology())
-    fiat_connectivity = fiat_tet.get_connectivity()
-    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
-    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
-    _dim = fiat_tet.get_dimension()
-    print("fiat")
-    print(make_entity_cone_lists(fiat_tet))
-    for dim0 in range(_dim):
-        connectivity = fiat_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse")
-    print(make_entity_cone_lists(fuse_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = fuse_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse ufc")
-    print(make_entity_cone_lists(ufc_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = ufc_connectivity[(dim0+1, dim0)]
-        print(connectivity)
+    # The three representations use different local vertex numbering
+    # conventions, so individual cone entries are not expected to
+    # agree. The per-dimension entity counts (and hence the cone
+    # offsets) are a numbering-independent invariant that must match.
+    fiat_cones, fiat_offsets = make_entity_cone_lists(fiat_tri)
+    fuse_cones, fuse_offsets = make_entity_cone_lists(fuse_tri.to_fiat())
+    ufc_cones, ufc_offsets = make_entity_cone_lists(ufc_tri.to_fiat())
+
+    assert fuse_offsets == fiat_offsets
+    assert ufc_offsets == fiat_offsets
+    assert len(fuse_cones) == len(fiat_cones)
+    assert len(ufc_cones) == len(fiat_cones)
 
 
 def test_compare_tets():
-    tet = make_tetrahedron()
-    # perm = tet.group.get_member([1, 2, 0, 3])
-    fuse_tet = tet
+    fuse_tet = make_tetrahedron()
     ufc_tet = ufc_tetrahedron()
     fiat_tet = ufc_simplex(3)
-    # breakpoint()
-    print(fiat_tet.get_topology())
-    print(fuse_tet.get_topology())
-    print(ufc_tet.get_topology())
-    fiat_connectivity = fiat_tet.get_connectivity()
-    fuse_connectivity = fuse_tet.to_fiat().get_connectivity()
-    ufc_connectivity = ufc_tet.to_fiat().get_connectivity()
-    _dim = fiat_tet.get_dimension()
-    print("fiat")
-    print(make_entity_cone_lists(fiat_tet))
-    for dim0 in range(_dim):
-        connectivity = fiat_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse")
-    print(make_entity_cone_lists(fuse_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = fuse_connectivity[(dim0+1, dim0)]
-        print(connectivity)
-    print("fuse ufc")
-    print(make_entity_cone_lists(ufc_tet.to_fiat()))
-    for dim0 in range(_dim):
-        connectivity = ufc_connectivity[(dim0+1, dim0)]
-        print(connectivity)
+
+    fiat_cones, fiat_offsets = make_entity_cone_lists(fiat_tet)
+    fuse_cones, fuse_offsets = make_entity_cone_lists(fuse_tet.to_fiat())
+    ufc_cones, ufc_offsets = make_entity_cone_lists(ufc_tet.to_fiat())
+
+    assert fuse_offsets == fiat_offsets
+    assert ufc_offsets == fiat_offsets
+    assert len(fuse_cones) == len(fiat_cones)
+    assert len(ufc_cones) == len(fiat_cones)
+
+
+@pytest.mark.parametrize(["cell"], [(polygon(3),), (make_tetrahedron(),)])
+def test_sub_entities_preserve_local_vertex_order(cell):
+    """fuse supplies FIAT with an explicit ``sub_entities`` mapping
+    (via ``CellComplexToFiatSimplex``) whose per-entity ordering
+    follows that entity's own local vertex tuple. FIAT's default
+    (auto-computed) ``sub_entities`` instead sorts sub-entities by
+    entity id, discarding that ordering. This checks that fuse's
+    mapping is actually preserving order where FIAT's default would
+    not."""
+    fiat_cell = cell.to_fiat()
+    topology = fiat_cell.get_topology()
+    auto = Simplex(fiat_cell.get_shape(), fiat_cell.vertices, topology)
+
+    saw_a_reordering_case = False
+    for dim in range(1, fiat_cell.get_spatial_dimension() + 1):
+        for entity, vertex_tuple in topology[dim].items():
+            fuse_order = tuple(e for d, e in fiat_cell.sub_entities[dim][entity] if d == 0)
+            auto_order = tuple(e for d, e in auto.sub_entities[dim][entity] if d == 0)
+
+            assert fuse_order == vertex_tuple
+            assert auto_order == tuple(sorted(vertex_tuple))
+
+            if vertex_tuple != tuple(sorted(vertex_tuple)):
+                saw_a_reordering_case = True
+
+    # Guard against the test vacuously passing because every local
+    # vertex tuple already happened to be sorted.
+    assert saw_a_reordering_case
+
+
+@pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),), (make_tetrahedron(),), (ufc_tetrahedron(),)])
+def test_sub_entity_counts(cell):
+    """For a k-dimensional simplex, the number of sub-entities
+    (including itself) is 2**(k+1) - 1: one for every non-empty
+    subset of its k+1 vertices."""
+    fiat_cell = cell.to_fiat()
+    for dim, entities in fiat_cell.sub_entities.items():
+        for entity, sub_ents in entities.items():
+            assert len(sub_ents) == 2 ** (dim + 1) - 1
 
 
 def make_entity_cone_lists(fiat_cell):

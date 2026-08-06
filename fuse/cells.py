@@ -488,6 +488,12 @@ class Point():
                 if (p_dim, p_id) not in sub_ents[dim][self_id]:
                     sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
                     sub_ents = p._subentity_traversal(sub_ents, min_ids)
+                    # Also pull in this facet's own sub-entities (e.g. a
+                    # tetrahedron's faces carry edges that are otherwise
+                    # never added to the tetrahedron's own entry).
+                    for entry in sub_ents[p_dim][p_id]:
+                        if entry not in sub_ents[dim][self_id]:
+                            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [entry]
 
         if (dim, self_id) not in sub_ents[dim][self_id]:
             sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]
