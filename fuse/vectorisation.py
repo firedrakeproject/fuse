@@ -19,9 +19,9 @@ class VectorTriple(ElementTriple):
     """
 
     def __init__(self, base, dim=None, perm=True):
-        if str(base.spaces[1]) in ("HDiv", "HCurl"):
+        if base.spaces[2].mapping() != "identity":
             raise ValueError(
-                f"Cannot vectorise an element in {base.spaces[1]}. The components do not transform independently under the pullback.")
+                f"Cannot vectorise an element with the {base.spaces[2]} pullback. The components do not transform independently under the pullback.")
         if base.spaces[0].shape:
             raise ValueError("Cannot vectorise an element that is already vector valued.")
         if isinstance(base, TensorProductTriple) or base.flat:
