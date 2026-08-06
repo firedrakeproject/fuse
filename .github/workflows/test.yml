@@ -174,7 +174,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/indiamai/fuse_new_spaces
         
       - name: Install checked out FIAT
         run: |
