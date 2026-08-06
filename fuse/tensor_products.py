@@ -226,15 +226,9 @@ class TensorProductTriple(ElementTriple):
           components, and transport finds the exchanged DOF. H(div) is the
           opposite case: every DOF on a facet shares its normal, so the
           permutation has nowhere to put the flip and it surfaces here.
-
-        Anything else is a bug and raises, rather than quietly returning the
-        identity -- a value change that goes missing still leaves the matrices
-        a valid group representation, so the homomorphism tests would not
-        notice.
         """
         if self.trace is None:
             return 1
-        # A key we wrote ourselves must name a member of this entity's group.
         member = entity.group.get_member_by_val(key)
         trace = self.trace(self.cell)
 
@@ -256,7 +250,7 @@ class TensorProductTriple(ElementTriple):
         ratio = new.dot(ref) / norm
         if not np.isclose(abs(ratio), 1.0):
             return 1
-        # Only the sign carries information; snap so the matrices stay exact
+        # Only the sign carries information; snap to integer so the matrices stay exact
         # signed permutations under inversion and reindexing.
         return 1 if ratio > 0 else -1
 
@@ -330,60 +324,79 @@ class TensorProductTriple(ElementTriple):
         symmetric at all.
         """
         entity_dim = sum(dim) if isinstance(dim, tuple) else dim
-        if entity_dim < 2 or len(ent_dofs) == 0:
-            # A point or an interval has no axes to permute.
+        if entity_dim < 2 or not ent_dofs:
+            # Points and intervals have no non-trivial axis permutations.
             return
-        keys = [dof_keys[d] for d in ent_dofs]
+
+        # These are the DOF keys in the order this entity's block uses.
+        keys = [dof_keys[dof] for dof in ent_dofs]
+
         # Which of a key's axes this entity extends along, read from the DOFs
         # rather than from `dim` so that one code path serves hex cells, hex
         # faces, and factors that are themselves flattened quads. Key entries
         # are (signature, position, dimension); an entity extends along the
         # one dimensional ones.
-        spanned = {tuple(j for j, axis in enumerate(k) if axis[2] == 1) for k in keys}
-        if len(spanned) != 1 or len(next(iter(spanned))) != entity_dim:
+        spanned_axes_set = {tuple(i for i, axis in enumerate(key) if axis[2] == 1) for key in keys}
+        if len(spanned_axes_set) != 1:
             # The entity's DOFs disagree about which axes it extends along,
             # so there is no well-defined action to build.
             self._closure_failures.add((entity_dim, None))
             return
-        spanned_axes = spanned.pop()
-        local = {dof: i for i, dof in enumerate(ent_dofs)}
+
+        spanned_axes = spanned_axes_set.pop()
+        if len(spanned_axes) != entity_dim:
+            # The keys describe a different-dimensional entity than the one
+            # we are trying to permute.
+            self._closure_failures.add((entity_dim, None))
+            return
+
+        local_index = {dof: i for i, dof in enumerate(ent_dofs)}
         grid = np.ix_(ent_dofs, ent_dofs)
+
+        # ``eo == 0`` is the identity permutation, already filled by the
+        # orientation loop above.
         for eo, axis_perm in enumerate(sorted(permutations(range(entity_dim)))):
             if eo == 0:
-                # The reflections, already filled by the caller.
                 continue
-            perm = self._transport(keys, spanned_axes, axis_perm, key_to_index, local)
-            if perm is None:
+
+            transported = self._transport(keys, spanned_axes, axis_perm, key_to_index, local_index)
+            if transported is None:
                 self._closure_failures.add((entity_dim, eo))
                 continue
+
             # Only the permutation's own value change is owed here; sub_mat[io]
             # already carries the reflection's. Hence the pure permutation key
             # 2**entity_dim * eo, NOT swap_key.
             value_change = self._orientation_value_change(entity, 2 ** entity_dim * eo)
-            P = value_change * np.eye(len(ent_dofs))[perm]
+            permutation_matrix = value_change * np.eye(len(ent_dofs))[transported]
             for io in range(2 ** entity_dim):
                 swap_key = 2 ** entity_dim * eo + io
                 if io in sub_mat and swap_key in sub_mat:
-                    sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], P)
+                    sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], permutation_matrix)
 
     @staticmethod
     def _transport(keys, spanned_axes, axis_perm, key_to_index, local):
-        """Where each DOF goes under an axis permutation, or None.
+        """Return the DOF permutation induced by ``axis_perm``.
 
-        ``None`` means the DOFs are not closed under ``axis_perm``: either no
-        DOF carries the permuted key, or one does but sits on another entity,
-        which an entity-local block cannot express.
+        ``None`` means the entity's DOFs are not closed under the permutation:
+        either the permuted key does not exist at all, or it exists on a
+        different entity and this local block cannot represent it.
         """
-        perm = []
+        permuted_indices = []
         for key in keys:
-            moved = list(key)
-            for i, axis in enumerate(spanned_axes):
-                moved[spanned_axes[axis_perm[i]]] = key[axis]
-            target = key_to_index.get(tuple(moved))
-            if target not in local:
+            # Start from the DOF's per-axis key and move only the axes this
+            # entity actually spans.
+            permuted_key = list(key)
+            for source_pos, source_axis in enumerate(spanned_axes):
+                target_axis = spanned_axes[axis_perm[source_pos]]
+                permuted_key[target_axis] = key[source_axis]
+
+            target_dof = key_to_index.get(tuple(permuted_key))
+            if target_dof not in local:
                 return None
-            perm.append(local[target])
-        return perm
+            permuted_indices.append(local[target_dof])
+
+        return permuted_indices
 
     def generate(self):
         dofs = [f.generate() for f in self.factors]
