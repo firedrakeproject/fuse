@@ -50,12 +50,12 @@ def test_convergence(col, k, deg, conv_rate):
     assert all([c > conv_rate for c in conv])
 
 
-cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
-nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
-rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
-dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 4))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
-nd2_params3d = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 5))]
-bdm_params3d = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 5))]
+cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 7))]
+nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 7))]
+rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 7))]
+dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 7))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 7))]
+nd2_params3d = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 7))]
+bdm_params3d = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 7))]
 
 
 @pytest.mark.parametrize("col,k,deg,conv_rate", cg_params3d + nd_params3d + rt_params3d + dg_params3d + nd2_params3d + bdm_params3d)
