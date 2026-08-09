@@ -7,10 +7,6 @@ on:
     branches:
       - main
   # And all pull requests
-  #   cd /opt/firedrake/
-  #   git fetch
-  #   git checkout indiamai/fuse-closures-with-pyop3
-  #   git pull
   pull_request:
 
 jobs:
@@ -174,7 +170,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/indiamai/fuse_remove_compare_change
         
       - name: Install checked out FIAT
         run: |
