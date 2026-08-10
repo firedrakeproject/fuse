@@ -142,6 +142,29 @@ class ElementTriple():
 
         return center, colours[tikz][dof.cell_defined_on.dimension]
 
+    def moment_center(self, dof, index=0, count=1):
+        """Reference position at which to draw an integral-moment DOF.
+
+        When several moments share an entity they are spread across it at
+        symmetric interior points so they do not overlap. The number of moments
+        (the dimension of the moment space on the entity) sets how many points
+        are used; a single moment falls back to the entity centre.
+        """
+        entity = dof.cell_defined_on
+        t = np.linspace(-1, 1, count + 2)[1:-1][index]
+        if entity.dimension == 0:
+            return self.cell.cell_attachment(entity.id)()
+        elif entity.dimension == 1:
+            return self.cell.cell_attachment(entity.id)(t)
+        elif entity.dimension == 2:
+            return self.cell.cell_attachment(entity.id)(0.5 * t, 0)
+        else:
+            center = np.array(list(sum(np.array(self.cell.vertices(return_coords=True)))), dtype=float)
+            if count > 1:
+                axis = np.array(self.cell.basis_vectors()[0], dtype=float)
+                center = center + 0.5 * t * axis
+            return center
+
     def get_value_shape(self):
         return self.spaces[0].shape
 
@@ -167,29 +190,68 @@ class ElementTriple():
             dual = DualSet(self.nodes, self.ref_el, self.entity_ids)
         return CiarletElement(self.poly_set, dual, degree, form_degree)
 
-    def to_tikz(self, show=True, scale=3):
+    def to_tikz(self, show=True, scale=3, vertices=None):
         """Generates tikz code for the element diagram
 
         Requires the \\usetikzlibrary{arrows.meta} library
+
+        :param: vertices: (Optional) physical vertex coordinates, ordered to match
+            ``self.cell.ordered_vertex_coords()``. When supplied the diagram is drawn on
+            these vertices via the cell's isoparametric map instead of the reference cell.
+            Vector DOF arrows are pushed forward by the element's pullback
+            (``self.spaces[2]``) so HDiv normals stay normal and HCurl tangents stay
+            tangential on the physical cell.
         """
         tikz_commands = []
         if show:
             tikz_commands += ['\\begin{tikzpicture}']
-        tikz_commands += self.cell.to_tikz(show=False, scale=scale)
+        phi = jac = None
+        if vertices is not None:
+            phi, jac = self.cell.physical_map(vertices)
+        tikz_commands += self.cell.to_tikz(show=False, scale=scale, coord_transform=phi)
+
+        pullback = self.spaces[2]
+
+        def make_transform(ref):
+            if jac is None:
+                return None
+            J = jac(ref)
+
+            def transform(v):
+                v = np.atleast_1d(np.asarray(v, dtype=float))
+                return np.atleast_1d(np.asarray(pullback.visualise_dof(J, v), dtype=float))
+            return transform
 
         dofs = self.generate()
         identity = FuseFunction(lambda *x: x)
+
+        # Count integral-moment DOFs per entity so several moments on the same
+        # entity can be spread across it rather than drawn on top of each other.
+        moment_counts = {}
+        for dof in dofs:
+            if isinstance(dof.pairing, L2Pairing):
+                eid = dof.cell_defined_on.id
+                moment_counts[eid] = moment_counts.get(eid, 0) + 1
+        moment_seen = {}
+
         for dof in dofs:
             center, color = self.get_dof_info(dof)
             if isinstance(dof.pairing, DeltaPairing):
-                coord = dof.eval(identity, pullback=False)
+                ref = dof.eval(identity, pullback=False)
+                coord = phi(ref) if phi is not None else ref
                 if isinstance(dof.target_space, Trace):
-                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
+                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color,
+                                                               transform=make_transform(ref))]
                 else:
                     tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
             elif isinstance(dof.pairing, L2Pairing):
-                coord = center
-                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
+                eid = dof.cell_defined_on.id
+                index = moment_seen.get(eid, 0)
+                moment_seen[eid] = index + 1
+                ref = self.moment_center(dof, index, moment_counts[eid])
+                coord = phi(ref) if phi is not None else ref
+                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color,
+                                                           transform=make_transform(ref))]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)

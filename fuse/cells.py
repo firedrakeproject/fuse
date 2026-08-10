@@ -674,16 +674,20 @@ class Point():
                 basis_vecs.append((v, v_0))
         return basis_vecs
 
-    def to_tikz(self, show=True, scale=3):
+    def to_tikz(self, show=True, scale=3, coord_transform=None):
         tikz_commands = []
         if show:
             tikz_commands += ['\\begin{tikzpicture}']
         bs = '\\'
-        arw = "\\tikz \\draw[-{Stealth[length=3mm, width=2mm]}] (-1pt,0) -- (1pt,0);"
+        # arw = "\\tikz \\draw[-{Stealth[length=3mm, width=2mm]}] (-1pt,0) -- (1pt,0);"
+        arw = ""
         # only need to draw edges
         d_ents = self.d_entities(1)
         for e in d_ents:
-            coords = "--".join([numpy_to_str_tuple(self.get_node(v, return_coords=True), scale=scale) for v in e.ordered_vertices()])
+            verts = [self.get_node(v, return_coords=True) for v in e.ordered_vertices()]
+            if coord_transform is not None:
+                verts = [coord_transform(v) for v in verts]
+            coords = "--".join([numpy_to_str_tuple(v, scale=scale) for v in verts])
             tikz_commands += [f"{bs}draw[thick] {coords} node[midway,sloped, allow upside down] {{ {arw} }};"]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
@@ -856,6 +860,69 @@ class Point():
             bary_coords += [(1 - sum(res),) + tuple(res[i] for i in range(len(res)))]
             assert np.allclose(np.array(sum(bary_coords[-1][i]*verts[i] for i in range(len(verts)))), pt)
         return bary_coords
+
+    def physical_map(self, vertices):
+        """Build an isoparametric map from the reference cell to a supplied set of vertices.
+
+        :param: vertices: physical vertex coordinates, ordered to match
+            ``self.ordered_vertex_coords()``.
+
+        Returns ``(phi, jac)`` where ``phi(x)`` maps a reference coordinate to its
+        physical image and ``jac(x)`` returns the Jacobian of the map at ``x``. The map
+        is affine for simplices and multilinear (Q1) for hypercubes."""
+        ref_verts = [np.asarray(v, dtype=float) for v in self.ordered_vertex_coords()]
+        new_verts = [np.asarray(v, dtype=float) for v in vertices]
+        if len(new_verts) != len(ref_verts):
+            raise ValueError("Expected {} vertices, got {}".format(len(ref_verts), len(new_verts)))
+        d = self.dimension
+        n = len(ref_verts)
+        v0_ref = ref_verts[0]
+
+        if n == d + 1:
+            ref_edges = np.array([ref_verts[k] - v0_ref for k in range(1, n)])
+            phys_edges = np.array([new_verts[k] - new_verts[0] for k in range(1, n)])
+            J = phys_edges.T @ np.linalg.inv(ref_edges.T)
+
+            def phi(x):
+                return tuple(new_verts[0] + J @ (np.asarray(x, dtype=float) - v0_ref))
+
+            def jac(x):
+                return J
+
+            return phi, jac
+
+        if n == 2 ** d:
+            ref = np.array(ref_verts)
+            mins = ref.min(axis=0)
+            maxs = ref.max(axis=0)
+            span = maxs - mins
+            patterns = np.isclose(ref, maxs)
+
+            def local(x):
+                return (np.asarray(x, dtype=float) - mins) / span
+
+            def phi(x):
+                t = local(x)
+                shape = np.array([np.prod(np.where(patterns[i], t, 1 - t)) for i in range(n)])
+                return tuple(sum(shape[i] * new_verts[i] for i in range(n)))
+
+            def jac(x):
+                t = local(x)
+                phys_dim = len(new_verts[0])
+                J = np.zeros((phys_dim, d))
+                for i in range(n):
+                    factors = np.where(patterns[i], t, 1 - t)
+                    for m in range(d):
+                        deriv = (1.0 if patterns[i][m] else -1.0) / span[m]
+                        for j in range(d):
+                            if j != m:
+                                deriv *= factors[j]
+                        J[:, m] += deriv * new_verts[i]
+                return J
+
+            return phi, jac
+
+        raise NotImplementedError("physical_map only supports simplex and hypercube cells")
 
     def cell_attachment(self, dst):
         if not isinstance(dst, int):

@@ -1,3 +1,4 @@
+import numpy as np
 from ufl.sobolevspace import H1, HDiv, HCurl, L2
 
 
@@ -29,6 +30,21 @@ class Pullback(object):
         """The UFL pullback (mapping) string for this transform."""
         return self.name
 
+    def visualise_dof(self, J, v):
+        """Push a reference DOF direction (normal or tangent) onto the physical cell.
+
+        This is used purely to draw DOF glyphs (the normal/tangent arrows in the
+        element diagrams): it maps the geometric direction the DOF represents, not
+        the basis functions. The two transform oppositely -- a tangent pushes
+        forward by J and a normal (conormal) by the inverse transpose -- so H(curl)
+        tangential DOFs use J and H(div) normal DOFs use J^{-T}. It is not the UFL
+        pullback used for assembly (see ``mapping``).
+
+        :param: J: Jacobian of the reference-to-physical cell map.
+        :param: v: reference-cell direction.
+        """
+        raise NotImplementedError
+
     def ufl_sobolev_space(self, form_degree, tdim):
         """The UFL Sobolev space this pullback naturally maps into.
 
@@ -55,6 +71,9 @@ class IdentityPullback(Pullback):
     def ufl_sobolev_space(self, form_degree, tdim):
         return L2 if form_degree == tdim else H1
 
+    def visualise_dof(self, J, v):
+        return np.asarray(v, dtype=float)
+
 
 class CovariantPiola(Pullback):
 
@@ -63,6 +82,11 @@ class CovariantPiola(Pullback):
     def ufl_sobolev_space(self, form_degree, tdim):
         return HCurl
 
+    def visualise_dof(self, J, v):
+        # Tangential (H(curl)) DOF direction: tangents push forward by J.
+        J = np.asarray(J, dtype=float)
+        return J @ np.asarray(v, dtype=float)
+
 
 class ContravariantPiola(Pullback):
 
@@ -70,6 +94,11 @@ class ContravariantPiola(Pullback):
 
     def ufl_sobolev_space(self, form_degree, tdim):
         return HDiv
+
+    def visualise_dof(self, J, v):
+        # Normal (H(div)) DOF direction: normals push forward by the inverse transpose.
+        J = np.asarray(J, dtype=float)
+        return np.linalg.inv(J).T @ np.asarray(v, dtype=float)
 
 
 Fid = IdentityPullback()

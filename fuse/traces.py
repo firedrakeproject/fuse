@@ -51,7 +51,7 @@ class TrH1(Trace):
     def plot(self, ax, coord, trace_entity, **kwargs):
         ax.scatter(*coord, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black", transform=None):
         return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
 
     def tabulate(self, Qpts, trace_entity):
@@ -113,9 +113,11 @@ class TrHDiv(Trace):
             raise ValueError("Immersion of HDiv edges not defined in 3D")
         return result
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black", transform=None):
         vec = self.tabulate([], trace_entity).squeeze()
-        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
+        if transform is not None:
+            vec = transform(vec)
+        end_point = [coord[i] + 0.05*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
         return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
 
@@ -150,9 +152,11 @@ class TrHCurl(Trace):
         vec = self.tabulate([], trace_entity).squeeze()
         ax.quiver(*coord, *vec, **kwargs)
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black", transform=None):
         vec = self.tabulate([], trace_entity).squeeze()
-        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
+        if transform is not None:
+            vec = transform(vec)
+        end_point = [coord[i] + 0.05*vec[i] for i in range(len(coord))]
         arw = "-{Stealth[length=3mm, width=2mm]}"
         return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
 
@@ -188,7 +192,7 @@ class TrGrad(Trace):
         circle1 = plt.Circle(coord, 0.075, fill=False, **kwargs)
         ax.add_patch(circle1)
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black", transform=None):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (4pt) node[anchor = south] {{}};"
 
     def __repr__(self):
@@ -223,7 +227,7 @@ class TrHess(Trace):
         circle1 = plt.Circle(coord, 0.15, fill=False, **kwargs)
         ax.add_patch(circle1)
 
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
+    def to_tikz(self, coord, trace_entity, scale, color="black", transform=None):
         return f"\\draw[{color}] {numpy_to_str_tuple(coord, scale)} circle (6pt) node[anchor = south] {{}};"
 
     def __repr__(self):
