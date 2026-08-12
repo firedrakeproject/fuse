@@ -1,5 +1,6 @@
 import pytest
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse import *
 from fuse.element_construction import periodic_table
 import numpy as np
@@ -122,7 +123,7 @@ def test_surface_const_nd(elem_gen, elem_code, deg):
     ones = as_vector((0, 1))
 
     for n in range(2, 6):
-        mesh = UnitSquareMesh(n, n, use_fuse=True)
+        mesh = UnitSquareMesh(n, n, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, elem.to_ufl())
         normal = FacetNormal(mesh)
         ones1 = interpolate(ones, V)
@@ -140,7 +141,7 @@ def test_surface_const_rt(elem_gen, elem_code, deg):
     ones = as_vector((1, 0))
 
     for n in range(1, 6):
-        mesh1 = UnitSquareMesh(n, n, use_fuse=True)
+        mesh1 = UnitSquareMesh(n, n, cell_backend=CellBackend.FUSE)
         mesh2 = UnitSquareMesh(n, n)
         V1 = FunctionSpace(mesh1, elem.to_ufl())
         V2 = FunctionSpace(mesh2, "RT", deg)
@@ -160,7 +161,7 @@ def test_surface_vec_rt(elem_gen, elem_code, deg):
     elem = elem_gen(cell)
 
     for n in range(2, 6):
-        mesh = UnitSquareMesh(n, n, use_fuse=True)
+        mesh = UnitSquareMesh(n, n, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
@@ -178,7 +179,7 @@ def test_surface_vec_nd(elem_gen, elem_code, deg):
     nd_elem = elem_gen(cell)
 
     for n in range(2, 6):
-        mesh = UnitSquareMesh(n, n, use_fuse=True)
+        mesh = UnitSquareMesh(n, n, cell_backend=CellBackend.FUSE)
         x, y = SpatialCoordinate(mesh)
         normal = FacetNormal(mesh)
         test_vec = as_vector((-y, x))
@@ -239,7 +240,7 @@ def test_convergence(elem_gen, elem_code, deg, conv_rate):
         _, exact = get_expression(V)
         diff_proj[n-min(scale_range)], diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
 
-        mesh1 = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        mesh1 = UnitSquareMesh(2**n, 2**n, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh1, elem.to_ufl())
         x, y = SpatialCoordinate(mesh1)
         expr = cos(x*pi*2)*sin(y*pi*2)
@@ -280,7 +281,7 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
     diff_proj = [0 for i in scale_range]
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, elem.to_ufl())
         # V = FunctionSpace(mesh, elem_code, deg)
         x, y = SpatialCoordinate(mesh)
@@ -311,7 +312,7 @@ def test_convergence_vector(elem_gen, elem_code, deg, conv_rate):
 def test_interpolation(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitSquareMesh(1, 1, use_fuse=True)
+    mesh = UnitSquareMesh(1, 1, cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, elem.to_ufl())
 
     expression, _ = get_expression(V)
@@ -342,7 +343,7 @@ def test_interpolation(elem_gen, elem_code, deg):
 def test_two_form(elem_gen, elem_gen2, elem_code, deg, deg2):
 
     cell = polygon(3)
-    mesh = UnitSquareMesh(3, 3, use_fuse=True)
+    mesh = UnitSquareMesh(3, 3, cell_backend=CellBackend.FUSE)
 
     elem = elem_gen(cell)
     elem2 = elem_gen2(cell)

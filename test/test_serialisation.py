@@ -1,5 +1,6 @@
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse.serialisation import ElementSerialiser
 from test_convert_to_fiat import create_cg1
 from test_orientations import interpolate_vs_project, get_expression
@@ -92,7 +93,7 @@ def test_post_serialisation_convergence(col, k, deg, conv_rate):
     scale_range = range(3, 6)
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem_decoded.to_ufl())
         x, y = SpatialCoordinate(mesh)

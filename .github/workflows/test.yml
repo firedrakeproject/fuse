@@ -41,7 +41,7 @@ jobs:
         # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
-      - name: Import vars example
+      - name: Import branches 
         uses: zlatko-ms/varfiletoenv@v3
         with:
             paths: ./branches.txt
@@ -67,7 +67,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/connorjward/pyop3
+          ref: refs/heads/$FIREDRAKE_BRANCH
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config

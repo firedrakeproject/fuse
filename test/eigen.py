@@ -1,4 +1,5 @@
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse import *
 import numpy as np
 from test_2d_examples_docs import construct_cg3
@@ -28,7 +29,7 @@ cr1 = create_cr(polygon(3))
 cg1 = create_cg1(polygon(3))
 
 for N in [50, 100, 200]:
-    mesh = RectangleMesh(N, N, pi, pi, use_fuse=True)
+    mesh = RectangleMesh(N, N, pi, pi, cell_backend=CellBackend.FUSE)
 
     for elem, space in zip([cg3, cr3], ["CG", "CR"]):
         V = FunctionSpace(mesh, elem.to_ufl_elem())

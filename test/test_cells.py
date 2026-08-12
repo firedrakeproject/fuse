@@ -1,5 +1,6 @@
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse.cells import ufc_triangle, ufc_tetrahedron
 import pytest
 import numpy as np
@@ -164,7 +165,7 @@ def test_ref_els(expect):
     print(expect)
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, "CG", 3)
         res1 = helmholtz_solve(mesh, V)
