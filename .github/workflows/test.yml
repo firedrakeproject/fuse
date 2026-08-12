@@ -64,7 +64,7 @@ jobs:
 
       - name: Import branch names 
         run: |
-            source fuse-repo/.github/workflow/branches
+            source ./fuse-repo/.github/workflow/branches
 
       - uses: actions/checkout@v5
         with:

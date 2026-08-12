@@ -32,7 +32,7 @@ jobs:
 
       - name: Import branch names 
         run: |
-            source fuse-repo/.github/workflows/branches
+            source ./fuse-repo/.github/workflows/branches
 
       
       - name: check env
