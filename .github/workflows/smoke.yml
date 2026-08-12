@@ -26,13 +26,14 @@ jobs:
         # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
-      - name: Import branch names 
-        run: |
-            source ./branches
-
       - uses: actions/checkout@v5
         with:
           path: fuse-repo
+
+      - name: Import branch names 
+        run: |
+            source fuse-repo/.github/workflows/branches
+
       
       - name: check env
         run: |
