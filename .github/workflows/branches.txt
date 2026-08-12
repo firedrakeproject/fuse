@@ -1,0 +1,2 @@
+FIAT_BRANCH=indiamai/fuse_enum
+FIREDRAKE_BRANCH=indiamai/fuse_enum

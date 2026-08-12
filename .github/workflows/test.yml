@@ -41,6 +41,11 @@ jobs:
         # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
+      - name: Import vars example
+        uses: zlatko-ms/varfiletoenv@v3
+        with:
+            paths: ./branches.txt
+
       - name: Pre-run cleanup
         # Make sure the current directory is empty
         run: find . -delete
@@ -153,7 +158,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/$FIREDRAKE_BRANCH
     
       - name: Make cython
         run: |
@@ -174,7 +179,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/$FIAT_BRANCH
         
       - name: Install checked out FIAT
         run: |
