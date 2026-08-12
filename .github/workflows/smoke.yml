@@ -26,6 +26,11 @@ jobs:
         # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
+      - name: Import branch names 
+        uses: zlatko-ms/varfiletoenv@v3
+        with:
+            paths: ./branches.txt
+
       - uses: actions/checkout@v5
         with:
           path: fuse-repo
@@ -34,7 +39,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/$FIAT_BRANCH
 
       - name: Install checked out FIAT
         # Needed for finat.ufl.FuseElement, which is not available upstream.
