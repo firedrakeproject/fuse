@@ -44,7 +44,7 @@ def create_dg2(cell):
 
     Pk = PolynomialSpace(2)
     dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(center, S1, S1)])
+                                             DOFGenerator(center, S1, S1)])
     return dg
 
 
@@ -53,7 +53,7 @@ def create_dg1_uneven(cell):
     center = [DOF(DeltaPairing(), PointKernel((0.25,)))]
     Pk = PolynomialSpace(1)
     dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, S1, S2),
-                                                DOFGenerator(center, S1, S2)])
+                                             DOFGenerator(center, S1, S2)])
     return dg
 
 
@@ -75,7 +75,7 @@ def create_cr(cell):
 def create_cr3(cell):
     Pk = PolynomialSpace(3)
     edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
-                                                                               DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+                                                                            DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
@@ -160,7 +160,7 @@ def create_cg2(cell=None):
 
     Pk = PolynomialSpace(deg)
     cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(center, S1, S1)])
+                                             DOFGenerator(center, S1, S1)])
     return cg
 
 
@@ -177,7 +177,7 @@ def create_cg2_tri(cell=None):
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(edge_xs, C3, S1)])
+                                             DOFGenerator(edge_xs, C3, S1)])
     return cg
 
 

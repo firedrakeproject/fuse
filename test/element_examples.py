@@ -85,7 +85,7 @@ def CR_n(cell, deg):
     sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
     if 0 in points:
         edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2, S1),
-                                                                                   DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+                                                                                DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     else:
         edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
