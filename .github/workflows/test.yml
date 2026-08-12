@@ -69,13 +69,14 @@ jobs:
           {
             echo "FIAT_BRANCH=$FIAT_BRANCH"
             echo "FIREDRAKE_BRANCH=$FIREDRAKE_BRANCH"
+            echo "BASE_FIREDRAKE_BRANCH=$BASE_FIREDRAKE_BRANCH"
           } >> "$GITHUB_ENV"
 
       - uses: actions/checkout@v5
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/${{ env.FIREDRAKE_BRANCH }}
+          ref: refs/heads/${{ env.BASE_FIREDRAKE_BRANCH }}
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config

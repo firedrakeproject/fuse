@@ -1,2 +1,3 @@
 export FIAT_BRANCH=indiamai/fuse_enum
 export FIREDRAKE_BRANCH=indiamai/fuse_enum
+export BASE_FIREDRAKE_BRANCH=connorjward/pyop3
