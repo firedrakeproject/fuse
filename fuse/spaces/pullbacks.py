@@ -5,10 +5,7 @@ class Pullback(object):
     """Symbolic representation of a finite element pullback F.
 
     F is the isomorphism induced by the cell map that transforms degrees of
-    freedom between the reference and physical cells. The correct choice
-    depends on the form of the DOFs: point/scalar DOFs use the identity,
-    tangential DOFs the covariant Piola map, and normal DOFs the
-    contravariant Piola map.
+    freedom between the reference and physical cells.
     """
 
     name = None
@@ -26,15 +23,10 @@ class Pullback(object):
         return hash(("Pullback", self.name))
 
     def mapping(self):
-        """The UFL pullback (mapping) string for this transform."""
         return self.name
 
     def ufl_sobolev_space(self, form_degree, tdim):
         """The UFL Sobolev space this pullback naturally maps into.
-
-        The identity pullback is natural for both H1 and L2; the two are
-        distinguished by the form degree, which is derived from where the DOFs
-        live (all-interior DOFs give an L2/discontinuous element).
         """
         raise NotImplementedError
 

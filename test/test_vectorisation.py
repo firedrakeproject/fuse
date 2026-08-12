@@ -168,8 +168,8 @@ def test_component_dofs_quadrature_matches_scalar(deg):
 
 
 @pytest.mark.parametrize("builder,match", [
-    (lambda: construct_tri_rtN(1), "HDiv"),
-    (lambda: construct_tri_ndN(1), "HCurl"),
+    (lambda: construct_tri_rtN(1), "contravariant Piola"),
+    (lambda: construct_tri_ndN(1), "covariant Piola"),
 ])
 def test_vector_triple_rejects_piola_mapped(builder, match):
     with pytest.raises(ValueError, match=match):
