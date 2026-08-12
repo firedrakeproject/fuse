@@ -41,10 +41,9 @@ jobs:
         # (https://github.com/actions/runner/issues/863)
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
-      - name: Import branches 
-        uses: zlatko-ms/varfiletoenv@v3
-        with:
-            paths: ./branches.txt
+      - name: Import branch names 
+        run: |
+            source ./branches
 
       - name: Pre-run cleanup
         # Make sure the current directory is empty

@@ -27,9 +27,8 @@ jobs:
         run: echo "HOME=/root" >> "$GITHUB_ENV"
 
       - name: Import branch names 
-        uses: zlatko-ms/varfiletoenv@v3
-        with:
-            paths: ./branches.txt
+        run: |
+            source ./branches
 
       - uses: actions/checkout@v5
         with:
