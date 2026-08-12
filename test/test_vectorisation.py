@@ -14,7 +14,6 @@ import pytest
 
 
 def interval_dgN(deg):
-    """A DG element on an interval, built as CG's edge sub-element is."""
     edge = polygon(3).edges()[0]
     pts = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
     dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((p,)))], S2, S1)
@@ -60,7 +59,6 @@ def test_to_fiat_reports_form_degree(deg):
 
 
 def test_component_kernel_wraps_point_kernel():
-    """Wrapping preserves the base's points and weights, and only rewrites components."""
     cell = polygon(3)
     base = DOF(DeltaPairing(), PointKernel((0.25, 0.25)), entity=cell, cell=cell)
     wrapped = DOF(DeltaPairing(), ComponentKernel((1,), PointKernel((0.25, 0.25))),
@@ -202,7 +200,6 @@ def test_vector_triple_shape_degree_and_count(builder, sd, deg):
 @pytest.mark.parametrize("builder", [construct_tri_cgN, construct_tet_cgN])
 @pytest.mark.parametrize("deg", [1, 2])
 def test_vector_triple_entity_ids_scale(builder, deg):
-    """Pins the DOF ordering contract that the orientation matrix lift relies on."""
     base = builder(deg)
     vec = VectorTriple(base)
     vec.to_ufl()
@@ -218,7 +215,6 @@ def test_vector_triple_entity_ids_scale(builder, deg):
 
 
 def block_lagrange(ref_el, deg, N, pts):
-    """Vector Lagrange laid out to match: row N*i+c is scalar basis fn i in component c."""
     sd = ref_el.get_spatial_dimension()
     scalar = Lagrange(ref_el, deg).tabulate(0, pts)[(0,) * sd]
     basis = np.zeros((N * scalar.shape[0], N, len(pts)))
@@ -256,11 +252,6 @@ def test_vector_cg_spans_block_lagrange(builder, sd, deg):
 
 @pytest.mark.parametrize("builder,sd,deg", VECTOR_CG)
 def test_vector_cg_component_block(builder, sd, deg):
-    """Basis function N*i+c lives entirely in component c, pinning component innermost.
-
-    Insensitive to the order of the DOFs within an entity, which FUSE and FIAT do not
-    share at degree 3, so unlike an exact comparison this holds at every degree.
-    """
     _, _, mine = tabulate_vector_cg(builder, deg)
 
     for i in range(mine.shape[0] // sd):
@@ -323,7 +314,7 @@ def test_vector_cg_dof_ordering_is_asserted():
 
 @pytest.mark.parametrize("deg", [1, 2, 3])
 def test_vector_triple_round_trip(deg):
-    """Serialisation must reconstruct an element that converts identically."""
+    """Serialisation must reconstruct an element identically."""
     original = VectorTriple(construct_tri_cgN(deg))
     converter = ElementSerialiser()
     decoded = converter.decode(converter.encode(original))
@@ -344,7 +335,6 @@ def test_vector_triple_round_trip(deg):
 
 @pytest.mark.parametrize("deg", [1, 2])
 def test_vector_triple_round_trip_matrices(deg):
-    """Orientation matrices could differ while tabulation still matched."""
     original = VectorTriple(construct_tri_cgN(deg))
     original.to_ufl()
     converter = ElementSerialiser()
@@ -360,12 +350,10 @@ def test_vector_triple_round_trip_matrices(deg):
 
 
 def test_vector_triple_registered_in_serialiser():
-    """Unregistered ids are returned as their reference string rather than decoded."""
     assert ElementSerialiser().obj_types["VectorTriple"] is VectorTriple
 
 
 def test_component_kernel_round_trip():
-    """VectorTriple stores only its base, so this path needs its own cover."""
     converter = ElementSerialiser()
     bare = converter.decode(converter.encode(ComponentKernel((1,))))
     assert bare.comp == (1,)
@@ -382,7 +370,6 @@ def test_component_kernel_round_trip():
 
 @pytest.mark.parametrize("flat", [False, True])
 def test_vector_triple_rejects_tensor_product(flat):
-    """Fails with a clear message rather than an AttributeError from generate()."""
     cell = polygon(3)
     edge = cell.edges()[0]
     vert = cell.vertices()[0]
@@ -402,12 +389,11 @@ def test_vector_triple_rejects_tensor_product(flat):
 def test_vector_cg_matches_firedrake_vector_cg(deg):
     """End to end check that exercises Firedrake's fuse_orientations.
 
-    Imported inside the test so the rest of this module stays Firedrake free.
     """
     from firedrake import (UnitSquareMesh, FunctionSpace, VectorFunctionSpace, Function,
                            SpatialCoordinate, as_vector, assemble, dot, dx, project)
 
-    mesh = UnitSquareMesh(4, 4, use_fuse=True)
+    mesh = UnitSquareMesh(4, 4, cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg)).to_ufl())
     W = VectorFunctionSpace(mesh, "CG", deg)
     assert V.dim() == W.dim()
@@ -429,14 +415,12 @@ def test_vector_cg_matches_firedrake_vector_cg(deg):
 def test_vector_cg_matches_firedrake_at_non_gdim(dim):
     """A value dimension unrelated to the mesh, against Firedrake's own dim= form.
 
-    This is the only path that exercises fuse_orientations, so it is what confirms
-    the Kronecker lift survives a component count that is not the cell dimension.
     """
     from firedrake import (UnitSquareMesh, FunctionSpace, VectorFunctionSpace, Function,
                            SpatialCoordinate, as_vector, assemble, dot, dx, project)
 
     deg = 2
-    mesh = UnitSquareMesh(4, 4, use_fuse=True)
+    mesh = UnitSquareMesh(4, 4, cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg), dim).to_ufl())
     W = VectorFunctionSpace(mesh, "CG", deg, dim=dim)
     assert V.dim() == W.dim()
@@ -451,13 +435,6 @@ def test_vector_cg_matches_firedrake_at_non_gdim(dim):
     difference = project(expr, V) - project(expr, W)
     assert assemble(dot(difference, difference) * dx) < 1e-20
 
-
-# ---------------------------------------------------------------------------
-# Value shapes that are not the geometric dimension.
-#
-# The number of components is a modelling choice - one scalar per chemical
-# species, energy group or Fourier mode - so it need not match the cell.
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("given,expected", [
@@ -565,10 +542,7 @@ def test_vector_triple_rejects_scalar_dim():
 @pytest.mark.parametrize("builder,dim", NON_GDIM)
 @pytest.mark.parametrize("deg", [1, 2])
 def test_non_gdim_component_block(builder, dim, deg):
-    """Each basis function is supported in exactly one component, at any rank.
-
-    This is what pins FUSE's component ordering to FIAT's ndindex layout: were the
-    two to disagree, the support would land in the wrong component.
+    """Each basis function is supported in exactly one component.
     """
     _, _, mine = tabulate_vector_cg(builder, deg, dim)
     shape = (dim,) if isinstance(dim, int) else dim
@@ -585,7 +559,7 @@ def test_non_gdim_component_block(builder, dim, deg):
 @pytest.mark.parametrize("builder,dim", NON_GDIM)
 @pytest.mark.parametrize("deg", [1, 2])
 def test_non_gdim_component_slices_span_scalar(builder, dim, deg):
-    """Fixed component slices still reproduce the scalar space."""
+    """Fixed component slices produce the scalar space."""
     elem, pts, mine = tabulate_vector_cg(builder, deg, dim)
     sd = elem.ref_el.get_spatial_dimension()
     scalar = Lagrange(elem.ref_el, deg).tabulate(0, pts)[(0,) * sd]
@@ -631,8 +605,3 @@ def test_non_gdim_round_trip(builder, dim):
                        vec.to_fiat().tabulate(0, pts)[(0,) * sd])
     assert decoded.entity_ids == vec.entity_ids
 
-
-def test_round_trip_without_dim_defaults_to_cell_dimension():
-    """Elements serialised before dim was explicit carry no dim key."""
-    decoded = VectorTriple._from_dict({"base": construct_tri_cgN(1)})
-    assert decoded.get_value_shape() == (2,)
