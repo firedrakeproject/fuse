@@ -30,11 +30,12 @@ jobs:
         with:
           path: fuse-repo
 
-      - name: Import branch names 
+      - name: Import branch names
+        shell: bash
         run: |
-            source ./fuse-repo/.github/workflows/branches
+          source ./fuse-repo/.github/branches
+          echo "FIAT_BRANCH=$FIAT_BRANCH" >> "$GITHUB_ENV"
 
-      
       - name: check env
         run: |
             echo $FIAT_BRANCH
@@ -43,7 +44,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/$FIAT_BRANCH
+          ref: refs/heads/${{ env.FIAT_BRANCH }}
 
       - name: Install checked out FIAT
         # Needed for finat.ufl.FuseElement, which is not available upstream.
