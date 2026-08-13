@@ -1,0 +1,35 @@
+:tocdepth: 0
+
+Pullback
+========
+
+.. currentmodule:: fuse.spaces.pullbacks
+
+.. autoclass:: Pullback
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Pullback.__init__
+      ~Pullback.dict_id
+      ~Pullback.mapping
+      ~Pullback.ufl_sobolev_space
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Pullback.name
+   
+   

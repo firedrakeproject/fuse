@@ -30,7 +30,7 @@ spaces
    :template: custom-module-template.rst                 
    :recursive:
 
-   element_sobolev_spaces
    interpolation_spaces
    polynomial_spaces
+   pullbacks
 
