@@ -177,6 +177,7 @@ def test_ref_els(expect):
     print("firedrake convergence order:", conv1)
     assert (np.array(conv1) > 3.8).all()
 
+
 @pytest.mark.xfail(reason="need quadrilateral fiat")
 def test_comparison():
     from finat.element_factory import as_fiat_cell

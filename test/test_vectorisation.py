@@ -436,7 +436,6 @@ def test_vector_cg_matches_firedrake_at_non_gdim(dim):
     assert assemble(dot(difference, difference) * dx) < 1e-20
 
 
-
 @pytest.mark.parametrize("given,expected", [
     (False, ()), (0, ()), ((), ()), ([], ()),
     (1, (1,)), (4, (4,)), ((4,), (4,)), ([3], (3,)),
@@ -604,4 +603,3 @@ def test_non_gdim_round_trip(builder, dim):
     assert np.allclose(decoded.to_fiat().tabulate(0, pts)[(0,) * sd],
                        vec.to_fiat().tabulate(0, pts)[(0,) * sd])
     assert decoded.entity_ids == vec.entity_ids
-
