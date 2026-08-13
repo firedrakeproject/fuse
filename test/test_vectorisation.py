@@ -5,6 +5,7 @@ from fuse.element_construction import (construct_tri_cgN, construct_tri_ndN, con
 from fuse.dof import ImmersedDOF
 from fuse.serialisation import ElementSerialiser
 from fuse.tensor_products import TensorProductTriple
+from finat.ufl import CellBackend
 from FIAT.lagrange import Lagrange
 from FIAT.quadrature_schemes import create_quadrature
 from recursivenodes import recursive_nodes
