@@ -176,7 +176,7 @@ def test_permute_nodes():
 #     xs = [DOF(L2Pairing(), ParameterisationKernel())]
 #
 #     dofs = DOFGenerator(xs, S2, S2)
-#     int_ned1 = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+#     int_ned1 = ElementTriple(edge, (P1, C0, Fcurl), dofs)
 #
 #     xs = [DOF(L2Pairing(), ComponentKernel((0,))),
 #           DOF(L2Pairing(), ComponentKernel((1,)))]
@@ -189,7 +189,7 @@ def test_permute_nodes():
 #     M = sp.Matrix([[y, -x]])
 #     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 #
-#     ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs, center_dofs])
+#     ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs, center_dofs])
 #     for n in ned.generate():
 #         print(n)
 #

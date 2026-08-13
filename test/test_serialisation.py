@@ -17,7 +17,7 @@ def test_dg_examples():
     encoded = converter.encode(vert)
     decoded = converter.decode(encoded)
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(decoded, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(decoded, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
 
     # [test_serialise 0]
     converter = ElementSerialiser()
@@ -29,7 +29,7 @@ def test_dg_examples():
         assert dof.eval(lambda: 1) == 1
 
     xs = [DOF(DeltaPairing(), PointKernel((-1,)))]
-    dg1 = ElementTriple(edge, (P1, CellL2, C0), DOFGenerator(xs, S2, S1))
+    dg1 = ElementTriple(edge, (P1, C0, Fid), DOFGenerator(xs, S2, S1))
 
     converter = ElementSerialiser()
     encoded = converter.encode(dg1)
