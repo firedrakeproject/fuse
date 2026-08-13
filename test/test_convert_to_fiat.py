@@ -122,7 +122,7 @@ def create_cg1_quad():
     vert_dg = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
-    Pk = PolynomialSpace(deg, deg + 1)
+    Pk = PolynomialSpace(deg)
     cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     return cg

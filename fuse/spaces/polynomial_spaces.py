@@ -46,39 +46,22 @@ def weighted_shape(weight, space):
 @total_ordering
 class PolynomialSpace(object):
     """
-    contains: the degree of the maximum degree Lagrange space that is spanned by this element. If this
-    element's polynomial space does not include the constant function, this function should
-    return -1.
+    maxdegree: the highest polynomial degree present in the space.
 
-    maxdegree: the degree of the minimum degree Lagrange space that spans this element.If this
-    element contains basis functions that are not in any Lagrange space, this property should
-    be None.
-
-    mindegree: the degree of the polynomial in the space with the lowest degree.
+    mindegree: the exclusive lower degree bound; the space keeps degrees in
+    (mindegree, maxdegree]. A complete space (constants included) has mindegree = -1.
 
     shape: the value shape of the space, as a tuple. The empty tuple is scalar valued. This is
     the shape of the value, not of the cell, so it is independent of the spatial dimension.
-
-    Note that on a simplex cells, the polynomial space of Lagrange space is a complete polynomial
-    space, but on other cells this is not true. For example, on quadrilateral cells, the degree 1
-    Lagrange space includes the degree 2 polynomial xy.
     """
 
-    def __init__(self, maxdegree, contains=None, mindegree=0, shape=()):
+    def __init__(self, maxdegree, mindegree=-1, shape=()):
         self.maxdegree = maxdegree
         self.mindegree = mindegree
-
-        if not contains and mindegree == 0:
-            self.contains = maxdegree
-        elif not contains and mindegree >= 0:
-            self.contains = -1
-        else:
-            self.contains = contains
-
         self.shape = normalise_shape(shape)
 
     def complete(self):
-        return self.mindegree == self.maxdegree
+        return self.mindegree < 0
 
     def degree(self):
         return self.maxdegree
@@ -90,27 +73,25 @@ class PolynomialSpace(object):
         ref_el = cell_to_simplex(ref_el)
         shape = self.shape
 
-        if self.mindegree > 0:
-            base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
-            dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
-            dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
-            if shape:
-                num_components = int(np.prod(shape))
-                indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(num_components))))
-            else:
-                indices = list(range(dimPmin, dimPmax))
-            restricted_ON = base_ON.take(indices)
-            return restricted_ON
-        return ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+        base_ON = ONPolynomialSet(ref_el, self.maxdegree, shape, scale="orthonormal")
+        dimPmin = expansions.polynomial_dimension(ref_el, self.mindegree)
+        if dimPmin == 0:
+            return base_ON
+        dimPmax = expansions.polynomial_dimension(ref_el, self.maxdegree)
+        if shape:
+            num_components = int(np.prod(shape))
+            indices = list(chain(*(range(i * dimPmin, i * dimPmax) for i in range(num_components))))
+        else:
+            indices = list(range(dimPmin, dimPmax))
+        restricted_ON = base_ON.take(indices)
+        return restricted_ON
 
     def __repr__(self):
         res = ""
         if self.complete():
             res += "P" + str(self.maxdegree)
-        elif self.mindegree > 0:
-            res = "P" + "(min " + str(self.mindegree) + " max " + str(self.maxdegree) + ")"
         else:
-            res += "Psub" + str(self.contains) + "sup" + str(self.maxdegree)
+            res = "P" + "(min " + str(self.mindegree) + " max " + str(self.maxdegree) + ")"
         if self.shape:
             res += "^" + "x".join(str(extent) for extent in self.shape)
         return res
@@ -139,9 +120,8 @@ class PolynomialSpace(object):
         assert isinstance(other, PolynomialSpace)
         max_bool = self.maxdegree == other.maxdegree
         min_bool = self.mindegree == other.mindegree
-        contains = self.contains == other.contains
         shape = self.shape == other.shape
-        return max_bool and min_bool and contains and shape
+        return max_bool and min_bool and shape
 
     def __lt__(self, other):
         """these comparison operators are not quite right - better to use a combining function
@@ -150,28 +130,28 @@ class PolynomialSpace(object):
         if self.maxdegree > other.maxdegree:
             return True
         elif self.maxdegree == other.maxdegree:
-            return self.contains >= other.contains
+            return self.mindegree <= other.mindegree
         return False
 
     def __hash__(self):
         """Hash."""
-        return hash((self.shape, self.mindegree, self.contains, self.maxdegree))
+        return hash((self.shape, self.mindegree, self.maxdegree))
 
     def restrict(self, mindegree, maxdegree):
-        return PolynomialSpace(maxdegree, contains=-1, mindegree=mindegree, shape=self.shape)
+        return PolynomialSpace(maxdegree, mindegree=mindegree, shape=self.shape)
 
     def to_vector(self, shape):
-        return PolynomialSpace(self.maxdegree, self.contains, self.mindegree, shape=shape)
+        return PolynomialSpace(self.maxdegree, self.mindegree, shape=shape)
 
     def _to_dict(self):
-        return {"shape": self.shape, "min": self.mindegree, "contains": self.contains, "max": self.maxdegree}
+        return {"shape": self.shape, "min": self.mindegree, "max": self.maxdegree}
 
     def dict_id(self):
         return "PolynomialSpace"
 
     def _from_dict(obj_dict):
         shape = obj_dict["shape"] if "shape" in obj_dict else obj_dict["set_shape"]
-        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], shape)
+        return PolynomialSpace(obj_dict["max"], obj_dict["min"], shape)
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):
@@ -200,7 +180,7 @@ class ConstructedPolynomialSpace(PolynomialSpace):
                 f"{sorted(shapes)}.")
         shape = shapes.pop() if shapes else ()
 
-        super(ConstructedPolynomialSpace, self).__init__(maxdegree, -1, mindegree, shape=shape)
+        super(ConstructedPolynomialSpace, self).__init__(maxdegree, mindegree, shape=shape)
 
     def __repr__(self):
         return "+".join([str(w) + "*" + str(x) for (w, x) in zip(self.weights, self.spaces)])
@@ -278,8 +258,3 @@ P1 = PolynomialSpace(1)
 P2 = PolynomialSpace(2)
 P3 = PolynomialSpace(3)
 P4 = PolynomialSpace(4)
-
-Q1 = PolynomialSpace(1, 2)
-Q2 = PolynomialSpace(2, 3)
-Q3 = PolynomialSpace(3, 4)
-Q4 = PolynomialSpace(4, 5)

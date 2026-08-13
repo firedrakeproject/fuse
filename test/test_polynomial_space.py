@@ -49,7 +49,7 @@ def test_restriction():
     restricted = P3.restrict(2, 3)
 
     # doesn't contain constants
-    assert restricted.contains == -1
+    assert restricted.mindegree == 2
     assert restricted.maxdegree == 3
 
     res_on_set = restricted.to_ON_polynomial_set(cell)

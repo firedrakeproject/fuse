@@ -35,7 +35,7 @@ def test_permsets():
     vert_dg = create_dg1(cell.vertices(get_class=True)[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
-    Pk = PolynomialSpace(deg, deg)
+    Pk = PolynomialSpace(deg)
     cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, c3, S1))
 
     dofs = cg.generate()

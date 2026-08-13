@@ -7,7 +7,7 @@ from fuse.tensor_products import tensor_product
 from fuse.vectorisation import VectorTriple
 
 from fuse.spaces.pullbacks import Pullback, IdentityPullback, CovariantPiola, ContravariantPiola, Fid, Fcurl, Fdiv
-from fuse.spaces.polynomial_spaces import P0, P1, P2, P3, Q2, PolynomialSpace
+from fuse.spaces.polynomial_spaces import P0, P1, P2, P3, PolynomialSpace
 from fuse.spaces.interpolation_spaces import C0, L2, H1, HDiv
 
 from fuse.element_construction import periodic_table
