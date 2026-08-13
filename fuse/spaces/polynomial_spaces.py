@@ -10,30 +10,15 @@ from functools import total_ordering
 
 
 def normalise_shape(shape):
-    """Canonicalise a declared value shape to a tuple of positive ints.
-
-    Scalar is the empty tuple.
+    """Map declared value shape to a tuple of ints.
     """
-    if shape is True:
-        raise ValueError("shape=True is no longer supported: the value shape must be given explicitly.")
     if isinstance(shape, (int, np.integer)):
         shape = () if shape == 0 else (shape,)
-    else:
-        try:
-            shape = tuple(shape)
-        except TypeError:
-            raise ValueError(f"Value shape {shape!r} must be an integer or a sequence of integers.")
-    for extent in shape:
-        if not isinstance(extent, (int, np.integer)) or extent < 1:
-            raise ValueError(f"Value shape {shape} must contain positive integers only.")
     return tuple(int(extent) for extent in shape)
 
 
 def weighted_shape(weight, space):
     """The value shape contributed by one weighted space of a combination.
-
-    A matrix weight is what gives a scalar space its components, so it sets the
-    shape; any other weight leaves the space's own shape alone.
     """
     if isinstance(weight, sp.Matrix):
         if space.shape:
@@ -51,8 +36,8 @@ class PolynomialSpace(object):
     mindegree: the exclusive lower degree bound; the space keeps degrees in
     (mindegree, maxdegree]. A complete space (constants included) has mindegree = -1.
 
-    shape: the value shape of the space, as a tuple. The empty tuple is scalar valued. This is
-    the shape of the value, not of the cell, so it is independent of the spatial dimension.
+    shape: the value shape of the space, as a tuple or integer.
+    The default empty tuple results in a scalar valued space.
     """
 
     def __init__(self, maxdegree, mindegree=-1, shape=()):
