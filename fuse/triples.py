@@ -1,5 +1,4 @@
 from fuse.cells import Point, TensorProductPoint, compare_topologies
-from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace
 from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
@@ -10,7 +9,6 @@ from FIAT.reference_element import ufc_cell
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
-import inspect
 from finat.ufl import FuseElement
 import warnings
 import numpy as np
@@ -23,7 +21,7 @@ class ElementTriple():
     Class to represent the three core parts of the element
 
     :param: cell: CellComplex
-    :param: spaces: Triple of spaces: (PolynomialSpace, SobolovSpace, InterpolationSpace)
+    :param: spaces: Triple of spaces: (PolynomialSpace, InterpolationSpace, Pullback)
     :param: dof_gen: Generator Triple to generate the degrees of freedom.
     """
 
@@ -36,15 +34,7 @@ class ElementTriple():
             d.add_cell(cell)
 
         self.cell = cell
-        cell_spaces = []
-        for space in spaces:
-            # TODO: Fix this to a more sensible condition when all spaces
-            # implemented
-            if inspect.isclass(space) and issubclass(space, ElementSobolevSpace):
-                cell_spaces.append(space(cell))
-            else:
-                cell_spaces.append(space)
-        self.spaces = tuple(cell_spaces)
+        self.spaces = tuple(spaces)
         self.DOFGenerator = dof_gen
         self.flat = False
 
@@ -110,7 +100,7 @@ class ElementTriple():
             self.dofs = []
             id_counter = 0
             for dof_gen in self.DOFGenerator:
-                generated = dof_gen.generate(self.cell, self.spaces[1], id_counter)
+                generated = dof_gen.generate(self.cell, self.spaces[2], id_counter)
                 self.dofs.extend(generated)
                 id_counter += len(generated)
         return self.dofs

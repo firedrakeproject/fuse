@@ -9,7 +9,7 @@ def construct_dg0():
     # [test_dg0 0]
     vert = Point(0)
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
     # [test_dg0 1]
     return dg0
 
@@ -17,7 +17,7 @@ def construct_dg0():
 def construct_dg0_int():
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     xs = [DOF(DeltaPairing(), PointKernel((0,)))]
-    dg1 = ElementTriple(edge, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg1 = ElementTriple(edge, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
     return dg1
 
 
@@ -25,7 +25,7 @@ def construct_dg1():
     # [test_dg1_int 0]
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     xs = [DOF(DeltaPairing(), PointKernel((-1,)))]
-    dg1 = ElementTriple(edge, (P1, CellL2, C0), DOFGenerator(xs, S2, S1))
+    dg1 = ElementTriple(edge, (P1, C0, Fid), DOFGenerator(xs, S2, S1))
     # [test_dg1_int 1]
     return dg1
 
@@ -39,7 +39,7 @@ def construct_dg1_tri():
     # [test_dg1_tri 0]
     tri = polygon(3)
     xs = [DOF(DeltaPairing(), PointKernel((-1, -np.sqrt(3)/3)))]
-    dg1 = ElementTriple(tri, (P1, CellL2, C0), DOFGenerator(xs, S3/S2, S1))
+    dg1 = ElementTriple(tri, (P1, C0, Fid), DOFGenerator(xs, S3/S2, S1))
     # [test_dg1_tri 1]
     return dg1
 
@@ -84,10 +84,10 @@ def construct_cg1():
     vert = edge.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
 
     xs = [immerse(edge, dg0, TrH1)]
-    cg1 = ElementTriple(edge, (P1, CellH1, C0),
+    cg1 = ElementTriple(edge, (P1, C0, Fid),
                         DOFGenerator(xs, S2, S1))
     # [test_cg1 1]
 
@@ -106,13 +106,13 @@ def construct_cg3(tri=None):
     vert = tri.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(tri, dg0, TrH1)]
     v_dofs = DOFGenerator(v_xs, C3, S1)
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
-    dg0_int = ElementTriple(edge, (P1, CellH1, C0), DOFGenerator(xs, S2, S1))
+    dg0_int = ElementTriple(edge, (P1, C0, Fid), DOFGenerator(xs, S2, S1))
 
     e_xs = [immerse(tri, dg0_int, TrH1)]
     e_dofs = DOFGenerator(e_xs, C3, S1)
@@ -120,7 +120,7 @@ def construct_cg3(tri=None):
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1, S1)
 
-    cg3 = ElementTriple(tri, (P3, CellH1, C0), [v_dofs, e_dofs, i_dofs])
+    cg3 = ElementTriple(tri, (P3, C0, Fid), [v_dofs, e_dofs, i_dofs])
     # [test_cg3 1]
     return cg3
 
@@ -167,7 +167,7 @@ def construct_nd(tri=None):
     xs = [DOF(L2Pairing(), VectorKernel(1))]
 
     dofs = DOFGenerator(xs, S1, S2)
-    int_ned = ElementTriple(edge, (P1, CellHCurl, C0), dofs)
+    int_ned = ElementTriple(edge, (P1, C0, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -177,7 +177,7 @@ def construct_nd(tri=None):
     Pk = PolynomialSpace(deg - 1)
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
-    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
+    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs])
     return ned
 
 
@@ -190,14 +190,14 @@ def construct_nd_2nd_kind(tri=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHCurl, C0), dofs)
+    int_ned = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, shape=2)
 
-    ned = ElementTriple(tri, (nd, CellHCurl, C0), [tri_dofs])
+    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs])
     return ned
 
 
@@ -211,7 +211,7 @@ def construct_nd2_2nd_kind(tri=None):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,)))]
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,)))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_ned = ElementTriple(edge, (PolynomialSpace(deg, shape=1), CellHCurl, C0), dofs)
+    int_ned = ElementTriple(edge, (PolynomialSpace(deg, shape=1), C0, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned, TrHCurl)]
     edge_dofs = DOFGenerator(xs, C3, S1)
@@ -223,7 +223,7 @@ def construct_nd2_2nd_kind(tri=None):
 
     nd = PolynomialSpace(deg, shape=2)
 
-    ned = ElementTriple(tri, (nd, CellHCurl, C0), [edge_dofs, face_dofs])
+    ned = ElementTriple(tri, (nd, C0, Fcurl), [edge_dofs, face_dofs])
     return ned
 
 
@@ -236,14 +236,14 @@ def construct_bdm(tri=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, shape=2)
 
-    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
+    rt = ElementTriple(tri, (nd, C0, Fdiv), [tri_dofs])
     return rt
 
 
@@ -256,14 +256,14 @@ def construct_bdm_bary(tri=None):
 
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,)))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, shape=2)
 
-    rt = ElementTriple(tri, (nd, CellHDiv, C0), [tri_dofs])
+    rt = ElementTriple(tri, (nd, C0, Fdiv), [tri_dofs])
     return rt
 
 
@@ -278,7 +278,7 @@ def construct_bdm2(tri=None):
     centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -291,7 +291,7 @@ def construct_bdm2(tri=None):
 
     space = PolynomialSpace(deg, shape=2)
 
-    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    bdm2 = ElementTriple(tri, (space, C0, Fdiv), [tri_dofs, interior])
     dofs = bdm2.generate()
     return bdm2
 
@@ -310,7 +310,7 @@ def construct_bdm2_bary(tri=None):
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=(s_0, s_1)))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -323,7 +323,7 @@ def construct_bdm2_bary(tri=None):
 
     space = PolynomialSpace(deg, shape=2)
 
-    bdm2 = ElementTriple(tri, (space, CellHDiv, C0), [tri_dofs, interior])
+    bdm2 = ElementTriple(tri, (space, C0, Fdiv), [tri_dofs, interior])
     dofs = bdm2.generate()
     return bdm2
 
@@ -364,12 +364,12 @@ def construct_rt(tri=None):
     xs = [DOF(L2Pairing(), VectorKernel(1))]
     dofs = DOFGenerator(xs, S1, S2)
 
-    int_rt = ElementTriple(edge, (vec_Pd, CellHDiv, C0), dofs)
+    int_rt = ElementTriple(edge, (vec_Pd, C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    rt = ElementTriple(tri, (rt_space, CellHDiv, C0), [tri_dofs])
+    rt = ElementTriple(tri, (rt_space, C0, Fdiv), [tri_dofs])
     return rt
 
 
@@ -398,7 +398,7 @@ def construct_hermite():
     vert = tri.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(tri, dg0, TrH1)]
     v_dofs = DOFGenerator(v_xs, S3/S2, S1)
@@ -412,7 +412,7 @@ def construct_hermite():
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1, S1)
 
-    her = ElementTriple(tri, (P3, CellH2, C0),
+    her = ElementTriple(tri, (P3, C0, Fid),
                         [v_dofs, v_derv_dofs, v_derv2_dofs, i_dofs])
     return her
 
@@ -438,11 +438,11 @@ def test_square_cg():
     edge = square.d_entities(1)[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, C0),
+    dg0 = ElementTriple(vert, (P0, C0, Fid),
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0,)))]
-    dg0_int = ElementTriple(edge, (P0, CellL2, C0),
+    dg0_int = ElementTriple(edge, (P0, C0, Fid),
                             DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(square, dg0, TrH1)]
@@ -454,7 +454,7 @@ def test_square_cg():
     i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
     i_dofs = DOFGenerator(i_xs, S1, S1)
 
-    cg3 = ElementTriple(square, (P3, CellH1, C0),
+    cg3 = ElementTriple(square, (P3, C0, Fid),
                         [v_dofs, e_dofs, i_dofs])
     x = sp.Symbol("x")
     y = sp.Symbol("y")
@@ -473,7 +473,7 @@ def test_rt_second_order():
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), (x,)))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt2 = ElementTriple(edge, (P1, CellHDiv, C0), dofs)
+    int_rt2 = ElementTriple(edge, (P1, C0, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt2, TrHDiv)]
     tri_dofs = DOFGenerator(xs, C3, S3)
@@ -483,7 +483,7 @@ def test_rt_second_order():
     i_dofs = DOFGenerator(i_xs, S1, S3)
 
     vecP3 = PolynomialSpace(3, shape=2)
-    rt2 = ElementTriple(tri, (vecP3, CellHDiv, C0), [tri_dofs, i_dofs])
+    rt2 = ElementTriple(tri, (vecP3, C0, Fdiv), [tri_dofs, i_dofs])
 
     phi = FuseFunction(sp.Matrix([(np.sqrt(3)/6) + (np.sqrt(3)/6)*x,
                                   1/6 + (np.sqrt(3)/6)*y]), symbols=(x, y))

@@ -60,9 +60,23 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
+          path: fuse-repo
+
+      - name: Import branch names
+        shell: bash
+        run: |
+          source ./fuse-repo/.github/branches
+          {
+            echo "FIAT_BRANCH=$FIAT_BRANCH"
+            echo "FIREDRAKE_BRANCH=$FIREDRAKE_BRANCH"
+            echo "BASE_FIREDRAKE_BRANCH=$BASE_FIREDRAKE_BRANCH"
+          } >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@v5
+        with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/connorjward/pyop3
+          ref: refs/heads/${{ env.BASE_FIREDRAKE_BRANCH }}
 
       - name: Validate single source of truth
         run: ./firedrake-repo/scripts/check-config
@@ -153,7 +167,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/${{ env.FIREDRAKE_BRANCH }}
     
       - name: Make cython
         run: |
@@ -161,9 +175,6 @@ jobs:
           cd ./firedrake-repo
           make
     
-      - uses: actions/checkout@v5
-        with:
-          path: fuse-repo
     
       - name: Install checked out fuse
         run: |
@@ -174,7 +185,7 @@ jobs:
         with:
           repository: firedrakeproject/fiat
           path: fiat-repo
-          ref: refs/heads/indiamai/fuse
+          ref: refs/heads/${{ env.FIAT_BRANCH }}
         
       - name: Install checked out FIAT
         run: |

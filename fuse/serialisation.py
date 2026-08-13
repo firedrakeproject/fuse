@@ -2,7 +2,7 @@ import json
 from fuse import *
 from fuse.groups import GroupMemberRep
 from fuse.spaces.polynomial_spaces import ConstructedPolynomialSpace
-from fuse.spaces.element_sobolev_spaces import ElementSobolevSpace
+from fuse.spaces.pullbacks import Pullback
 from fuse.spaces.interpolation_spaces import InterpolationSpace
 from fuse.traces import Trace
 from fuse.triples import ImmersedDOFs
@@ -35,7 +35,7 @@ class ElementSerialiser():
                           "Group": GroupRepresentation,
                           "GroupMember": GroupMemberRep,
                           "PermutationSet": PermutationSetRepresentation,
-                          "SobolevSpace": ElementSobolevSpace,
+                          "Pullback": Pullback,
                           "InterpolationSpace": InterpolationSpace,
                           "PolynomialSpace": PolynomialSpace,
                           "ConstructedPolynomialSpace": ConstructedPolynomialSpace,
