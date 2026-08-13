@@ -14,9 +14,13 @@ class TensorProductTriple(ElementTriple):
     def __init__(self, A, B, flat=False):
         self.A = A
         self.B = B
-        self.spaces = []
-        for (a, b) in zip(self.A.spaces, self.B.spaces):
-            self.spaces.append(a if a >= b else b)
+        (poly_a, wi_a, pullback_a) = A.spaces
+        (poly_b, wi_b, pullback_b) = B.spaces
+        if pullback_a != pullback_b:
+            raise ValueError("Tensor product factors must share the same pullback.")
+        self.spaces = [poly_a if poly_a >= poly_b else poly_b,
+                       wi_a if wi_a >= wi_b else wi_b,
+                       pullback_a]
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
         self.cell = TensorProductPoint(A.cell, B.cell)
