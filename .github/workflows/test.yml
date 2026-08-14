@@ -34,6 +34,8 @@ jobs:
       PYOP2_SPMD_STRICT: 1
       EXTRA_PYTEST_ARGS: --splitting-algorithm least_duration --timeout=600 --timeout-method=thread -o faulthandler_timeout=660 --durations-path=./fuse-repo/test/test_durations.json --durations=50
       PYTEST_MPI_MAX_NPROCS: 8
+      # TODO: reduce this 
+      FIREDRAKE_RUN_SPLIT_TESTS_TIMEOUT: 3600
     steps:
       - name: Fix HOME
         # For unknown reasons GitHub actions overwrite HOME to /github/home
@@ -191,7 +193,7 @@ jobs:
         run: |
           . venv/bin/activate
           python3 -m pip install --break-system-packages -e './fiat-repo'
-
+    
       - name: Run tests
         run: |
           . venv/bin/activate

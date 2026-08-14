@@ -4,11 +4,12 @@ from finat.ufl import CellBackend
 from fuse.cells import ufc_triangle, ufc_tetrahedron
 import pytest
 import numpy as np
+import sympy as sp
 from FIAT.reference_element import default_simplex, ufc_simplex, Simplex
 from test_convert_to_fiat import helmholtz_solve
 
 
-@pytest.fixture(scope='module', params=[0, 1, 2])
+@pytest.fixture(scope='module', params=[0, 1, 2, 3])
 def C(request):
     dim = request.param
     if dim == 0:
@@ -17,6 +18,8 @@ def C(request):
         return Point(1, [Point(0), Point(0)], vertex_num=2)
     elif dim == 2:
         return polygon(3)
+    elif dim == 3:
+        return make_tetrahedron()
 
 
 def test_vertices(C):
@@ -197,6 +200,16 @@ def test_comparison():
     # print(tensor_product1 >= tensor_product1)
 
 
+def test_self_equality(C):
+    assert C == C
+
+
+@pytest.mark.parametrize(["A", "B", "res"], [(ufc_triangle(), polygon(3), False),
+                                             (line(), line(), True),])
+def test_equivalence(A, B, res):
+    assert A.equivalent(B) == res
+
+
 @pytest.mark.parametrize(["cell"], [(ufc_triangle(),), (polygon(3),)])
 def test_connectivity(cell):
     cell = cell.to_fiat()
@@ -350,3 +363,19 @@ def test_tet_groups():
                 print()
             print([s.array_form for s in sub_group])
             print([s.array_form for s in flip_group])
+
+
+@pytest.mark.parametrize("attachment", [(sp.Integer(-1), sp.Symbol("x")),
+                                        (sp.Symbol("x"), sp.Integer(-1)),
+                                        (sp.Integer(-1), sp.Integer(1))])
+def test_edge_components_evaluate_numerically(attachment):
+    """Components without symbols must evaluate like the ones that have them.
+
+    Attachments mixing constant and symbolic components previously returned a
+    mix of floats and sympy objects, which numpy cannot compare.
+    """
+    edge = Edge(Point(0), attachment=attachment)
+    res = edge(0.5)
+    expected = tuple(float(c.subs({sp.Symbol("x"): 0.5})) for c in attachment)
+    assert res == expected
+    assert all(not isinstance(v, sp.Expr) for v in res)

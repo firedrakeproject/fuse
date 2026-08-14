@@ -10,11 +10,13 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
-from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value, _SYMBOLS, as_tuple
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
+from itertools import product
+from collections import defaultdict
 
 
 class Arrow3D(FancyArrowPatch):
@@ -151,6 +153,13 @@ def compute_scaled_verts(d, n):
         raise ValueError("Dimension {} not supported".format(d))
 
 
+def line():
+    """
+    Constructs the default 1D interval
+    """
+    return Point(1, [Point(0), Point(0)], vertex_num=2)
+
+
 def polygon(n):
     """
     Constructs the 2D default cell with n sides/vertices
@@ -265,6 +274,15 @@ def ufc_tetrahedron():
     # return Point(3, vertex_num=4, edges=[face1, face4, face3, face4], edge_orientations={3: [2, 1, 0]})
 
 
+def is_hypercube(cell):
+    """True for interval-product entities (quad, hex, ...), i.e. cells with
+    ``2**dim`` vertices and ``dim >= 2``."""
+    if cell.dimension < 2:
+        return False
+    nverts = len(cell.vertices())
+    return nverts == 2 ** cell.dimension
+
+
 class Point():
     """
     Cell complex representation of a finite element cell
@@ -373,6 +391,7 @@ class Point():
         """
         verts = self.ordered_vertices()
         v_coords = [self.get_node(v, return_coords=True) for v in verts]
+
         n = len(verts)
         max_group = SymmetricGroup(n)
         edges = [edge.ordered_vertices() for edge in self.edges()]
@@ -393,6 +412,9 @@ class Point():
 
     def dim(self):
         return self.dimension
+
+    def dimensions(self):
+        return [i for i in range(self.dimension + 1)]
 
     def get_shape(self):
         num_verts = len(self.vertices())
@@ -507,6 +529,15 @@ class Point():
         min_ids = [min(dimension) for dimension in structure]
         return min_ids
 
+    def local_id(self, node):
+        structure = [sorted(generation) for generation in nx.topological_generations(self.G)]
+        structure.reverse()
+        min_id = self.get_starter_ids()
+        for d in range(len(structure)):
+            if node.id in structure[d]:
+                return node.id - min_id[d]
+        raise ValueError("Node not found in cell")
+
     def graph_dim(self):
         if self.oriented:
             dim = self.dimension + 1
@@ -555,6 +586,7 @@ class Point():
     def d_entities_ids(self, d):
         return self.d_entities(d, get_class=False)
 
+    @cache
     def d_entities(self, d, get_class=True):
         """Get all the d dimensional entities of the cell complex.
 
@@ -653,7 +685,6 @@ class Point():
         self_levels = [generation for generation in nx.topological_generations(self.G)]
         vertices = entity.ordered_vertices()
         if self.dimension == 0:
-            # return [[]
             raise ValueError("Dimension 0 entities cannot have Basis Vectors")
         if self.oriented:
             # ordered_vertices() handles the orientation so we want to drop the orientation node
@@ -833,7 +864,7 @@ class Point():
         chain = cache[(source, dst)]
         return lambda *x: fold_reduce(chain, *x)
 
-    def attachment_J(self, source, dst):
+    def attachment_J_det(self, source, dst):
         attachment = self.attachment(source, dst)
         symbol_names = ["x", "y", "z"]
         symbols = []
@@ -842,13 +873,41 @@ class Point():
         for i in range(self.dim_of_node(dst)):
             symbols += [sp.Symbol(symbol_names[i])]
         J = sp.Matrix(attachment(*symbols)).jacobian(sp.Matrix(symbols))
-        return J
+        return np.sqrt(abs(float(sp.det(J.T * J))))
 
     def quadrature(self, degree):
         fiat_el = self.to_fiat()
         Q = create_quadrature(fiat_el, degree)
         pts, wts = Q.get_points(), Q.get_weights()
         return pts, wts
+
+    def volume(self):
+        vertices = np.asarray(self.ordered_vertex_coords())
+        if self.get_spatial_dimension() == 0:
+            return 1
+        elif self.get_spatial_dimension() == 1:
+            return abs(vertices[1] - vertices[0])[0]
+        elif self.get_spatial_dimension() == 2:
+            x = vertices[:, 0]
+            y = vertices[:, 1]
+            return 0.5 * abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1)))
+        elif self.get_spatial_dimension() == 3:
+            vertices = np.asarray(vertices)
+            V = 0.0
+            for face in self.d_entities(2):
+                pts = np.array([self.get_node(v, return_coords=True) for v in face.ordered_vertices()])
+                c = pts.mean(axis=0)
+
+                n = np.zeros(3)
+                for i in range(len(pts)):
+                    v0 = pts[i]
+                    v1 = pts[(i + 1) % len(pts)]
+                    n += np.cross(v0, v1)
+                V += np.dot(c, n)
+            V = abs(V) / 3.0
+            return V
+        else:
+            raise NotImplementedError("Dimension not accounted for")
 
     def cartesian_to_barycentric(self, pts):
         verts = np.array(self.ordered_vertex_coords())
@@ -916,9 +975,12 @@ class Point():
     def _from_dict(o_dict):
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
 
-
-def _attachment_symbols(nvals):
-    return tuple(sp.Symbol(s) for s in ["x", "y", "z"][:nvals])
+    def equivalent(self, other):
+        if self.dimension != other.dimension:
+            return False
+        if set(self.ordered_vertex_coords()) != set(other.ordered_vertex_coords()):
+            return False
+        return self.get_topology() == other.get_topology()
 
 
 @cache
@@ -926,18 +988,16 @@ def _component_evaluator(expr, nvals):
     """
     Compile one scalar attachment component for numeric evaluation.
 
-    Returns None if the component cannot be evaluated numerically, in which
-    case the caller must fall back to the symbolic path. Cells are rebuilt
-    frequently from the same attachment polynomials, so this is cached on the
+    Only components fully determined by the given values are compiled;
+    everything else defers to sympy_to_numpy, which decides how partially
+    substituted expressions are represented. Cells are rebuilt frequently
+    from the same attachment polynomials, so this is cached on the
     expression rather than on the edge holding it.
     """
-    free = len(expr.atoms(sp.Symbol))
-    if free == nvals:
-        fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
+    if len(expr.atoms(sp.Symbol)) == nvals:
+        fn = sp.lambdify(_SYMBOLS[:nvals], expr, "math")
         return lambda *x: float(fn(*x))
-    if free == 0:
-        return lambda *x: expr
-    return None
+    return lambda *x: sympy_to_numpy(expr, _SYMBOLS, x)
 
 
 @cache
@@ -947,7 +1007,7 @@ def _matrix_evaluator(expr, nvals):
     """
     if len(expr.atoms(sp.Symbol)) != nvals:
         return None
-    fn = sp.lambdify(_attachment_symbols(nvals), expr, "numpy")
+    fn = sp.lambdify(_SYMBOLS[:nvals], expr, "numpy")
 
     def evaluate(*x):
         res = np.array(fn(*x)).astype(np.float64)
@@ -984,8 +1044,9 @@ class Edge():
         if nvals not in cache:
             if hasattr(self.attachment, '__iter__'):
                 parts = [_component_evaluator(c, nvals) for c in self.attachment]
-                built = None if any(p is None for p in parts) else \
-                    (lambda *x: tuple(p(*x) for p in parts))
+
+                def built(*x):
+                    return tuple(p(*x) for p in parts)
             else:
                 built = _matrix_evaluator(sp.ImmutableMatrix(self.attachment), nvals)
             cache[nvals] = built
@@ -1009,7 +1070,12 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    res.append(sympy_to_numpy(attach_comp, syms, x))
+                    if len(attach_comp.atoms(sp.Symbol)) <= len(x):
+                        res.append(sympy_to_numpy(attach_comp, syms, x))
+                    else:
+                        res_val = attach_comp.subs({syms[i]: x[i] for i in range(len(x))})
+                        res.append(res_val)
+
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -1040,50 +1106,274 @@ class Edge():
 
 
 class TensorProductPoint():
+    id_iter = itertools.count()
 
-    def __init__(self, A, B, flat=False):
-        self.A = A
-        self.B = B
+    def __init__(self, *factors):
+        self.id = next(self.id_iter)
+        self.A = factors[0]
+        self.B = factors[1]
+        self.factors = factors
         self.dimension = self.A.dimension + self.B.dimension
-        self.flat = flat
+        self.flat = False
+        self.fiat_elem = None
+        self.group = self.compute_cell_group()
+        self.entities = {}
+
+        for d in self.dimensions()[:-1]:
+            self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
+        self.entities[self.dim()] = [self]
 
     def ordered_vertices(self):
-        return self.A.ordered_vertices() + self.B.ordered_vertices()
+        return self.entities[0]
+
+    def ordered_vertex_coords(self):
+        return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
+
+    def component_orientations(self):
+        from fuse.utils import canonical_tensor_orientation_key
+        from fuse.groups import signed_axis_permutation
+        self.component_os_to_os = {}
+        for dim in self.to_fiat().get_topology():
+            self.component_os_to_os[dim] = {}
+            ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
+            active = [i for i, d in enumerate(dim) if d > 0]
+            ed = sum(dim)
+            group = list(product(*(e.group.members() for e in ents)))
+            for gs in group:
+                # Each active factor may itself be a multi-dimensional entity
+                # (e.g. a flattened quad face used as a tensor factor), so its
+                # member is decomposed into its own (axis_perm, flips) block
+                # rather than assumed to contribute a single reflection bit.
+                axis_perm = [0] * ed
+                flips = [0] * ed
+                offset = 0
+                for i in active:
+                    d_local = dim[i]
+                    local_perm, local_flips = signed_axis_permutation(gs[i], d_local)
+                    for j in range(d_local):
+                        axis_perm[offset + j] = offset + local_perm[j]
+                        flips[offset + j] = local_flips[j]
+                    offset += d_local
+                o_val = canonical_tensor_orientation_key(tuple(axis_perm), tuple(flips), ed)
+                self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
+        return self.component_os_to_os
+
+    def compute_cell_group(self):
+        """
+        Systematically work out the symmetry group of the tensor product cell.
+        """
+        verts = self.vertices()
+        group = list(product(*(f.group.members() for f in self.factors)))
+        # group = [(g_a, g_b) for g_a in self.A.group.members() for g_b in self.B.group.members()]
+        perms = []
+        for gs in group:
+            new_verts = list(product(*(g.permute(f.vertices()) for g, f in zip(gs, self.factors))))
+            # new_verts = [(v_a, v_b) for v_a in g_a.permute(self.A.vertices()) for v_b in g_b.permute(self.B.vertices())]
+            perm = [verts.index(v) for v in new_verts]
+            perms += [fuse_groups.Permutation(perm)]
+
+        grp = fuse_groups.PermutationSetRepresentation(perms).add_cell(self)
+        return grp
+
+    def get_starter_ids(self):
+        # this doesn't actually make sense - remove when confirmed all changes to eliminate min ids from triple is done
+        raise NotImplementedError
+        a_starts = self.A.get_starter_ids()
+        b_starts = self.B.get_starter_ids()
+        ids = []
+        for a, b in zip(a_starts, b_starts):
+            ids += [max(a, b)]
+        return ids
 
     def get_spatial_dimension(self):
         return self.dimension
 
     def get_sub_entities(self):
-        self.A.get_sub_entities()
-        self.B.get_sub_entities()
+        return self.to_fiat().sub_entities
 
-    def dimension(self):
-        return tuple(self.A.dimension, self.B.dimension)
+    def dim(self):
+        return self.dimensions()[-1]
+
+    def dimensions(self):
+        return list(product(*(f.dimensions() for f in self.factors)))
 
     def d_entities(self, d, get_class=True):
-        return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
+        if isinstance(d, tuple):
+            if get_class:
+                return self.entities[d]
+            return [e.id for e in self.entities[d]]
+        raise NotImplementedError("Tensor Product point must be indexed by a tuple of dimensions")
 
     def vertices(self, get_class=True, return_coords=False):
         # TODO maybe refactor with get_node
-        verts = self.d_entities(0, get_class)
         if return_coords:
-            a_verts = self.A.vertices(return_coords=return_coords)
-            b_verts = self.B.vertices(return_coords=return_coords)
-            return [a + b for a in a_verts for b in b_verts]
-        return verts
+            # a_verts = self.A.vertices(return_coords=return_coords)
+            # b_verts = self.B.vertices(return_coords=return_coords)
+            # return [a + b for a in a_verts for b in b_verts]
+            return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
+        # return [(a, b) for a in self.A.vertices() for b in self.B.vertices()]
+        return list(product(*(f.vertices() for f in self.factors)))
+
+    def __repr__(self):
+        return "*".join([str(f) for f in self.factors])
 
     def to_ufl(self, name=None):
-        if self.flat:
-            return CellComplexToUFL(self, "quadrilateral")
-        return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
+        return TensorProductCell(*[f.to_ufl() for f in self.factors])
 
     def to_fiat(self, name=None):
-        if self.flat:
-            return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
-        return CellComplexToFiatTensorProduct(self, name)
+        if self.fiat_elem is None:
+            self.fiat_elem = CellComplexToFiatTensorProduct(self, name)
+        return self.fiat_elem
 
     def flatten(self):
-        return TensorProductPoint(self.A, self.B, True)
+        # Each factor must itself be hypercube-shaped: either a genuine
+        # interval (dimension == 1)or ann already-flattened cell
+        assert all(f.dimension == 1 or getattr(f, "flat", False) for f in self.factors)
+        return FlattenedPoint(*self.factors)
+
+
+class FlattenedPoint(Point, TensorProductPoint):
+    d_entities_by_total_d = Point.d_entities
+
+    def __init__(self, *factors):
+        self.A = factors[0]
+        self.B = factors[1]
+        self.factors = factors
+        self.dimension = sum(f.dimension for f in factors)
+        self.flat = True
+        fuse_edges = self.construct_fuse_rep()
+        super().__init__(self.dimension, fuse_edges)
+
+    def to_ufl(self, name=None):
+        return CellComplexToUFL(self, name=name)
+
+    def to_fiat(self, name=None):
+        # TODO this should check if it actually is a hypercube
+        fiat = CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
+        return fiat
+
+    def d_entities(self, d, get_class=True):
+        if isinstance(d, tuple):
+            if not get_class:
+                return [p.id for p in self.all_subpoints[d]]
+            return self.all_subpoints[d]
+        return self.d_entities_by_total_d(d, get_class)
+
+    def tensor_attachment_expr(self, axis, factor_edge, parent_mask, child_mask):
+        """
+        Build the tensor-product attachment as a tuple of SymPy expressions.
+
+        Parameters
+        ----------
+        axis:
+            The factor in which the parent cell is being restricted to a facet.
+
+        factor_edge:
+            The Fuse Edge from the factor parent entity to the factor child entity.
+            Its `.attachment` is expected to be a SymPy expression or tuple of
+            SymPy expressions.
+
+        parent_mask:
+            Dimension tuple of the parent product entity.
+
+        child_mask:
+            Dimension tuple of the child product entity.
+
+        Example
+        -------
+        For parent mask (1, 1), child mask (0, 1), axis 0:
+
+            parent coords: (x, y)
+            attachment might be: (0, y) or (1, y)
+
+        For parent mask (1, 1, 1), child mask (1, 0, 1), axis 1:
+
+            parent coords: (x, y, z)
+            attachment might be: (x, 0, z) or (x, 1, z)
+        """
+        child_dim = sum(child_mask)
+        child_syms = _SYMBOLS[:child_dim]
+        result = tuple()
+        child_offset = 0
+
+        for i, (pdim, cdim) in enumerate(zip(parent_mask, child_mask)):
+            if i == axis:
+                local_expr = as_tuple(factor_edge.attachment)
+                # Substitute the child coordinates belonging to this factor.
+                local_child_syms = child_syms[child_offset:child_offset + cdim]
+                local_child_symbols = _SYMBOLS[:cdim]
+                subs = {old: new for old, new in zip(local_child_symbols, local_child_syms)}
+                mapped = tuple(sp.sympify(expr).subs(subs) for expr in local_expr)
+                for comp in mapped:
+                    result += comp
+                child_offset += cdim
+            else:
+                # Identity map on unchanged tensor factors.
+                result += tuple(child_syms[child_offset:child_offset + cdim])
+                child_offset += cdim
+        return result
+
+    def construct_fuse_rep(self):
+        """
+        Construct a Fuse Point for the tensor product of two or three Fuse Point objects.
+        """
+        if len(self.factors) not in (2, 3):
+            raise NotImplementedError("Only 2- and 3-factor tensor products are supported.")
+        top_dim = sum(f.dimension for f in self.factors)
+        # Cache all subentities of each factor by dimension.
+        factor_entities = [{d: tuple(f.d_entities(d, get_class=True)) for d in range(f.dimension + 1)}
+                           for f in self.factors]
+        masks_by_total_dim = defaultdict(list)
+        for mask in product(*(range(f.dimension + 1) for f in self.factors)):
+            masks_by_total_dim[sum(mask)].append(mask)
+
+        product_points = {}
+        all_subpoints = {mask: []
+                         for mask in product(*(range(f.dimension + 1) for f in self.factors))}
+
+        def codim_one_facets(product_entity, mask):
+            """
+            Yield (child_product_entity, axis, factor_edge) for each codim-1 facet.
+            product_entity is a tuple of factor subentities.
+            mask is the corresponding tuple of factor dimensions.
+            """
+            for axis, dim in enumerate(mask):
+                if dim == 0:
+                    continue
+                factor_parent = product_entity[axis]
+                for factor_edge in factor_parent.connections:
+                    child_factor_entity = factor_edge.point
+
+                    child_entity = list(product_entity)
+                    child_entity[axis] = child_factor_entity
+                    child_entity = tuple(child_entity)
+
+                    yield child_entity, axis, factor_edge
+
+        top_level_edges = []
+        for total_dim in range(top_dim + 1):
+            for mask in masks_by_total_dim[total_dim]:
+                for prod_ent in product(*(factor_entities[i][d] for i, d in enumerate(mask))):
+                    if total_dim == 0:
+                        product_point = Point(0)
+                    else:
+                        boundary = []
+                        for child_ent, axis, factor_edge in codim_one_facets(prod_ent, mask):
+                            child_point = product_points[child_ent]
+                            child_mask = tuple(e.dimension for e in child_ent)
+                            attach = self.tensor_attachment_expr(axis, factor_edge, mask, child_mask)
+                            boundary.append(Edge(child_point, attach, factor_edge.o))
+                        product_point = Point(total_dim, boundary)
+
+                        if prod_ent == tuple(self.factors):
+                            top_level_edges = boundary
+                    product_points[prod_ent] = product_point
+                    all_subpoints[mask].append(product_point)
+        self.all_subpoints = all_subpoints
+        return top_level_edges
+
+    def flatten(self):
+        return self
 
 
 class CellComplexToFiatSimplex(Simplex):
@@ -1111,7 +1401,7 @@ class CellComplexToFiatSimplex(Simplex):
         #     breakpoint()
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension, e_id=0, o=None):
         """Constructs the reference element of a cell
@@ -1144,15 +1434,14 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
 
     def __init__(self, cell, name=None):
         self.fe_cell = cell
-        self.sub_cells = [cell.A.to_fiat(), cell.B.to_fiat()]
+        fiat_factors = [f.to_fiat() for f in cell.factors]
         if name is None:
-            name = " * ".join([s.name for s in self.sub_cells])
+            name = " * ".join([s.name for s in fiat_factors])
         self.name = name
-# , sub_entities=self.fe_cell.get_sub_entities()
-        super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
+        super(CellComplexToFiatTensorProduct, self).__init__(*fiat_factors)
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1180,10 +1469,11 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
+        self.name = product.name
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
-        return self.name
+        return "FUSE_" + self.name
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1272,18 +1562,18 @@ def constructCellComplex(name):
         return polygon(3).to_ufl(name)
         # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
-        interval = Point(1, [Point(0), Point(0)], vertex_num=2)
-        return TensorProductPoint(interval, interval).flatten().to_ufl(name)
-        # return ufc_quad().to_ufl(name)
+        return TensorProductPoint(line(), line()).flatten().to_ufl(name)
+        # return firedrake_quad().to_ufl(name)
         # return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
         # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
     elif name == "hexahedron":
-        import warnings
-        warnings.warn("Hexahedron unimplemented in Fuse")
-        import ufl
-        return ufl.Cell(name)
+        # import warnings
+        # warnings.warn("Hexahedron unimplemented in Fuse")
+        # import ufl
+        # return ufl.Cell(name)
+        return TensorProductPoint(line(), line(), line()).flatten().to_ufl(name)
     elif "*" in name:
         components = [constructCellComplex(c.strip()).cell_complex for c in name.split("*")]
         return TensorProductPoint(*components).to_ufl(name)

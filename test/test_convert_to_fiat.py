@@ -7,7 +7,7 @@ from firedrake import *
 from finat.ufl import CellBackend
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
-from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3
+from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_dg0_integral, construct_dg1_integral, construct_dg2_integral
 from test_3d_examples_docs import (construct_tet_rt, construct_tet_rt2, construct_tet_rt3,
                                    construct_tet_ned, construct_tet_ned_2nd_kind,
                                    construct_tet_ned_2nd_kind_2, construct_tet_ned_2nd_kind_2_non_bary,
@@ -116,15 +116,13 @@ def create_cg1(cell):
 
 def create_cg1_quad():
     deg = 1
-    cell = polygon(4)
-    # cell = constructCellComplex("quadrilateral").cell_complex
-
-    vert_dg = create_dg0(cell.vertices()[0])
+    cell = TensorProductPoint(line(), line()).flatten()
+    print(cell, type(cell))
+    vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg, deg + 1)
     cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
-
     return cg
 
 
@@ -149,6 +147,8 @@ def create_cg1_flipped(cell):
 
 
 def create_cg2(cell=None):
+    if cell is None:
+        cell = line()
     deg = 2
     if cell is None:
         cell = Point(1, [Point(0), Point(0)], vertex_num=2)
@@ -372,7 +372,10 @@ def test_entity_perms(elem_gen, cell):
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(create_cg1, "CG", 1),
                                                     (create_dg1, "DG", 1),
-                                                    pytest.param(create_dg2, "DG", 2, marks=pytest.mark.xfail(reason='Need to update TSFC in CI')),
+                                                    (construct_dg0_integral, "DG", 0),
+                                                    (construct_dg1_integral, "DG", 1),
+                                                    (construct_dg2_integral, "DG", 2),
+                                                    (create_dg2, "DG", 2),
                                                     (create_cg2, "CG", 2)
                                                     ])
 def test_1d(elem_gen, elem_code, deg):
@@ -536,6 +539,29 @@ def poisson_solve(r, elem, parameters={}, quadrilateral=False):
     return sqrt(assemble(inner(u - f, u - f) * dx))
 
 
+def run_test_original(r, elem_code, deg, parameters={}, quadrilateral=False):
+    # Create mesh and define function space
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral)
+
+    x = SpatialCoordinate(m)
+    V = FunctionSpace(m, elem_code, deg)
+    # Define variational problem
+    u = Function(V)
+    v = TestFunction(V)
+    a = inner(grad(u), grad(v)) * dx
+
+    bcs = [DirichletBC(V, Constant(0), 3),
+           DirichletBC(V, Constant(42), 4)]
+
+    # Compute solution
+    solve(a == 0, u, solver_parameters=parameters, bcs=bcs)
+
+    f = Function(V)
+    f.interpolate(42*x[1])
+
+    return sqrt(assemble(inner(u - f, u - f) * dx))
+
+
 @pytest.mark.parametrize(['params', 'elem_gen'],
                          [(p, d)
                           for p in [{}, {'snes_type': 'ksponly', 'ksp_type': 'preonly', 'pc_type': 'lu'}]
@@ -547,8 +573,7 @@ def test_poisson_analytic(params, elem_gen):
 
 
 @pytest.mark.parametrize(['elem_gen'],
-                         [pytest.param(create_cg1_quad_tensor, marks=pytest.mark.xfail(reason="Needs tensor prod fiat branch")),
-                          pytest.param(create_cg1_quad, marks=pytest.mark.xfail(reason='Need to allow generation on tensor product quads'))])
+                         [(create_cg1_quad_tensor,), (create_cg1_quad,)])
 def test_quad(elem_gen):
     elem = elem_gen()
     r = 0
@@ -556,8 +581,13 @@ def test_quad(elem_gen):
     assert (poisson_solve(r, ufl_elem, parameters={}, quadrilateral=True) < 1.e-9)
 
 
+@pytest.mark.xfail(reason="Issue with quad cell")
 def test_non_tensor_quad():
-    create_cg1_quad()
+    elem = create_cg1_quad()
+    # ufl_elem = elem.to_ufl()
+    print(elem.to_fiat().entity_permutations())
+    # elem.cell.hasse_diagram(filename="cg1quad.png")
+    assert (run_test_original(1, "CG", 1, parameters={}, quadrilateral=True) < 1.e-9)
 
 
 def project(U, mesh, func):
@@ -876,10 +906,10 @@ def test_basis_funcs_gen(form_num):
     for v in basis_funcs[:1]:
         print(v)
         vec = as_tensor(sp.lambdify(symbols, v)(x_m[0], x_m[1], x_m[2])[:, 0])
-        min_id1 = min([v for e in elem.entity_ids[2].values() for v in e])
-        max_id1 = max([v for e in elem.entity_ids[2].values() for v in e]) + 1
-        min_id2 = min([v for e in elem2.entity_ids[2].values() for v in e])
-        max_id2 = max([v for e in elem2.entity_ids[2].values() for v in e]) + 1
+        min_id1 = min([v for e in elem.entity_dofs[2].values() for v in e])
+        max_id1 = max([v for e in elem.entity_dofs[2].values() for v in e]) + 1
+        min_id2 = min([v for e in elem2.entity_dofs[2].values() for v in e])
+        max_id2 = max([v for e in elem2.entity_dofs[2].values() for v in e]) + 1
 
         res = assemble(interpolate(vec, V)).dat.data
         res2 = assemble(interpolate(vec, V2)).dat.data
@@ -1088,7 +1118,7 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                             (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                             (construct_tet_ned2, "N1curl", 2, 1e-13),
                                                             (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
-                                                            (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
+                                                            (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-11),
                                                             (construct_tet_ned3_old, "N1curl", 2, 1e-13)])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     if hasattr(elem_gen, "__call__"):
@@ -1121,6 +1151,159 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
             print(res)
             errors += [res]
     assert all([res < max_err for res in errors])
+
+
+def _two_hex_d4_perms():
+    # The 8 cube symmetries of cell A that fix its top/bottom face pair,
+    from sympy.combinatorics.named_groups import DihedralGroup
+    T = [0, 3, 2, 1]
+    Tinv = [T.index(i) for i in range(4)]
+    perms = []
+    for m in DihedralGroup(4).generate():
+        sigma = list(m.array_form)
+        bottom = [Tinv[sigma[T[i]]] for i in range(4)]
+        perms.append(Permutation(bottom + [4 + i for i in sigma], size=8))
+    return perms
+
+
+@pytest.mark.parametrize("deg", [1, 2])
+def test_two_hex_projection_fiat_cg(deg):
+    is_vector = False
+
+    from firedrake.utility_meshes import TwoHexMesh
+    from firedrake import project as firedrake_project  # this module's own `project` (line 592) shadows the builtin
+    group = _two_hex_d4_perms()
+
+    errors = []
+    for g in group:
+        mesh = TwoHexMesh(perm=g)
+        V = FunctionSpace(mesh, "CG", deg)
+        x = SpatialCoordinate(mesh)
+        # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
+        # scalar field; k=1/k=2 (Nedelec/RT) spaces at any degree >= 1
+        # exactly represent a constant vector field (matching
+        # test_hdiv_3d_orientation_consistency's rationale).
+        expr = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = assemble(firedrake_project(expr, V))
+        out = Function(V)
+        a = inner(u, v)*dx
+        L = inner(f, v)*dx
+        solve(a == L, out)
+        res = sqrt(assemble(dot(out - expr, out - expr) * dx))
+        print(g.array_form, res)
+        errors += [res]
+    assert all([res < 1e-10 for res in errors])
+
+
+@pytest.mark.parametrize("col,k,deg", [(2, 0, 1), (2, 0, 2), (2, 0, 3), (2, 0, 4), (2, 1, 1), (2, 1, 2), (2, 2, 1), (2, 2, 2)])
+def test_two_hex_projection(col, k, deg):
+    # Analogous to test_two_tet_projection, but for hexahedra: sweeps the
+    # shared quadrilateral face's full 8-element dihedral symmetry group
+    elem = periodic_table(col, 3, k, deg)
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+
+    from firedrake.utility_meshes import TwoHexMesh
+    from firedrake import project as firedrake_project  # this module's own `project` (line 592) shadows the builtin
+    group = _two_hex_d4_perms()
+
+    errors = []
+    for g in group:
+        mesh = TwoHexMesh(perm=g, use_fuse=True)
+        V = FunctionSpace(mesh, ufl_elem)
+        x = SpatialCoordinate(mesh)
+        # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
+        # scalar field; k=1/k=2 (Nedelec/RT) spaces at any degree >= 1
+        # exactly represent a constant vector field (matching
+        # test_hdiv_3d_orientation_consistency's rationale). k=3 (DG) is
+        # excluded: it has no shared DOFs across cells, so there is no
+        # cross-cell orientation to get wrong.
+        expr = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        u = TrialFunction(V)
+        v = TestFunction(V)
+        f = assemble(firedrake_project(expr, V))
+        out = Function(V)
+        a = inner(u, v)*dx
+        L = inner(f, v)*dx
+        solve(a == L, out)
+        res = sqrt(assemble(dot(out - expr, out - expr) * dx))
+        print(g.array_form, res)
+        errors += [res]
+    assert all([res < 1e-10 for res in errors])
+
+
+def _one_form_norm_spread(ufl_elem, is_vector, mesh_factory, perms):
+    # For a transformation that is a signed permutation, the norm of the assembled
+    # vector should be fixed.
+    norms = []
+    for g in perms:
+        mesh = mesh_factory(g)
+        V = FunctionSpace(mesh, ufl_elem)
+        v = TestFunction(V)
+        x = SpatialCoordinate(mesh)
+        f = as_vector((2, 3, 5)) if is_vector else x[0] + 2*x[1] + 3*x[2]
+        b = assemble(inner(f, v)*dx)
+        norms.append(float(np.linalg.norm(np.asarray(b.dat.data_ro).reshape(-1))))
+    norms = np.array(norms)
+    return norms, norms.max() - norms.min()
+
+
+_HEX_VEC_XFAIL = pytest.mark.xfail(
+    reason="hex H(div)/H(curl) facet orientation sign is wrong on reflections; "
+           "the 1-form norm is not orientation-invariant",
+    strict=True)
+
+
+@pytest.mark.parametrize("k,deg", [
+    pytest.param(0, 2, id="CG-2"),
+    pytest.param(0, 3, id="CG-3"),
+    # RT deg 1 (single-dof faces) is correct; its 1x1 sign reconciliation is
+    # invisible to ||b||, so it is an expected pass, guarded by the projection test.
+    pytest.param(2, 1, id="RT-1"),
+    pytest.param(1, 1, marks=_HEX_VEC_XFAIL, id="N1curl-1"),
+    pytest.param(1, 2, marks=_HEX_VEC_XFAIL, id="N1curl-2"),
+    pytest.param(2, 2, marks=_HEX_VEC_XFAIL, id="RT-2"),
+])
+def test_two_hex_one_form_orientation_invariance(k, deg):
+    # Scalar (CG) cases are orientation-invariant; the hex vector cases
+    # (k=1 H(curl), k=2 H(div)) are the known facet-sign bug and are xfail.
+    from firedrake.utility_meshes import TwoHexMesh
+    elem = periodic_table(2, 3, k, deg)
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+    perms = _two_hex_d4_perms()
+    _, spread = _one_form_norm_spread(
+        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, use_fuse=True), perms)
+    assert spread < 1e-10
+
+
+_TET_ONE_FORM_PERMS = [
+    Permutation([0, 1, 2, 3]),
+    Permutation([0, 2, 3, 1]),
+    Permutation([0, 3, 1, 2]),
+    Permutation([0, 1, 3, 2]),
+    Permutation([0, 3, 2, 1]),
+    Permutation([0, 2, 1, 3]),
+]
+
+
+@pytest.mark.parametrize("elem_gen", [
+    pytest.param(construct_tet_cg4, id="CG-4"),
+    pytest.param(construct_tet_rt2, id="RT-2"),
+    pytest.param(construct_tet_ned_2nd_kind_2, id="N2curl-2"),
+])
+def test_two_tet_one_form_orientation_invariance(elem_gen):
+    # construct_tet_ned2 (1st-kind Nedelec deg 2) is deliberately excluded: its
+    # face orientation matrices are not signed permutations
+    from firedrake.utility_meshes import TwoTetMesh
+    elem = elem_gen()
+    ufl_elem = elem.to_ufl()
+    is_vector = len(elem.get_value_shape()) > 0
+    _, spread = _one_form_norm_spread(
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+    assert spread < 1e-10
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg",

@@ -207,9 +207,9 @@ def test_vector_triple_entity_ids_scale(builder, deg):
     N = vec.N
 
     assert len(vec.nodes) == vec.poly_set.get_num_members()
-    for dim in vec.entity_ids:
-        for entity in vec.entity_ids[dim]:
-            assert len(vec.entity_ids[dim][entity]) == N * len(base.entity_ids[dim][entity])
+    for dim in vec.entity_dofs:
+        for entity in vec.entity_dofs[dim]:
+            assert len(vec.entity_dofs[dim][entity]) == N * len(base.entity_dofs[dim][entity])
 
     for vec_id, (base_id, comp) in vec.comp_map.items():
         assert vec.dof_id_to_fiat_id[vec_id] == N * base.dof_id_to_fiat_id[base_id] + comp
