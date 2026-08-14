@@ -479,13 +479,13 @@ class Point():
         return self._topology
 
     def get_sub_entities(self):
+        # Construct sub entity dictionary, preserving vertex order.
         min_ids = self.get_starter_ids()
         sub_entities = {d: {e.id - min_ids[d]: [] for e in self.d_entities(d)} for d in range(self.get_spatial_dimension() + 1)}
         self.sub_entities = self._subentity_traversal(sub_entities, min_ids)
         return self.sub_entities
 
     def _subentity_traversal(self, sub_ents, min_ids):
-        # print(self, sub_ents)
         dim = self.get_spatial_dimension()
         self_id = self.id - min_ids[dim]
 
@@ -510,6 +510,11 @@ class Point():
                 if (p_dim, p_id) not in sub_ents[dim][self_id]:
                     sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(p_dim, p_id)]
                     sub_ents = p._subentity_traversal(sub_ents, min_ids)
+
+                    # All subentities of p are subentities of self.
+                    for entry in sub_ents[p_dim][p_id]:
+                        if entry not in sub_ents[dim][self_id]:
+                            sub_ents[dim][self_id] = sub_ents[dim][self_id] + [entry]
 
         if (dim, self_id) not in sub_ents[dim][self_id]:
             sub_ents[dim][self_id] = sub_ents[dim][self_id] + [(dim, self_id)]

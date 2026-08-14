@@ -2,10 +2,10 @@ import pytest
 import numpy as np
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 from test_2d_examples_docs import construct_cg1, construct_dg1, construct_dg0_integral, construct_dg1_integral
 from test_convert_to_fiat import create_cg2, create_dg0, helmholtz_solve as helmholtz_solve2
 from fuse.tensor_products import HDiv as HDiv_fuse, HCurl as HCurl_fuse
-# from test_convert_to_fiat import create_cg1
 
 
 def create_cg3_interval(cell=None):
@@ -127,7 +127,7 @@ def mass_solve(U):
                           (construct_dg1, construct_cg1, "DG", "CG", 1, 1),
                           (construct_dg1_integral, construct_cg1, "DG", "CG", 1, 1)])
 def test_ext_mesh(generator1, generator2, code1, code2, deg1, deg2):
-    m = UnitIntervalMesh(2, use_fuse=True)
+    m = UnitIntervalMesh(2, cell_backend=CellBackend.FUSE)
     mesh = ExtrudedMesh(m, 2)
 
     # manual method of creating tensor product elements
@@ -155,7 +155,7 @@ def test_helmholtz(elem_gen, elem_code, deg, conv_rate):
     vals = range(3, 6)
     res = []
     for r in vals:
-        m = UnitIntervalMesh(2**r, use_fuse=True)
+        m = UnitIntervalMesh(2**r, cell_backend=CellBackend.FUSE)
         mesh = ExtrudedMesh(m, 2**r)
 
         A = elem_gen()
@@ -303,7 +303,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
     A = construct_cg1()
     B = construct_cg1()
     elem = tensor_product(A, B)
@@ -339,7 +339,7 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res_fuse = []
     res_fiat = []
     for r in vals:
-        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
+        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
         A = elem_gen()
         B = elem_gen()
         elem = symmetric_tensor_product(A, B).flatten()

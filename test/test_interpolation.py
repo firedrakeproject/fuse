@@ -1,4 +1,5 @@
 from firedrake import *
+from finat.ufl import CellBackend
 from firedrake.ufl_expr import extract_unique_domain
 from fuse import *
 import numpy as np
@@ -9,8 +10,8 @@ from test_convert_to_fiat import create_cg2, create_cg2_tri
 
 @pytest.mark.xfail(reason="Needs updated FIAT tensor branch")
 def test_cross_mesh_tri_to_quad():
-    mesh1 = UnitSquareMesh(10, 10, use_fuse=True)
-    mesh2 = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
+    mesh1 = UnitSquareMesh(10, 10, cell_backend=CellBackend.FUSE)
+    mesh2 = UnitSquareMesh(10, 10, quadrilateral=True, cell_backend=CellBackend.FUSE)
     A = create_cg2()
     B = create_cg2()
     V1 = FunctionSpace(mesh1, create_cg2_tri().to_ufl())
@@ -26,7 +27,7 @@ def test_cross_mesh_tri_to_quad():
 
 
 def test_cross_mesh_fuse_to_ufc():
-    mesh1 = UnitSquareMesh(10, 10, use_fuse=True)
+    mesh1 = UnitSquareMesh(10, 10, cell_backend=CellBackend.FUSE)
     mesh2 = UnitSquareMesh(10, 10)
     V1 = FunctionSpace(mesh1, create_cg2_tri().to_ufl())
     V2 = FunctionSpace(mesh2, "CG", 2)
@@ -43,7 +44,7 @@ def test_cross_mesh_fuse_to_ufc():
 def test_cross_mesh():
     dest_quad = False
     atol = 1e-8
-    m_src = UnitSquareMesh(2, 3, use_fuse=True)
+    m_src = UnitSquareMesh(2, 3, cell_backend=CellBackend.FUSE)
     m_dest = UnitSquareMesh(3, 5, quadrilateral=dest_quad)
     coords = np.array(
         [[0.56, 0.6], [0.1, 0.9], [0.9, 0.1], [0.9, 0.9], [0.726, 0.6584]]

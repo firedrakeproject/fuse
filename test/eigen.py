@@ -1,4 +1,5 @@
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse import *
 import numpy as np
 from test_2d_examples_docs import construct_cg3
@@ -7,12 +8,12 @@ from test_convert_to_fiat import create_cr, create_cg1
 
 def create_cr3(cell):
     Pk = PolynomialSpace(3)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
-                                                                               DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
+                                                                            DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
 
 
 errors_cg = []
@@ -28,7 +29,7 @@ cr1 = create_cr(polygon(3))
 cg1 = create_cg1(polygon(3))
 
 for N in [50, 100, 200]:
-    mesh = RectangleMesh(N, N, pi, pi, use_fuse=True)
+    mesh = RectangleMesh(N, N, pi, pi, cell_backend=CellBackend.FUSE)
 
     for elem, space in zip([cg3, cr3], ["CG", "CR"]):
         V = FunctionSpace(mesh, elem.to_ufl_elem())

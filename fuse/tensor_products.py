@@ -71,9 +71,13 @@ class TensorProductTriple(ElementTriple):
         if len(factors) < 2:
             raise ValueError("Cannot create a tensor product with fewer than 2 factors")
         self.factors = factors
-        self.spaces = []
-        for i in range(len(self.factors[0].spaces)):
-            self.spaces.append(max(f.spaces[i] for f in self.factors))
+        (poly_a, wi_a, pullback_a) = A.spaces
+        (poly_b, wi_b, pullback_b) = B.spaces
+        if pullback_a != pullback_b:
+            raise ValueError("Tensor product factors must share the same pullback.")
+        self.spaces = [poly_a if poly_a >= poly_b else poly_b,
+                       wi_a if wi_a >= wi_b else wi_b,
+                       pullback_a]
 
         self.DOFGenerator = [f.DOFGenerator for f in self.factors]
         self.cell = TensorProductPoint(*[f.cell for f in factors])
