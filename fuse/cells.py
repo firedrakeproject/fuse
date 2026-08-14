@@ -1401,7 +1401,7 @@ class CellComplexToFiatSimplex(Simplex):
         #     breakpoint()
 
     def cellname(self):
-        return "FUSE_" + self.name
+        return "FUSE_" + self.name + repr(self.cell)
 
     def construct_subelement(self, dimension, e_id=0, o=None):
         """Constructs the reference element of a cell
@@ -1441,7 +1441,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
         super(CellComplexToFiatTensorProduct, self).__init__(*fiat_factors)
 
     def cellname(self):
-        return "FUSE_" + self.name
+        return "FUSE_" + self.name + repr(self.cell)
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1473,7 +1473,7 @@ class CellComplexToFiatHypercube(Hypercube):
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
-        return "FUSE_" + self.name
+        return "FUSE_" + self.name + repr(self.cell)
 
     def construct_subelement(self, dimension):
         """Constructs the reference element of a cell
@@ -1540,7 +1540,7 @@ class CellComplexToUFL(Cell):
         return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
-        return "FUSE_" + super(CellComplexToUFL, self).__repr__()
+        return "FUSE_" + super(CellComplexToUFL, self).__repr__() + repr(self.cell_complex)
 
     def reconstruct(self, **kwargs):
         """Reconstruct this cell, overwriting properties by those in kwargs."""

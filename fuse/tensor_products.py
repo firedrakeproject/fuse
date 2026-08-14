@@ -1,6 +1,6 @@
 from fuse.triples import ElementTriple
 from fuse.traces import TrHCurl, TrHDiv
-from fuse.spaces.element_sobolev_spaces import CellHDiv, CellHCurl
+from fuse.spaces.pullbacks import Fid, Fdiv, Fcurl
 from fuse.cells import TensorProductPoint
 import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
@@ -35,49 +35,78 @@ def flatten_dictionary(tensor_dict):
     return flat_dict
 
 
-def leaf_dof_keys(elem, out=None):
-    """Map each of ``elem``'s generated DOFs to a tuple of per-axis leaf DOFs.
+def one_dim_signature(elem):
+    """What makes two one-dimensional elements interchangeable as axes.
+
+    Axes may be swapped only between factors describing the same space. That
+    cannot be decided by identity: an axis is often built by calling the same
+    constructor twice, giving equal elements on distinct cells. Compare what
+    determines the space instead -- its polynomial and Sobolev spaces, and how
+    its DOFs are distributed over entities. The last of these is what
+    separates, say, CG2 from DG2, whose spaces print the same but which place
+    their DOFs differently.
+    """
+    entity_assoc = elem._entity_associations(elem.generate(), overall=False)[0]
+    return (str(elem.spaces[0]), str(elem.spaces[1]), str(elem.spaces[2]),
+            tuple(sorted((d, tuple(len(v) for v in ents.values()))
+                         for d, ents in entity_assoc.items())))
+
+
+def one_dim_dof_keys(elem, out=None):
+    """Map each of ``elem``'s generated DOFs to a per-axis key.
 
     A tensor product DOF is a tuple with one component per factor, but a
     factor may itself be a product, so a component can be a nested tuple.
     Descending to the one-dimensional leaves gives every DOF a flat key with
     one entry per spatial axis, which is what an axis permutation acts on.
+
+    Each axis contributes ``(signature, position, entity_dimension)`` rather
+    than the DOF itself, so that axes built separately but describing the same
+    space match -- while axes describing different spaces still do not,
+    leaving such a product correctly asymmetric. The dimension travels along
+    so callers can still tell which axes an entity extends along.
     """
     if out is None:
         out = {}
     from fuse.enriched import EnrichedElement
     if isinstance(elem, EnrichedElement):
         # Checked before TensorProductTriple, which it subclasses.
-        leaf_dof_keys(elem.A, out)
-        leaf_dof_keys(elem.B, out)
+        one_dim_dof_keys(elem.A, out)
+        one_dim_dof_keys(elem.B, out)
     elif isinstance(elem, TensorProductTriple):
-        sub_keys = [leaf_dof_keys(f) for f in elem.factors]
+        sub_keys = [one_dim_dof_keys(f) for f in elem.factors]
         for dof in elem.generate():
             out[dof] = sum((sub_keys[i][comp] for i, comp in enumerate(dof)), ())
     else:
-        for dof in elem.generate():
-            out[dof] = (dof,)
+        # for dof in elem.generate():
+        #     out[dof] = (dof,)
+        signature = one_dim_signature(elem)
+        for position, dof in enumerate(elem.generate()):
+            out[dof] = ((signature, position, dof.cell_defined_on.dim()),)
     return out
 
 
 class TensorProductTriple(ElementTriple):
 
-    # Axis permutations the DOF set turned out not to be closed under.
-    # Populated by ``_fill_face_axis_swaps``; stays empty when matrices are
-    # not built at all.
+    # Axis permutations the DOF set is not closed under, recorded by
+    # _fill_axis_permutations and read by _resolve_symmetry.
     _closure_failures = frozenset()
 
     def __init__(self, *factors, flat=False, symmetric=None, matrices=True):
         if len(factors) < 2:
             raise ValueError("Cannot create a tensor product with fewer than 2 factors")
         self.factors = factors
-        (poly_a, wi_a, pullback_a) = A.spaces
-        (poly_b, wi_b, pullback_b) = B.spaces
-        if pullback_a != pullback_b:
-            raise ValueError("Tensor product factors must share the same pullback.")
-        self.spaces = [poly_a if poly_a >= poly_b else poly_b,
-                       wi_a if wi_a >= wi_b else wi_b,
-                       pullback_a]
+        pullback = set(f.spaces[2] for f in factors if f.spaces[2] != Fid)
+        if len(pullback) > 1:
+            raise ValueError("Tensor product factors must only contain 1 type of non-identity pullback.")
+        elif len(pullback) == 0: # all are the identity
+            pullback = Fid
+        else:
+            pullback = pullback.pop()
+        larger = lambda a, b: a if a >= b else b
+        self.spaces = [reduce(larger, (f.spaces[0] for f in factors)),
+                       reduce(larger, (f.spaces[1] for f in factors)),
+                       pullback]
 
         self.DOFGenerator = [f.DOFGenerator for f in self.factors]
         self.cell = TensorProductPoint(*[f.cell for f in factors])
@@ -92,9 +121,8 @@ class TensorProductTriple(ElementTriple):
             self.cell = self.cell.flatten()
         self.dofs = self.generate()
 
-        # Subclasses (HDiv, HCurl) set self.mat_transformer before calling
-        # this constructor; only default it here if they haven't.
         self.mat_transformer = getattr(self, "mat_transformer", None)
+        self.trace = getattr(self, "trace", None)
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
@@ -107,7 +135,6 @@ class TensorProductTriple(ElementTriple):
 
     @property
     def form_degree(self):
-        # Using lowest dimension dof to define form degree, tensor product dims are additive
         return min(sum(comp.cell_defined_on.dim() for comp in dof) for dof in self.generate())
 
     def __repr__(self):
@@ -123,6 +150,9 @@ class TensorProductTriple(ElementTriple):
             f.to_ufl()
         dofs = self.generate()
         dof_keys, key_to_index = self._axis_key_maps(dofs)
+        # Reset closure_failures as we are constructing matrices
+        self._closure_failures = set()
+
         oriented_mats_by_entity, flat_by_entity = self._initialise_entity_dicts(dofs, tensor=True)
         if self.flat:
             cell = self.unflat_cell
@@ -153,7 +183,8 @@ class TensorProductTriple(ElementTriple):
                             sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat)
                         # sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)] = np.eye(np.matmul(sub_mat[new_o][np.ix_(ent_dofs, ent_dofs)], combined_sub_mat).shape[0])
                     if self.flat:
-                        self._fill_face_axis_swaps(dim, ent_dofs, sub_mat, dof_keys, key_to_index)
+                        entity = self.cell.d_entities(total_dim)[self.ent_mapping[dim][sub_ents]]
+                        self._fill_axis_permutations(entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index)
 
         if self.flat:
             oriented_mats_by_entity = flatten_dictionary(oriented_mats_by_entity)
@@ -168,12 +199,7 @@ class TensorProductTriple(ElementTriple):
         self._resolve_symmetry()
 
     def _resolve_symmetry(self):
-        """Settle ``self.symmetric`` against the closure the fill observed.
-
-        A flat element is symmetric exactly when every entity's DOFs are
-        closed under permutation of that entity's axes, which is what
-        ``_fill_face_axis_swaps`` needs in order to produce the axis-swap
-        orientations at all.
+        """Reconcile ``self.symmetric`` with observed matrix construction.
         """
         closed = not self._closure_failures
         if self.requested_symmetric is None:
@@ -183,52 +209,68 @@ class TensorProductTriple(ElementTriple):
                 "%r was declared symmetric but its DOFs are not closed under "
                 "axis permutation %r" % (self, sorted(self._closure_failures)))
 
-    def _axis_permutation_sign(self, tau):
-        """Value change an H(div) DOF picks up from permuting axes.
+    def _orientation_value_change(self, entity, key):
+        """Change of value an orientation induces on this element's DOFs.
 
-        Reordering an entity's axes by an odd permutation reverses its
-        orientation, so the normal an H(div) DOF integrates against flips.
-        Nothing downstream supplies this: Firedrake's assembly selects one of
-        these matrices and multiplies by it once (``FuseMatrixApplyBuilder``
-        in ``firedrake/pack.py``), so the sign has to be carried here.
+        Reorienting an entity moves its basis vectors, and how a DOF responds
+        depends on what it measures: an H(div) DOF integrates against a
+        normal, an H(curl) DOF against a tangent, a scalar DOF against
+        nothing. The trace knows that, so ask it rather than special-casing
+        the family here.
 
-        The reflection part of an orientation already carries its own sign
-        through the matrix being composed with, leaving only the
-        permutation's parity. Tangential (H(curl)) and scalar DOFs are
-        unaffected by the reversal itself.
+        There are exactly three ways to have no change of value, and each is a
+        positive statement rather than a failure to work one out:
+
+        - the element is scalar valued, so no direction moves;
+        - the trace measures nothing on an entity of this dimension (H(div)
+          has no normal on a cell interior);
+        - the direction has been carried onto a *different* DOF's rather than
+          rescaled, so the transport permutation being built alongside already
+          accounts for it. An H(curl) axis swap exchanges the two tangential
+          components, and transport finds the exchanged DOF. H(div) is the
+          opposite case: every DOF on a facet shares its normal, so the
+          permutation has nowhere to put the flip and it surfaces here.
         """
-        if str(self.spaces[1]) != "HDiv":
+        if self.trace is None:
             return 1
-        inversions = sum(1 for i in range(len(tau))
-                         for j in range(i + 1, len(tau)) if tau[i] > tau[j])
-        return -1 if inversions % 2 else 1
+        member = entity.group.get_member_by_val(key)
+        trace = self.trace(self.cell)
+
+        def spanning(ent):
+            # The vectors spanning the entity, in the containing cell's frame.
+            return np.array(self.cell.basis_vectors(entity=ent), dtype=float)[:ent.dimension]
+
+        # Guard the trace call alone: the shapes it declines are the second
+        # case above. Failures in basis_vectors are bugs and must propagate.
+        try:
+            ref = np.asarray(trace.manipulate_basis(spanning(entity)), dtype=float).ravel()
+            new = np.asarray(trace.manipulate_basis(spanning(entity.orient(~member))), dtype=float).ravel()
+        except ValueError:
+            return 1
+
+        norm = ref.dot(ref)
+        if norm == 0:
+            raise ValueError("%r measures a degenerate direction on %r" % (trace, entity))
+        ratio = new.dot(ref) / norm
+        if not np.isclose(abs(ratio), 1.0):
+            return 1
+        # Only the sign carries information; snap to integer so the matrices stay exact
+        # signed permutations under inversion and reindexing.
+        return 1 if ratio > 0 else -1
 
     def _axis_key_maps(self, dofs):
-        """Per-axis leaf keys for ``dofs``, indexed both ways.
+        """Per-axis keys for ``dofs`` on one dimensional entities, indexed both ways.
 
-        Returns ``(dof_keys, key_to_index)`` where ``dof_keys`` maps a global
-        DOF index to its leaf key and ``key_to_index`` inverts that. Resets
-        the record of axis permutations the DOF set is not closed under.
+        Returns ``(dof_keys, key_to_index)`` where ``dof_keys`` maps a
+        DOF index to its one_dim key and ``key_to_index`` inverts that.
         """
-        self._closure_failures = set()
-        leaves = leaf_dof_keys(self)
-        dof_keys = {}
-        key_to_index = {}
-        for i, dof in enumerate(dofs):
-            key = leaves.get(dof)
-            if key is None:
-                continue
-            dof_keys[i] = key
-            key_to_index[key] = i
+        leaves = one_dim_dof_keys(self)
+        dof_keys = {i: leaves[dof] for i, dof in enumerate(dofs)}
+        key_to_index = {key: i for i, key in dof_keys.items()}
         return dof_keys, key_to_index
 
     def _snapshot_generation_order(self):
         """Keep a copy of the matrices indexed in generation DOF order.
-
-        ``_regroup_matrices`` rewrites ``self.matrices`` into the
-        dimension-grouped order Firedrake consumes, but ``self.entity_dofs``
-        stays in generation order. Parent elements pair the two when they
-        read a factor's blocks, so they need the un-regrouped copy.
         """
         self._gen_order_matrices = {dim: {e: {o: mat.copy() for o, mat in os.items()}
                                           for e, os in ents.items()}
@@ -238,23 +280,21 @@ class TensorProductTriple(ElementTriple):
         """Re-express the orientation matrices in closure DOF order.
 
         FUSE generates tensor-product and enriched DOFs in an interleaved
-        order. Firedrake packs each cell's closure DOFs by entity dimension
+        order.
+        Firedrake packs each cell's closure DOFs by entity dimension
         and, within a dimension, by entity number, and applies these matrices
         in that order.
-
-        Ordering by dimension alone is not enough. An entity's matrix is the
-        identity apart from a block sitting at that entity's own DOFs, so if
-        the entities within a dimension come out in the wrong order the block
-        lands on a different entity's DOFs -- the right transformation applied
-        to the wrong DOF. That stays invisible while every orientation is the
-        identity and only bites once an entity is actually reversed.
         """
         grouped = [dof
                    for total_dim in sorted(self.entity_dofs)
                    for ent in sorted(self.entity_dofs[total_dim])
                    for dof in self.entity_dofs[total_dim][ent]]
         n = len(grouped)
+        # Kept so callers can map a generated DOF to the row it ends up in,
+        # rather than reproducing this ordering and drifting out of step.
+        self.closure_order = grouped
         if grouped == list(range(n)):
+            # already in order
             return
         ix = np.ix_(grouped, grouped)
         for mats in (self.matrices, self.reversed_matrices):
@@ -263,70 +303,104 @@ class TensorProductTriple(ElementTriple):
                     for k in list(os.keys()):
                         os[k] = os[k][ix].copy()
 
-    def _fill_face_axis_swaps(self, dim, ent_dofs, sub_mat, dof_keys, key_to_index):
+    def _fill_axis_permutations(self, entity, dim, ent_dofs, sub_mat, dof_keys, key_to_index):
         """Populate the axis-permuting orientations of an entity.
 
-        The per-entity loop in ``setup_matrices`` fills only the reflection
-        subgroup (extrinsic orientation ``eo == 0``, canonical keys
-        ``0..2**d - 1``) because it enumerates products of the factors' own
-        orientations, which cannot permute axes. Enriched elements are worse
-        still: they combine their summands block-diagonally, so they cannot
-        even express a permutation that maps one summand's DOFs onto
-        another's.
+        Orientations are keyed ``2**d * eo + io``, with ``eo`` the extrinsic
+        orientation (which axis permutation) and ``io`` the intrinsic one
+        (which axes are reflected) -- see
+        ``fuse.utils.canonical_tensor_orientation_key``. The per-entity loop in
+        ``setup_matrices`` reaches only the reflections, ``eo == 0``, because it
+        enumerates products of the factors' own orientations and those cannot
+        permute axes. This fills the rest, as
 
-        The remaining members compose those reflections with a pure DOF
-        permutation. An axis permutation ``tau`` sends the DOF whose per-axis
-        leaf key is ``k`` to the DOF with key ``tau(k)``, so looking that key
-        up gives the permutation directly, for any number of axes and across
-        summand blocks. The canonical key ``2**d * eo + io`` (see
-        ``fuse.utils.canonical_tensor_orientation_key``) is then
-        ``M[io] @ P_tau``.
+            ``M[2**d * eo + io] = M[io] @ (value_change * P_axis_perm)``
 
-        Skipped when the entity's DOFs are not closed under ``tau``; the
-        caller records that as a failure of symmetry.
+        ``P_axis_perm`` comes from the per-axis keys: permuting the key of a DOF
+        names its image, so looking that key up gives the permutation directly,
+        for any number of axes and across enriched summands. ``value_change``
+        comes from the element's trace, and is owed only for the permutation
+        itself since ``M[io]`` already carries the reflection's.
+
+        An entity whose DOFs are not closed under some permutation is recorded
+        in ``_closure_failures``, leaving those orientations as the identity;
+        ``_resolve_symmetry`` reads that to decide whether the element is
+        symmetric at all.
         """
-        ed = sum(dim) if isinstance(dim, tuple) else dim
-        if ed < 2 or len(ent_dofs) == 0:
-            # A point or an interval has no axes to permute.
+        entity_dim = sum(dim) if isinstance(dim, tuple) else dim
+        if entity_dim < 2 or not ent_dofs:
+            # Points and intervals have no non-trivial axis permutations.
             return
-        keys = [dof_keys.get(d) for d in ent_dofs]
-        if any(k is None for k in keys):
-            self._closure_failures.add((ed, None))
-            return
-        # Which leaf axes this entity actually extends along. Taking these
-        # from the DOFs rather than from `dim` is what lets one code path
-        # serve hex cells, hex faces, and factors that are themselves
-        # flattened quads.
-        active = {tuple(j for j, c in enumerate(k) if c.cell_defined_on.dim() == 1) for k in keys}
-        if len(active) != 1 or len(next(iter(active))) != ed:
+
+        # These are the DOF keys in the order this entity's block uses.
+        keys = [dof_keys[dof] for dof in ent_dofs]
+
+        # Which of a key's axes this entity extends along, read from the DOFs
+        # rather than from `dim` so that one code path serves hex cells, hex
+        # faces, and factors that are themselves flattened quads. Key entries
+        # are (signature, position, dimension); an entity extends along the
+        # one dimensional ones.
+        spanned_axes_set = {tuple(i for i, axis in enumerate(key) if axis[2] == 1) for key in keys}
+        if len(spanned_axes_set) != 1:
             # The entity's DOFs disagree about which axes it extends along,
             # so there is no well-defined action to build.
-            self._closure_failures.add((ed, None))
+            self._closure_failures.add((entity_dim, None))
             return
-        act = active.pop()
-        local = {d: i for i, d in enumerate(ent_dofs)}
+
+        spanned_axes = spanned_axes_set.pop()
+        if len(spanned_axes) != entity_dim:
+            # The keys describe a different-dimensional entity than the one
+            # we are trying to permute.
+            self._closure_failures.add((entity_dim, None))
+            return
+
+        local_index = {dof: i for i, dof in enumerate(ent_dofs)}
         grid = np.ix_(ent_dofs, ent_dofs)
-        for eo, tau in enumerate(sorted(permutations(range(ed)))):
+
+        # ``eo == 0`` is the identity permutation, already filled by the
+        # orientation loop above.
+        for eo, axis_perm in enumerate(sorted(permutations(range(entity_dim)))):
             if eo == 0:
                 continue
-            perm = []
-            for k in keys:
-                new_key = list(k)
-                for i in range(ed):
-                    new_key[act[i]] = k[act[tau.index(i)]]
-                target = key_to_index.get(tuple(new_key))
-                if target is None or target not in local:
-                    perm = None
-                    break
-                perm.append(local[target])
-            if perm is None:
-                self._closure_failures.add((ed, eo))
+
+            transported = self._transport(keys, spanned_axes, axis_perm, key_to_index, local_index)
+            if transported is None:
+                self._closure_failures.add((entity_dim, eo))
                 continue
-            P = self._axis_permutation_sign(tau) * np.eye(len(ent_dofs))[perm]
-            for io in range(2 ** ed):
-                swap_key = 2 ** ed * eo + io
+
+            # Only the permutation's own value change is owed here; sub_mat[io]
+            # already carries the reflection's. Hence the pure permutation key
+            # 2**entity_dim * eo, NOT swap_key.
+            value_change = self._orientation_value_change(entity, 2 ** entity_dim * eo)
+            permutation_matrix = value_change * np.eye(len(ent_dofs))[transported]
+            for io in range(2 ** entity_dim):
+                swap_key = 2 ** entity_dim * eo + io
                 if io in sub_mat and swap_key in sub_mat:
-                    sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], P)
+                    sub_mat[swap_key][grid] = np.matmul(sub_mat[io][grid], permutation_matrix)
+
+    @staticmethod
+    def _transport(keys, spanned_axes, axis_perm, key_to_index, local):
+        """Return the DOF permutation induced by ``axis_perm``.
+
+        ``None`` means the entity's DOFs are not closed under the permutation:
+        either the permuted key does not exist at all, or it exists on a
+        different entity and this local block cannot represent it.
+        """
+        permuted_indices = []
+        for key in keys:
+            # Start from the DOF's per-axis key and move only the axes this
+            # entity actually spans.
+            permuted_key = list(key)
+            for source_pos, source_axis in enumerate(spanned_axes):
+                target_axis = spanned_axes[axis_perm[source_pos]]
+                permuted_key[target_axis] = key[source_axis]
+
+            target_dof = key_to_index.get(tuple(permuted_key))
+            if target_dof not in local:
+                return None
+            permuted_indices.append(local[target_dof])
+
+        return permuted_indices
 
     def generate(self):
         dofs = [f.generate() for f in self.factors]
@@ -422,7 +496,7 @@ class HDiv(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
         self.trace = TrHDiv
         super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], CellHDiv(self.cell), self.spaces[2])
+        self.spaces = (self.spaces[0], self.spaces[1], Fdiv)
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
@@ -459,14 +533,14 @@ class HDiv(TensorProductTriple):
             cell = element.sub_elements[0].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
             return lambda v: [gem.Zero(), gem.Zero(), v], mats
-        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HDiv":
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fdiv:
             # First factor is an already H(div)-wrapped 2D element (the
             # in-plane RT part), second is a DG interval: the horizontal
             # (x, y) components of a 3D H(div) field.
             cell = element.sub_elements[1].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
             # First factor is an already H(curl)-wrapped 2D element,
             # second is a DG interval: rotate the tangential 2-vector 90
             # degrees anticlockwise into a 3-vector and pad.
@@ -491,7 +565,7 @@ class HCurl(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
         super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], CellHCurl(self.cell), self.spaces[2])
+        self.spaces = (self.spaces[0], self.spaces[1], Fcurl)
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
@@ -509,7 +583,7 @@ class HCurl(TensorProductTriple):
         ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
-        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
+        if all(fe.spaces[2] == Fid for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
@@ -526,12 +600,12 @@ class HCurl(TensorProductTriple):
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
-        elif ks == (1, 0) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+        elif ks == (1, 0) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
             # First factor is an already H(curl)-wrapped 2D element (an
             # in-plane tangential edge component), second is a CG interval
             mats = lambda m_a, m_b, o: np.kron(m_a, m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (0, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "H1":
+        elif ks == (0, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fid:
             # First factor is a plain (unwrapped) bilinear (Q1) scalar
             # element on a 2D base cell, second is a DG interval
             cell = element.sub_elements[1].cell

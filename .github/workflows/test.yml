@@ -36,6 +36,7 @@ jobs:
       PYTEST_MPI_MAX_NPROCS: 8
       # TODO: reduce this 
       FIREDRAKE_RUN_SPLIT_TESTS_TIMEOUT: 3600
+      LOOPY_NO_CACHE: 1
     steps:
       - name: Fix HOME
         # For unknown reasons GitHub actions overwrite HOME to /github/home

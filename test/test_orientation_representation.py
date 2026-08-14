@@ -62,12 +62,14 @@ def assert_is_representation(elem):
 
 
 def regrouped_positions(elem):
-    """Where each generated DOF ends up after ``_regroup_matrices``."""
-    dim_of = {d: total_dim
-              for total_dim, ents in elem.entity_dofs.items()
-              for dofs in ents.values()
-              for d in dofs}
-    grouped = sorted(range(len(dim_of)), key=lambda i: (dim_of[i], i))
+    """Where each generated DOF ends up in the reindexed matrices.
+
+    Read from the element rather than recomputed here: these tests check the
+    matrices against ``entity_dofs``, and a second copy of the ordering rule
+    would silently disagree the moment the real one changed.
+    """
+    n = sum(len(dofs) for ents in elem.entity_dofs.values() for dofs in ents.values())
+    grouped = getattr(elem, "closure_order", list(range(n)))
     return {gen: pos for pos, gen in enumerate(grouped)}
 
 

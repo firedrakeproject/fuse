@@ -19,7 +19,7 @@ def create_cg3_interval(cell=None):
     interior = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), )))]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
                                                 DOFGenerator(interior, S2, S1)])
     return cg
 
@@ -192,7 +192,7 @@ def test_project_vec_quad(elem_gen, elem_code, deg, conv_rate):
     res_fuse = []
     res_fire = []
     for r in vals:
-        mesh_fuse = UnitSquareMesh(2**r, 2**r, quadrilateral=True, use_fuse=True)
+        mesh_fuse = UnitSquareMesh(2**r, 2**r, quadrilateral=True, cell_backend=CellBackend.FUSE)
         U = FunctionSpace(mesh_fuse, elem_gen().to_ufl())
         res_fuse += [project_expr(mesh_fuse, U, expr)]
 
@@ -223,7 +223,7 @@ def test_project_vec_ext(elem_gen, conv_rate):
     res_fire = []
     for r in vals:
         fuse_elem, firedrake_elem = elem_gen()
-        mesh_fuse = ExtrudedMesh(UnitIntervalMesh(2**r, use_fuse=True), 2**r)
+        mesh_fuse = ExtrudedMesh(UnitIntervalMesh(2**r, cell_backend=CellBackend.FUSE), 2**r)
         U = FunctionSpace(mesh_fuse, fuse_elem.to_ufl())
         res_fuse += [project_expr(mesh_fuse, U, expr)]
 
@@ -252,7 +252,7 @@ def test_project_vec_hex(elem_gen, conv_rate):
     expr = lambda x: as_vector([function(x, 0), function(x, 1), function(x, 2)])
     res_fuse = []
     for r in vals:
-        mesh_fuse = UnitCubeMesh(2**r, 2**r, 2**r, hexahedral=True, use_fuse=True)
+        mesh_fuse = UnitCubeMesh(2**r, 2**r, 2**r, hexahedral=True, cell_backend=CellBackend.FUSE)
         U = FunctionSpace(mesh_fuse, elem_gen().flatten().to_ufl())
         res_fuse += [project_expr(mesh_fuse, U, expr)]
 
@@ -272,7 +272,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     res_ufc = []
     res_fuse = []
     for r in vals:
-        m = UnitSquareMesh(2**r, 2**r, quadrilateral=True, use_fuse=True)
+        m = UnitSquareMesh(2**r, 2**r, quadrilateral=True, cell_backend=CellBackend.FUSE)
         mesh_fuse = ExtrudedMesh(m, 2**r)
 
         A = elem_gen()
@@ -317,14 +317,10 @@ def test_on_quad_mesh():
 
 def test_cg3():
     r = 1
-    mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True, use_fuse=True)
+    mesh = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True, cell_backend=CellBackend.FUSE)
     res_fuse = []
-    A = create_cg3_interval()
-    B = create_cg3_interval()
-    # elem = symmetric_tensor_product(A, B, matrices=False).flatten()
-    # U = FunctionSpace(mesh, elem.to_ufl())
-    # res_fuse += [helmholtz_solve(mesh, U)]
-    elem = symmetric_tensor_product(A, B).flatten()
+    int_elem = create_cg3_interval()
+    elem = symmetric_tensor_product(int_elem, int_elem).flatten()
     U = FunctionSpace(mesh, elem.to_ufl())
     res_fuse += [helmholtz_solve(mesh, U)]
     assert all(np.array(res_fuse) < 0.003)
@@ -340,9 +336,8 @@ def test_quad_mesh_helmholtz(elem_gen, elem_code, deg, conv_rate):
     res_fiat = []
     for r in vals:
         mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
-        A = elem_gen()
-        B = elem_gen()
-        elem = symmetric_tensor_product(A, B).flatten()
+        int_elem = elem_gen()
+        elem = symmetric_tensor_product(int_elem, int_elem).flatten()
         U = FunctionSpace(mesh_fuse, elem.to_ufl())
         res_fuse += [helmholtz_solve(mesh_fuse, U)]
 
@@ -370,7 +365,7 @@ def test_ext_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     res_fuse = []
     res_fiat = []
     for r in vals:
-        mesh_fuse = ExtrudedMesh(UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True, use_fuse=True), 2**r)
+        mesh_fuse = ExtrudedMesh(UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=True, cell_backend=CellBackend.FUSE), 2**r)
         A = elem_gen()
         B = elem_gen()
         C = elem_gen()
@@ -402,11 +397,9 @@ def test_quad_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     res_fuse = []
     res_fiat = []
     for r in vals:
-        mesh_fuse = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r, hexahedral=True, use_fuse=True)
-        A = elem_gen()
-        B = elem_gen()
-        C = elem_gen()
-        elem = symmetric_tensor_product(A, B, C).flatten()
+        mesh_fuse = UnitCubeMesh(2 ** r, 2 ** r, 2 ** r, hexahedral=True, cell_backend=CellBackend.FUSE)
+        int_elem = elem_gen()
+        elem = symmetric_tensor_product(int_elem, int_elem, int_elem).flatten()
         U = FunctionSpace(mesh_fuse, elem.to_ufl())
         res_fuse += [helmholtz_solve2(U, mesh_fuse)]
 
@@ -459,7 +452,7 @@ def test_creation(A, B, C):
                           "that vanish off their associated facet like FIAT's HDivTrace, so "
                           "the facet mass form (ds/dS) is not well posed for this space.")
 def test_trace_galerkin_projection():
-    mesh = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
+    mesh = UnitSquareMesh(10, 10, quadrilateral=True, cell_backend=CellBackend.FUSE)
 
     x, y = SpatialCoordinate(mesh)
     A = construct_cg1()
@@ -513,7 +506,7 @@ def test_hdiv():
 
     m = UnitIntervalMesh(2)
     mesh = ExtrudedMesh(m, 2)
-    m = UnitIntervalMesh(2, use_fuse=True)
+    m = UnitIntervalMesh(2, cell_backend=CellBackend.FUSE)
     mesh2 = ExtrudedMesh(m, 2)
     V = FunctionSpace(mesh, firedrake_rt1)
     V2 = FunctionSpace(mesh2, fuse_rt1.to_ufl())
@@ -552,7 +545,7 @@ def test_hcurl():
 
     m = UnitIntervalMesh(2)
     mesh = ExtrudedMesh(m, 2)
-    m = UnitIntervalMesh(2, use_fuse=True)
+    m = UnitIntervalMesh(2, cell_backend=CellBackend.FUSE)
     mesh2 = ExtrudedMesh(m, 2)
     V = FunctionSpace(mesh, firedrake_ncurl1)
     V2 = FunctionSpace(mesh2, fuse_ncurl1.to_ufl())
@@ -577,7 +570,7 @@ def test_hdiv_3d_orientation_consistency():
     # If neighbouring cells disagreed on the sign of a shared facet DOF, the
     # global RT space could no longer represent a true constant vector field
     f_vec = as_vector((2, 3, 5))
-    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, rt1_hex().flatten().to_ufl())
 
     u = TrialFunction(V)
@@ -594,7 +587,7 @@ def test_hcurl_3d_orientation_consistency():
     # sign-consistency check for the tangential edge DOFs, not just a
     # well-posedness check.
     f_vec = as_vector((2, 3, 5))
-    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, cell_backend=CellBackend.FUSE)
     elem = ned1_hex().flatten()
     V = FunctionSpace(mesh, elem.to_ufl())
     u = TrialFunction(V)
@@ -636,16 +629,15 @@ def test_sum_fac():
     # In 2d we have O(N_q^2N_i^4) -> O(p^6)
     # Sum factorisation gains 1 factor so we expect O(p^5)
     # For CG3 p = 3 so it should be 3x faster
-    mesh1 = ExtrudedMesh(UnitIntervalMesh(10, use_fuse=True), 10)
+    mesh1 = ExtrudedMesh(UnitIntervalMesh(10, cell_backend=CellBackend.FUSE), 10)
     mesh2 = ExtrudedMesh(UnitIntervalMesh(10), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
     elem = tensor_product(A, B)
-    mesh3 = UnitSquareMesh(10, 10, quadrilateral=True, use_fuse=True)
+    mesh3 = UnitSquareMesh(10, 10, quadrilateral=True, cell_backend=CellBackend.FUSE)
     mesh4 = UnitSquareMesh(10, 10, quadrilateral=True)
-    C = create_cg3_interval()
-    D = create_cg3_interval()
-    elem2 = symmetric_tensor_product(C, D).flatten()
+    int_elem = create_cg3_interval()
+    elem2 = symmetric_tensor_product(int_elem, int_elem).flatten()
     V = FunctionSpace(mesh1, elem.to_ufl())
     V1 = FunctionSpace(mesh2, "CG", 3)
     V2 = FunctionSpace(mesh3, elem2.to_ufl())
@@ -669,15 +661,16 @@ def test_sum_fac_3d():
     # In 2d we have O(N_q^3N_i^6) -> O(p^9)
     # Sum factorisation gains 2 factors so we expect O(p^7)
     # For CG3 p = 3 so it should be 9x faster - seems that it is faster than this in regular firedrake
-    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, use_fuse=True), 10)
+    mesh = ExtrudedMesh(UnitSquareMesh(10, 10, cell_backend=CellBackend.FUSE), 10)
     mesh2 = ExtrudedMesh(UnitSquareMesh(10, 10), 10)
     A = create_cg3_interval()
     B = create_cg3_interval()
     C = create_cg3_interval()
     elem = tensor_product(tensor_product(A, B).flatten(), C)
-    mesh3 = UnitCubeMesh(10, 10, 10, hexahedral=True, use_fuse=True)
+    mesh3 = UnitCubeMesh(10, 10, 10, hexahedral=True, cell_backend=CellBackend.FUSE)
     mesh4 = UnitCubeMesh(10, 10, 10, hexahedral=True)
-    elem2 = symmetric_tensor_product(A, B, C).flatten()
+    int_elem = create_cg3_interval()
+    elem2 = symmetric_tensor_product(int_elem, int_elem, int_elem).flatten()
     V = FunctionSpace(mesh, elem.to_ufl())
     V1 = FunctionSpace(mesh2, "CG", 3)
     V2 = FunctionSpace(mesh3, elem2.to_ufl())
