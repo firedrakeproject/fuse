@@ -1,5 +1,6 @@
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 import numpy as np
 import sympy as sp
 from test_convert_to_fiat import create_cg2_tri, construct_cg3
@@ -18,7 +19,7 @@ def construct_bubble(cell=None):
 
 
 def test_bubble():
-    mesh = UnitTriangleMesh(use_fuse=True)
+    mesh = UnitTriangleMesh(cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(mesh)
 
     tri = polygon(3)

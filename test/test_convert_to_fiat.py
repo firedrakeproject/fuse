@@ -1211,7 +1211,7 @@ def test_two_hex_projection(col, k, deg):
 
     errors = []
     for g in group:
-        mesh = TwoHexMesh(perm=g, use_fuse=True)
+        mesh = TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, ufl_elem)
         x = SpatialCoordinate(mesh)
         # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
@@ -1269,7 +1269,7 @@ def test_two_hex_one_form_orientation_invariance(k, deg):
     is_vector = len(elem.get_value_shape()) > 0
     perms = _two_hex_d4_perms()
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, use_fuse=True), perms)
+        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE), perms)
     assert spread < 1e-10
 
 
@@ -1296,7 +1296,7 @@ def test_two_tet_one_form_orientation_invariance(elem_gen):
     ufl_elem = elem.to_ufl()
     is_vector = len(elem.get_value_shape()) > 0
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, cell_backend=CellBackend.FUSE), _TET_ONE_FORM_PERMS)
     assert spread < 1e-10
 
 
