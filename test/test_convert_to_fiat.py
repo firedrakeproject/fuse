@@ -4,6 +4,7 @@ import sympy as sp
 from fuse import *
 from fuse.element_construction import periodic_table
 from firedrake import *
+from finat.ufl import CellBackend
 from sympy.combinatorics import Permutation
 from FIAT.quadrature_schemes import create_quadrature
 from test_2d_examples_docs import construct_cg1, construct_nd, construct_rt, construct_cg3, construct_dg0_integral, construct_dg1_integral, construct_dg2_integral
@@ -21,7 +22,7 @@ np.set_printoptions(linewidth=120, precision=4, suppress=True)
 def create_dg0(cell):
     xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
     Pk = PolynomialSpace(0)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    dg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return dg
 
 
@@ -32,7 +33,7 @@ def create_dg1(cell):
     else:
         xs = [DOF(DeltaPairing(), PointKernel(cell.vertices(return_coords=True)[0]))]
     Pk = PolynomialSpace(1)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    dg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return dg
 
 
@@ -42,8 +43,8 @@ def create_dg2(cell):
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
 
     Pk = PolynomialSpace(2)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(center, S1, S1)])
+    dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+                                             DOFGenerator(center, S1, S1)])
     return dg
 
 
@@ -51,56 +52,56 @@ def create_dg1_uneven(cell):
     xs = [DOF(DeltaPairing(), PointKernel(-0.75,))]
     center = [DOF(DeltaPairing(), PointKernel((0.25,)))]
     Pk = PolynomialSpace(1)
-    dg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, S1, S2),
-                                                DOFGenerator(center, S1, S2)])
+    dg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, S1, S2),
+                                             DOFGenerator(center, S1, S2)])
     return dg
 
 
 def create_dg1_tet(cell):
     xs = [DOF(DeltaPairing(), PointKernel(tuple(cell.vertices(return_coords=True)[0])))]
-    dg1 = ElementTriple(cell, (P1, CellL2, C0), DOFGenerator(xs, Z4, S1))
+    dg1 = ElementTriple(cell, (P1, C0, Fid), DOFGenerator(xs, Z4, S1))
 
     return dg1
 
 
 def create_cr(cell):
     Pk = PolynomialSpace(1)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1)])
 
 
 def create_cr3(cell):
     Pk = PolynomialSpace(3)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
-                                                                               DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2, S1),
+                                                                            DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
 
 
 def create_fortin_soulie(cell):
     Pk = PolynomialSpace(2)
-    edge_2 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/3,)))], S2, S1)])
-    edge_1 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
+    edge_2 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/3,)))], S2, S1)])
+    edge_1 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_2xs = [immerse(cell, edge_2, TrH1)]
     edge_1xs = [immerse(cell, edge_1, TrH1, node=1)]
 
     group_2 = PermutationSetRepresentation([Permutation([2, 0, 1]), Permutation([0, 1, 2])])
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_2xs, group_2, S1), DOFGenerator(edge_1xs, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_2xs, group_2, S1), DOFGenerator(edge_1xs, S1, S1)])
 
 
 def create_cf(cell):
     Pk = PolynomialSpace(3)
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, CellL2, C0),
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid),
                              [DOFGenerator([DOF(DeltaPairing(), PointKernel((-1/2,)))], S2, S1),
                               DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
-    return ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
+    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3, S1), DOFGenerator(center, S1, S1)])
 
 
 def create_cg1(cell):
@@ -109,7 +110,7 @@ def create_cg1(cell):
     xs = [immerse(cell, vert_dg, TrH1)]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return cg
 
 
@@ -119,9 +120,9 @@ def create_cg1_quad():
     print(cell, type(cell))
     vert_dg = create_dg1(cell.vertices()[0])
     xs = [immerse(cell, vert_dg, TrH1)]
-    Pk = PolynomialSpace(deg + 1, deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
+    Pk = PolynomialSpace(deg, deg + 1)
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
     return cg
 
 
@@ -138,7 +139,7 @@ def create_cg1_flipped(cell):
     xs = [immerse(cell, vert_dg, TrH1, node=1)]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
+    cg = ElementTriple(cell, (Pk, C0, Fid), DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1))
 
     for dof in cg.generate():
         print(dof)
@@ -158,8 +159,8 @@ def create_cg2(cell=None):
     center = [DOF(DeltaPairing(), PointKernel((0,)))]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(center, S1, S1)])
+    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+                                             DOFGenerator(center, S1, S1)])
     return cg
 
 
@@ -172,11 +173,11 @@ def create_cg2_tri(cell=None):
     vert_dg0 = create_dg0(cell.vertices()[0])
     xs = [immerse(cell, vert_dg0, TrH1)]
 
-    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), CellL2, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
+    edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (PolynomialSpace(0), C0, Fid), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1))
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
-    cg = ElementTriple(cell, (Pk, CellL2, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(edge_xs, C3, S1)])
+    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
+                                             DOFGenerator(edge_xs, C3, S1)])
     return cg
 
 
@@ -185,13 +186,13 @@ def create_cg1_tet(cell):
     vert = cell.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
     cgverts = DOFGenerator(v_xs, Z4, S1)
 
-    cg1 = ElementTriple(cell, (P1, CellH1, "C0"),
+    cg1 = ElementTriple(cell, (P1, "C0", Fid),
                         [cgverts])
 
     return cg1
@@ -203,11 +204,11 @@ def create_cg2_tet(cell):
     edge = cell.edges()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0,)))]
-    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+    dg1_int = ElementTriple(edge, (P1, "C0", Fid),
                             DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
@@ -216,7 +217,7 @@ def create_cg2_tet(cell):
     e_xs = [immerse(cell, dg1_int, TrH1)]
     cgedges = DOFGenerator(e_xs, tet_edges, S1)
 
-    cg2 = ElementTriple(cell, (P2, CellH1, "C0"),
+    cg2 = ElementTriple(cell, (P2, "C0", Fid),
                         [cgverts, cgedges])
 
     return cg2
@@ -231,15 +232,15 @@ def create_cg3_tet(cell=None, perm=True):
     face = cell.d_entities(2)[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, CellL2, "C0"),
+    dg0 = ElementTriple(vert, (P0, "C0", Fid),
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5),)))]
-    dg1_int = ElementTriple(edge, (P1, CellL2, "C0"),
+    dg1_int = ElementTriple(edge, (P1, "C0", Fid),
                             DOFGenerator(xs, S2, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
-    dg0_face = ElementTriple(face, (P0, CellL2, "C0"),
+    dg0_face = ElementTriple(face, (P0, "C0", Fid),
                              DOFGenerator(xs, S1, S1))
 
     v_xs = [immerse(cell, dg0, TrH1)]
@@ -251,7 +252,7 @@ def create_cg3_tet(cell=None, perm=True):
     f_xs = [immerse(cell, dg0_face, TrH1)]
     cgfaces = DOFGenerator(f_xs, tet_faces, S1)
 
-    cg3 = ElementTriple(cell, (P3, CellH1, "C0"),
+    cg3 = ElementTriple(cell, (P3, "C0", Fid),
                         [cgverts, cgedges, cgfaces], perm)
 
     return cg3
@@ -391,7 +392,7 @@ def test_1d(elem_gen, elem_code, deg):
         res1 = helmholtz_solve(V, mesh)
         diff2[i-min(scale_range)] = res1
 
-        mesh = UnitIntervalMesh(2 ** i, use_fuse=True)
+        mesh = UnitIntervalMesh(2 ** i, cell_backend=CellBackend.FUSE)
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = helmholtz_solve(V2, mesh)
         diff[i-min(scale_range)] = res2
@@ -414,7 +415,7 @@ def test_helmholtz_2d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitSquareMesh(2 ** i, 2 ** i, use_fuse=True)
+        mesh = UnitSquareMesh(2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
@@ -447,7 +448,7 @@ def test_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff2 = [0 for i in scale_range]
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem_code, deg)
         res1 = helmholtz_solve(V, mesh)
@@ -517,7 +518,7 @@ def helmholtz_solve(V, mesh):
 
 def poisson_solve(r, elem, parameters={}, quadrilateral=False):
     # Create mesh and define function space
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(m)
     V = FunctionSpace(m, elem)
 
@@ -615,7 +616,7 @@ def project(U, mesh, func):
 def test_project(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
-    mesh = UnitTriangleMesh(use_fuse=True)
+    mesh = UnitTriangleMesh(cell_backend=CellBackend.FUSE)
 
     # U = FunctionSpace(mesh, elem_code, deg)
     # assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
@@ -629,7 +630,7 @@ def test_project_3d(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
 
-    mesh = UnitCubeMesh(3, 3, 3, use_fuse=True)
+    mesh = UnitCubeMesh(3, 3, 3, cell_backend=CellBackend.FUSE)
 
     U = FunctionSpace(mesh, elem_code, deg)
     assert np.allclose(project(U, mesh, Constant(1)), 0, rtol=1e-5)
@@ -669,7 +670,7 @@ def test_projection_convergence_3d(elem_gen, elem_code, deg, conv_rate):
     diff = [0 for i in scale_range]
     diff_ufc = [0 for i in scale_range]
     for i in scale_range:
-        mesh_fuse = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+        mesh_fuse = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh_fuse, elem.to_ufl())
         x = SpatialCoordinate(mesh_fuse)
         res = project(V, mesh, expr(x))
@@ -705,7 +706,7 @@ def test_const_vec(elem_gen, elem_code, deg, conv_rate):
     vec = as_vector([1, 1, 1])
     scale_range = range(0, 2)
     for i in scale_range:
-        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+        mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
         V2 = FunctionSpace(mesh, elem.to_ufl())
         res2 = assemble(interpolate(vec, V2))
         CG3 = VectorFunctionSpace(mesh, "CG", 3)
@@ -723,7 +724,7 @@ def test_linear_vec(elem_gen, elem_code, deg):
     cell = make_tetrahedron()
     elem = elem_gen(cell)
     i = 0
-    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, use_fuse=True)
+    mesh = UnitCubeMesh(2 ** i, 2 ** i, 2 ** i, cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(mesh)
     candidate_vecs = [
         [1, 0, 0], [0, 0, 0],
@@ -756,7 +757,7 @@ def test_ned_2nd_kind_edges():
     elem = construct_tet_ned_2nd_kind_2()
     # elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh(use_fuse=True)
+    mesh = OneTetMesh(cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
     V3 = FunctionSpace(mesh, elem.to_ufl())
@@ -782,7 +783,7 @@ def test_ned_2nd_kind_faces():
     elem = construct_tet_ned_2nd_kind_2()
     elem2 = construct_tet_ned_2nd_kind_2_non_bary()
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh(use_fuse=True)
+    mesh = OneTetMesh(cell_backend=CellBackend.FUSE)
     V = FunctionSpace(mesh, "N2curl", 2)
     V2 = FunctionSpace(mesh, elem.to_ufl())
     V3 = FunctionSpace(mesh, elem2.to_ufl())
@@ -866,7 +867,7 @@ def test_make_face_bary():
 @pytest.mark.parametrize("form_num", [1, 2])
 def test_basis_funcs_gen(form_num):
     from firedrake.utility_meshes import OneTetMesh
-    mesh = OneTetMesh(use_fuse=True)
+    mesh = OneTetMesh(cell_backend=CellBackend.FUSE)
     cell = make_tetrahedron()
     x, y, z = sp.Symbol("x"), sp.Symbol("y"), sp.Symbol("z")
     symbols = [x, y, z]
@@ -1082,7 +1083,7 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
     error_gs = []
     error_row_lists = []
     for g in group:
-        mesh = TwoTetMesh(perm=g, use_fuse=True)
+        mesh = TwoTetMesh(perm=g, cell_backend=CellBackend.FUSE)
         print(g)
         print(mesh.entity_orientations)
         V2 = FunctionSpace(mesh, elem.to_ufl())
@@ -1142,7 +1143,7 @@ def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
 
     for elem in [ufl_elem]:
         for g in group:
-            mesh = TwoTetMesh(perm=g, use_fuse=True)
+            mesh = TwoTetMesh(perm=g, cell_backend=CellBackend.FUSE)
             print(g)
             print(mesh.entity_orientations)
             V2 = FunctionSpace(mesh, elem)
@@ -1210,7 +1211,7 @@ def test_two_hex_projection(col, k, deg):
 
     errors = []
     for g in group:
-        mesh = TwoHexMesh(perm=g, use_fuse=True)
+        mesh = TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, ufl_elem)
         x = SpatialCoordinate(mesh)
         # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
@@ -1268,7 +1269,7 @@ def test_two_hex_one_form_orientation_invariance(k, deg):
     is_vector = len(elem.get_value_shape()) > 0
     perms = _two_hex_d4_perms()
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, use_fuse=True), perms)
+        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE), perms)
     assert spread < 1e-10
 
 
@@ -1295,7 +1296,7 @@ def test_two_tet_one_form_orientation_invariance(elem_gen):
     ufl_elem = elem.to_ufl()
     is_vector = len(elem.get_value_shape()) > 0
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, cell_backend=CellBackend.FUSE), _TET_ONE_FORM_PERMS)
     assert spread < 1e-10
 
 
@@ -1305,7 +1306,7 @@ def test_two_tet_one_form_orientation_invariance(elem_gen):
 def test_3d_two_form(elem_gen, elem_code, deg):
 
     cell = make_tetrahedron()
-    mesh_fuse = UnitTetrahedronMesh(use_fuse=True)
+    mesh_fuse = UnitTetrahedronMesh(cell_backend=CellBackend.FUSE)
     mesh_ufc = UnitTetrahedronMesh()
 
     spaces = []
@@ -1337,8 +1338,8 @@ def test_3d_two_form(elem_gen, elem_code, deg):
 
 # TODO this is not a real test
 def test_scaling_mesh():
-    mesh1 = RectangleMesh(2, 1, 1, 1, use_fuse=True)
-    mesh2 = RectangleMesh(2, 1, 0.5, 1, use_fuse=True)
+    mesh1 = RectangleMesh(2, 1, 1, 1, cell_backend=CellBackend.FUSE)
+    mesh2 = RectangleMesh(2, 1, 0.5, 1, cell_backend=CellBackend.FUSE)
     vec = as_vector([1, 1])
     elem = construct_rt(polygon(3))
     V1 = FunctionSpace(mesh1, elem.to_ufl())
