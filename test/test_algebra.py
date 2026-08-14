@@ -14,7 +14,7 @@ def construct_bubble(cell=None):
     f = (3*np.sqrt(3)/4)*(y + np.sqrt(3)/3)*(np.sqrt(3)*x + y - 2*np.sqrt(3)/3)*(-np.sqrt(3)*x + y - 2*np.sqrt(3)/3)
     space = PolynomialSpace(3).restrict(0, 0)*f
     xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
-    bubble = ElementTriple(cell, (space, CellL2, L2), DOFGenerator(xs, S1, S1))
+    bubble = ElementTriple(cell, (space, L2, Fid), DOFGenerator(xs, S1, S1))
     return bubble
 
 

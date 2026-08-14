@@ -1,6 +1,6 @@
 from fuse.triples import ElementTriple
 from fuse.traces import TrHCurl, TrHDiv
-from fuse.spaces.element_sobolev_spaces import CellHDiv, CellHCurl
+from fuse.spaces.pullbacks import Fid, Fdiv, Fcurl
 from fuse.cells import TensorProductPoint
 import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
@@ -96,13 +96,13 @@ class TensorProductTriple(ElementTriple):
         if len(factors) < 2:
             raise ValueError("Cannot create a tensor product with fewer than 2 factors")
         self.factors = factors
-        (poly_a, wi_a, pullback_a) = A.spaces
-        (poly_b, wi_b, pullback_b) = B.spaces
-        if pullback_a != pullback_b:
+        pullback = factors[0].spaces[2]
+        if any(f.spaces[2] != pullback for f in factors[1:]):
             raise ValueError("Tensor product factors must share the same pullback.")
-        self.spaces = [poly_a if poly_a >= poly_b else poly_b,
-                       wi_a if wi_a >= wi_b else wi_b,
-                       pullback_a]
+        larger = lambda a, b: a if a >= b else b
+        self.spaces = [reduce(larger, (f.spaces[0] for f in factors)),
+                       reduce(larger, (f.spaces[1] for f in factors)),
+                       pullback]
 
         self.DOFGenerator = [f.DOFGenerator for f in self.factors]
         self.cell = TensorProductPoint(*[f.cell for f in factors])
@@ -492,7 +492,7 @@ class HDiv(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
         self.trace = TrHDiv
         super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], CellHDiv(self.cell), self.spaces[2])
+        self.spaces = (self.spaces[0], self.spaces[1], Fdiv)
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
@@ -529,14 +529,14 @@ class HDiv(TensorProductTriple):
             cell = element.sub_elements[0].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
             return lambda v: [gem.Zero(), gem.Zero(), v], mats
-        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HDiv":
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fdiv:
             # First factor is an already H(div)-wrapped 2D element (the
             # in-plane RT part), second is a DG interval: the horizontal
             # (x, y) components of a 3D H(div) field.
             cell = element.sub_elements[1].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (1, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
             # First factor is an already H(curl)-wrapped 2D element,
             # second is a DG interval: rotate the tangential 2-vector 90
             # degrees anticlockwise into a 3-vector and pad.
@@ -561,7 +561,7 @@ class HCurl(TensorProductTriple):
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
         self.trace = TrHCurl
         super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], CellHCurl(self.cell), self.spaces[2])
+        self.spaces = (self.spaces[0], self.spaces[1], Fcurl)
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
@@ -579,7 +579,7 @@ class HCurl(TensorProductTriple):
         ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
         transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
-        if all(str(fe.spaces[1]) == "H1" or str(fe.spaces[1]) == "L2" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
+        if all(fe.spaces[2] == Fid for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
@@ -596,12 +596,12 @@ class HCurl(TensorProductTriple):
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
-        elif ks == (1, 0) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "HCurl":
+        elif ks == (1, 0) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
             # First factor is an already H(curl)-wrapped 2D element (an
             # in-plane tangential edge component), second is a CG interval
             mats = lambda m_a, m_b, o: np.kron(m_a, m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (0, 1) and dims == (2, 1) and str(element.sub_elements[0].spaces[1]) == "H1":
+        elif ks == (0, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fid:
             # First factor is a plain (unwrapped) bilinear (Q1) scalar
             # element on a 2D base cell, second is a DG interval
             cell = element.sub_elements[1].cell
