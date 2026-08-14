@@ -19,7 +19,9 @@ class EnrichedElement(TensorProductTriple):
             raise ValueError("EnrichedElement should only be used for Tensor product elements. Use + between triples for enrichment.")
         self.A = A
         self.B = B
-        self.spaces = (A.spaces[0] + B.spaces[0], A.spaces[1], max([A.spaces[2], B.spaces[2]]))
+        if A.spaces[2] != B.spaces[2]:
+            raise NotImplementedError("Two FUSE triples with different pullbacks cannot be added.")
+        self.spaces = (A.spaces[0] + B.spaces[0], max(A.spaces[1], B.spaces[1]), A.spaces[2])
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
         if A.cell.flat != B.cell.flat:

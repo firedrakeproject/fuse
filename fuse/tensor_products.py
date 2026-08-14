@@ -96,9 +96,13 @@ class TensorProductTriple(ElementTriple):
         if len(factors) < 2:
             raise ValueError("Cannot create a tensor product with fewer than 2 factors")
         self.factors = factors
-        pullback = factors[0].spaces[2]
-        if any(f.spaces[2] != pullback for f in factors[1:]):
-            raise ValueError("Tensor product factors must share the same pullback.")
+        pullback = set(f.spaces[2] for f in factors if f.spaces[2] != Fid)
+        if len(pullback) > 1:
+            raise ValueError("Tensor product factors must only contain 1 type of non-identity pullback.")
+        elif len(pullback) == 0: # all are the identity
+            pullback = Fid
+        else:
+            pullback = pullback.pop()
         larger = lambda a, b: a if a >= b else b
         self.spaces = [reduce(larger, (f.spaces[0] for f in factors)),
                        reduce(larger, (f.spaces[1] for f in factors)),
