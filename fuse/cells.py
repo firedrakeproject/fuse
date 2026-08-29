@@ -440,22 +440,6 @@ class Point():
             return self._topology
         return self._topology_unrelabelled
 
-    def get_renumbered_topology(self):
-        structure = [generation for generation in nx.topological_generations(self.graph())]
-        structure.reverse()
-
-        min_ids = [min(dimension) for dimension in structure]
-        vertices = self.ordered_vertices()
-        relabelled_verts = {vertices[i]: i for i in range(len(vertices))}
-
-        self._topology = {}
-        for i in range(len(structure)):
-            dimension = structure[i]
-            self._topology[i] = {}
-            for node in dimension:
-                self._topology[i][node - min_ids[i]] = tuple([relabelled_verts[vert] for vert in self.get_node(node).ordered_vertices()])
-        return self._topology
-
     def get_sub_entities(self):
         # Construct sub entity dictionary, preserving vertex order.
         min_ids = self.get_starter_ids()
@@ -545,7 +529,6 @@ class Point():
             flatten = itertools.chain.from_iterable(full_list)
             verts = list(dict.fromkeys(flatten))
             if self.oriented:
-                # make sure this is necessary
                 return self.oriented.permute(verts)
             return verts
 

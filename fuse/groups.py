@@ -29,6 +29,30 @@ def perm_list_to_matrix(identity, perm):
     return res
 
 
+def is_normal_subgroup(subgroup, group):
+    members = {h.perm for h in subgroup.members()}
+    return all(((~x) * h * x).perm in members
+               for x in group.members() for h in subgroup.members())
+
+
+def sub_entity_cone_offset(cell):
+    """Offset between how a cell lists its sub entities and the convention that sub
+    entity k is the one opposite vertex k.
+
+    An orientation value is computed by comparing a cell's cone of sub entities, while
+    numeric_rep labels group members by vertex order. The two agree only under the
+    opposite-vertex convention, so this offset relates them.
+    """
+    verts = cell.ordered_vertices()
+    opposite = []
+    for connection in cell.connections:
+        missing = [v for v in verts if v not in set(connection.ordered_vertices())]
+        if len(missing) != 1:
+            raise ValueError("Cone offset is only defined for a simplex")
+        opposite.append(verts.index(missing[0]))
+    return Permutation(opposite)
+
+
 class GroupMemberRep(object):
 
     def __init__(self, perm, M, group):
@@ -117,29 +141,22 @@ class GroupMemberRep(object):
         if group.size() == 1:
             # Trivial case
             return np.array([1])
-        if group.size() == 6 and self.group.size() == 6:
-            # horrible hack for S3
+        if group.size() == self.group.size():
+            # A free orbit of the full symmetry group
+            # Uses sub_entity_cone_offset to reconcile FUSE facet numbering with FIAT.
+            w = self.group.get_member(sub_entity_cone_offset(self.group.cell))
+            oriented = w * (~self) * w
             members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
-            mapping = {4: 4, 3: 0, 0: 3}
-            if (~self).numeric_rep() in mapping.keys():
-                n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
+            permuted_members = [(m*oriented).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
         elif group.size() == self.perm.size:
-            if self.perm.size == 3:
+            if is_normal_subgroup(group, self.group):
+                # Products leave the orbit group, so they are projected back through the
+                # coset section. That section commutes with the translation only when the
+                # subgroup is normal
                 cosets = self.group.cosets_by_submember(group)
                 members = [cosets[m.array_form].numeric_rep() for m in group.members()]
                 permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-                mapping = {4: 3, 3: 4, 0: 0}
-                # mapping = {4: 4, 3: 0, 0: 3}
-                if (~self).numeric_rep() in mapping.keys():
-                    n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                    permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
                 mat = perm_list_to_matrix(members, permuted_members)
             else:
                 mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
@@ -147,10 +164,6 @@ class GroupMemberRep(object):
             members = [m.numeric_rep() for m in group.members()]
             permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
             mat = perm_list_to_matrix(members, permuted_members)
-            # cosets = self.group.cosets_by_submember(group)
-            # members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            # permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-            # mat = perm_list_to_matrix(members, permuted_members)
         else:
             raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
         return mat
@@ -217,7 +230,9 @@ class PermutationSetRepresentation():
         return conj_class
 
     def cosets(self, subset):
-        # Divides current group by given subset
+        # Divides current group by given subset into left cosets gH.
+        # The g*h order is load bearing: cosets_by_submember relies on it to
+        # recover the right factor h, and reversing it is not a relabelling.
         # can be modified to allow members of given subset not to exist in group self
         seen = self.members().copy()
         cosets = []
@@ -235,6 +250,7 @@ class PermutationSetRepresentation():
         return cosets
 
     def cosets_by_submember(self, subset):
+        # Maps each member x = g*h of self to the right factor h in subset.
         cosets = self.cosets(subset)
         cosets_by_submember = {}
         for i, m in enumerate(subset.members()):
