@@ -24,7 +24,7 @@ jobs:
         arch: [default]
     runs-on: [self-hosted, Linux]
     container:
-      image: ubuntu:latest
+      image: ubuntu:25.10
     env:
       OMPI_ALLOW_RUN_AS_ROOT: 1
       OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: 1
