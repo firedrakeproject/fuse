@@ -32,6 +32,7 @@ class ElementSerialiser():
                           "Edge": Edge,
                           "Triple": ElementTriple,
                           "VectorTriple": VectorTriple,
+                          "MixedTriple": MixedTriple,
                           "Group": GroupRepresentation,
                           "GroupMember": GroupMemberRep,
                           "PermutationSet": PermutationSetRepresentation,
