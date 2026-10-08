@@ -632,8 +632,9 @@ class ElementTriple():
         assert self.cell == other.cell
         assert self.spaces[0].shape == other.spaces[0].shape
         assert str(self.spaces[1]) == str(other.spaces[1])
+        assert self.spaces[2] == other.spaces[2]
 
-        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], max([self.spaces[2], other.spaces[2]]))
+        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], self.spaces[2])
 
         from fuse.tensor_products import TensorProductTriple
         if isinstance(other, TensorProductTriple):

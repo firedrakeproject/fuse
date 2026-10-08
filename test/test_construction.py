@@ -25,7 +25,7 @@ quad_params = [(2, k, deg) for deg in list(range(1, 4)) for k in [0, 1, 2, 3]]
 @pytest.mark.parametrize("col,k,deg", quad_params)
 def test_construction_quad(col, k, deg):
     elem = periodic_table(col, 2, k, deg)
-    mesh = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
+    mesh = UnitSquareMesh(2, 2, quadrilateral=True, cell_backend=CellBackend.FUSE)
     FunctionSpace(mesh, elem.to_ufl())
 
 
@@ -35,7 +35,7 @@ hex_params = [(2, k, deg) for deg in list(range(1, 3)) for k in [0, 1, 2, 3]]
 @pytest.mark.parametrize("col,k,deg", hex_params)
 def test_construction_hex(col, k, deg):
     elem = periodic_table(col, 3, k, deg)
-    mesh = UnitCubeMesh(2, 2, 2, hexahedral=True, use_fuse=True)
+    mesh = UnitCubeMesh(2, 2, 2, hexahedral=True, cell_backend=CellBackend.FUSE)
     FunctionSpace(mesh, elem.to_ufl())
 
 
@@ -60,7 +60,7 @@ def test_convergence_quad(col, k, deg, conv_rate):
     scale_range = range(3, 6)
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
@@ -85,7 +85,7 @@ def test_convergence_quad_vec(col, k, deg, conv_rate):
     scale_range = range(3, 6)
     diff_proj = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
@@ -110,7 +110,7 @@ def test_convergence_hex(col, k, deg, conv_rate):
     scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y, z = SpatialCoordinate(mesh)
@@ -135,7 +135,7 @@ def test_convergence_hex_vec(col, k, deg, conv_rate):
     scale_range = range(2, 4)
     diff_proj = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y, z = SpatialCoordinate(mesh)
@@ -152,7 +152,7 @@ def test_convergence_hex_vec(col, k, deg, conv_rate):
 @pytest.mark.parametrize("k", [1, 2])
 def test_hex_orientation_consistency(k):
     f_vec = as_vector((2, 3, 5))
-    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, cell_backend=CellBackend.FUSE)
     elem = periodic_table(2, 3, k, 2)
     V = FunctionSpace(mesh, elem.to_ufl())
     u = TrialFunction(V)

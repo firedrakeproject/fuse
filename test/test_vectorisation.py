@@ -603,4 +603,10 @@ def test_non_gdim_round_trip(builder, dim):
     sd = vec.to_fiat().ref_el.get_spatial_dimension()
     assert np.allclose(decoded.to_fiat().tabulate(0, pts)[(0,) * sd],
                        vec.to_fiat().tabulate(0, pts)[(0,) * sd])
-    assert decoded.entity_ids == vec.entity_ids
+    assert decoded.entity_dofs == vec.entity_dofs
+
+
+def test_round_trip_without_dim_defaults_to_cell_dimension():
+    """Elements serialised before dim was explicit carry no dim key."""
+    decoded = VectorTriple._from_dict({"base": construct_tri_cgN(1)})
+    assert decoded.get_value_shape() == (2,)

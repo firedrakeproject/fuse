@@ -1211,7 +1211,7 @@ def test_two_hex_projection(col, k, deg):
 
     errors = []
     for g in group:
-        mesh = TwoHexMesh(perm=g, use_fuse=True)
+        mesh = TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE)
         V = FunctionSpace(mesh, ufl_elem)
         x = SpatialCoordinate(mesh)
         # k=0 (CG) spaces at any degree >= 1 exactly represent a linear
@@ -1250,32 +1250,26 @@ def _one_form_norm_spread(ufl_elem, is_vector, mesh_factory, perms):
     return norms, norms.max() - norms.min()
 
 
-_HEX_VEC_XFAIL = pytest.mark.xfail(
-    reason="hex H(div)/H(curl) facet orientation sign is wrong on reflections; "
-           "the 1-form norm is not orientation-invariant",
-    strict=True)
-
-
 @pytest.mark.parametrize("k,deg", [
     pytest.param(0, 2, id="CG-2"),
     pytest.param(0, 3, id="CG-3"),
-    # RT deg 1 (single-dof faces) is correct; its 1x1 sign reconciliation is
-    # invisible to ||b||, so it is an expected pass, guarded by the projection test.
     pytest.param(2, 1, id="RT-1"),
-    pytest.param(1, 1, marks=_HEX_VEC_XFAIL, id="N1curl-1"),
-    pytest.param(1, 2, marks=_HEX_VEC_XFAIL, id="N1curl-2"),
-    pytest.param(2, 2, marks=_HEX_VEC_XFAIL, id="RT-2"),
+    pytest.param(1, 1, id="N1curl-1"),
+    pytest.param(1, 2, id="N1curl-2"),
+    pytest.param(2, 2, id="RT-2"),
 ])
 def test_two_hex_one_form_orientation_invariance(k, deg):
-    # Scalar (CG) cases are orientation-invariant; the hex vector cases
-    # (k=1 H(curl), k=2 H(div)) are the known facet-sign bug and are xfail.
+    # Sweeping the shared face's whole symmetry group with a 1-form is what
+    # makes this test sharp: a bilinear form applies the orientation matrix on
+    # both sides, so a sign error cancels, and an axis-aligned mesh only ever
+    # presents reflections, so the axis-swap orientations go unexercised.
     from firedrake.utility_meshes import TwoHexMesh
     elem = periodic_table(2, 3, k, deg)
     ufl_elem = elem.to_ufl()
     is_vector = len(elem.get_value_shape()) > 0
     perms = _two_hex_d4_perms()
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, use_fuse=True), perms)
+        ufl_elem, is_vector, lambda g: TwoHexMesh(perm=g, cell_backend=CellBackend.FUSE), perms)
     assert spread < 1e-10
 
 
@@ -1302,7 +1296,7 @@ def test_two_tet_one_form_orientation_invariance(elem_gen):
     ufl_elem = elem.to_ufl()
     is_vector = len(elem.get_value_shape()) > 0
     _, spread = _one_form_norm_spread(
-        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, use_fuse=True), _TET_ONE_FORM_PERMS)
+        ufl_elem, is_vector, lambda g: TwoTetMesh(perm=g, cell_backend=CellBackend.FUSE), _TET_ONE_FORM_PERMS)
     assert spread < 1e-10
 
 

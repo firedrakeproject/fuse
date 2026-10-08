@@ -1,5 +1,6 @@
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 import numpy as np
 import sympy as sp
 from test_convert_to_fiat import create_cg2_tri, construct_cg3
@@ -13,12 +14,12 @@ def construct_bubble(cell=None):
     f = (3*np.sqrt(3)/4)*(y + np.sqrt(3)/3)*(np.sqrt(3)*x + y - 2*np.sqrt(3)/3)*(-np.sqrt(3)*x + y - 2*np.sqrt(3)/3)
     space = PolynomialSpace(3).restrict(0, 0)*f
     xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
-    bubble = ElementTriple(cell, (space, CellL2, L2), DOFGenerator(xs, S1, S1))
+    bubble = ElementTriple(cell, (space, L2, Fid), DOFGenerator(xs, S1, S1))
     return bubble
 
 
 def test_bubble():
-    mesh = UnitTriangleMesh(use_fuse=True)
+    mesh = UnitTriangleMesh(cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(mesh)
 
     tri = polygon(3)
