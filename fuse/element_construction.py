@@ -6,6 +6,9 @@ from recursivenodes import recursive_nodes
 import itertools
 from functools import reduce
 from operator import mul
+# Aliased to avoid clashing with the HDiv/HCurl interpolation-space tags
+# already brought in by `from fuse import *`.
+from fuse.tensor_products import HDiv as HDivTP, HCurl as HCurlTP
 
 
 def convert_to_generation(coords, verts, return_idx=False):
@@ -444,6 +447,41 @@ def construct_tet_cgN(deg):
     return cg
 
 
+def construct_interval_cgN(deg, cell=None):
+    if cell is None:
+        cell = line()
+    vert = cell.vertices()[0]
+
+    xs = [DOF(DeltaPairing(), PointKernel(()))]
+    dg0 = ElementTriple(vert, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    v_xs = [immerse(cell, dg0, TrH1)]
+    v_dofs = [DOFGenerator(v_xs, get_cyc_group(len(cell.vertices())), S1)]
+
+    points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
+
+    Pk = PolynomialSpace(deg)
+    sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
+    sym_dofs = [DOFGenerator([pt], S2, S1) for pt in sym_points]
+    if 0 in points:
+        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)]
+    else:
+        centre_dof = []
+
+    cg = ElementTriple(cell, (Pk, CellH1, C0), v_dofs + sym_dofs + centre_dof)
+    assert len(cg.generate()) == deg + 1
+    return cg
+
+
+def construct_interval_dgN_integral(deg, cell=None):
+    if cell is None:
+        cell = line()
+    Pk = PolynomialSpace(deg)
+    dofs = lagrange_facet_fns(cell, deg, interior=True, vector=False)
+    dg = ElementTriple(cell, (Pk, CellL2, C0), dofs)
+    assert len(dg.generate()) == deg + 1
+    return dg
+
+
 def construct_tri_ndN(deg):
     cell = polygon(3)
     edge = cell.edges()[0]
@@ -645,6 +683,7 @@ def construct_dgN(dim):
 
 
 def construct_dgNminus(dim):
+
     if dim == 2:
         cell = polygon(3)
         inc = 3
@@ -663,9 +702,106 @@ def construct_dgNminus(dim):
     return construct_dim_dgNminus
 
 
+# The factors below are deliberately shared rather than rebuilt per axis:
+# an axis permutation is resolved by matching DOFs across axes, and DOFs
+# compare by identity, so axes built from separate calls never match.
+
+
+def construct_quad_cgN(deg):
+    A = construct_interval_cgN(deg)
+    elem = tensor_product(A, A).flatten()
+    assert len(elem.generate()) == (deg + 1)**2
+    return elem
+
+
+def construct_hex_cgN(deg):
+    A = construct_interval_cgN(deg)
+    elem = symmetric_tensor_product(A, A, A).flatten()
+    assert len(elem.generate()) == (deg + 1)**3
+    return elem
+
+
+def construct_quad_dgN(deg):
+    A = construct_interval_dgN_integral(deg)
+    elem = tensor_product(A, A).flatten()
+    assert len(elem.generate()) == (deg + 1)**2
+    return elem
+
+
+def construct_hex_dgN(deg):
+    A = construct_interval_dgN_integral(deg)
+    elem = symmetric_tensor_product(A, A, A).flatten()
+    assert len(elem.generate()) == (deg + 1)**3
+    return elem
+
+
+def construct_quad_rtN(deg):
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    # Enriched first, then flattened: the sum is the smallest object whose
+    # DOF set is closed under the axis swap, so flattening a component on
+    # its own would bury a non-symmetric flat element inside the sum.
+    elem = (HDivTP(tensor_product(cgN, dgNm1)) + HDivTP(tensor_product(dgNm1, cgN))).flatten()
+    assert len(elem.generate()) == 2 * deg * (deg + 1)
+    return elem
+
+
+def construct_quad_ndN(deg):
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    # See construct_quad_rtN: enriched first, then flattened.
+    elem = (HCurlTP(tensor_product(cgN, dgNm1)) + HCurlTP(tensor_product(dgNm1, cgN))).flatten()
+    assert len(elem.generate()) == 2 * deg * (deg + 1)
+    return elem
+
+
+def construct_hex_rtN(deg):
+    # In-plane RT_deg-on-quad pieces, extruded by a discontinuous
+    # interval, following the same structure as rt1_hex (deg=1 case).
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    h1 = HDivTP(tensor_product(cgN, dgNm1).flatten())
+    h2 = HDivTP(tensor_product(dgNm1, cgN).flatten())
+    x_component = HDivTP(tensor_product(h1, dgNm1))
+    y_component = HDivTP(tensor_product(h2, dgNm1))
+    dg_quad = tensor_product(dgNm1, dgNm1).flatten()
+    z_component = HDivTP(tensor_product(dg_quad, cgN))
+    elem = x_component + y_component + z_component
+    assert len(elem.generate()) == 3 * deg**2 * (deg + 1)
+    # Unlike the quad case, the outer tensor_product here combines an
+    # already-flat 2D piece with a genuine 1D interval, so the result
+    # isn't itself flat yet (matches rt1_hex's own need for an explicit
+    # .flatten() at the call site) -- flatten here so callers get a
+    # directly-usable element, consistent with construct_hex_cgN/dgN.
+    return elem.flatten()
+
+
+def construct_hex_ndN(deg):
+    # In-plane Nedelec-1st-kind-deg-on-quad pieces, extruded by a
+    # continuous interval, following the same structure as ned1_hex
+    # (deg=1 case).
+    cgN = construct_interval_cgN(deg)
+    dgNm1 = construct_interval_dgN_integral(deg - 1)
+    ex = HCurlTP(tensor_product(dgNm1, cgN).flatten())
+    ey = HCurlTP(tensor_product(cgN, dgNm1).flatten())
+    x_component = HCurlTP(tensor_product(ex, cgN))
+    y_component = HCurlTP(tensor_product(ey, cgN))
+    cg_quad = tensor_product(cgN, cgN).flatten()
+    z_component = HCurlTP(tensor_product(cg_quad, dgNm1))
+    elem = x_component + y_component + z_component
+    assert len(elem.generate()) == 3 * (deg + 1)**2 * deg
+    # See construct_hex_rtN: flatten here so callers get a directly-usable
+    # element, consistent with construct_hex_cgN/dgN.
+    return elem.flatten()
+
+
 # column: dimension: form number
 constructors = {
     0: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
         2: {
             0: construct_tri_cgN,
             1: construct_tri_ndN,
@@ -680,6 +816,10 @@ constructors = {
         },
     },
     1: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
         2: {
             0: construct_tri_cgN,
             1: construct_tri_ndN_2,
@@ -691,6 +831,24 @@ constructors = {
             1: construct_tet_ndN_2,
             2: construct_tet_bdmN,
             3: construct_dgN(3),
+        },
+    },
+    2: {
+        1: {
+            0: construct_interval_cgN,
+            1: construct_interval_dgN_integral,
+        },
+        2: {
+            0: construct_quad_cgN,
+            1: construct_quad_ndN,
+            2: construct_quad_rtN,
+            3: construct_quad_dgN,
+        },
+        3: {
+            0: construct_hex_cgN,
+            1: construct_hex_ndN,
+            2: construct_hex_rtN,
+            3: construct_hex_dgN,
         },
     },
 }

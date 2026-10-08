@@ -19,6 +19,150 @@ def test_construction3d(col, k, deg):
     elem.to_fiat()
 
 
+quad_params = [(2, k, deg) for deg in list(range(1, 4)) for k in [0, 1, 2, 3]]
+
+
+@pytest.mark.parametrize("col,k,deg", quad_params)
+def test_construction_quad(col, k, deg):
+    elem = periodic_table(col, 2, k, deg)
+    mesh = UnitSquareMesh(2, 2, quadrilateral=True, use_fuse=True)
+    FunctionSpace(mesh, elem.to_ufl())
+
+
+hex_params = [(2, k, deg) for deg in list(range(1, 3)) for k in [0, 1, 2, 3]]
+
+
+@pytest.mark.parametrize("col,k,deg", hex_params)
+def test_construction_hex(col, k, deg):
+    elem = periodic_table(col, 3, k, deg)
+    mesh = UnitCubeMesh(2, 2, 2, hexahedral=True, use_fuse=True)
+    FunctionSpace(mesh, elem.to_ufl())
+
+
+def project_only(V, mesh, expr):
+    f = assemble(project(expr, V))
+    out = Function(V)
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    a = inner(u, v)*dx
+    L = inner(f, v)*dx
+    solve(a == L, out)
+    return sqrt(assemble(dot(out - expr, out - expr) * dx))
+
+
+cg_quad_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
+dg_quad_params = [(2, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_quad_params + dg_quad_params)
+def test_convergence_quad(col, k, deg, conv_rate):
+    elem = periodic_table(col, 2, k, deg)
+    scale_range = range(3, 6)
+    diff_inte = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        _, exact = get_expression(V)
+        _, diff_inte[n-min(scale_range)] = interpolate_vs_project(V, expr, exact)
+
+    print("interpolation l2 error norms:", diff_inte)
+    diff_inte = np.array(diff_inte)
+    conv = np.log2(diff_inte[:-1] / diff_inte[1:])
+    print("convergence order:", conv)
+    assert all([c > conv_rate for c in conv])
+
+
+nd_quad_params = [(2, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
+rt_quad_params = [(2, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", nd_quad_params + rt_quad_params)
+def test_convergence_quad_vec(col, k, deg, conv_rate):
+    elem = periodic_table(col, 2, k, deg)
+    scale_range = range(3, 6)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitSquareMesh(2**n, 2**n, quadrilateral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y = SpatialCoordinate(mesh)
+        expr = as_vector([cos(x*pi*2)*sin(y*pi*2), cos(x*pi*2)*sin(y*pi*2)])
+        diff_proj[n-min(scale_range)] = project_only(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv)
+    assert all([c > conv_rate for c in conv])
+
+
+cg_hex_params = [(2, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
+dg_hex_params = [(2, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", cg_hex_params + dg_hex_params)
+def test_convergence_hex(col, k, deg, conv_rate):
+    elem = periodic_table(col, 3, k, deg)
+
+    scale_range = range(2, 4)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y, z = SpatialCoordinate(mesh)
+        expr = cos(x*pi*2)*sin(y*pi*2)
+        diff_proj[n-min(scale_range)] = project_test(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv1)
+    assert all([c > conv_rate for c in conv1])
+
+
+nd_hex_params = [(2, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
+rt_hex_params = [(2, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
+
+
+@pytest.mark.parametrize("col,k,deg,conv_rate", nd_hex_params + rt_hex_params)
+def test_convergence_hex_vec(col, k, deg, conv_rate):
+    elem = periodic_table(col, 3, k, deg)
+
+    scale_range = range(2, 4)
+    diff_proj = [0 for i in scale_range]
+    for n in scale_range:
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, hexahedral=True, use_fuse=True)
+
+        V = FunctionSpace(mesh, elem.to_ufl())
+        x, y, z = SpatialCoordinate(mesh)
+        expr = as_vector([cos(x*pi*2)*sin(y*pi*2)]*3)
+        diff_proj[n-min(scale_range)] = project_only(V, mesh, expr)
+
+    print("projection l2 error norms:", diff_proj)
+    diff_proj = np.array(diff_proj)
+    conv1 = np.log2(diff_proj[:-1] / diff_proj[1:])
+    print("convergence order:", conv1)
+    assert all([c > conv_rate for c in conv1])
+
+
+@pytest.mark.parametrize("k", [1, 2])
+def test_hex_orientation_consistency(k):
+    f_vec = as_vector((2, 3, 5))
+    mesh = UnitCubeMesh(3, 3, 3, hexahedral=True, use_fuse=True)
+    elem = periodic_table(2, 3, k, 2)
+    V = FunctionSpace(mesh, elem.to_ufl())
+    u = TrialFunction(V)
+    v = TestFunction(V)
+    sol = Function(V)
+    solve(inner(u, v) * dx == inner(f_vec, v) * dx, sol)
+    error = sqrt(assemble(dot(sol - f_vec, sol - f_vec) * dx))
+    assert error < 1e-10
+
+
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 7))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 7))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 7))]
@@ -124,28 +268,32 @@ def test_polynomial_poisson_solve(deg):
     assert np.allclose(res, 0)
 
 
-# def test_plane():
-#     from fuse import make_tetrahedron
-#     cell = make_tetrahedron()
-#     verts = cell.ordered_vertex_coords()
-#     res = check_below_plane(verts[1], verts[2], verts[3], (verts[1] + verts[2] + verts[3])/3)
-#     print(res)
+def test_ned3():
+    nd3_pt = periodic_table(1, 3, 1, 3)
+    pt_gen = nd3_pt.DOFGenerator[1].x[0].triple.DOFGenerator[0].g1.members()
+    nd3_pt.to_fiat()
+    from test_3d_examples_docs import construct_tet_ned_2nd_kind_3
+    nd3_mn = construct_tet_ned_2nd_kind_3()
+    mn_gen = nd3_mn.DOFGenerator[1].x[0].triple.DOFGenerator[0].g1.members()
+    nd3_mn.to_fiat()
 
+    print([nd3_pt.dofs[i].id for i in range(24, 30)])
+    print([nd3_mn.dofs[i].id for i in range(24, 30)])
+    # for i in range(24, 30):
+    #     print(i)
+    #     print(pt_gen[i - 24], nd3_pt.dofs[i])
+    #     print(mn_gen[i - 24], nd3_mn.dofs[i])
 
-# def test_check_line():
-#     from fuse import polygon
-#     cell = polygon(3)
-#     verts = np.array(sorted(cell.ordered_vertex_coords()))
-#     midpoint = (verts[1] + verts[2])/2
-#     midpoint1 = (verts[0] + verts[2])/2
-#     assert check_below_line(verts[0], midpoint, (0, 0)) == 0
-#     assert check_on_line(verts[0], midpoint, (0, 0))
-#     assert check_on_line(verts[1], verts[2], midpoint)
-#     assert not check_on_line(verts[1], verts[2], midpoint1)
-
-#     assert check_below_line(verts[0], midpoint, (-0.5, 0)) == -1
-#     assert check_below_line(verts[0], midpoint, (0, -0.5)) == 1
-
-#     assert check_below_line(verts[1], midpoint1, verts[0]) == 1
-
-# test_construction3d(1,3, 2)
+    def permute_face(elem, o):
+        dof_ids = [d.id for d in elem.dofs]
+        transform_mat = elem.matrices[2][0][o.numeric_rep()]
+        transformed = np.matmul(transform_mat, dof_ids)
+        return transformed[24:30]
+    for o in mn_gen:
+        print(o)
+        print(o.numeric_rep())
+    for o in pt_gen:
+        print(o)
+        print(o.numeric_rep())
+        # print(permute_face(nd3_pt, o))
+        # print(permute_face(nd3_mn, o))

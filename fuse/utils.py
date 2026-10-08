@@ -2,6 +2,8 @@ import numpy as np
 import sympy as sp
 import math
 
+_SYMBOLS = tuple(sp.Symbol(s) for s in ("x", "y", "z"))
+
 
 def fold_reduce(func_list, *prev):
     """
@@ -29,7 +31,7 @@ def sympy_to_numpy(array, symbols, values):
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
 
-    if len(array.atoms(sp.Symbol)) == len(values) and all(not isinstance(v, sp.Expr) for v in values):
+    if len(array.atoms(sp.Symbol)) <= len(values) and all(not isinstance(v, sp.Expr) for v in values):
         nparray = np.array(substituted).astype(np.float64)
 
         if len(nparray.shape) > 1:
@@ -47,9 +49,9 @@ def tabulate_sympy(expr, pts):
     # expr: sp matrix expression in x,y,z for components of R^d
     # pts: n values in R^d
     # returns: evaluation of expr at pts
-    res = np.array(pts)
+    res = np.zeros((pts.shape[0],) + (expr.shape[-1],))
     i = 0
-    syms = ["x", "y", "z"]
+    syms = _SYMBOLS
     for pt in pts:
         if not hasattr(pt, "__iter__"):
             pt = (pt,)
@@ -57,16 +59,20 @@ def tabulate_sympy(expr, pts):
         subbed = np.array(subbed).astype(np.float64)
         res[i] = subbed[0]
         i += 1
-    final = res.squeeze()
-    return final
+    # final = res.squeeze()
+    return res
 
 
-def max_deg_sp_mat(sp_mat):
+def max_deg_sp_expr(sp_expr):
     degs = []
-    for comp in sp_mat:
-        # only compute degree if component is a polynomial
-        if sp.sympify(comp).as_poly():
-            degs += [sp.sympify(comp).as_poly().degree()]
+    if isinstance(sp_expr, sp.Matrix):
+        for comp in sp_expr:
+            # only compute degree if component is a polynomial
+            if sp.sympify(comp).as_poly():
+                degs += [sp.sympify(comp).as_poly().total_degree()]
+    else:
+        if sp.sympify(sp_expr).as_poly():
+            degs += [sp.sympify(sp_expr).as_poly().total_degree()]
     return max(degs)
 
 
@@ -101,3 +107,32 @@ def orientation_value(identity_arg, perm_arg):
         identity.remove(perm[i])
         val += loc * math.factorial(len(perm) - i - 1)
     return val
+
+
+def lehmer_rank(perm):
+    """Rank of ``perm`` within ``sorted(permutations(range(len(perm))))``."""
+    return orientation_value(list(range(len(perm))), list(perm))
+
+
+def canonical_tensor_orientation_key(axis_perm, flips, d):
+    """Canonical FIAT/dmcommon orientation key for an interval-product entity.
+
+    ``o = (2**d) * lehmer_rank(axis_perm) + sum_i flips[i] * 2**(d - 1 - i)``
+
+    ``axis_perm`` is a permutation of ``range(d)`` sending input axis ``i`` to
+    output axis ``axis_perm[i]``; ``flips[i]`` in ``{0, 1}`` marks a reflection
+    of axis ``i``. This matches FIAT's
+    ``make_entity_permutations_tensorproduct``, whose tuple keys
+    ``(eo, o_1, ..., o_d)`` flatten to this same integer, and the numbering
+    consumed by Firedrake's ``dmcommon`` tensor-product orientation switch.
+    """
+    io = sum(int(flips[i]) * 2 ** (d - 1 - i) for i in range(d))
+    return (2 ** d) * lehmer_rank(axis_perm) + io
+
+
+def as_tuple(expr):
+    if isinstance(expr, tuple):
+        return expr
+    if isinstance(expr, list):
+        return tuple(expr)
+    return (expr,)
