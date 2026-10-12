@@ -647,6 +647,23 @@ class Point():
 
         return reordered_entities
 
+    def entity_stabiliser(self, entity):
+        """The members of this cell's symmetry group that map ``entity`` onto itself.
+
+        ``entity`` is a sub-entity of this cell. 
+
+        Returns a permutation set on this cell; it is a subgroup of ``self.group``.
+        """
+        coords = np.array([np.array(self.get_node(v, return_coords=True), dtype=float).ravel()
+                           for v in entity.ordered_vertices()])
+
+        def maps_onto_itself(g):
+            images = np.array([np.array(g(tuple(x)), dtype=float).ravel() for x in coords])
+            return all(np.min(np.linalg.norm(coords - y, axis=1)) < 1e-10 for y in images)
+
+        stab = [g.perm for g in self.group.members() if maps_onto_itself(g)]
+        return fuse_groups.PermutationSetRepresentation(stab, cell=self)
+
     def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True):
         if not entity:
             entity = self

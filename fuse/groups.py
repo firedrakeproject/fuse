@@ -96,6 +96,14 @@ class GroupMemberRep(object):
     def __invert__(self):
         return self.group.get_member(~self.perm)
 
+    def compose(self, other):
+        """The composition self o other: apply ``other``, then ``self``.
+
+        Note that the product ``*`` follows sympy and applies the left factor
+        first, so ``self.compose(other)`` is ``other * self``.
+        """
+        return other * self
+
     def __repr__(self):
         string = "g"
         string += str(self.array_form)
@@ -291,6 +299,91 @@ class PermutationSetRepresentation():
 
     def size(self):
         return len(self.perm_list)
+
+    def _match(self, members):
+        """The members of this set with the same permutations as ``members``.
+
+        ``members`` may be a permutation set or a list of group members.
+        """
+        if hasattr(members, "members"):
+            members = members.members()
+        size = max(m.perm.size for m in self.members())
+        lookup = {tuple(Permutation(m.perm, size=size).array_form): m for m in self.members()}
+        try:
+            return [lookup[tuple(Permutation(m.perm, size=size).array_form)] for m in members]
+        except KeyError as e:
+            raise ValueError(f"{e} is not a member of {self}") from None
+
+    def is_subgroup(self, H):
+        """Whether ``H``, a set of members of this group, is a subgroup of it."""
+        H = self._match(H)
+        perms = {h.perm for h in H}
+        return self.identity.perm in perms and all(a.compose(b).perm in perms for a in H for b in H)
+
+    def is_left_transversal(self, A, H):
+        """Whether ``A`` is a left transversal of the subgroup ``H``.
+
+        Every member of this group is ``a o h`` for exactly one ``a``
+        in ``A`` and ``h`` in ``H``.
+        """
+        A, H = self._match(A), self._match(H)
+        if len(A) * len(H) != self.size():
+            return False
+        return len({a.compose(h).perm for a in A for h in H}) == self.size()
+
+    def decompose(self, x, H):
+        """Write ``x = a o h`` with ``a`` in this transversal and ``h`` in ``H``.
+
+        This set must be a left transversal of the subgroup ``H`` of the group
+        containing ``x``; the decomposition is then unique.
+
+        Returns ``(a, h)`` with ``a`` in ``self`` and ``h`` in ``H``.
+        """
+        G = x.group
+        Hperms = {m.perm: m for m in G._match(H)}
+        found = []
+        for a in G._match(self):
+            h = (~a).compose(x)
+            if h.perm in Hperms:
+                found.append((a, Hperms[h.perm]))
+        if len(found) != 1:
+            raise ValueError(f"No unique decomposition of {x}: this set is not a left transversal of H")
+        return found[0]
+
+    def span_stabiliser(self, act, tol=1e-10):
+        """The members ``s`` with span(act(s)) == span(act(identity)).
+
+        ``act(s)`` returns an (m, n) array whose rows are the images under ``s``
+        of m vectors (for example linear functionals evaluated on a basis), all
+        in one fixed coordinate system. Returns a permutation set on this
+        group's cell.
+        """
+        X = np.asarray(act(self.identity), dtype=float)
+        r = np.linalg.matrix_rank(X, tol=tol)
+        stab = [s for s in self.members()
+                if np.linalg.matrix_rank(np.vstack([X, np.asarray(act(s), dtype=float)]), tol=tol) == r]
+        return PermutationSetRepresentation([s.perm for s in stab], cell=self.cell)
+
+    def span_representation(self, act, tol=1e-8):
+        """The matrices of the action on the span of ``act(identity)``.
+
+        For each member ``s`` returns ``rho(s)`` with
+        ``act(s)[i] = sum_j rho(s)[j, i] * act(identity)[j]``. The rows of
+        ``act(identity)`` must be linearly independent and every member must
+        preserve their span (as for the members of :meth:`span_stabiliser`).
+        Returns ``{permutation array form: rho(s)}``.
+        """
+        X = np.asarray(act(self.identity), dtype=float)
+        if np.linalg.matrix_rank(X, tol=tol) != X.shape[0]:
+            raise ValueError("The vectors are not linearly independent")
+        rho = {}
+        for s in self.members():
+            R = np.asarray(act(s), dtype=float)
+            sol, *_ = np.linalg.lstsq(X.T, R.T, rcond=None)
+            if not np.allclose(X.T @ sol, R.T, atol=tol):
+                raise ValueError(f"{s} does not preserve the span")
+            rho[tuple(s.perm.array_form)] = sol
+        return rho
 
     def __mul__(self, other_group):
         # convert to set to remove duplicates
