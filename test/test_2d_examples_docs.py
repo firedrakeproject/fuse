@@ -164,7 +164,7 @@ def construct_nd(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), VectorKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel(1, action=HCurl))]
 
     dofs = DOFGenerator(xs, S1, S2)
     int_ned = ElementTriple(edge, (P1, C0, Fcurl), dofs)
@@ -188,7 +188,7 @@ def construct_nd_2nd_kind(tri=None):
     edge = tri.edges()[0]
     x = sp.Symbol("x")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
     dofs = DOFGenerator(xs, S2, S2)
     int_ned = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
 
@@ -208,8 +208,8 @@ def construct_nd2_2nd_kind(tri=None):
     edge = tri.edges()[0]
 
     s_0 = sp.Symbol("s_0")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,)))]
-    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,), action=HCurl))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
     int_ned = ElementTriple(edge, (PolynomialSpace(deg, shape=1), C0, Fcurl), dofs)
 
@@ -218,7 +218,7 @@ def construct_nd2_2nd_kind(tri=None):
 
     s_1 = sp.Symbol("s_1")
     s_2 = sp.Symbol("s_2")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1, s_2)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1, s_2), action=HCurl))]
     face_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, shape=2)
@@ -234,7 +234,7 @@ def construct_bdm(tri=None):
     edge = tri.edges()[0]
     x = sp.Symbol("x")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
     int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
@@ -254,7 +254,7 @@ def construct_bdm_bary(tri=None):
     edge = tri.edges()[0]
     s_0 = sp.Symbol("s_0")
 
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
     int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
 
@@ -274,8 +274,8 @@ def construct_bdm2(tri=None):
     edge = tri.edges()[0]
     x = sp.Symbol("x")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
-    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,), action=HDiv))]
+    centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,), action=HDiv))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
     int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
@@ -286,7 +286,7 @@ def construct_bdm2(tri=None):
     s_1 = sp.Symbol("s_1")
     s_0 = sp.Symbol("s_0")
     phi_0 = [1 - s_1, s_0]
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1), action=HDiv))]
     interior = DOFGenerator(xs, C3, S1)
 
     space = PolynomialSpace(deg, shape=2)
@@ -306,8 +306,8 @@ def construct_bdm2_bary(tri=None):
     s_1 = sp.Symbol("s_1")
     vertex_basis = s_0*(2*s_0 - 1)
     edge_basis = 4*s_0*s_1
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=(s_0, s_1)))]
-    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=(s_0, s_1)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=(s_0, s_1), action=HDiv))]
+    centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=(s_0, s_1), action=HDiv))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
     int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
@@ -318,7 +318,7 @@ def construct_bdm2_bary(tri=None):
     s_1 = sp.Symbol("s_1")
     s_0 = sp.Symbol("s_0")
     phi_0 = [1 - s_1, s_0]
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1)))]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1), action=HDiv))]
     interior = DOFGenerator(xs, C3, S1)
 
     space = PolynomialSpace(deg, shape=2)
@@ -361,7 +361,7 @@ def construct_rt(tri=None):
     Pd = PolynomialSpace(deg - 1)
     rt_space = vec_Pd + (Pd.restrict(deg - 2, deg - 1))*M
 
-    xs = [DOF(L2Pairing(), VectorKernel(1))]
+    xs = [DOF(L2Pairing(), VectorKernel(1, action=HDiv))]
     dofs = DOFGenerator(xs, S1, S2)
 
     int_rt = ElementTriple(edge, (vec_Pd, C0, Fdiv), dofs)
@@ -471,7 +471,7 @@ def test_rt_second_order():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), (x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), (x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
     int_rt2 = ElementTriple(edge, (P1, C0, Fdiv), dofs)
 

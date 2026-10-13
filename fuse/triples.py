@@ -1,6 +1,6 @@
 from fuse.cells import Point, TensorProductPoint, compare_topologies
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
-from fuse.traces import Trace
+from fuse.traces import Trace, TrHCurl, TrHDiv
 from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
@@ -716,4 +716,17 @@ class ImmersedDOFs():
 
 
 def immerse(target_cell, triple, target_space, node=0):
+    """Immerse the DOFs of ``triple`` into ``target_cell`` with the trace ``target_space``.
+
+    How each DOF is lifted is decided by its kernel's action. An HCurl or HDiv
+    trace is checked against the kernels; a kernel that declares no action
+    takes it from the trace, which is deprecated.
+    """
+    trace = target_space(target_cell)
+    if isinstance(trace, (TrHCurl, TrHDiv)):
+        undeclared = [dof.kernel for dof in triple.generate() if dof.kernel.declared_action is None]
+        if undeclared:
+            warnings.warn(f"Kernels {undeclared} declare no action and are immersed with {trace}: taking the "
+                          "action from the trace. Pass action=HCurl or action=HDiv to the kernels instead.",
+                          DeprecationWarning, stacklevel=2)
     return ImmersedDOFs(target_cell, triple, target_space, node)

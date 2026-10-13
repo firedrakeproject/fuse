@@ -1,6 +1,9 @@
 from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
-from fuse.traces import TrH1
+from fuse.traces import TrH1, TrHCurl, TrHDiv
+from fuse.actions import as_action, H1Action, HCurlAction, HDivAction
+import copy
+import warnings
 import numpy as np
 import sympy as sp
 
@@ -12,7 +15,6 @@ class Pairing():
 
     def __init__(self):
         self.entity = None
-        self.orientation = None
 
     def _to_dict(self):
         o_dict = {"entity": self.entity}
@@ -40,21 +42,12 @@ class DeltaPairing(Pairing):
     def add_entity(self, entity):
         res = DeltaPairing()
         res.entity = entity
-        if self.orientation:
-            res = res.permute(self.orientation)
-        return res
-
-    def permute(self, g):
-        res = DeltaPairing()
-        if self.entity:
-            res.entity = self.entity
-        #    res.entity = self.entity.orient(g)
-        if self.orientation is not None:
-            g = g * self.orientation
-        res.orientation = g
         return res
 
     def __repr__(self):
+        return self.describe()
+
+    def describe(self, orientation=None):
         return "{fn}({kernel})"
 
     def dict_id(self):
@@ -75,37 +68,17 @@ class L2Pairing(Pairing):
         Qpts, Qwts = self.entity.quadrature(5)
         return sum([wt*np.dot(kernel(*pt), v(*pt)) for pt, wt in zip(Qpts, Qwts)])
 
-    def tabulate(self):
-        bvs = np.array(self.entity.basis_vectors())
-        if self.orientation:
-            new_bvs = np.array(self.entity.orient(self.orientation).basis_vectors())
-            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-            return basis_change
-        return np.eye(bvs.shape[0])
-
     def add_entity(self, entity):
         res = L2Pairing()
         res.entity = entity
-        if self.orientation:
-            res = res.permute(self.orientation)
-        return res
-
-    def permute(self, g):
-        if g.perm.is_Identity:
-            return self
-
-        res = L2Pairing()
-        if self.entity:
-            res.entity = self.entity
-        if self.orientation is not None:
-            g = g * self.orientation
-        res.orientation = g
         return res
 
     def __repr__(self):
-        if self.orientation is not None:
-            return "integral_{}({})({{kernel}} * {{fn}}) dx) ".format(str(self.orientation), str(self.entity))
-        return "integral_{}({{kernel}} * {{fn}}) dx) ".format(str(self.entity))
+        return self.describe()
+
+    def describe(self, orientation=None):
+        entity = str(self.entity) if orientation is None else "{}({})".format(str(orientation), str(self.entity))
+        return "integral_{}({{kernel}} * {{fn}}) dx) ".format(entity)
 
     def dict_id(self):
         return "L2Inner"
@@ -117,12 +90,76 @@ class L2Pairing(Pairing):
 
 
 class BaseKernel():
+    """A DOF kernel.
 
-    def __init__(self):
+    The kernel class moves the kernel's support under a symmetry. Its value is
+    transformed by ``action``, a :class:`fuse.actions.KernelAction` chosen with
+    the kernel, or one of the spaces H1, HCurl, HDiv or L2 as a shorthand for
+    a form action. Scalar kernels default to H1.
+    """
+
+    def __init__(self, action=None):
         self.attachment = False
+        self.orientation = None
+        self._action = as_action(action)
+        if self._action is None and self.rank == 1:
+            warnings.warn(f"Vector valued kernel {self} has no action: assuming HCurl. "
+                          "Pass action=HCurl (or another action) explicitly.", DeprecationWarning, stacklevel=3)
+
+    @property
+    def rank(self):
+        """0 for scalar valued kernels, 1 for vector valued ones."""
+        return 0
+
+    @property
+    def declared_action(self):
+        return self._action
+
+    @property
+    def action(self):
+        if self._action is not None:
+            return self._action
+        return HCurlAction if self.rank == 1 else H1Action
+
+    def with_action(self, action):
+        """A copy of this kernel with ``action``."""
+        res = copy.copy(self)
+        res._action = as_action(action)
+        return res
+
+    def action_for_trace(self, trace):
+        """This kernel, checked against the trace it is immersed with.
+
+        The trace carries no information beyond the kernel's action: an HCurl
+        or HDiv trace must agree with it. A kernel that declares no action takes
+        it from the trace (deprecated, see :func:`fuse.triples.immerse`).
+        """
+        expected = {TrHCurl: HCurlAction, TrHDiv: HDivAction}.get(type(trace))
+        if expected is None:
+            return self
+        if self.declared_action is None:
+            return self.with_action(expected)
+        if not expected.matches(self.declared_action):
+            raise ValueError(f"Kernel {self} has action {self.declared_action} but is immersed with {trace}")
+        return self
+
+    def act(self, g):
+        """This kernel transformed by the symmetry ``g`` of its entity."""
+        res = copy.copy(self)
+        res.orientation = g if self.orientation is None else g.compose(self.orientation)
+        return res
 
     def permute(self, g):
-        raise NotImplementedError("This method should be implemented by the subclass")
+        return self.act(g)
+
+    def action_matrix(self, entity):
+        """Inverse transpose of the linear part of the kernel's symmetry, in the
+        coordinates of ``entity``."""
+        if entity.get_spatial_dimension() == 0:
+            return np.eye(0)
+        bvs = np.array(entity.basis_vectors())
+        new_bvs = np.array(entity.orient(self.orientation).basis_vectors())
+        return np.matmul(np.linalg.inv(new_bvs), bvs)
 
     def __repr__(self):
         return "BaseKernel"
@@ -133,11 +170,11 @@ class BaseKernel():
 
 class PointKernel(BaseKernel):
 
-    def __init__(self, x):
+    def __init__(self, x, action=None):
         if not isinstance(x, tuple):
             x = (x,)
         self.pt = x
-        super(PointKernel, self).__init__()
+        super(PointKernel, self).__init__(action)
 
     def __repr__(self):
         x = list(map(str, list(self.pt)))
@@ -146,13 +183,15 @@ class PointKernel(BaseKernel):
     def degree(self, interpolant_degree):
         return interpolant_degree
 
-    def permute(self, g):
-        return PointKernel(g(self.pt))
+    def act(self, g):
+        res = copy.copy(self)
+        res.pt = g(self.pt)
+        return res
 
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+    def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
@@ -168,10 +207,14 @@ class PointKernel(BaseKernel):
 
 class VectorKernel(BaseKernel):
 
-    def __init__(self, x, g=None):
+    def __init__(self, x, g=None, action=None):
         self.pt = x
         self.g = g
-        super(VectorKernel, self).__init__()
+        super(VectorKernel, self).__init__(action)
+
+    @property
+    def rank(self):
+        return 0 if np.ndim(self.pt) == 0 else 1
 
     def __repr__(self):
         if isinstance(self.pt, tuple):
@@ -183,18 +226,16 @@ class VectorKernel(BaseKernel):
     def degree(self, interpolant_degree):
         return interpolant_degree
 
-    def permute(self, g):
-        return VectorKernel(self.pt, g)
-
     def __call__(self, *args):
         return self.pt
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+    def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
         if isinstance(self.pt, int):
             return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        if not immersed:
-            return Qpts, np.array([wt*np.matmul(self.pt, basis_change)for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        return Qpts, np.array([wt*immersed(np.matmul(self.pt, basis_change))for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        # TODO: a constant vector is acted on by the transpose of the action
+        # matrix, unlike the polynomial kernels
+        value = action.act(basis_change.T, self.pt)
+        return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt}
@@ -209,7 +250,7 @@ class VectorKernel(BaseKernel):
 
 class BarycentricPolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, g=None, symbols=[]):
+    def __init__(self, fn, g=None, symbols=[], action=None):
         if hasattr(fn, "__iter__") or isinstance(fn, sp.Matrix):
             # if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
             #     raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
@@ -223,7 +264,11 @@ class BarycentricPolynomialKernel(BaseKernel):
             self.shape = 0
         self.g = g
         self.syms = symbols
-        super(BarycentricPolynomialKernel, self).__init__()
+        super(BarycentricPolynomialKernel, self).__init__(action)
+
+    @property
+    def rank(self):
+        return 0 if self.shape == 0 else 1
 
     def __repr__(self):
         return str(self.fn)
@@ -235,10 +280,6 @@ class BarycentricPolynomialKernel(BaseKernel):
             return interpolant_degree
         return self.fn.as_poly().total_degree() + interpolant_degree
 
-    def permute(self, g):
-        new_fn = self.fn
-        return BarycentricPolynomialKernel(new_fn, g=g, symbols=self.syms)
-
     def __call__(self, *args):
         if self.shape == 0:
             res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
@@ -246,17 +287,12 @@ class BarycentricPolynomialKernel(BaseKernel):
             res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
         return res
 
-    def evaluate(self, Qpts, bary_pts, Qwts, basis_change, immersed, dim, value_shape):
+    def evaluate(self, Qpts, bary_pts, Qwts, basis_change, action, dim, value_shape):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [list(np.ndindex(value_shape)) for pt in Qpts]
-        if self.shape != 0 and not immersed:
-            wts = [wt*np.matmul(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
-        elif self.shape == 0:
-            wts = [wt*self(*pt) for pt, wt in zip(bary_pts, Qwts)]
-        else:
-            wts = [wt*immersed(np.matmul(basis_change, self(*pt))) for pt, wt in zip(bary_pts, Qwts)]
+        wts = [wt*action.act(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
@@ -272,7 +308,7 @@ class BarycentricPolynomialKernel(BaseKernel):
 
 class PolynomialKernel(BaseKernel):
 
-    def __init__(self, fn, g=None, symbols=[]):
+    def __init__(self, fn, g=None, symbols=[], action=None):
         if hasattr(fn, "__iter__"):
             if len(symbols) != 0 and any(not sp.sympify(fn[i]).as_poly() for i in range(len(fn))):
                 raise ValueError("Function components must be able to be interpreted as a sympy polynomial")
@@ -283,7 +319,11 @@ class PolynomialKernel(BaseKernel):
             self.shape = 0
         self.g = g
         self.syms = symbols
-        super(PolynomialKernel, self).__init__()
+        super(PolynomialKernel, self).__init__(action)
+
+    @property
+    def rank(self):
+        return 0 if self.shape == 0 else 1
 
     def __repr__(self):
         return str(self.fn)
@@ -295,11 +335,6 @@ class PolynomialKernel(BaseKernel):
             return interpolant_degree
         return self.fn.as_poly().total_degree() + interpolant_degree
 
-    def permute(self, g):
-        # new_fn = self.fn.subs({self.syms[i]: g(self.syms)[i] for i in range(len(self.syms))})
-        new_fn = self.fn
-        return PolynomialKernel(new_fn, g=g, symbols=self.syms)
-
     def __call__(self, *args):
         if self.shape == 0:
             res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
@@ -309,20 +344,12 @@ class PolynomialKernel(BaseKernel):
                 res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
         return res
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+    def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [list(np.ndindex(value_shape)) for pt in Qpts]
-        # if not immersed or self.shape == 0:
-        #     return Qpts, np.array([wt*self(*(np.matmul(pt, basis_change))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
-        # return Qpts, np.array([wt*immersed(np.matmul(basis_change, self(*(np.matmul(basis_change, pt))))) for pt, wt in zip(Qpts, Qwts)]).astype(np.float64), comps
-        if self.shape != 0 and not immersed:
-            wts = [wt*np.matmul(basis_change, self(*np.matmul(basis_change.T, pt))) for pt, wt in zip(Qpts, Qwts)]
-        elif self.shape == 0:
-            wts = [wt*self(*np.matmul(basis_change.T, pt)) for pt, wt in zip(Qpts, Qwts)]
-        else:
-            wts = [wt*immersed(np.matmul(basis_change, self(*np.matmul(basis_change.T, pt)))) for pt, wt in zip(Qpts, Qwts)]
+        wts = [wt*action.act(basis_change, self(*np.matmul(basis_change.T, pt))) for pt, wt in zip(Qpts, Qwts)]
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
@@ -372,12 +399,34 @@ class ComponentKernel(BaseKernel):
             return interpolant_degree
         return self.base_kernel.degree(interpolant_degree)
 
-    def permute(self, g):
+    @property
+    def rank(self):
+        return 0 if self.base_kernel is None else self.base_kernel.rank
+
+    def act(self, g):
         if self.base_kernel is None:
             return self
         # The component index is unchanged by a cell symmetry, as each
         # component transforms as a scalar under the identity pullback.
-        return ComponentKernel(self.comp, self.base_kernel.permute(g))
+        return ComponentKernel(self.comp, self.base_kernel.act(g))
+
+    def action_matrix(self, entity):
+        if self.base_kernel is None:
+            return super(ComponentKernel, self).action_matrix(entity)
+        return self.base_kernel.action_matrix(entity)
+
+    @property
+    def declared_action(self):
+        return self._action if self.base_kernel is None else self.base_kernel.declared_action
+
+    @property
+    def action(self):
+        return super(ComponentKernel, self).action if self.base_kernel is None else self.base_kernel.action
+
+    def with_action(self, action):
+        if self.base_kernel is None:
+            return super(ComponentKernel, self).with_action(action)
+        return ComponentKernel(self.comp, self.base_kernel.with_action(action))
 
     def __call__(self, *args):
         if self.base_kernel is None:
@@ -392,11 +441,11 @@ class ComponentKernel(BaseKernel):
             raise ValueError(f"Cannot offset a component of rank {len(comp)} by one of rank {len(self.comp)}.")
         return tuple(a + b for a, b in zip(self.comp, comp))
 
-    def evaluate(self, Qpts, Qwts, basis_change, immersed, dim, value_shape):
+    def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
         if self.base_kernel is None:
             return Qpts, Qwts, [[self.comp] for pt in Qpts]
         pts, wts, comps = self.base_kernel.evaluate(Qpts, Qwts, basis_change,
-                                                    immersed, dim, tuple())
+                                                    action, dim, tuple())
         return pts, wts, [[self._shift(c) for c in cs] for cs in comps]
 
     def _to_dict(self):
@@ -437,7 +486,7 @@ class DOF():
 
     def __call__(self, g, entity_o=False):
         new_generation = self.generation.copy()
-        return DOF(self.pairing.permute(g), self.kernel.permute(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
+        return DOF(self.pairing, self.kernel.act(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
 
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
@@ -465,76 +514,41 @@ class DOF():
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
-        Qpts, Qwts = self.cell_defined_on.quadrature(self.kernel.degree(arg_degree))
+        entity = self.cell_defined_on
+        Qpts, Qwts = entity.quadrature(self.kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        dim = self.cell_defined_on.get_spatial_dimension()
-        if dim > 0:
-            bvs = np.array(self.cell_defined_on.basis_vectors())
-            new_bvs = np.array(self.cell_defined_on.orient(self.pairing.orientation).basis_vectors())
-            basis_change = np.matmul(np.linalg.inv(new_bvs), bvs)
-        else:
-            basis_change = np.eye(dim)
-
-        if self.immersed and (isinstance(self.kernel, VectorKernel) or isinstance(self.kernel, BarycentricPolynomialKernel) or isinstance(self.kernel, PolynomialKernel)):
-            def immersed(pt):
-                basis = np.array(self.cell_defined_on.basis_vectors()).T
-                basis_coeffs = np.matmul(np.linalg.inv(basis), np.array(pt))
-                J = np.array(self.cell.basis_vectors(entity=self.cell_defined_on)).T
-                # J2 = self.cell.attachment_J(self.cell.id, self.cell_defined_on.id)
-                # if not np.allclose(J2 @ np.array(pt), J @ basis_coeffs):
-                #     breakpoint()
-                return np.matmul(J, basis_coeffs)
-        else:
-            immersed = self.immersed
+        basis_change = self.kernel.action_matrix(entity)
+        action = self.kernel.action.resolve(entity, self.kernel.rank)
 
         if isinstance(self.kernel, BarycentricPolynomialKernel):
-            # if self.pairing.orientation is not None and
-            # self.pairing.orientation.numeric_rep() == 1:
-            #     breakpoint()
-            # print(self)
-            # print(self.cell_defined_on.cartesian_to_barycentric(Qpts))
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
-            bary_pts = self.cell_defined_on.cartesian_to_barycentric(pts)
-            # print(bary_pts)
-            # print(basis_change)
-            pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
+            bary_pts = entity.cartesian_to_barycentric(pts)
+            pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, action, self.cell.dimension, value_shape)
         else:
-            pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, immersed, self.cell.dimension, value_shape)
+            pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, action, self.cell.dimension, value_shape)
 
         if self.immersed:
-            # need to compute jacobian from attachment.
-            pts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in pts])
-            # J_det = self.cell.attachment_J_det(self.cell.id, self.cell_defined_on.id)
-            J_det = 1
-            if not np.allclose(J_det, 1):
-                raise ValueError("Jacobian Determinant is not 1 did you do something wrong")
-            immersion = self.target_space.tabulate(pts, self.cell_defined_on)
-            if isinstance(self.target_space, TrH1):
-                new_wts = wts
-            else:
-                new_wts = np.outer(wts * J_det, immersion)
-                # shape is wrong for 2d face on tet
-            # if isinstance(self.kernel, BarycentricPolynomialKernel) and self.kernel.shape > 1:
-            #     new_wts = np.array([self.cell.attachment(self.cell.id, self.cell_defined_on.id)(*pt) for pt in new_wts])
-        else:
-            new_wts = wts
+            pts = np.array([self.cell.attachment(self.cell.id, entity.id)(*pt) for pt in pts])
+            if not isinstance(self.target_space, (TrH1, TrHCurl, TrHDiv)):
+                # derivative traces are not yet kernel actions
+                wts = np.outer(wts, self.target_space.tabulate(pts, entity))
+            elif not isinstance(self.kernel, (PointKernel, ComponentKernel)):
+                L = action.lift_matrix(self.cell, entity, self.kernel.rank)
+                if L is not None:
+                    wts = np.matmul(np.reshape(wts, (len(wts), -1)), L.T)
         # pt dict is { pt: [(weight, component)]}
-        if len(comps) > 0 and len(new_wts) > 0 and len(new_wts[0]) != len(comps[0]):
-            raise ValueError(f"{self} produced {len(new_wts[0])} weights for {len(comps[0])} components. The kernel and the value shape disagree.")
-        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, new_wts, comps)}
-        # if self.cell_defined_on.dimension >= 2:
-        #     print(self)
-        #     np.set_printoptions(linewidth=90, precision=4, suppress=True)
-        #     for key, val in pt_dict.items():
-        #         print(np.array(key), ":", np.array([v[0] for v in val]))
+        if len(comps) > 0 and len(wts) > 0 and len(wts[0]) != len(comps[0]):
+            raise ValueError(f"{self} produced {len(wts[0])} weights for {len(comps[0])} components. The kernel and the value shape disagree.")
+        pt_dict = {tuple(pt): [(w, c) for w, c in zip(wt, cp)] for pt, wt, cp in zip(pts, wts, comps)}
         return pt_dict
 
     def __repr__(self, fn="v"):
-        return str(self.pairing).format(fn=fn, kernel=self.kernel)
+        return self.pairing.describe(self.kernel.orientation).format(fn=fn, kernel=self.kernel)
 
     def immerse(self, entity, attachment, target_space, g, triple):
         new_generation = self.generation.copy()
-        return ImmersedDOF(self.pairing, self.kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
+        kernel = self.kernel.action_for_trace(target_space)
+        return ImmersedDOF(self.pairing, kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
 
     def with_kernel(self, kernel):
         """A copy of this DOF acting through a different kernel.
@@ -583,7 +597,7 @@ class ImmersedDOF(DOF):
         new_cell_defined_on = self.cell.get_node(permuted_e)
 
         new_attach = lambda *x: g(self.attachment(*x))
-        return ImmersedDOF(self.pairing.permute(permuted_g), self.kernel.permute(permuted_g), new_cell_defined_on,
+        return ImmersedDOF(self.pairing, self.kernel.act(permuted_g), new_cell_defined_on,
                            new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell, entity_o)
 
     def __repr__(self):
