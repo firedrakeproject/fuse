@@ -200,8 +200,7 @@ def proxy_field_bfs(cell, rot=False):
         grp = [C3]
     else:
         bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
-        # grp = [tet_edges]
-        grp = [S1, S1, S1, S1, S1, S1]
+        grp = [tet_edges]
         facet_syms = [[symbols[i] for i in facet] for facet in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
     if rot:
         if cell.dimension == 2:
@@ -210,9 +209,15 @@ def proxy_field_bfs(cell, rot=False):
             grp = [C3]
         else:
             bfs = [sp.Matrix(symbols[i]*dl[j].cross(dl[k]) + symbols[j]*dl[k].cross(dl[i]) + symbols[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
-            grp = [S1, S1, S1, S1]
-            # grp = [tet_faces]
+            grp = [tet_faces]
             facet_syms = [[symbols[i] for i in facet] for facet in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
+    if cell.dimension == 3:
+        # As for the immersed DOFs, the field of the first edge (face) is
+        # generated onto the others by the transversal.
+        base = cell.d_entities(2 if rot else 1)[0]
+        base_ids = {cell.ordered_vertices().index(v) for v in base.ordered_vertices()}
+        k = [i for i, fs in enumerate(facet_syms) if {symbols.index(x) for x in fs} == base_ids][0]
+        bfs, facet_syms = [bfs[k]], [facet_syms[k]]
 
     return bfs, grp, symbols, facet_syms
 
@@ -277,10 +282,11 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False, action=None):
                     dofs += [DOFGenerator(xs1, grp*pf_grp, S1)]
                     counter += (pf_grp*grp).size()
                 else:
-                    for o in grp.members():
-                        xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols, action=action))]
-                        dofs += [DOFGenerator(xs1, pf_grp, S1)]
-                        counter += (pf_grp).size()
+                    # the orientations of one moment on its entity form one generator
+                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols, action=action))
+                           for o in grp.members()]
+                    dofs += [DOFGenerator(xs1, pf_grp, S1)]
+                    counter += len(xs1)*pf_grp.size()
     counter = 0
     interior_deg = deg - 2
 
@@ -319,9 +325,16 @@ def vector_basis_fns(cell, deg, rot=False, interior_only=False, action=None):
             vgrp = vgrp.add_cell(cell)
             grp = grp.add_cell(cell)
             if grp.size()*vgrp.size() <= cell.group.size():
-                iden = grp.identity
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))]
-                dofs += [DOFGenerator(xs1, grp*vgrp, g2)]
+                if grp.size() == 1 and not interior_only:
+                    # the images under vgrp span an invariant space on their
+                    # own, so they belong together in one generator
+                    # (interior_only generators are taken apart again by
+                    # immerse_and_generate_on_interior_face, which reads one kernel)
+                    xs1 = [x(s) for x in xs1 for s in cell.group._match(vgrp)]
+                    dofs += [DOFGenerator(xs1, grp, g2)]
+                else:
+                    dofs += [DOFGenerator(xs1, grp*vgrp, g2)]
                 counter += (vgrp*grp).size()
             else:
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))]
@@ -351,17 +364,22 @@ def lagrange_facet_fns(cell, deg, interior=False, vector=False, action=None):
             v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_2)/2, symbols=symbols, action=action))]
             if cell.dimension == 3:
-                # if grp.size() > 3:
+                # The three directions are moved into each other by the
+                # symmetries, so they belong to one generator: on their own
+                # they need not span an invariant space.
                 v_3 = np.array(cell.get_node(cell.ordered_vertices()[3], return_coords=True))
-                dofs += [DOFGenerator(xs, grp, g2)]
-                xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols, action=action))]
-                dofs += [DOFGenerator(xs, grp, g2)]
-                xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_3)/2, symbols=symbols, action=action))]
+                xs += [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols, action=action)),
+                       DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_3)/2, symbols=symbols, action=action))]
                 dofs += [DOFGenerator(xs, grp, g2)]
             else:
                 if grp.size() > 3:
                     dofs += [DOFGenerator(xs, grp, g2)]
                     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols, action=action))]
+                    dofs += [DOFGenerator(xs, grp, g2)]
+                elif grp.size() == 1:
+                    # the two directions span the constant vectors, an
+                    # invariant space, so they belong together in one generator
+                    xs = [x(s) for x in xs for s in cell.group._match(S2.add_cell(cell))]
                     dofs += [DOFGenerator(xs, grp, g2)]
                 else:
                     dofs += [DOFGenerator(xs, S2*grp, g2)]
