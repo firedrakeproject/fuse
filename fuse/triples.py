@@ -3,6 +3,7 @@ from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
 from fuse.traces import Trace, TrH1, TrHCurl, TrHDiv
 from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
 from fuse.utils import numpy_to_str_tuple
+from fuse.spaces.polynomial_spaces import riesz_matrices
 from FIAT.dual_set import DualSet
 from FIAT.finite_element import CiarletElement
 from FIAT.reference_element import ufc_cell
@@ -31,7 +32,7 @@ class ElementTriple():
             dof_gen = [dof_gen]
         for d in dof_gen:
             assert isinstance(d, DOFGenerator)
-            d.add_cell(cell)
+            d.add_context(cell, spaces[0])
 
         self.cell = cell
         self.spaces = tuple(spaces)
@@ -273,14 +274,7 @@ class ElementTriple():
             raise ValueError("Plotting not supported in this dimension")
 
     def compute_dense_matrix(self, ref_el, entity_ids, nodes, poly_set):
-        dual = DualSet(nodes, ref_el, entity_ids)
-
-        old_coeffs = poly_set.get_coeffs()
-        dualmat = dual.to_riesz(poly_set)
-
-        shp = dualmat.shape
-        A = dualmat.reshape((shp[0], -1))
-        B = old_coeffs.reshape((shp[0], -1))
+        A, B = riesz_matrices(nodes, poly_set)
         V = np.dot(A, np.transpose(B))
 
         with warnings.catch_warnings():
@@ -621,13 +615,24 @@ class DOFGenerator():
         self.g2 = trans_group
         self.dof_numbers = None
         self.ls = None
+        self._generator_dofs = None
+        self.cell = None
+        self.space = None
+        self._stabiliser = None
+        self._representation = None
 
     def __iter__(self):
         yield self.x
         yield self.g1
         yield self.g2
 
-    def add_cell(self, cell):
+    def add_context(self, cell, space):
+        """Place this generator in a triple on ``cell`` with polynomial space
+        ``space``. A generator belongs to one triple only."""
+        if self.cell is not None and (self.cell is not cell or self.space is not space):
+            raise ValueError(f"{self} already belongs to a triple on {self.cell}: use a new DOFGenerator")
+        self.cell = cell
+        self.space = space
         self.g1 = self.g1.add_cell(cell)
         self.g2 = self.g2.add_cell(cell)
 
@@ -639,6 +644,7 @@ class DOFGenerator():
     def generate(self, cell, space, id_counter):
         if self.ls is None:
             self.ls = []
+            self._generator_dofs = []
             for l_g in self.x:
                 i = 0
                 for g in self.g1.members():
@@ -650,9 +656,51 @@ class DOFGenerator():
                         id_counter += 1
                         i += 1
                     self.ls.extend(generated)
+                    if g.perm.is_Identity:
+                        self._generator_dofs.extend(generated)
             self.dof_numbers = len(self.ls)
             self.dof_ids = [dof.id for dof in self.ls]
         return self.ls
+
+    def generator_dofs(self):
+        """The generator DOFs X, as generated: the DOFs given by the identity
+        of the transversal (several for an immersed generator)."""
+        if self._generator_dofs is None:
+            raise ValueError("DOFs not generated yet")
+        return self._generator_dofs
+
+    def _act(self):
+        """s -> the generator DOFs moved by s, applied to the basis of the space."""
+        X = self.generator_dofs()
+        G = self.cell.group
+
+        def act(s):
+            # act by the cell's own member, so that it composes with the kernels' orientations
+            s, = G._match([s])
+            return self.space.functional_matrix(self.cell, [d(s) for d in X])
+        return act
+
+    def stabiliser(self):
+        """H_X: the symmetries of the triple's cell that fix the span of this
+        DOF generator."""
+        if self._stabiliser is None:
+            self._stabiliser = self.cell.group.span_stabiliser(self._act())
+        return self._stabiliser
+
+    def representation(self):
+        """rho_X: the action of the stabiliser H_X on span(X), as {permutation: matrix}."""
+        if self._representation is None:
+            self._representation = self.stabiliser().span_representation(self._act())
+        return self._representation
+
+    def check_transversal(self):
+        """Raise unless the generating group is a left transversal of H_X."""
+        if not self.generator_dofs():
+            return
+        H = self.stabiliser()
+        if not self.cell.group.is_left_transversal(self.g1, H):
+            raise ValueError(f"{self.g1} is not a left transversal of the stabiliser of the generator DOFs "
+                             f"of {self} (order {H.size()}), so it does not generate each DOF exactly once")
 
     def make_entity_ids(self):
         dofs = self.ls
@@ -700,7 +748,8 @@ class ImmersedDOFs():
     def __call__(self, g):
         target_node, o = self.target_cell.permute_entities(g, self.C.dim())[self.start_node]
         if self.C.dim() > 0 and o != o.group.identity:
-            raise ValueError("Not matching orientation - groups incorrect")
+            raise ValueError(f"{g} sends the base entity onto {self.target_cell.get_node(target_node)} but reorients it; "
+                             "each member of the transversal must carry the base entity onto its image without reorienting it")
         attachment = self.target_cell.cell_attachment(target_node)
         new_dofs = []
 
