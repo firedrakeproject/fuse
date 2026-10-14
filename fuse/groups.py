@@ -257,14 +257,6 @@ class PermutationSetRepresentation():
             return [m.perm for m in self._members]
         return self._members
 
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return self.get_member(~Permutation(perm1)) * self.get_member(Permutation(perm2))
-
     def get_member(self, perm):
         if not isinstance(perm, Permutation):
             perm = Permutation.from_sequence(perm)
@@ -335,9 +327,8 @@ class PermutationSetRepresentation():
         """Write ``x = a o h`` with ``a`` in this transversal and ``h`` in ``H``.
 
         This set must be a left transversal of the subgroup ``H`` of the group
-        containing ``x``; the decomposition is then unique.
-
-        Returns ``(a, h)`` with ``a`` in ``self`` and ``h`` in ``H``.
+        containing ``x``; the decomposition is then unique. Returns ``(a, h)``
+        as members of that group: ``a`` represents the coset of ``x``.
         """
         G = x.group
         Hperms = {m.perm: m for m in G._match(H)}
@@ -477,14 +468,6 @@ class GroupRepresentation(PermutationSetRepresentation):
             return [m.perm for m in self._members]
         return self._members
 
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
-
     # def get_member(self, perm):
     #    if not isinstance(perm, Permutation):
     #        perm = Permutation.from_sequence(perm)
@@ -610,13 +593,13 @@ new_S3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([1, 2
                                        Permutation([0, 2, 1]), Permutation([2, 1, 0]), Permutation([1, 0, 2])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
-tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
-                                          Permutation([1, 3, 0, 2]), Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([3, 2, 0, 1]), Permutation([1, 0, 3, 2]),
+                                          Permutation([1, 2, 3, 0]), Permutation([2, 0, 1, 3]), Permutation([2, 3, 1, 0])])
 tet_edges_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2]),
                                               Permutation([1, 2, 0, 3]), Permutation([3, 1, 0, 2]), Permutation([2, 3, 0, 1])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 0, 3, 1]),
 #                                           Permutation([3, 2, 0, 1]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
-tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1])])
+tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([3, 2, 0, 1]), Permutation([0, 2, 3, 1]), Permutation([0, 3, 1, 2])])
 tet_faces_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 3, 2, 0]), Permutation([1, 2, 3, 0]), Permutation([3, 0, 2, 1])])
 # tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]), Permutation([3, 0, 1, 2])])
 tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 0, 3, 2]), Permutation([3, 0, 1, 2])])

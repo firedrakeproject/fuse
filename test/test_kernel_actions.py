@@ -1,11 +1,13 @@
 """Tests for kernel actions: how a symmetry or an immersion transforms a kernel's value."""
+import itertools
+
 import numpy as np
 import pytest
 import sympy as sp
 
 from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, DOF, L2Pairing,
                   DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
-                  TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
+                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
 from fuse.actions import as_action
 
 x, y = sp.symbols("x y")
@@ -168,9 +170,8 @@ def edge_triple(tri, action=None):
 
 
 def test_trace_must_match_action(tri):
-    xs = [immerse(tri, edge_triple(tri, HDiv), TrHCurl)]
     with pytest.raises(ValueError):
-        ElementTriple(tri, (PolynomialSpace(1, shape=2), C0, None), DOFGenerator(xs, C3, S1)).generate()
+        immerse(tri, edge_triple(tri, HDiv), TrHCurl)
 
 
 def test_trace_without_action_is_deprecated(tri):
@@ -215,3 +216,147 @@ def test_kernel_action_composes(tri):
             assert kgh.orientation.perm == h.compose(g).perm
             assert np.allclose(kgh.action_matrix(tri),
                                k.act(h).action_matrix(tri) @ k.act(g).action_matrix(tri))
+
+
+# ------------------------------------------------------------------ traces are dual to lifts
+
+@pytest.mark.parametrize("cell_fn", [lambda: polygon(3), make_tetrahedron], ids=["triangle", "tetrahedron"])
+def test_lift_is_dual_to_trace(cell_fn):
+    """<lift(k), v> in the cell equals <k, tr(v)> on the entity. The trace
+    derived from the lift agrees with the trace class the action names: the
+    field itself for H1, its tangential component on an edge for HCurl and its
+    normal component on a facet for HDiv."""
+    cell = cell_fn()
+    rng = np.random.default_rng(0)
+    v = rng.standard_normal(cell.dimension)
+    kappa = rng.standard_normal()
+    for action, dim in [(H1, 0), (HCurl, 1), (HDiv, cell.dimension - 1)]:
+        for entity in cell.d_entities(dim):
+            a = as_action(action).resolve(entity, 0)
+            restricted = a.restrict(cell, entity, 0, v)
+            trace = a.trace(cell, entity, 0)
+            assert np.allclose(np.ravel(restricted), np.ravel(trace(lambda *x: v, entity)(0)) if action is not H1 else v)
+            L = a.lift_matrix(cell, entity, 0)
+            if L is not None:
+                assert np.isclose(np.dot(np.ravel(L) * kappa, v), kappa * np.ravel(restricted)[0])
+
+
+def test_flat_vector_on_face_restricts_to_tangential_part():
+    """A flat vector on a face of a tetrahedron lifts into the plane of the face,
+    so its trace forgets the normal component of a field."""
+    tet = make_tetrahedron()
+    face = tet.d_entities(2)[0]
+    a = as_action(HCurl).resolve(face, 1)
+    L = a.lift_matrix(tet, face, 1)
+    n = np.cross(*np.array(tet.basis_vectors(entity=face)))
+    assert np.allclose(n @ L, 0)
+    assert np.allclose(a.restrict(tet, face, 1, n), 0)
+    assert isinstance(a.trace(tet, face, 1), TrH1)
+
+
+# ------------------------------------------------------------------ the trace is read from the kernels
+
+def test_immerse_reads_trace_from_kernels(tri):
+    assert isinstance(immerse(tri, edge_triple(tri, HCurl)).trace, TrHCurl)
+    assert isinstance(immerse(tri, edge_triple(tri, HDiv)).trace, TrHDiv)
+    assert isinstance(immerse(tri, edge_triple(tri)).trace, TrH1)
+
+
+def test_immerse_with_redundant_trace(tri):
+    with pytest.warns(DeprecationWarning):
+        immerse(tri, edge_triple(tri, HDiv), TrHDiv)
+    with pytest.raises(ValueError):
+        immerse(tri, edge_triple(tri, HDiv), TrH1)
+
+
+def test_mixed_traces_cannot_be_immersed_together(tri):
+    edge = tri.edges()[0]
+    xs = [DOF(L2Pairing(), PolynomialKernel(1, action=HCurl)), DOF(L2Pairing(), PolynomialKernel(1, action=HDiv))]
+    triple = ElementTriple(edge, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1, S1))
+    with pytest.raises(ValueError):
+        immerse(tri, triple)
+
+
+# ------------------------------------------------------------------ immersion respects the entity's symmetry
+
+def affine_map(cell, g):
+    """The affine map of g, x -> g(x), and its linear part."""
+    M = np.array(g.transform_matrix, dtype=float)    # x' = [x, 1] @ M
+    d = cell.dimension
+    return (lambda x: np.r_[np.array(x, dtype=float), 1] @ M), M[:d, :].T
+
+
+def apply_functional(quadrature, v):
+    return sum(w * np.atleast_1d(v(pt))[c[0] if c else 0] for pt, wcs in quadrature.items() for w, c in wcs)
+
+
+def random_field(rng, d, shape):
+    """A random polynomial of degree 2, integrated exactly by the quadrature."""
+    monomials = [e for e in itertools.product(range(3), repeat=d) if sum(e) <= 2]
+    C = rng.standard_normal((len(monomials),) + shape)
+    return lambda x: sum(c * np.prod([xi**ei for xi, ei in zip(x, e)]) for c, e in zip(C, monomials))
+
+
+@pytest.mark.parametrize("p", [(0, 2, 0, 2), (0, 2, 1, 1), (0, 2, 1, 2), (0, 2, 2, 1), (0, 2, 2, 2),
+                               (1, 2, 1, 2), (1, 2, 2, 1), (0, 3, 0, 3), (0, 3, 1, 1), (0, 3, 2, 1),
+                               (1, 3, 1, 1), (0, 3, 1, 2), (0, 3, 2, 2), (1, 3, 2, 1), (1, 3, 2, 2)],
+                         ids=lambda p: "c{}-d{}-k{}-deg{}".format(*p))
+def test_immersed_dof_moves_with_the_cell(true_action, p):
+    """Moving an immersed DOF by a symmetry g of the cell (which moves it to
+    another entity, acted on by the induced symmetry of the entity) gives the
+    functional v -> l(g*v): its points are moved by g and its values by the
+    action of g on the lifted kernel."""
+    from fuse.element_construction import periodic_table
+    from fuse.dof import ImmersedDOF
+    rng = np.random.default_rng(0)
+    elem = periodic_table(*p)
+    cell = elem.cell
+    d = cell.dimension
+    shape = () if p[2] in (0, 3) else (d,)
+    for dof in elem.generate():
+        if not isinstance(dof, ImmersedDOF):
+            continue
+        lifted = dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank).lifted()
+        quadrature = dof.to_quadrature(3, shape)
+        for g in members(cell):
+            T, DT = affine_map(cell, g)
+            A = np.linalg.inv(DT).T
+            v = random_field(rng, d, shape)
+            expected = 0.0
+            for pt, wcs in quadrature.items():
+                if shape:
+                    w = np.zeros(d)
+                    for wv, c in wcs:
+                        w[c[0]] = wv
+                    expected += np.dot(lifted.act(A, w), v(T(pt)))
+                else:
+                    expected += sum(wv for wv, _ in wcs) * v(T(pt))
+            assert np.isclose(apply_functional(dof(g).to_quadrature(3, shape), v), expected, atol=1e-8), (dof, g)
+
+
+# ------------------------------------------------------------------ serialisation
+
+@pytest.mark.parametrize("kernel", [PolynomialKernel(1, action=HDiv), PolynomialKernel((x, y), action=HCurl),
+                                    PointKernel((0.5,)), PolynomialKernel(x, action=SymmetricTensorAction())])
+def test_kernel_action_serialises(kernel):
+    from fuse.serialisation import ElementSerialiser
+    converter = ElementSerialiser()
+    decoded = converter.decode(converter.encode(kernel))
+    assert decoded.declared_action == kernel.declared_action
+
+
+@pytest.mark.parametrize("cell_fn", [lambda: polygon(3), make_tetrahedron], ids=["triangle", "tetrahedron"])
+def test_induced_entity_symmetry(cell_fn):
+    """A symmetry g of the cell sends an entity E to E' and induces a symmetry
+    h of the reference entity with g o psi_E = psi_E' o h, where psi are the
+    attachments of the entities in the cell."""
+    cell = cell_fn()
+    rng = np.random.default_rng(0)
+    for dim in range(1, cell.dimension):
+        for i, E in enumerate(cell.d_entities(dim)):
+            psi_E = cell.attachment(cell.id, E.id)
+            for g in members(cell):
+                E_image, h = cell.permute_entities(g, dim)[i]
+                psi_image = cell.attachment(cell.id, E_image)
+                x = tuple(0.2 * rng.standard_normal(dim))
+                assert np.allclose(np.array(g(psi_E(*x)), dtype=float), np.array(psi_image(*h(x)), dtype=float))

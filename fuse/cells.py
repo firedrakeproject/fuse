@@ -10,6 +10,7 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
+from sympy.combinatorics import Permutation
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from FIAT.quadrature_schemes import create_quadrature
@@ -419,6 +420,18 @@ class Point():
             raise TypeError("Shape undefined for {}".format(str(self)))
 
     def get_topology(self, renumber=False):
+        """The topology handed to FIAT, which is where FUSE meets FIAT's numbering.
+
+        * Global vertex numbers are the vertices in id order (``vertices()``):
+          FIAT's vertex coordinates are listed in that order.
+        * Each entity's tuple lists its vertices in its own construction order
+          (``ordered_vertices()``), so FIAT's local vertex order of every entity,
+          the cell included, is FUSE's construction order. Orientation keys are
+          permutations of these local positions.
+
+        A cell whose external numbering differs (for example a hypercube
+        numbering) should translate here, not in the rest of FUSE.
+        """
         structure = [generation for generation in nx.topological_generations(self.graph())]
         structure.reverse()
 
@@ -618,14 +631,22 @@ class Point():
         return self.d_entities(1, get_class)
 
     def permute_entities(self, g, d):
+        """Where the symmetry ``g`` sends each ``d``-dimensional entity.
+
+        Returns, for each entity in the order of ``d_entities(d)``, the entity
+        it is sent to and the symmetry of that entity induced by ``g``. ``g``
+        is read in construction order, ``ordered_vertices()``: vertex ``i``
+        goes to vertex ``g.perm(i)``, the same map as ``g(x)``.
+        """
         # TODO something is wrong here for squares it can return [()]
-        # verts = self.ordered_vertices()
-        verts = self.vertices(get_class=False)
+        verts = self.ordered_vertices()
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
         if d == 0:
+            # listed in the order of d_entities, like the other dimensions
+            image = dict(zip(verts, reordered))
             entity_group = self.d_entities(d)[0].group
-            return list(zip(reordered, [entity_group.identity for r in reordered]))
+            return [(image[v], entity_group.identity) for v in entities]
 
         entity_dict = {}
         reordered_entity_dict = {}
@@ -639,20 +660,17 @@ class Point():
         for ent in entities:
             for ent1 in entities:
                 if set(entity_dict[ent]) == set(reordered_entity_dict[ent1]):
-                    if entity_dict[ent] != reordered_entity_dict[ent1]:
-                        o = entity_group.transform_between_perms(entity_dict[ent], reordered_entity_dict[ent1])
-                        reordered_entities[entities.index(ent1)] = (ent, o)
-                    else:
-                        reordered_entities[entities.index(ent1)] = (ent, entity_group.identity)
+                    # local vertex i of ent1 is sent to local vertex o(i) of ent
+                    o = [entity_dict[ent].index(v) for v in reordered_entity_dict[ent1]]
+                    reordered_entities[entities.index(ent1)] = (ent, entity_group.get_member(Permutation(o)))
 
         return reordered_entities
 
     def entity_stabiliser(self, entity):
         """The members of this cell's symmetry group that map ``entity`` onto itself.
 
-        ``entity`` is a sub-entity of this cell. 
-
-        Returns a permutation set on this cell; it is a subgroup of ``self.group``.
+        ``entity`` is a sub-entity of this cell. Returns a permutation set on
+        this cell; it is a subgroup of ``self.group``.
         """
         coords = np.array([np.array(self.get_node(v, return_coords=True), dtype=float).ravel()
                            for v in entity.ordered_vertices()])

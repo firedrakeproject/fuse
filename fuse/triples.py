@@ -1,6 +1,6 @@
 from fuse.cells import Point, TensorProductPoint, compare_topologies
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
-from fuse.traces import Trace, TrHCurl, TrHDiv
+from fuse.traces import Trace, TrH1, TrHCurl, TrHDiv
 from fuse.groups import perm_matrix_to_perm_array, perm_list_to_matrix
 from fuse.utils import numpy_to_str_tuple
 from FIAT.dual_set import DualSet
@@ -104,6 +104,22 @@ class ElementTriple():
                 self.dofs.extend(generated)
                 id_counter += len(generated)
         return self.dofs
+
+    def immersion_trace(self, target_cell):
+        """The trace with which this triple's DOFs are immersed in ``target_cell``.
+
+        It is the dual of the lift of the DOFs' kernels, so it is read off
+        their actions; all DOFs must agree on it.
+        """
+        traces = {type(dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank)
+                       .trace(target_cell, dof.cell_defined_on, dof.kernel.rank))
+                  for dof in self.generate()}
+        if not traces:
+            # nothing is immersed
+            return TrH1
+        if len(traces) != 1:
+            raise ValueError(f"The DOFs of {self} lift with different traces {traces}, so cannot be immersed together")
+        return traces.pop()
 
     def __iter__(self):
         yield self.cell
@@ -715,18 +731,28 @@ class ImmersedDOFs():
         return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"])
 
 
-def immerse(target_cell, triple, target_space, node=0):
-    """Immerse the DOFs of ``triple`` into ``target_cell`` with the trace ``target_space``.
+def immerse(target_cell, triple, target_space=None, node=0):
+    """Immerse the DOFs of ``triple`` into ``target_cell``.
 
-    How each DOF is lifted is decided by its kernel's action. An HCurl or HDiv
-    trace is checked against the kernels; a kernel that declares no action
-    takes it from the trace, which is deprecated.
+    How each DOF is lifted, and so its trace, is decided by its kernel's
+    action. ``target_space`` is only needed for the derivative traces
+    (``TrGrad``, ``TrHess``). Passing another trace is deprecated: it is
+    checked against the kernels, or, for kernels that declare no action,
+    supplies their action.
     """
+    if target_space is None:
+        return ImmersedDOFs(target_cell, triple, triple.immersion_trace(target_cell), node)
     trace = target_space(target_cell)
-    if isinstance(trace, (TrHCurl, TrHDiv)):
+    if isinstance(trace, (TrH1, TrHCurl, TrHDiv)):
         undeclared = [dof.kernel for dof in triple.generate() if dof.kernel.declared_action is None]
-        if undeclared:
+        if undeclared and isinstance(trace, (TrHCurl, TrHDiv)):
             warnings.warn(f"Kernels {undeclared} declare no action and are immersed with {trace}: taking the "
                           "action from the trace. Pass action=HCurl or action=HDiv to the kernels instead.",
+                          DeprecationWarning, stacklevel=2)
+        elif not undeclared:
+            derived = triple.immersion_trace(target_cell)
+            if derived is not target_space:
+                raise ValueError(f"The kernels of {triple} lift with the {derived(target_cell)} trace, not {trace}")
+            warnings.warn(f"The trace is read from the kernels' actions: drop the {trace} argument to immerse.",
                           DeprecationWarning, stacklevel=2)
     return ImmersedDOFs(target_cell, triple, target_space, node)

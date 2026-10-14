@@ -195,14 +195,14 @@ class PointKernel(BaseKernel):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
-        o_dict = {"pt": self.pt}
+        o_dict = {"pt": self.pt, "action": self._action}
         return o_dict
 
     def dict_id(self):
         return "PointKernel"
 
     def _from_dict(obj_dict):
-        return PointKernel(tuple(obj_dict["pt"]))
+        return PointKernel(tuple(obj_dict["pt"]), action=obj_dict.get("action"))
 
 
 class VectorKernel(BaseKernel):
@@ -238,14 +238,14 @@ class VectorKernel(BaseKernel):
         return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
 
     def _to_dict(self):
-        o_dict = {"pt": self.pt}
+        o_dict = {"pt": self.pt, "action": self._action}
         return o_dict
 
     def dict_id(self):
         return "VectorKernel"
 
     def _from_dict(obj_dict):
-        return VectorKernel(tuple(obj_dict["pt"]))
+        return VectorKernel(tuple(obj_dict["pt"]), action=obj_dict.get("action"))
 
 
 class BarycentricPolynomialKernel(BaseKernel):
@@ -296,14 +296,14 @@ class BarycentricPolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
-        o_dict = {"fn": self.fn, "syms": self.syms}
+        o_dict = {"fn": self.fn, "syms": self.syms, "action": self._action}
         return o_dict
 
     def dict_id(self):
         return "BarycentricPolynomialKernel"
 
     def _from_dict(obj_dict):
-        return BarycentricPolynomialKernel(obj_dict["fn"], symbols=obj_dict["syms"])
+        return BarycentricPolynomialKernel(obj_dict["fn"], symbols=obj_dict["syms"], action=obj_dict.get("action"))
 
 
 class PolynomialKernel(BaseKernel):
@@ -353,14 +353,14 @@ class PolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
-        o_dict = {"fn": self.fn}
+        o_dict = {"fn": self.fn, "action": self._action}
         return o_dict
 
     def dict_id(self):
         return "PolynomialKernel"
 
     def _from_dict(obj_dict):
-        return PolynomialKernel(obj_dict["fn"])
+        return PolynomialKernel(obj_dict["fn"], action=obj_dict.get("action"))
 
 
 class ComponentKernel(BaseKernel):
@@ -581,9 +581,25 @@ class ImmersedDOF(DOF):
         attached_fn = fn.attach(self.attachment)
 
         if pullback:
-            attached_fn = self.target_space(attached_fn, self.cell_defined_on)
+            attached_fn = self.restrict(attached_fn)
 
         return self.pairing(self.kernel, attached_fn, self.cell)
+
+    def restrict(self, fn):
+        """The trace of ``fn`` on the entity, the dual of the kernel's lift."""
+        if not isinstance(self.target_space, (TrH1, TrHCurl, TrHDiv)):
+            # derivative traces are not yet kernel actions
+            return self.target_space(fn, self.cell_defined_on)
+        if isinstance(self.kernel, (PointKernel, ComponentKernel)):
+            return fn
+        entity, rank = self.cell_defined_on, self.kernel.rank
+        action = self.kernel.action.resolve(entity, rank)
+        if action.lift_matrix(self.cell, entity, rank) is None:
+            return fn
+
+        def restricted(*x):
+            return tuple(action.restrict(self.cell, entity, rank, np.array(fn(*x), dtype=float).squeeze()))
+        return restricted
 
     def tabulate(self, Qpts):
         # modify this to take reference space q pts

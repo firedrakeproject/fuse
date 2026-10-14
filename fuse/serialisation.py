@@ -49,7 +49,9 @@ class ElementSerialiser():
                           "PolynomialKernel": PolynomialKernel,
                           "PointKernel": PointKernel,
                           "ComponentKernel": ComponentKernel,
-                          "Trace": Trace
+                          "Trace": Trace,
+                          "FormAction": FormAction,
+                          "SymmetricTensorAction": SymmetricTensorAction,
                           }
 
     def encode(self, obj):

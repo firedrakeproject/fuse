@@ -390,7 +390,7 @@ def construct_tri_cgN(deg):
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
-    v_xs = [immerse(cell, dg0, TrH1)]
+    v_xs = [immerse(cell, dg0)]
     v_dofs = [DOFGenerator(v_xs, C3, S1)]
 
     points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
@@ -403,7 +403,7 @@ def construct_tri_cgN(deg):
     else:
         centre_dof = []
     edge_dg0 = ElementTriple(edge, (Pk, C0, Fid), sym_dofs + centre_dof)
-    edge_xs = [immerse(cell, edge_dg0, TrH1)]
+    edge_xs = [immerse(cell, edge_dg0)]
     edge_dofs = [DOFGenerator(edge_xs, C3, S1)]
 
     int_dofs = lagrange_facet_pts(cell, deg)
@@ -418,7 +418,7 @@ def construct_tet_cgN(deg):
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
-    v_xs = [immerse(cell, dg0, TrH1)]
+    v_xs = [immerse(cell, dg0)]
     v_dofs = [DOFGenerator(v_xs, C4, S1)]
 
     points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
@@ -431,12 +431,12 @@ def construct_tet_cgN(deg):
     else:
         centre_dof = []
     edge_dg0 = ElementTriple(edge, (Pk, C0, Fid), sym_dofs + centre_dof)
-    edge_xs = [immerse(cell, edge_dg0, TrH1)]
+    edge_xs = [immerse(cell, edge_dg0)]
     edge_dofs = [DOFGenerator(edge_xs, tet_edges, S1)]
 
     face_dofs = lagrange_facet_pts(face, deg)
     face_trp = ElementTriple(face, (Pk, C0, Fid), face_dofs)
-    face_xs = [immerse(cell, face_trp, TrH1)]
+    face_xs = [immerse(cell, face_trp)]
     face_dofs = [DOFGenerator(face_xs, tet_faces, S1)]
 
     int_dofs = lagrange_facet_pts(cell, deg)
@@ -452,7 +452,7 @@ def construct_tri_ndN(deg):
 
     dofs = lagrange_facet_fns(edge, deg - 1, action=HCurl)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
-    xs = [immerse(cell, int_ned1, TrHCurl)]
+    xs = [immerse(cell, int_ned1)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
     center_dofs = lagrange_facet_fns(cell, deg - 2, interior=True, vector=True, action=HCurl)
@@ -475,12 +475,12 @@ def construct_tet_ndN(deg):
 
     edge_dofs = lagrange_facet_fns(edge, deg - 1, action=HCurl)
     int_ned = ElementTriple(edge, (PolynomialSpace(deg - 1, shape=1), C0, Fcurl), edge_dofs)
-    xs = [immerse(cell, int_ned, TrHCurl)]
+    xs = [immerse(cell, int_ned)]
     edge_dofs = [DOFGenerator(xs, tet_edges, S1)]
 
     face_dofs = lagrange_facet_fns(face, deg - 2, vector=True, action=HCurl)
     face_ned = ElementTriple(face, (PolynomialSpace(deg - 2, shape=2), C0, Fcurl), face_dofs)
-    xs = [immerse(cell, face_ned, TrH1)]
+    xs = [immerse(cell, face_ned)]
     face_dofs = [DOFGenerator(xs, tet_faces, S1)]
 
     center_dofs = lagrange_facet_fns(cell, deg - 3, interior=True, vector=True, action=HCurl)
@@ -510,7 +510,7 @@ def construct_tri_ndN_2(deg):
 
     dofs = lagrange_facet_fns(edge, deg, action=HCurl)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
-    xs = [immerse(cell, int_ned1, TrHCurl)]
+    xs = [immerse(cell, int_ned1)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
     dofs = vector_basis_fns(cell, deg - 1, rot=True, action=HCurl)
@@ -528,7 +528,7 @@ def construct_tet_ndN_2(deg):
     face = cell.d_entities(2)[0]
     dofs = lagrange_facet_fns(edge, deg, action=HCurl)
     edge_elem = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
-    xs = [immerse(cell, edge_elem, TrHCurl)]
+    xs = [immerse(cell, edge_elem)]
     edge_dofs = [DOFGenerator(xs, tet_edges, S1)]
 
     face_dofs = []
@@ -536,7 +536,7 @@ def construct_tet_ndN_2(deg):
         face_dofs = vector_basis_fns(face, deg - 1, rot=True, action=HCurl)
         # not correct poly space
         face_elem = ElementTriple(face, (PolynomialSpace(1, shape=2), C0, Fcurl), face_dofs)
-        xs = [immerse(cell, face_elem, TrH1)]
+        xs = [immerse(cell, face_elem)]
         face_dofs = [DOFGenerator(xs, tet_faces, S1)]
 
     center_dofs = []
@@ -559,7 +559,7 @@ def construct_tri_rtN(deg):
 
     dofs = lagrange_facet_fns(edge, deg - 1, action=HDiv)
     int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
-    xs = [immerse(cell, int_ned1, TrHDiv)]
+    xs = [immerse(cell, int_ned1)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
     center_dofs = lagrange_facet_fns(cell, deg - 2, interior=True, vector=True, action=HDiv)
@@ -582,7 +582,7 @@ def construct_tet_rtN(deg):
 
     face_dofs = lagrange_facet_fns(face, deg - 1, action=HDiv)
     face_rt = ElementTriple(face, (PolynomialSpace(deg - 1, shape=2), C0, Fcurl), face_dofs)
-    xs = [immerse(cell, face_rt, TrHDiv)]
+    xs = [immerse(cell, face_rt)]
     face_dofs = [DOFGenerator(xs, tet_faces, S1)]
 
     center_dofs = lagrange_facet_fns(cell, deg - 2, interior=True, vector=True, action=HDiv)
@@ -607,7 +607,7 @@ def construct_tri_bdmN(deg):
 
     dofs = lagrange_facet_fns(edge, deg, action=HDiv)
     edge_trip = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
-    xs = [immerse(cell, edge_trip, TrHDiv)]
+    xs = [immerse(cell, edge_trip)]
     tri_dofs = [DOFGenerator(xs, C3, S1)]
 
     center_dofs = vector_basis_fns(cell, deg - 1, action=HDiv)
@@ -625,7 +625,7 @@ def construct_tet_bdmN(deg):
 
     dofs = lagrange_facet_fns(face, deg, action=HDiv)
     int = ElementTriple(face, (PolynomialSpace(1, shape=2), C0, Fdiv), dofs)
-    xs = [immerse(cell, int, TrHDiv)]
+    xs = [immerse(cell, int)]
     face_dofs = [DOFGenerator(xs, tet_faces, S1)]
 
     center_dofs = []

@@ -15,6 +15,7 @@ action is, as shorthands for form actions (see :func:`as_action`).
 import numpy as np
 
 from fuse.spaces.interpolation_spaces import InterpolationSpace
+from fuse.traces import TrH1, TrHCurl, TrHDiv
 
 
 class KernelAction():
@@ -38,9 +39,33 @@ class KernelAction():
         the DOF is immersed, or None when the value is unchanged."""
         raise NotImplementedError
 
+    def restrict(self, cell, entity, rank, value):
+        """The trace: a value in ``cell`` restricted to ``entity``.
+
+        It is the dual of the lift, ``<lift(k), v> = <k, restrict(v)>``.
+        """
+        L = self.lift_matrix(cell, entity, rank)
+        if L is None:
+            return value
+        return np.matmul(np.transpose(L), np.ravel(value))
+
+    def lifted(self):
+        """The action on the value once it is lifted into the cell."""
+        raise NotImplementedError
+
+    def trace(self, cell, entity, rank):
+        """The trace object (used for plotting and the orientation matrices)."""
+        raise NotImplementedError(f"{self} has no trace")
+
     def matches(self, other):
         """Whether this action is the one ``other`` describes."""
         return self == other
+
+    def dict_id(self):
+        return type(self).__name__
+
+    def _to_dict(self):
+        return {}
 
 
 class FormAction(KernelAction):
@@ -87,6 +112,12 @@ class FormAction(KernelAction):
     def __hash__(self):
         return hash((FormAction, self.k, self.proxy))
 
+    def _to_dict(self):
+        return {"k": self.k, "proxy": self.proxy}
+
+    def _from_dict(obj_dict):
+        return FormAction(obj_dict["k"], obj_dict["proxy"])
+
     def matches(self, other):
         return isinstance(other, FormAction) and self.proxy == other.proxy and \
             (self.k is None or other.k is None or self.k == other.k)
@@ -105,6 +136,18 @@ class FormAction(KernelAction):
         if not valid:
             raise ValueError(f"{self} cannot be the action of a rank {rank} kernel on a {n}-dimensional entity")
         return FormAction(k, self.proxy)
+
+    def lifted(self):
+        # the form degree and proxy are kept; only the ambient dimension changes
+        return self
+
+    def trace(self, cell, entity, rank):
+        if self.k == 0 or self.proxy == "scalar":
+            return TrH1(cell)
+        if self.proxy == "hodge":
+            return TrHDiv(cell)
+        # a tangential vector on a face has no trace class of its own
+        return TrHCurl(cell) if entity.dimension == 1 else TrH1(cell)
 
     def act(self, A, value):
         if self.k == 0:
@@ -151,6 +194,9 @@ class SymmetricTensorAction(KernelAction):
 
     def __hash__(self):
         return hash(SymmetricTensorAction)
+
+    def _from_dict(obj_dict):
+        return SymmetricTensorAction()
 
     def act(self, A, value):
         return np.matmul(np.matmul(A, value), np.transpose(A))
