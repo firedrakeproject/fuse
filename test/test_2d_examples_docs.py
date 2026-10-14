@@ -167,7 +167,7 @@ def construct_nd(tri=None):
     xs = [DOF(L2Pairing(), VectorKernel(1, action=HCurl))]
 
     dofs = DOFGenerator(xs, S1, S2)
-    int_ned = ElementTriple(edge, (P1, C0, Fcurl), dofs)
+    int_ned = ElementTriple(edge, (P0, L2, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -190,7 +190,7 @@ def construct_nd_2nd_kind(tri=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned = ElementTriple(edge, (P1, L2, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -211,14 +211,17 @@ def construct_nd2_2nd_kind(tri=None):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,), action=HCurl))]
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_ned = ElementTriple(edge, (PolynomialSpace(deg, shape=1), C0, Fcurl), dofs)
+    int_ned = ElementTriple(edge, (PolynomialSpace(deg), L2, Fcurl), dofs)
 
     xs = [immerse(tri, int_ned)]
     edge_dofs = DOFGenerator(xs, C3, S1)
 
+    # moments against the Whitney field of the edge (0, 1) rotated by a right angle,
+    # in the barycentric coordinates of this triangle, and its rotations
     s_1 = sp.Symbol("s_1")
     s_2 = sp.Symbol("s_2")
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([-s_0, 1 - s_1], symbols=(s_0, s_1, s_2), action=HCurl))]
+    phi_0 = [(np.sqrt(3)/6)*s_0 + (np.sqrt(3)/3)*s_1, -s_0/2]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1, s_2), action=HCurl))]
     face_dofs = DOFGenerator(xs, C3, S1)
 
     nd = PolynomialSpace(deg, shape=2)
@@ -236,7 +239,7 @@ def construct_bdm(tri=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(deg), L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -256,7 +259,7 @@ def construct_bdm_bary(tri=None):
 
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0, symbols=(s_0,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(deg), L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -278,15 +281,16 @@ def construct_bdm2(tri=None):
     centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,), action=HDiv))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(deg), L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    s_1 = sp.Symbol("s_1")
-    s_0 = sp.Symbol("s_0")
-    phi_0 = [1 - s_1, s_0]
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1), action=HDiv))]
+    # moments against the Whitney field of the edge (0, 1), l_0 grad(l_1) - l_1 grad(l_0)
+    # in the barycentric coordinates l_i of this triangle, and its rotations
+    s_0, s_1, s_2 = sp.symbols("s_0 s_1 s_2")
+    phi_0 = [-s_0/2, -(np.sqrt(3)/6)*s_0 - (np.sqrt(3)/3)*s_1]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1, s_2), action=HDiv))]
     interior = DOFGenerator(xs, C3, S1)
 
     space = PolynomialSpace(deg, shape=2)
@@ -310,15 +314,16 @@ def construct_bdm2_bary(tri=None):
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=(s_0, s_1), action=HDiv))]
 
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_rt = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fdiv), dofs)
+    int_rt = ElementTriple(edge, (PolynomialSpace(deg), L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
-    s_1 = sp.Symbol("s_1")
-    s_0 = sp.Symbol("s_0")
-    phi_0 = [1 - s_1, s_0]
-    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1), action=HDiv))]
+    # moments against the Whitney field of the edge (0, 1), l_0 grad(l_1) - l_1 grad(l_0)
+    # in the barycentric coordinates l_i of this triangle, and its rotations
+    s_0, s_1, s_2 = sp.symbols("s_0 s_1 s_2")
+    phi_0 = [-s_0/2, -(np.sqrt(3)/6)*s_0 - (np.sqrt(3)/3)*s_1]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1, s_2), action=HDiv))]
     interior = DOFGenerator(xs, C3, S1)
 
     space = PolynomialSpace(deg, shape=2)
@@ -364,7 +369,7 @@ def construct_rt(tri=None):
     xs = [DOF(L2Pairing(), VectorKernel(1, action=HDiv))]
     dofs = DOFGenerator(xs, S1, S2)
 
-    int_rt = ElementTriple(edge, (vec_Pd, C0, Fdiv), dofs)
+    int_rt = ElementTriple(edge, (P0, L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt)]
     tri_dofs = DOFGenerator(xs, C3, S1)
@@ -473,7 +478,7 @@ def test_rt_second_order():
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), (x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_rt2 = ElementTriple(edge, (P1, C0, Fdiv), dofs)
+    int_rt2 = ElementTriple(edge, (P1, L2, Fdiv), dofs)
 
     xs = [immerse(tri, int_rt2)]
     tri_dofs = DOFGenerator(xs, C3, S3)

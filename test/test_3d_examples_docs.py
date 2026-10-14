@@ -38,7 +38,7 @@ def construct_tet_cg3():
                         DOFGenerator(xs, S1, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/3,)))]
-    dg1_int = ElementTriple(edge, (P0, "C0", Fid),
+    dg1_int = ElementTriple(edge, (P1, "C0", Fid),
                             DOFGenerator(xs, S2, S1))
 
     xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
@@ -54,7 +54,7 @@ def construct_tet_cg3():
     f_xs = [immerse(tetra, dg0_face)]
     cgfaces = DOFGenerator(f_xs, tet_faces, S1)
 
-    cg3 = ElementTriple(tetra, (P1, "C0", Fid),
+    cg3 = ElementTriple(tetra, (P3, "C0", Fid),
                         [cgverts, cgedges, cgfaces])
     # [test_tet_cg3 1]
 
@@ -117,7 +117,7 @@ def construct_tet_cg6(cell=None, perm=True):
     xs = [DOF(DeltaPairing(), PointKernel((-0.8302238962785669,)))]
     xs1 = [DOF(DeltaPairing(), PointKernel((-0.4688487934707142),))]
     xs2 = [DOF(DeltaPairing(), PointKernel((0),))]
-    dg2_int = ElementTriple(edge, (P2, "C0", Fid),
+    dg2_int = ElementTriple(edge, (PolynomialSpace(4), "C0", Fid),
                             [DOFGenerator(xs, S2, S1), DOFGenerator(xs1, S2, S1), DOFGenerator(xs2, S1, S1)], perm)
 
     # xs = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), -0.26)))]
@@ -133,8 +133,8 @@ def construct_tet_cg6(cell=None, perm=True):
     # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
     # xs = [DOF(DeltaPairing(), PointKernel(tuple((2*v_0 + v_1)/2)))]
     dg1_face1 = ElementTriple(face, (P1, C0, Fid), DOFGenerator(xs, C3, S1), perm)
-    dg1_face2 = ElementTriple(face, (P1, C0, Fid), DOFGenerator(xs1, S3, S1), perm)
-    dg1_face3 = ElementTriple(face, (P1, C0, Fid), DOFGenerator(xs2, S1, S1), perm)
+    dg1_face2 = ElementTriple(face, (P2, C0, Fid), DOFGenerator(xs1, S3, S1), perm)
+    dg1_face3 = ElementTriple(face, (P0, C0, Fid), DOFGenerator(xs2, S1, S1), perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0.3130289641134407, 0.31302896411344056, 0.3130289641134407))),]
     # a point towards the midpoint of the first edge, generated like the edges
@@ -204,7 +204,7 @@ def construct_tet_rt(cell=None):
 
     xs = [DOF(L2Pairing(), VectorKernel(1, action=HDiv))]
     dofs = DOFGenerator(xs, S1, S2)
-    face_vec = ElementTriple(face, (rt_space, "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (P0, L2, Fdiv), dofs)
 
     im_xs = [immerse(cell, face_vec)]
     face = DOFGenerator(im_xs, tet_faces, S1)
@@ -231,7 +231,7 @@ def construct_tet_rt2(cell=None, perm=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y), action=HDiv))]
     dofs = DOFGenerator(xs, C3, S2)
-    face_vec = ElementTriple(face, (rt_space, "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (P1, L2, Fdiv), dofs)
 
     im_xs = [immerse(cell, face_vec)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
@@ -273,7 +273,7 @@ def construct_tet_rt3(cell=None, perm=None):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=symbols, action=HDiv))]
     xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=symbols, action=HDiv))]
     dofs = [DOFGenerator(xs, C3, S3), DOFGenerator(xs1, C3, S3)]
-    face_vec = ElementTriple(face, (rt_space, "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (P2, L2, Fdiv), dofs)
 
     im_xs = [immerse(cell, face_vec)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
@@ -309,7 +309,7 @@ def construct_tet_bdm_old(cell=None, perm=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel(1/3 - (1/2)*x + y/(2*np.sqrt(3)), symbols=(x, y), action=HDiv))]
     dofs = DOFGenerator(xs, C3, S2)
-    face_vec = ElementTriple(face, (PolynomialSpace(deg, shape=2), "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (PolynomialSpace(deg), L2, Fdiv), dofs)
     im_xs = [immerse(cell, face_vec)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
@@ -330,7 +330,7 @@ def construct_tet_bdm(cell=None, perm=None):
     s_2 = sp.Symbol("s_2")
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(1.0*s_2, symbols=(s_0, s_1, s_2), action=HDiv))]
     dofs = DOFGenerator(xs, C3, S3)
-    face_vec = ElementTriple(face, (PolynomialSpace(deg, shape=2), "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (PolynomialSpace(deg), L2, Fdiv), dofs)
     im_xs = [immerse(cell, face_vec)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
@@ -355,7 +355,7 @@ def construct_tet_bdm2(cell=None, perm=None):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(vertex_basis, symbols=symbols, action=HDiv))]
     xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(edge_basis, symbols=symbols, action=HDiv))]
     dofs = [DOFGenerator(xs, C3, S3), DOFGenerator(xs1, C3, S3)]
-    face_vec = ElementTriple(face, (space, "C0", Fdiv), dofs)
+    face_vec = ElementTriple(face, (PolynomialSpace(deg), L2, Fdiv), dofs)
     im_xs = [immerse(cell, face_vec)]
     faces = DOFGenerator(im_xs, tet_faces, S1)
 
@@ -393,7 +393,7 @@ def construct_tet_ned(cell=None):
     xs = [DOF(L2Pairing(), VectorKernel(1, action=HCurl))]
     dofs = DOFGenerator(xs, S1, S2)
 
-    edges = ElementTriple(edge, (vec_Pd, L2, Fcurl), dofs)
+    edges = ElementTriple(edge, (P0, L2, Fcurl), dofs)
     xs = [immerse(tet, edges)]
     tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([3, 2, 0, 1]),
                                               Permutation([1, 0, 3, 2]), Permutation([1, 2, 3, 0]),
@@ -416,7 +416,7 @@ def construct_tet_ned_2nd_kind_old(tet=None, perm=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P1, L2, Fcurl), dofs)
 
     xs = [immerse(tet, int_ned1)]
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
@@ -437,7 +437,7 @@ def construct_tet_ned_2nd_kind(tet=None, perm=None):
     s_0 = sp.Symbol("s_0")
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(1 - s_0, symbols=(s_0,), action=HCurl))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P1, L2, Fcurl), dofs)
 
     xs = [immerse(tet, int_ned1)]
     edge_dofs = DOFGenerator(xs, tet_edges, S1)
@@ -465,7 +465,7 @@ def construct_tet_ned2(tet=None, perm=None):
 
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
     dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P1, L2, Fcurl), dofs)
 
     v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
     # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
@@ -476,7 +476,7 @@ def construct_tet_ned2(tet=None, perm=None):
     # xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
     # xs = [DOF(L2Pairing(), VectorKernel((v_1 - v_0)/2)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),]
     center_dofs = DOFGenerator(xs, S2, S3)
-    face_vec = ElementTriple(face, (P1, C0, Fcurl), center_dofs)
+    face_vec = ElementTriple(face, (PolynomialSpace(0, shape=2), L2, Fcurl), center_dofs)
     im_xs = [immerse(tet, face_vec)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
 
@@ -503,13 +503,16 @@ def construct_tet_ned_2nd_kind_2(tet=None, both=False):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_0*(2*s_0 - 1), symbols=(s_0,), action=HCurl))]
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(4*s_0*(1 - s_0), symbols=(s_0,), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P2, L2, Fcurl), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1)], tet_edges, S1)
 
     s_1 = sp.Symbol("s_1")
     s_2 = sp.Symbol("s_2")
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([(np.sqrt(3)/6)*(s_2 - s_1 - 1), (s_0 / 2)], symbols=(s_0, s_1, s_2), action=HCurl))]
-    face_vec = ElementTriple(face, (P1, C0, Fcurl), DOFGenerator(xs, C3, S1))
+    # moments against the Raviart-Thomas functions of degree 1 on the face
+    xy = sp.Matrix([sp.symbols("x y")])
+    face_space = PolynomialSpace(0, shape=2) + PolynomialSpace(0).restrict(-1, 0)*xy
+    face_vec = ElementTriple(face, (face_space, L2, Fcurl), DOFGenerator(xs, C3, S1))
 
     face_dofs = DOFGenerator([immerse(tet, face_vec)], tet_faces, S1)
 
@@ -531,25 +534,26 @@ def construct_tet_ned_2nd_kind_3(tet=None):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_1**3, symbols=(s_0, s_1), action=HCurl))]
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(3.0*s_0*s_1**2, symbols=(s_0, s_1), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S2, S2)]
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P3, L2, Fcurl), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1)], tet_edges, S1)
 
     s_1 = sp.Symbol("s_1")
     s_2 = sp.Symbol("s_2")
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel([(np.sqrt(3)/6)*s_0*s_1 + (np.sqrt(3)/3)*s_1**2, -0.5*s_0*s_1], symbols=(s_0, s_1, s_2), action=HCurl))]
     xs2 = [DOF(L2Pairing(), BarycentricPolynomialKernel([-0.5*s_0*s_1*s_2, (np.sqrt(3)/2)*s_0*s_1*s_2], symbols=(s_0, s_1, s_2), action=HCurl))]
-    face_vec = ElementTriple(face, (P1, C0, Fcurl), [DOFGenerator(xs, S3, S1), DOFGenerator(xs2, S2, S3)])
+    # moments against the Raviart-Thomas functions of degree 2 on the face
+    xy = sp.Matrix([sp.symbols("x y")])
+    face_space = PolynomialSpace(1, shape=2) + PolynomialSpace(1).restrict(0, 1)*xy
+    face_vec = ElementTriple(face, (face_space, L2, Fcurl), [DOFGenerator(xs, S3, S1), DOFGenerator(xs2, S2, S3)])
 
     face_dofs = DOFGenerator([immerse(tet, face_vec)], tet_faces, S1)
+    # moments against the lowest order Raviart-Thomas field of the face (0, 3, 1),
+    # l_0 grad(l_3) x grad(l_1) + l_3 grad(l_1) x grad(l_0) + l_1 grad(l_0) x grad(l_3)
+    # in the barycentric coordinates l_i of this tetrahedron, and its images on the other faces
     s_3 = sp.Symbol("s_3")
-    vecs = [[-0.25*s_0 - 0.25*s_1, 0.25*s_1 - 0.25*s_3, -0.25*s_0 - 0.25*s_3],
-            [-0.25*s_2 - 0.25*s_3, 0.25*s_1 + 0.25*s_3, -0.25*s_1 - 0.25*s_2],
-            [-0.25*s_0 - 0.25*s_1, 0.25*s_0 + 0.25*s_2, 0.25*s_1 + 0.25*s_2],
-            [0.25*s_2 + 0.25*s_3, 0.25*s_0 + 0.25*s_2, -0.25*s_0 - 0.25*s_3]]
-    interiors = []
-    for v in vecs:
-        xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(v, symbols=(s_0, s_1, s_2, s_3), action=HCurl))]
-        interiors += [DOFGenerator(xs, S1, S1)]
+    phi_0 = [-s_0/4 - s_1/4, -s_1/4 - s_3/4, -s_0/4 - s_3/4]
+    xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(phi_0, symbols=(s_0, s_1, s_2, s_3), action=HCurl))]
+    interiors = [DOFGenerator(xs, tet_faces, S1)]
 
     ned = ElementTriple(tet, (nd_space, C0, Fcurl), [edge_dofs, face_dofs] + interiors)
     return ned
@@ -568,7 +572,7 @@ def construct_tet_ned_2nd_kind_2_non_bary(tet=None, both=False):
     xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,), action=HCurl))]
     centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P2, L2, Fcurl), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1)], tet_edges, S1)
 
     y = sp.Symbol("y")
@@ -576,7 +580,10 @@ def construct_tet_ned_2nd_kind_2_non_bary(tet=None, both=False):
                [(-np.sqrt(3)/6) + (np.sqrt(3)/6)*x, 1/6 + (np.sqrt(3)/6)*y],
                [(np.sqrt(3)/6) + (np.sqrt(3)/6)*x, 1/6 + (np.sqrt(3)/6)*y]]
     xs = [DOF(L2Pairing(), PolynomialKernel(rt_vecs[1], symbols=(x, y), action=HCurl))]
-    face_vec = ElementTriple(face, (P1, C0, Fcurl), DOFGenerator(xs, C3, S2))
+    # moments against the Raviart-Thomas functions of degree 1 on the face
+    xy = sp.Matrix([sp.symbols("x y")])
+    face_space = PolynomialSpace(0, shape=2) + PolynomialSpace(0).restrict(-1, 0)*xy
+    face_vec = ElementTriple(face, (face_space, L2, Fcurl), DOFGenerator(xs, C3, S2))
 
     face_dofs = DOFGenerator([immerse(tet, face_vec)], tet_faces, S1)
 
@@ -607,7 +614,7 @@ def construct_tet_ned3_old(tet=None, both=False):
     xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(s_1, symbols=(s_0, s_1), action=HCurl))]
     centre = [DOF(L2Pairing(), BarycentricPolynomialKernel(2*s_0*s_1, symbols=(s_0, s_1), action=HCurl))]
     dofs = [DOFGenerator(xs, S2, S2), DOFGenerator(centre, S1, S2)]
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    int_ned1 = ElementTriple(edge, (P2, L2, Fcurl), dofs)
     edge_dofs = DOFGenerator([immerse(tet, int_ned1)], tet_edges, S1)
 
     v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
@@ -624,7 +631,7 @@ def construct_tet_ned3_old(tet=None, both=False):
     # face_dofs = DOFGenerator([immerse(tet, face_vec1), immerse(tet, face_vec2)], tet_faces, S1)
     # xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel((v_1 - v_0)*s_0/2, symbols=(s_0, s_1, s_2)))]
 
-    face_vec1 = ElementTriple(face, (P1, C0, Fid), DOFGenerator(xs1, S3, S3))
+    face_vec1 = ElementTriple(face, (PolynomialSpace(1, shape=2), L2, Fid), DOFGenerator(xs1, S3, S3))
     face_dofs = DOFGenerator([immerse(tet, face_vec1)], tet_faces, S1)
 
     xs = [DOF(L2Pairing(), VectorKernel([1, 0, 0], action=HCurl)),
