@@ -128,6 +128,9 @@ jobs:
 
           : # Fix for petsc4py+slepc4py build
           echo 'setuptools<81' > constraints.txt
+          echo 'Cython==3.2.9' >> constraints.txt
+
+          export PIP_CONSTRAINT="$PWD/constraints.txt"
           export PIP_CONSTRAINT=constraints.txt
 
           : # Install build dependencies
