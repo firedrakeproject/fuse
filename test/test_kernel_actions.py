@@ -152,7 +152,7 @@ def test_hodge_needs_codimension_one():
 def edge_triple(tri, action=None):
     edge = tri.edges()[0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=action))]
-    return ElementTriple(edge, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1, S1))
+    return ElementTriple(edge, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1))
 
 
 def test_trace_must_match_action(tri):
@@ -172,7 +172,7 @@ def test_declared_matches_trace(tri, action, trace):
 
     def nodes(triple):
         xs = [immerse(tri, triple, trace)]
-        dofs = ElementTriple(tri, (space, C0, None), DOFGenerator(xs, C3, S1)).generate()
+        dofs = ElementTriple(tri, (space, C0, None), DOFGenerator(xs, C3)).generate()
         return [dof.to_quadrature(1, (2,)) for dof in dofs]
 
     with pytest.warns(DeprecationWarning):
@@ -270,7 +270,7 @@ def test_flat_vector_on_face_restricts_to_tangential_part():
 
 def immersed_edge_dofs(tri, triple):
     space = PolynomialSpace(1, shape=2)
-    return ElementTriple(tri, (space, C0, None), DOFGenerator([immerse(tri, triple)], C3, S1)).generate()
+    return ElementTriple(tri, (space, C0, None), DOFGenerator([immerse(tri, triple)], C3)).generate()
 
 
 def test_immersed_dofs_trace_through_their_kernels(tri):
@@ -295,7 +295,7 @@ def test_mixed_actions_are_immersed_together(tri):
     is traced through its own kernel."""
     edge = tri.edges()[0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=HCurl)), DOF(L2Pairing(), PolynomialKernel(1, action=HDiv))]
-    triple = ElementTriple(edge, (PolynomialSpace(1), L2, None), DOFGenerator(xs, S1, S1))
+    triple = ElementTriple(edge, (PolynomialSpace(1), L2, None), DOFGenerator(xs, S1))
     for dof in immersed_edge_dofs(tri, triple):
         tangent = np.array(tri.basis_vectors(entity=dof.cell_defined_on))[0]
         assert np.isclose(abs(np.dot(dof.lift_direction(), tangent)), 1 if dof.kernel.action == as_action(HCurl) else 0)

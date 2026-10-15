@@ -340,17 +340,19 @@ class ElementTriple():
 
 
 class DOFGenerator():
+    """A DOF generation tuple (X, A): the generator DOFs X and the generation
+    transversal A, which generates the full set of DOFs by symmetry."""
 
-    def __init__(self, generator_funcs, gen_group, trans_group):
-        # assert isinstance(G_1, Group)
-        # assert isinstance(G_2, Group)
+    def __init__(self, generator_funcs, transversal, *removed):
+        if removed:
+            raise TypeError("DOFGenerator takes (X, A): the third argument (G2) has been removed. "
+                            "How the DOFs transform is now computed from the kernels' actions.")
         self.x = generator_funcs
-        self.g1 = gen_group
-        self.g2 = trans_group
+        self.transversal = transversal
         self.dof_numbers = None
         self.ls = None
         self._generator_dofs = None
-        # for each member of the transversal (in the order of g1.members()),
+        # for each member of the transversal (in the order of transversal.members()),
         # the positions in self.ls of the DOFs it generates
         self._positions_by_member = None
         self.cell = None
@@ -360,8 +362,7 @@ class DOFGenerator():
 
     def __iter__(self):
         yield self.x
-        yield self.g1
-        yield self.g2
+        yield self.transversal
 
     def add_context(self, cell, space):
         """ Fix the cell and space of the DOF generator. A single generator object can
@@ -370,8 +371,7 @@ class DOFGenerator():
             raise ValueError(f"{self} already belongs to a triple on {self.cell}: use a new DOFGenerator")
         self.cell = cell
         self.space = space
-        self.g1 = self.g1.add_cell(cell)
-        self.g2 = self.g2.add_cell(cell)
+        self.transversal = self.transversal.add_cell(cell)
 
     def num_dofs(self):
         if self.dof_numbers is None:
@@ -382,7 +382,7 @@ class DOFGenerator():
         if self.ls is None:
             self.ls = []
             self._generator_dofs = []
-            members = self.g1.members()
+            members = self.transversal.members()
             self._positions_by_member = [[] for _ in members]
             for l_g in self.x:
                 i = 0
@@ -457,12 +457,12 @@ class DOFGenerator():
         """
         G = self.cell.group
         g, = G._match([g])
-        A = G._match(self.g1)
+        A = G._match(self.transversal)
         H = self.stabiliser()
         index = self._positions_by_member
         M = np.zeros((len(self.ls), len(self.ls)))
         for i, a in enumerate(A):
-            a_new, h = self.g1.decompose(g.compose(a), H)
+            a_new, h = self.transversal.decompose(g.compose(a), H)
             j = [b.perm for b in A].index(a_new.perm)
             M[np.ix_(index[j], index[i])] = self._stabiliser_mapping(h)
         return M
@@ -493,8 +493,8 @@ class DOFGenerator():
         if not self.generator_dofs():
             return
         H = self.stabiliser()
-        if not self.cell.group.is_left_transversal(self.g1, H):
-            raise ValueError(f"{self.g1} is not a left transversal of the stabiliser of the generator DOFs "
+        if not self.cell.group.is_left_transversal(self.transversal, H):
+            raise ValueError(f"{self.transversal} is not a left transversal of the stabiliser of the generator DOFs "
                              f"of {self} (order {H.size()}), so it does not generate each DOF exactly once")
 
     def make_entity_ids(self):
@@ -517,18 +517,19 @@ class DOFGenerator():
         repr_str = "DOFGen("
         for x_elem in self.x:
             repr_str += "g(" + str(x_elem) + ")"
-        repr_str += str(self.g1) + str(self.g2) + ")"
+        repr_str += str(self.transversal) + ")"
         return repr_str
 
     def _to_dict(self):
-        o_dict = {"x": self.x, "g1": self.g1, "g2": self.g2}
+        o_dict = {"x": self.x, "transversal": self.transversal}
         return o_dict
 
     def dict_id(self):
         return "DOFGen"
 
     def _from_dict(obj_dict):
-        return DOFGenerator(obj_dict["x"], obj_dict["g1"], obj_dict["g2"])
+        # dicts written before G2 was removed store the transversal as "g1"
+        return DOFGenerator(obj_dict["x"], obj_dict["transversal"] if "transversal" in obj_dict else obj_dict["g1"])
 
 
 class ImmersedDOFs():

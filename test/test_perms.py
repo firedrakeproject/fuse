@@ -54,11 +54,11 @@ def test_nd_perms(cell):
     y = sp.Symbol("y")
 
     xs = [DOF(L2Pairing(), VectorKernel(edge.basis_vectors()[0]))]
-    dofs = DOFGenerator(xs, S1, S2)
+    dofs = DOFGenerator(xs, S1)
     int_ned = ElementTriple(edge, (P1, C0, Fcurl), dofs)
 
     xs = [immerse(cell, int_ned, TrHCurl)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
+    tri_dofs = DOFGenerator(xs, C3)
 
     M = sp.Matrix([[y, -x]])
     vec_Pk = PolynomialSpace(deg - 1, shape=2)
@@ -80,10 +80,10 @@ def test_square():
 # edge.basis_vectors()[0]
     xs = [DOF(L2Pairing(), PointKernel(-0.5))]
     dg0_int = ElementTriple(edge, (P0, C0, Fid),
-                            DOFGenerator(xs, S2, S2))
+                            DOFGenerator(xs, S2))
 
     e_xs = [immerse(square, dg0_int, TrHDiv)]
-    e_dofs = DOFGenerator(e_xs, sq_edges, S1)
+    e_dofs = DOFGenerator(e_xs, sq_edges)
 
     # i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
     # i_dofs = DOFGenerator(i_xs, S1, S1)

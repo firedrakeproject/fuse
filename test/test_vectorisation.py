@@ -17,7 +17,7 @@ import pytest
 def interval_dgN(deg):
     edge = polygon(3).edges()[0]
     pts = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
-    dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((p,)))], S2, S1)
+    dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((p,)))], S2)
             for p in pts[:len(pts) // 2]]
     return ElementTriple(edge, (PolynomialSpace(deg), C0, Fid), dofs)
 
@@ -27,8 +27,8 @@ def interval_cg1():
     edge = cell.edges()[0]
     vert = cell.vertices()[0]
     dg0 = ElementTriple(vert, (P0, C0, Fid),
-                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1, S1))
-    return ElementTriple(edge, (P1, C0, Fid), [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)])
+                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
+    return ElementTriple(edge, (P1, C0, Fid), [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
 
 
 # The DOFs of a k-form are integrals over k-dimensional entities, so the form
@@ -373,9 +373,9 @@ def test_vector_triple_rejects_tensor_product(flat):
     edge = cell.edges()[0]
     vert = cell.vertices()[0]
     dg0 = ElementTriple(vert, (P0, C0, Fid),
-                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1, S1))
+                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
     interval = ElementTriple(edge, (P1, C0, Fid),
-                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)])
+                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
     tp = TensorProductTriple(interval, interval)
     if flat:
         tp = tp.flatten()
