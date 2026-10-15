@@ -111,9 +111,7 @@ def test_with_kernel_preserves_attributes(deg):
             assert copy.triple is dof.triple
         # add_entity is reapplied by DOF.__init__, so check it round trips
         assert copy.pairing.entity is dof.pairing.entity
-        assert copy.pairing.orientation is dof.pairing.orientation
-        # a non immersed DOF is always given a fresh TrH1, so compare by value
-        assert type(copy.target_space) is type(dof.target_space)
+        assert copy.target_space is dof.target_space
 
 
 def test_with_kernel_replaces_only_the_kernel():

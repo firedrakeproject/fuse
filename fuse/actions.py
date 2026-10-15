@@ -13,7 +13,6 @@ action is, as shorthands for form actions (see :func:`as_action`).
 import numpy as np
 
 from fuse.spaces.interpolation_spaces import InterpolationSpace
-from fuse.traces import TrH1, TrHCurl, TrHDiv
 
 
 class KernelAction():
@@ -37,10 +36,10 @@ class KernelAction():
         the DOF is immersed, or None when the value is unchanged."""
         raise NotImplementedError
 
-    def restrict(self, cell, entity, rank, value):
+    def trace(self, cell, entity, rank, value):
         """The trace: a value in ``cell`` restricted to ``entity``.
 
-        It is the dual of the lift, ``<lift(k), v> = <k, restrict(v)>``.
+        It is the dual of the lift, ``<lift(k), v> = <k, trace(v)>``.
         """
         L = self.lift_matrix(cell, entity, rank)
         if L is None:
@@ -50,10 +49,6 @@ class KernelAction():
     def lifted(self):
         """The action on the value once it is lifted into the cell."""
         raise NotImplementedError
-
-    def trace(self, cell, entity, rank):
-        """The trace object (used for plotting and the orientation matrices)."""
-        raise NotImplementedError(f"{self} has no trace")
 
     def matches(self, other):
         """Whether this action is the one ``other`` describes."""
@@ -97,6 +92,11 @@ class FormAction(KernelAction):
     def __repr__(self):
         return f"FormAction(k={self.k}, proxy={self.proxy!r})"
 
+    def __str__(self):
+        if self.k == 0:
+            return "H1"
+        return {"flat": "HCurl", "hodge": "HDiv", "scalar": "L2"}[self.proxy]
+
     def __eq__(self, other):
         return isinstance(other, FormAction) and (self.k, self.proxy) == (other.k, other.proxy)
 
@@ -131,14 +131,6 @@ class FormAction(KernelAction):
     def lifted(self):
         # the form degree and proxy are kept; only the ambient dimension changes
         return self
-
-    def trace(self, cell, entity, rank):
-        if self.k == 0 or self.proxy == "scalar":
-            return TrH1(cell)
-        if self.proxy == "hodge":
-            return TrHDiv(cell)
-        # a tangential vector on a face has no trace class of its own
-        return TrHCurl(cell) if entity.dimension == 1 else TrH1(cell)
 
     def act(self, A, value):
         if self.k == 0:

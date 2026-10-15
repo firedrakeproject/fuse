@@ -487,10 +487,9 @@ class DOF():
         self.immersed = immersed
         self.cell_defined_on = entity
         self.attachment = attachment
-        if not self.immersed:
-            self.target_space = TrH1(self.cell_defined_on)
-        else:
-            self.target_space = target_space
+        # an explicit trace for the derivative immersions (TrGrad, TrHess);
+        # every other DOF is traced through its kernel's action
+        self.target_space = target_space
         self.g = g
         self.id = None
         self.sub_id = sub_id
@@ -522,8 +521,6 @@ class DOF():
             self.trace_entity = cell
             self.cell_defined_on = cell
             self.pairing = self.pairing.add_entity(cell)
-        if self.target_space is None:
-            self.target_space = space
         if self.id is None and overall_id is not None:
             self.id = overall_id
         if self.sub_id is None and generator_id is not None:
@@ -549,7 +546,7 @@ class DOF():
 
         if self.immersed:
             pts = np.array([self.cell.attachment(self.cell.id, entity.id)(*pt) for pt in pts])
-            if not isinstance(self.target_space, (TrH1, TrHCurl, TrHDiv)):
+            if self.target_space is not None:
                 # derivative traces are not yet kernel actions
                 wts = np.outer(wts, self.target_space.tabulate(pts, entity))
             elif not isinstance(self.kernel, (PointKernel, ComponentKernel)):
@@ -566,9 +563,26 @@ class DOF():
         return self.pairing.describe(self.kernel.orientation).format(fn=fn, kernel=self.kernel)
 
     def immerse(self, entity, attachment, target_space, g, triple):
+        """This DOF immersed on ``entity``. ``target_space`` is an explicit
+        trace (deprecated for TrH1, TrHCurl and TrHDiv, which are checked
+        against the kernel's action), or None to trace through the action."""
         new_generation = self.generation.copy()
-        kernel = self.kernel.action_for_trace(target_space)
+        kernel = self.kernel
+        if isinstance(target_space, (TrH1, TrHCurl, TrHDiv)):
+            kernel = kernel.action_for_trace(target_space)
+            target_space = None
         return ImmersedDOF(self.pairing, kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
+
+    def lift_direction(self):
+        """The direction an immersed DOF's kernel is lifted along: the tangent
+        of a flat form on an edge or the normal of a hodge form, or None."""
+        if not self.immersed or isinstance(self.kernel, (PointKernel, ComponentKernel)):
+            return None
+        entity, rank = self.cell_defined_on, self.kernel.rank
+        L = self.kernel.action.resolve(entity, rank).lift_matrix(self.cell, entity, rank)
+        if L is None or L.shape[1] != 1:
+            return None
+        return L[:, 0]
 
     def with_kernel(self, kernel):
         """A copy of this DOF acting through a different kernel.
@@ -601,13 +615,13 @@ class ImmersedDOF(DOF):
         attached_fn = fn.attach(self.attachment)
 
         if pullback:
-            attached_fn = self.restrict(attached_fn)
+            attached_fn = self.trace(attached_fn)
 
         return self.pairing(self.kernel, attached_fn, self.cell)
 
-    def restrict(self, fn):
+    def trace(self, fn):
         """The trace of ``fn`` on the entity, the dual of the kernel's lift."""
-        if not isinstance(self.target_space, (TrH1, TrHCurl, TrHDiv)):
+        if self.target_space is not None:
             # derivative traces are not yet kernel actions
             return self.target_space(fn, self.cell_defined_on)
         if isinstance(self.kernel, (PointKernel, ComponentKernel)):
@@ -618,14 +632,15 @@ class ImmersedDOF(DOF):
             return fn
 
         def restricted(*x):
-            return tuple(action.restrict(self.cell, entity, rank, np.array(fn(*x), dtype=float).squeeze()))
+            return tuple(action.trace(self.cell, entity, rank, np.array(fn(*x), dtype=float).squeeze()))
         return restricted
 
     def tabulate(self, Qpts):
         # modify this to take reference space q pts
-        immersion = self.target_space.tabulate(Qpts, self.pairing.entity)
         res, _ = self.kernel.tabulate(Qpts, self.attachment)
-        return immersion*res
+        if self.target_space is None:
+            return res
+        return self.target_space.tabulate(Qpts, self.pairing.entity)*res
 
     def __call__(self, g, entity_o=False):
         index_trace = self.cell.d_entities_ids(self.cell_defined_on.dim()).index(self.cell_defined_on.id)
@@ -637,7 +652,10 @@ class ImmersedDOF(DOF):
                            new_attach, self.target_space, g, self.triple, self.generation, self.sub_id, self.cell, entity_o)
 
     def __repr__(self):
-        fn = "tr_{1}_{0}(v)".format(str(self.cell_defined_on), str(self.target_space))
+        trace = self.target_space
+        if trace is None:
+            trace = self.kernel.action.resolve(self.cell_defined_on, self.kernel.rank)
+        fn = "tr_{1}_{0}(v)".format(str(self.cell_defined_on), str(trace))
         return super(ImmersedDOF, self).__repr__(fn)
 
     def immerse(self, entity, attachment, trace, g):

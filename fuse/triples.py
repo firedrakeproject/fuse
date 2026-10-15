@@ -1,6 +1,6 @@
 from fuse.cells import Point, TensorProductPoint
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
-from fuse.traces import Trace, TrH1, TrHCurl, TrHDiv
+from fuse.traces import TrH1, TrHCurl, TrHDiv
 from fuse.utils import numpy_to_str_tuple
 from fuse.spaces.polynomial_spaces import riesz_matrices
 from FIAT.dual_set import DualSet
@@ -19,6 +19,31 @@ def is_permutation_matrix(M):
     """Whether ``M`` is an unsigned permutation matrix."""
     R = np.round(M)
     return np.allclose(M, R) and set(np.unique(R)) <= {0, 1} and np.allclose(R.sum(axis=0), 1) and np.allclose(R.sum(axis=1), 1)
+
+
+def plot_dof(ax, dof, coord, **kwargs):
+    """Draw a DOF at ``coord``: an arrow along the direction its kernel is
+    lifted (a tangent or a normal), the derivative trace's marker, or a point."""
+    if dof.target_space is not None:
+        dof.target_space.plot(ax, coord, dof.cell_defined_on, **{k: v for k, v in kwargs.items() if k != "length"})
+        return
+    direction = dof.lift_direction()
+    if direction is None:
+        ax.scatter(*coord, color=kwargs.get("color"))
+    else:
+        ax.quiver(*coord, *direction, **kwargs)
+
+
+def dof_to_tikz(dof, coord, scale, color="black"):
+    """The tikz command drawing a DOF, as :func:`plot_dof` does."""
+    if dof.target_space is not None:
+        return dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)
+    direction = dof.lift_direction()
+    if direction is None:
+        return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
+    end_point = [coord[i] + 0.25*direction[i] for i in range(len(coord))]
+    arw = "-{Stealth[length=3mm, width=2mm]}"
+    return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
 
 
 class ElementTriple():
@@ -144,22 +169,6 @@ class ElementTriple():
         self.generate()
         return scipy.linalg.block_diag(*[gen.mapping(g) for gen in self.DOFGenerator])
 
-    def immersion_trace(self, target_cell):
-        """The trace with which this triple's DOFs are immersed in ``target_cell``.
-
-        It is the dual of the lift of the DOFs' kernels, so it is determined by
-        their actions. All DOFs in a single generation tuple must agree on it.
-        """
-        traces = {type(dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank)
-                       .trace(target_cell, dof.cell_defined_on, dof.kernel.rank))
-                  for dof in self.generate()}
-        if not traces:
-            # nothing is immersed
-            return TrH1
-        if len(traces) != 1:
-            raise ValueError(f"The DOFs of {self} lift with different traces {traces}, so cannot be immersed together")
-        return traces.pop()
-
     def __iter__(self):
         yield self.cell
         yield self.spaces
@@ -238,13 +247,9 @@ class ElementTriple():
             center, color = self.get_dof_info(dof)
             if isinstance(dof.pairing, DeltaPairing):
                 coord = dof.eval(identity, pullback=False)
-                if isinstance(dof.target_space, Trace):
-                    tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
-                else:
-                    tikz_commands += [f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"]
             elif isinstance(dof.pairing, L2Pairing):
                 coord = center
-                tikz_commands += [dof.target_space.to_tikz(coord, dof.cell_defined_on, scale, color)]
+            tikz_commands += [dof_to_tikz(dof, coord, scale, color)]
         if show:
             tikz_commands += ['\\end{tikzpicture}']
             return "\n".join(tikz_commands)
@@ -271,10 +276,7 @@ class ElementTriple():
                     coord = center
                 if len(coord) == 1:
                     coord = (coord[0], 0)
-                if isinstance(dof.target_space, Trace):
-                    dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
-                else:
-                    ax.scatter(*coord, color=color)
+                plot_dof(ax, dof, coord, color=color)
                 ax.text(*coord, dof.id)
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
@@ -293,13 +295,10 @@ class ElementTriple():
                     center = [0, 0, 0]
                 if isinstance(dof.pairing, DeltaPairing):
                     coord = dof.eval(identity, pullback=False)
-                    if isinstance(dof.target_space, Trace):
-                        dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
-                    else:
-                        ax.scatter(*coord, color=color)
+                    plot_dof(ax, dof, coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
-                    dof.target_space.plot(ax, center, dof.cell_defined_on, color=color, length=0.2)
+                    plot_dof(ax, dof, center, color=color, length=0.2)
                 ax.text(*coord, dof.id)
             plt.axis('off')
             ax.get_xaxis().set_visible(False)
@@ -534,11 +533,12 @@ class DOFGenerator():
 
 class ImmersedDOFs():
 
-    def __init__(self, target_cell, triple, trace, start_node=0):
+    def __init__(self, target_cell, triple, trace=None, start_node=0):
         self.target_cell = target_cell
         self.triple = triple
         self.C, self.V, self.E = triple
-        self.trace = trace(target_cell)
+        # an explicit trace; without one each DOF is traced through its kernel's action
+        self.trace = None if trace is None else trace(target_cell)
         self.start_node = start_node
 
     def __call__(self, g):
@@ -561,8 +561,9 @@ class ImmersedDOFs():
 
     def __repr__(self):
         repr_str = ""
+        trace = "" if self.trace is None else str(self.trace) + "_"
         for dof_gen in self.E:
-            repr_str += "Im_" + str(self.trace) + "_" + str(self.target_cell) + "(" + str(dof_gen) + ")"
+            repr_str += "Im_" + trace + str(self.target_cell) + "(" + str(dof_gen) + ")"
         return repr_str
 
     def _to_dict(self):
@@ -576,28 +577,39 @@ class ImmersedDOFs():
         return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"])
 
 
+def _named_trace(action, entity):
+    """The trace class that names how ``action`` lifts from ``entity``, for
+    checking the deprecated trace argument of :func:`immerse`."""
+    if action.k == 0 or action.proxy == "scalar":
+        return TrH1
+    if action.proxy == "hodge":
+        return TrHDiv
+    return TrHCurl if entity.dimension == 1 else TrH1
+
+
 def immerse(target_cell, triple, target_space=None, node=0):
     """Immerse the DOFs of ``triple`` into ``target_cell``.
 
-    How each DOF is lifted, and so its trace, is decided by its kernel's
-    action. ``target_space`` is only needed for the derivative traces
-    (``TrGrad``, ``TrHess``). Passing another trace is deprecated: it is
-    checked against the kernels, or, for kernels that declare no action,
-    supplies their action.
+    Each DOF is lifted, and so traced, through its own kernel's action.
+    ``target_space`` is only needed for the derivative traces (``TrGrad``,
+    ``TrHess``). Passing TrH1, TrHCurl or TrHDiv is deprecated: it is checked
+    against the kernels, or, for kernels that declare no action, supplies
+    their action.
     """
-    if target_space is None:
-        return ImmersedDOFs(target_cell, triple, triple.immersion_trace(target_cell), node)
+    if target_space is None or not issubclass(target_space, (TrH1, TrHCurl, TrHDiv)):
+        return ImmersedDOFs(target_cell, triple, target_space, node)
     trace = target_space(target_cell)
-    if isinstance(trace, (TrH1, TrHCurl, TrHDiv)):
-        undeclared = [dof.kernel for dof in triple.generate() if dof.kernel.declared_action is None]
-        if undeclared and isinstance(trace, (TrHCurl, TrHDiv)):
-            warnings.warn(f"Kernels {undeclared} declare no action and are immersed with {trace}: taking the "
-                          "action from the trace. Pass action=HCurl or action=HDiv to the kernels instead.",
-                          DeprecationWarning, stacklevel=2)
-        elif not undeclared:
-            derived = triple.immersion_trace(target_cell)
-            if derived is not target_space:
-                raise ValueError(f"The kernels of {triple} lift with the {derived(target_cell)} trace, not {trace}")
-            warnings.warn(f"The trace is read from the kernels' actions: drop the {trace} argument to immerse.",
-                          DeprecationWarning, stacklevel=2)
+    undeclared = [dof.kernel for dof in triple.generate() if dof.kernel.declared_action is None]
+    if undeclared and isinstance(trace, (TrHCurl, TrHDiv)):
+        warnings.warn(f"Kernels {undeclared} declare no action and are immersed with {trace}: taking the "
+                      "action from the trace. Pass action=HCurl or action=HDiv to the kernels instead.",
+                      DeprecationWarning, stacklevel=2)
+    elif not undeclared:
+        for dof in triple.generate():
+            action = dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank)
+            if _named_trace(action, dof.cell_defined_on) is not target_space:
+                raise ValueError(f"The kernel {dof.kernel} of {triple} has action {action}, which does not "
+                                 f"lift with the {trace} trace")
+        warnings.warn(f"The trace is read from the kernels' actions: drop the {trace} argument to immerse.",
+                      DeprecationWarning, stacklevel=2)
     return ImmersedDOFs(target_cell, triple, target_space, node)

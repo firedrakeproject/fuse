@@ -226,10 +226,9 @@ def test_vector_kernel_acts_like_a_constant_polynomial(tri, value, action):
 
 @pytest.mark.parametrize("cell_fn", [lambda: polygon(3), make_tetrahedron], ids=["triangle", "tetrahedron"])
 def test_lift_is_dual_to_trace(cell_fn):
-    """<lift(k), v> in the cell equals <k, tr(v)> on the entity. The trace
-    derived from the lift agrees with the trace class the action names: the
-    field itself for H1, its tangential component on an edge for HCurl and its
-    normal component on a facet for HDiv."""
+    """<lift(k), v> in the cell equals <k, tr(v)> on the entity, and the trace
+    is the field itself for H1, its tangential component on an edge for HCurl
+    and its normal component on a facet for HDiv."""
     cell = cell_fn()
     rng = np.random.default_rng(0)
     v = rng.standard_normal(cell.dimension)
@@ -237,9 +236,19 @@ def test_lift_is_dual_to_trace(cell_fn):
     for action, dim in [(H1, 0), (HCurl, 1), (HDiv, cell.dimension - 1)]:
         for entity in cell.d_entities(dim):
             a = as_action(action).resolve(entity, 0)
-            restricted = a.restrict(cell, entity, 0, v)
-            trace = a.trace(cell, entity, 0)
-            assert np.allclose(np.ravel(restricted), np.ravel(trace(lambda *x: v, entity)(0)) if action is not H1 else v)
+            restricted = a.trace(cell, entity, 0, v)
+            if action is H1:
+                expected = v
+            else:
+                basis = np.array(cell.basis_vectors(entity=entity))
+                if action is HCurl:
+                    direction = basis[0]
+                elif cell.dimension == 2:
+                    direction = basis[0] @ np.array([[0, -1], [1, 0]])
+                else:
+                    direction = np.cross(basis[0], basis[1])
+                expected = [direction @ v]
+            assert np.allclose(np.ravel(restricted), np.ravel(expected))
             L = a.lift_matrix(cell, entity, 0)
             if L is not None:
                 assert np.isclose(np.dot(np.ravel(L) * kappa, v), kappa * np.ravel(restricted)[0])
@@ -254,16 +263,24 @@ def test_flat_vector_on_face_restricts_to_tangential_part():
     L = a.lift_matrix(tet, face, 1)
     n = np.cross(*np.array(tet.basis_vectors(entity=face)))
     assert np.allclose(n @ L, 0)
-    assert np.allclose(a.restrict(tet, face, 1, n), 0)
-    assert isinstance(a.trace(tet, face, 1), TrH1)
+    assert np.allclose(a.trace(tet, face, 1, n), 0)
 
 
 # ------------------------------------------------------------------ the trace is read from the kernels
 
-def test_immerse_reads_trace_from_kernels(tri):
-    assert isinstance(immerse(tri, edge_triple(tri, HCurl)).trace, TrHCurl)
-    assert isinstance(immerse(tri, edge_triple(tri, HDiv)).trace, TrHDiv)
-    assert isinstance(immerse(tri, edge_triple(tri)).trace, TrH1)
+def immersed_edge_dofs(tri, triple):
+    space = PolynomialSpace(1, shape=2)
+    return ElementTriple(tri, (space, C0, None), DOFGenerator([immerse(tri, triple)], C3, S1)).generate()
+
+
+def test_immersed_dofs_trace_through_their_kernels(tri):
+    """Without a trace argument nothing is stored on the immersion: each DOF
+    lifts along the tangent (HCurl) or the normal (HDiv) of its edge."""
+    assert immerse(tri, edge_triple(tri, HCurl)).trace is None
+    for action, normal in [(HCurl, False), (HDiv, True)]:
+        for dof in immersed_edge_dofs(tri, edge_triple(tri, action)):
+            tangent = np.array(tri.basis_vectors(entity=dof.cell_defined_on))[0]
+            assert np.isclose(abs(np.dot(dof.lift_direction(), tangent)), 0 if normal else 1)
 
 
 def test_immerse_with_redundant_trace(tri):
@@ -273,12 +290,15 @@ def test_immerse_with_redundant_trace(tri):
         immerse(tri, edge_triple(tri, HDiv), TrH1)
 
 
-def test_mixed_traces_cannot_be_immersed_together(tri):
+def test_mixed_actions_are_immersed_together(tri):
+    """One immersed triple can hold kernels with different actions: each DOF
+    is traced through its own kernel."""
     edge = tri.edges()[0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=HCurl)), DOF(L2Pairing(), PolynomialKernel(1, action=HDiv))]
-    triple = ElementTriple(edge, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1, S1))
-    with pytest.raises(ValueError):
-        immerse(tri, triple)
+    triple = ElementTriple(edge, (PolynomialSpace(1), L2, None), DOFGenerator(xs, S1, S1))
+    for dof in immersed_edge_dofs(tri, triple):
+        tangent = np.array(tri.basis_vectors(entity=dof.cell_defined_on))[0]
+        assert np.isclose(abs(np.dot(dof.lift_direction(), tangent)), 1 if dof.kernel.action == as_action(HCurl) else 0)
 
 
 # ------------------------------------------------------------------ immersion respects the entity's symmetry
