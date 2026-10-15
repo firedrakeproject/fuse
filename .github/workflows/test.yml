@@ -102,7 +102,7 @@ jobs:
 
       - name: Install PETSc
         run: |
-          git clone --depth 1 https://gitlab.com/petsc/petsc.git
+          git clone  https://gitlab.com/petsc/petsc.git
           cd petsc
           git checkout d2a0018167bbba
           python3 ../firedrake-repo/scripts/firedrake-configure \
