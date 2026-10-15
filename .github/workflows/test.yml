@@ -104,7 +104,8 @@ jobs:
         run: |
           git clone  https://gitlab.com/petsc/petsc.git
           cd petsc
-          git checkout d2a0018167bbba
+          git checkout v3.25.4
+          # git checkout d2a0018167bbba
           python3 ../firedrake-repo/scripts/firedrake-configure \
             --arch ${{ matrix.arch }} --show-petsc-configure-options | \
             xargs -L1 ./configure --with-make-np=8 --download-slepc
