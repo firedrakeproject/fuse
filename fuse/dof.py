@@ -10,7 +10,8 @@ import sympy as sp
 
 class Pairing():
     """
-    Akin to an inner product, the pairing combines a kernel and an input function
+    The pairing combines a kernel and an input function.
+    In many cases, this takes the form of an inner product.
     """
 
     def __init__(self):
@@ -23,9 +24,8 @@ class Pairing():
 
 class DeltaPairing(Pairing):
     """
-    The delta pairing allows the evaluation at a single points
+    The delta pairing allows evaluation at point
 
-    Calling method:
     :param: kernel: Normally a PointKernel
     """
 
@@ -60,6 +60,7 @@ class DeltaPairing(Pairing):
 
 
 class L2Pairing(Pairing):
+    """ The L2 inner product as a pairing """
 
     def __init__(self):
         super(L2Pairing, self).__init__()
@@ -91,11 +92,13 @@ class L2Pairing(Pairing):
 
 class BaseKernel():
     """A DOF kernel.
+    
+    A kernel must be associated with an ``action``, an instance of 
+    :class:`fuse.actions.KernelAction`, that describes the transformation of 
+    the kernel value under symmetry.
 
-    The kernel class moves the kernel's support under a symmetry. Its value is
-    transformed by ``action``, a :class:`fuse.actions.KernelAction` chosen with
-    the kernel, or one of the spaces H1, HCurl, HDiv or L2 as a shorthand for
-    a form action. Scalar kernels default to H1.
+    This class also accepts the shorthand H1, HCurl, HDiv or L2 for a form action.
+    Scalar kernels default to H1.
     """
 
     def __init__(self, action=None):
@@ -128,10 +131,12 @@ class BaseKernel():
         return res
 
     def action_for_trace(self, trace):
-        """This kernel, checked against the trace it is immersed with.
+        """
+        This function verifies the given trace matches the action.
 
-        The trace carries no information beyond the kernel's action: an HCurl
-        or HDiv trace must agree with it. A kernel that declares no action takes
+        To be removed when we no longer support specifying the trace type.
+        
+        A kernel that declares no action takes
         it from the trace (deprecated, see :func:`fuse.triples.immerse`).
         """
         expected = {TrHCurl: HCurlAction, TrHDiv: HDivAction}.get(type(trace))
@@ -144,7 +149,7 @@ class BaseKernel():
         return self
 
     def act(self, g):
-        """This kernel transformed by the symmetry ``g`` of its entity."""
+        """ Transform the kernel by the symmetry ``g`` of the associated entity"""
         res = copy.copy(self)
         res.orientation = g if self.orientation is None else g.compose(self.orientation)
         return res
@@ -153,7 +158,10 @@ class BaseKernel():
         return self.act(g)
 
     def action_matrix(self, entity):
-        """Inverse transpose of the linear part of the kernel's symmetry, in the
+        """
+        Represents the inverse transform of the entity's basis under a symmetry.
+
+        This is the inverse transpose of the linear part of the kernel's symmetry, in the
         coordinates of ``entity``."""
         if entity.get_spatial_dimension() == 0:
             return np.eye(0)
@@ -248,6 +256,28 @@ class VectorKernel(BaseKernel):
         return VectorKernel(tuple(obj_dict["pt"]), action=obj_dict.get("action"))
 
 
+def evaluate_polynomial(kernel, args):
+    """The value of a polynomial kernel at values ``args``.
+
+    The polynomial's symbols are replaced with the values of args. 
+
+    Constructs a lambda function version of the polynomial on first run,
+    to avoid repeated sympy substitutions.
+
+    If the values in args are symbolic, falls back to sympy.
+    """
+    args = args[:len(kernel.syms)]
+    if "_numeric" not in kernel.__dict__:
+        exprs = kernel.fn.as_expr() if kernel.shape == 0 else [f.as_expr() for f in kernel.fn]
+        free = set().union(*[sp.sympify(e).free_symbols for e in np.atleast_1d(exprs)])
+        kernel._numeric = sp.lambdify(kernel.syms, exprs, "numpy") if free <= set(kernel.syms) else None
+    if kernel._numeric is None or any(isinstance(a, sp.Basic) for a in args):
+        if kernel.shape == 0:
+            return sympy_to_numpy(kernel.fn, kernel.syms, args)
+        return [sympy_to_numpy(f, kernel.syms, args) for f in kernel.fn]
+    return np.array(kernel._numeric(*args), dtype=np.float64)
+
+
 class BarycentricPolynomialKernel(BaseKernel):
 
     def __init__(self, fn, g=None, symbols=[], action=None):
@@ -281,25 +311,14 @@ class BarycentricPolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() + interpolant_degree
 
     def __call__(self, *args):
-        if self.shape == 0:
-            res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
-        else:
-            res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
-        return res
-
-    def numeric(self, *args):
-        """The kernel's value at numeric barycentric coordinates."""
-        if "_lambdified" not in self.__dict__:
-            exprs = self.fn.as_expr() if self.shape == 0 else [f.as_expr() for f in self.fn]
-            self._lambdified = sp.lambdify(self.syms, exprs, "numpy")
-        return np.array(self._lambdified(*args[:len(self.syms)]), dtype=np.float64)
+        return evaluate_polynomial(self, args)
 
     def evaluate(self, Qpts, bary_pts, Qwts, basis_change, action, dim, value_shape):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [list(np.ndindex(value_shape)) for pt in Qpts]
-        wts = [wt*action.act(basis_change, self.numeric(*pt)) for pt, wt in zip(bary_pts, Qwts)]
+        wts = [wt*action.act(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
@@ -343,13 +362,7 @@ class PolynomialKernel(BaseKernel):
         return self.fn.as_poly().total_degree() + interpolant_degree
 
     def __call__(self, *args):
-        if self.shape == 0:
-            res = sympy_to_numpy(self.fn, self.syms, args[:len(self.syms)])
-        else:
-            res = []
-            for i in range(self.shape):
-                res += [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)])]
-        return res
+        return evaluate_polynomial(self, args)
 
     def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
         if len(value_shape) == 0:
@@ -373,9 +386,9 @@ class PolynomialKernel(BaseKernel):
 class ComponentKernel(BaseKernel):
     """Selects a component of the value of the function the DOF acts on.
 
-    Used bare, this is a moment against a single component. Wrapping another
-    kernel in ``base_kernel`` instead restricts that kernel to a component,
-    which is how a scalar functional is lifted to act on one component of a
+    Used bare, this is a moment against a single component.
+    A kernel passed as ``base_kernel`` is restricted to the given component,
+    e.g. a scalar functional can be lifted to act on one component of a
     vector valued function.
 
     Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped.

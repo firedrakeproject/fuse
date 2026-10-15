@@ -476,7 +476,7 @@ def test_rt_second_order():
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), (x,), action=HDiv))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2, S2)
     int_rt2 = ElementTriple(edge, (P1, L2, Fdiv), dofs)
 

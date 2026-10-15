@@ -147,8 +147,8 @@ class ElementTriple():
     def immersion_trace(self, target_cell):
         """The trace with which this triple's DOFs are immersed in ``target_cell``.
 
-        It is the dual of the lift of the DOFs' kernels, so it is read off
-        their actions; all DOFs must agree on it.
+        It is the dual of the lift of the DOFs' kernels, so it is determined by
+        their actions. All DOFs in a single generation tuple must agree on it.
         """
         traces = {type(dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank)
                        .trace(target_cell, dof.cell_defined_on, dof.kernel.rank))
@@ -351,6 +351,9 @@ class DOFGenerator():
         self.dof_numbers = None
         self.ls = None
         self._generator_dofs = None
+        # for each member of the transversal (in the order of g1.members()),
+        # the positions in self.ls of the DOFs it generates
+        self._positions_by_member = None
         self.cell = None
         self.space = None
         self._stabiliser = None
@@ -362,8 +365,8 @@ class DOFGenerator():
         yield self.g2
 
     def add_context(self, cell, space):
-        """Place this generator in a triple on ``cell`` with polynomial space
-        ``space``. A generator belongs to one triple only."""
+        """ Fix the cell and space of the DOF generator. A single generator object can
+            only belong to one triple."""
         if self.cell is not None and (self.cell is not cell or self.space is not space):
             raise ValueError(f"{self} already belongs to a triple on {self.cell}: use a new DOFGenerator")
         self.cell = cell
@@ -380,9 +383,11 @@ class DOFGenerator():
         if self.ls is None:
             self.ls = []
             self._generator_dofs = []
+            members = self.g1.members()
+            self._positions_by_member = [[] for _ in members]
             for l_g in self.x:
                 i = 0
-                for g in self.g1.members():
+                for a, g in enumerate(members):
                     generated = l_g(g)
                     if not isinstance(generated, list):
                         generated = [generated]
@@ -390,6 +395,7 @@ class DOFGenerator():
                         dof.add_context(self, cell, space, g, id_counter, i)
                         id_counter += 1
                         i += 1
+                    self._positions_by_member[a] += range(len(self.ls), len(self.ls) + len(generated))
                     self.ls.extend(generated)
                     if g.perm.is_Identity:
                         self._generator_dofs.extend(generated)
@@ -398,14 +404,15 @@ class DOFGenerator():
         return self.ls
 
     def generator_dofs(self):
-        """The generator DOFs X, as generated: the DOFs given by the identity
-        of the transversal (several for an immersed generator)."""
+        """The generator DOFs X, with their immersion expanded through ``generate()`` 
+            """
         if self._generator_dofs is None:
             raise ValueError("DOFs not generated yet")
         return self._generator_dofs
 
     def _act(self):
-        """s -> the generator DOFs moved by s, applied to the basis of the space."""
+        """Constructs a function from the symmetry group of the cell 
+        to DOFs evaluated on the cell transformed by that symmetry group member."""
         X = self.generator_dofs()
         G = self.cell.group
         cache = self.__dict__.setdefault("_act_cache", {})
@@ -419,8 +426,9 @@ class DOFGenerator():
         return act
 
     def stabiliser(self):
-        """H_X: the symmetries of the triple's cell that fix the span of this
-        DOF generator. For immersed DOFs, the stabiliser of the entity they
+        """For non immersed DOFs, the stabiliser is H_X: the symmetries of the triple's cell
+        that fix the span of this DOF generator tuple.
+        For immersed DOFs, the stabiliser is H_E: the symmetries that do not move the entity they
         are immersed on."""
         if self._stabiliser is None:
             entities = {(x.C.dim(), x.start_node) for x in self.x if isinstance(x, ImmersedDOFs)}
@@ -452,26 +460,13 @@ class DOFGenerator():
         g, = G._match([g])
         A = G._match(self.g1)
         H = self.stabiliser()
-        index = self._generated_index(len(A))
-        n = sum(len(i) for i in index)
-        M = np.zeros((n, n))
+        index = self._positions_by_member
+        M = np.zeros((len(self.ls), len(self.ls)))
         for i, a in enumerate(A):
             a_new, h = self.g1.decompose(g.compose(a), H)
             j = [b.perm for b in A].index(a_new.perm)
             M[np.ix_(index[j], index[i])] = self._stabiliser_mapping(h)
         return M
-
-    def _generated_index(self, num_a):
-        """For each member of the transversal, the positions (in generation
-        order) of the DOFs it generates, in the order of the generator DOFs."""
-        sizes = [len(x.triple.generate()) if isinstance(x, ImmersedDOFs) else 1 for x in self.x]
-        index = [[] for _ in range(num_a)]
-        start = 0
-        for size in sizes:
-            for i in range(num_a):
-                index[i] += list(range(start + i*size, start + (i + 1)*size))
-            start += num_a*size
-        return index
 
     def _stabiliser_mapping(self, h):
         """How a member ``h`` of the stabiliser transforms the generator DOFs.
@@ -494,7 +489,8 @@ class DOFGenerator():
         return scipy.linalg.block_diag(*blocks)
 
     def check_transversal(self):
-        """Raise unless the generating group is a left transversal of H_X."""
+        """This function checks the given generation transversal is
+        actually a left transversal of the stabiliser H."""
         if not self.generator_dofs():
             return
         H = self.stabiliser()

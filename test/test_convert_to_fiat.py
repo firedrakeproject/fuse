@@ -1081,16 +1081,16 @@ def test_two_tet_interpolation(elem_gen, elem_code, deg):
                                                            # (construct_tet_cg4, "CG", 4, 1e-13),
                                                            # (periodic_table(0, 3, 0, 4), "CG", 4, 1e-13),
                                                            # (periodic_table(0, 3, 0, 6), "CG", 6, 1e-13),
-                                                           # (construct_tet_rt2, "RT", 2, 1e-13),
+                                                            (construct_tet_rt2, "RT", 2, 1e-13),
                                                            # (construct_tet_rt3, "RT", 3, 1e-13),
-                                                           # (construct_tet_bdm2, "BDM", 2, 1e-13),
+                                                            (construct_tet_bdm2, "BDM", 2, 1e-13),
                                                            # (construct_tet_ned_2nd_kind_2, "N2curl", 2, 1e-12),
                                                            # (construct_tet_ned_2nd_kind_2_non_bary, "N2curl", 2, 1e-12),
-                                                            (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
+                                                           # (construct_tet_ned_2nd_kind_3, "N2curl", 3, 1e-12),
                                                            # (construct_tet_ned2, "N1curl", 2, 1e-13),
-                                                            (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
-                                                            (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
-                                                           # (construct_tet_ned3_old, "N1curl", 2, 1e-13)
+                                                           # (periodic_table(1, 3, 1, 3), "N2curl", 3, 1e-12),
+                                                           # (periodic_table(1, 3, 1, 4), "N2curl", 4, 1e-12),
+                                                            (construct_tet_ned3_old, "N1curl", 2, 1e-13)
                                                             ])
 def test_two_tet_projection(elem_gen, elem_code, deg, max_err):
     if hasattr(elem_gen, "__call__"):
