@@ -475,7 +475,10 @@ def construct_tet_ned2(tet=None, perm=None):
     # breakpoint()
     # xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
     # xs = [DOF(L2Pairing(), VectorKernel((v_1 - v_0)/2)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2)),]
-    center_dofs = DOFGenerator(xs, S2, S3)
+    # the two images span the constant vectors, which every symmetry preserves,
+    # so they form one generator
+    xs = [x(s) for x in xs for s in face.group._match(S2.add_cell(face))]
+    center_dofs = DOFGenerator(xs, S1, S3)
     face_vec = ElementTriple(face, (PolynomialSpace(0, shape=2), L2, Fcurl), center_dofs)
     im_xs = [immerse(tet, face_vec)]
     face_dofs = DOFGenerator(im_xs, tet_faces, S1)
@@ -544,7 +547,9 @@ def construct_tet_ned_2nd_kind_3(tet=None):
     # moments against the Raviart-Thomas functions of degree 2 on the face
     xy = sp.Matrix([sp.symbols("x y")])
     face_space = PolynomialSpace(1, shape=2) + PolynomialSpace(1).restrict(0, 1)*xy
-    face_vec = ElementTriple(face, (face_space, L2, Fcurl), [DOFGenerator(xs, S3, S1), DOFGenerator(xs2, S2, S3)])
+    # the two images of the bubble moment span an invariant space, so they form one generator
+    xs2 = [x(s) for x in xs2 for s in face.group._match(S2.add_cell(face))]
+    face_vec = ElementTriple(face, (face_space, L2, Fcurl), [DOFGenerator(xs, S3, S1), DOFGenerator(xs2, S1, S3)])
 
     face_dofs = DOFGenerator([immerse(tet, face_vec)], tet_faces, S1)
     # moments against the lowest order Raviart-Thomas field of the face (0, 3, 1),

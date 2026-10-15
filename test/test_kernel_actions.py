@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 import sympy as sp
 
-from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, DOF, L2Pairing,
-                  DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
+from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, BarycentricPolynomialKernel,
+                  DOF, L2Pairing, DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
                   TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
 from fuse.actions import as_action
 
@@ -16,12 +16,6 @@ x, y = sp.symbols("x y")
 @pytest.fixture
 def tri():
     return polygon(3)
-
-
-@pytest.fixture
-def true_action(monkeypatch):
-    """The form action with the orientation sign on the kernel's own entity."""
-    monkeypatch.setattr(FormAction, "legacy_orientation_sign", False)
 
 
 def members(entity):
@@ -88,7 +82,7 @@ def test_resolve_rejects(tri, action, rank):
 # ------------------------------------------------------------------ action of symmetries
 
 @pytest.mark.parametrize("action,sign", [(H1, 1), (HCurl, -1), (HDiv, -1), (L2, -1)])
-def test_interval_reflection(tri, true_action, action, sign):
+def test_interval_reflection(tri, action, sign):
     """On an interval, a moment of a 0-form is kept by the reflection; a moment
     of a 1-form (whether read flat or hodge, which agree on an interval) changes
     sign."""
@@ -98,15 +92,7 @@ def test_interval_reflection(tri, true_action, action, sign):
     assert np.isclose(a.act(A, 1.0), sign)
 
 
-def test_legacy_orientation_sign(tri):
-    """While the legacy sign is in place, a 1-form moment on an interval is
-    kept by the reflection, as a 0-form would be."""
-    edge = tri.edges()[0]
-    A = action_matrix(edge, reflections(edge)[0])
-    assert np.isclose(as_action(HCurl).resolve(edge, 0).act(A, 1.0), 1)
-
-
-def test_flat_and_hodge_differ_by_orientation(tri, true_action):
+def test_flat_and_hodge_differ_by_orientation(tri):
     """On the triangle, the same vector read flat and hodge transforms the same
     way under rotations and with opposite signs under reflections."""
     v = np.array([0.3, -0.7])
@@ -118,7 +104,7 @@ def test_flat_and_hodge_differ_by_orientation(tri, true_action):
 
 
 @pytest.mark.parametrize("action", [HCurl, HDiv])
-def test_form_action_composes(tri, true_action, action):
+def test_form_action_composes(tri, action):
     a = as_action(action).resolve(tri, 1)
     v = np.array([0.3, -0.7])
     for g in members(tri):
@@ -218,6 +204,24 @@ def test_kernel_action_composes(tri):
                                k.act(h).action_matrix(tri) @ k.act(g).action_matrix(tri))
 
 
+@pytest.mark.parametrize("value,action", [((1.0, 2.0), HCurl), ((1.0, 2.0), HDiv), (1.0, L2)])
+def test_vector_kernel_acts_like_a_constant_polynomial(tri, value, action):
+    """A constant vector (or scalar) kernel transforms exactly as the same
+    constant written as a polynomial kernel."""
+    Qpts, Qwts = tri.quadrature(1)
+    bary = tri.cartesian_to_barycentric(Qpts)
+    shape = (2,) if np.ndim(value) else ()
+    s = sp.symbols("s_0 s_1 s_2")
+    for g in members(tri):
+        kv = VectorKernel(value, action=action).act(g)
+        kp = BarycentricPolynomialKernel(value, symbols=s, action=action).act(g)
+        A = kv.action_matrix(tri)
+        act = kv.action.resolve(tri, kv.rank)
+        _, wv, cv = kv.evaluate(Qpts, Qwts, A, act, 2, shape)
+        _, wp, cp = kp.evaluate(Qpts, bary, Qwts, A, act, 2, shape)
+        assert np.allclose(wv, wp) and cv == cp
+
+
 # ------------------------------------------------------------------ traces are dual to lifts
 
 @pytest.mark.parametrize("cell_fn", [lambda: polygon(3), make_tetrahedron], ids=["triangle", "tetrahedron"])
@@ -301,7 +305,7 @@ def random_field(rng, d, shape):
                                (1, 2, 1, 2), (1, 2, 2, 1), (0, 3, 0, 3), (0, 3, 1, 1), (0, 3, 2, 1),
                                (1, 3, 1, 1), (0, 3, 1, 2), (0, 3, 2, 2), (1, 3, 2, 1), (1, 3, 2, 2)],
                          ids=lambda p: "c{}-d{}-k{}-deg{}".format(*p))
-def test_immersed_dof_moves_with_the_cell(true_action, p):
+def test_immersed_dof_moves_with_the_cell(p):
     """Moving an immersed DOF by a symmetry g of the cell (which moves it to
     another entity, acted on by the induced symmetry of the entity) gives the
     functional v -> l(g*v): its points are moved by g and its values by the

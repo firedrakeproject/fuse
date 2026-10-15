@@ -90,13 +90,6 @@ class FormAction(KernelAction):
 
     PROXIES = ("scalar", "flat", "hodge")
 
-    #: While True, the det(A) factor is left out of the action of a symmetry on
-    #: the kernel's own entity: a scalar top form transforms like a 0-form, and
-    #: a hodge vector like a flat one, as FUSE always has. The proxy still
-    #: decides the lift. The orientation matrices are built for that convention;
-    #: turning this off is the check that they are built from the kernel action.
-    legacy_orientation_sign = True
-
     def __init__(self, k=None, proxy="scalar"):
         if proxy not in self.PROXIES:
             raise ValueError(f"proxy must be one of {self.PROXIES}, not {proxy!r}")
@@ -154,8 +147,8 @@ class FormAction(KernelAction):
             return value
         if np.ndim(value) == 0:
             # top form: scales by the determinant
-            return value if self.legacy_orientation_sign else np.linalg.det(A) * value
-        if self.proxy == "flat" or self.legacy_orientation_sign:
+            return np.linalg.det(A) * value
+        if self.proxy == "flat":
             return np.matmul(A, value)
         return np.linalg.det(A) * np.matmul(np.linalg.inv(A).T, value)
 

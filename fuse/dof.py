@@ -158,8 +158,11 @@ class BaseKernel():
         if entity.get_spatial_dimension() == 0:
             return np.eye(0)
         bvs = np.array(entity.basis_vectors())
-        new_bvs = np.array(entity.orient(self.orientation).basis_vectors())
-        return np.matmul(np.linalg.inv(new_bvs), bvs)
+        oriented = entity.__dict__.setdefault("_oriented_basis_vectors", {})
+        key = None if self.orientation is None else self.orientation.perm
+        if key not in oriented:
+            oriented[key] = np.array(entity.orient(self.orientation).basis_vectors())
+        return np.matmul(np.linalg.inv(oriented[key]), bvs)
 
     def __repr__(self):
         return "BaseKernel"
@@ -230,12 +233,9 @@ class VectorKernel(BaseKernel):
         return self.pt
 
     def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
-        if isinstance(self.pt, int):
-            return Qpts, np.array([wt*self.pt for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
-        # TODO: a constant vector is acted on by the transpose of the action
-        # matrix, unlike the polynomial kernels
-        value = action.act(basis_change.T, self.pt)
-        return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [[(i,) for i in range(dim)] for pt in Qpts]
+        comps = list(np.ndindex(value_shape)) if len(value_shape) else [tuple()]
+        value = action.act(basis_change, np.array(self.pt, dtype=np.float64))
+        return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [comps for pt in Qpts]
 
     def _to_dict(self):
         o_dict = {"pt": self.pt, "action": self._action}
@@ -287,12 +287,19 @@ class BarycentricPolynomialKernel(BaseKernel):
             res = [sympy_to_numpy(self.fn[i], self.syms, args[:len(self.syms)]) for i in range(self.shape)]
         return res
 
+    def numeric(self, *args):
+        """The kernel's value at numeric barycentric coordinates."""
+        if "_lambdified" not in self.__dict__:
+            exprs = self.fn.as_expr() if self.shape == 0 else [f.as_expr() for f in self.fn]
+            self._lambdified = sp.lambdify(self.syms, exprs, "numpy")
+        return np.array(self._lambdified(*args[:len(self.syms)]), dtype=np.float64)
+
     def evaluate(self, Qpts, bary_pts, Qwts, basis_change, action, dim, value_shape):
         if len(value_shape) == 0:
             comps = [[tuple()] for pt in Qpts]
         else:
             comps = [list(np.ndindex(value_shape)) for pt in Qpts]
-        wts = [wt*action.act(basis_change, self(*pt)) for pt, wt in zip(bary_pts, Qwts)]
+        wts = [wt*action.act(basis_change, self.numeric(*pt)) for pt, wt in zip(bary_pts, Qwts)]
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):

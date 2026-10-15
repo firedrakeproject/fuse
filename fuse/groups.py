@@ -121,48 +121,6 @@ class GroupMemberRep(object):
         mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
         return mat
 
-    def matrix_form_subgroup(self, group):
-        if group.size() == 1:
-            # Trivial case
-            return np.array([1])
-        if group.size() == 6 and self.group.size() == 6:
-            # horrible hack for S3
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
-            mapping = {4: 4, 3: 0, 0: 3}
-            if (~self).numeric_rep() in mapping.keys():
-                n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.perm.size:
-            if self.perm.size == 3:
-                cosets = self.group.cosets_by_submember(group)
-                members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-                permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-                mapping = {4: 3, 3: 4, 0: 0}
-                # mapping = {4: 4, 3: 0, 0: 3}
-                if (~self).numeric_rep() in mapping.keys():
-                    n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                    permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
-                mat = perm_list_to_matrix(members, permuted_members)
-            else:
-                mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
-        elif group.size() < self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-            # cosets = self.group.cosets_by_submember(group)
-            # members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            # permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-            # mat = perm_list_to_matrix(members, permuted_members)
-        else:
-            raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
-        return mat
-
     def lin_combination_form(self):
         if self.group.cell.dimension == 0:
             return [1]

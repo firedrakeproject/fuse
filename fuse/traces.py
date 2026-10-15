@@ -58,9 +58,6 @@ class TrH1(Trace):
         return np.ones(len(Qpts))
         # return Qwts
 
-    def manipulate_basis(self, basis):
-        return np.array([1])
-
     def __repr__(self):
         return "H1"
 
@@ -97,22 +94,6 @@ class TrHDiv(Trace):
             raise ValueError("Immersion of HDiv edges not defined in 3D")
         return result
 
-    def manipulate_basis(self, basis):
-        if basis.shape[-1] == 1:
-            return basis
-        elif basis.shape == (1, 2):
-            result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
-        elif basis.shape == (2, 2):
-            # Two dim cross product - pad with zeros and take z component of result
-            zeros_row = np.zeros((basis.shape[0], 1), dtype=basis.dtype)
-            basis = np.hstack([basis, zeros_row])
-            result = np.cross(basis[0], basis[1])[2]
-        elif basis.shape == (2, 3):
-            result = np.cross(basis[0], basis[1])
-        else:
-            raise ValueError("Immersion of HDiv edges not defined in 3D")
-        return result
-
     def to_tikz(self, coord, trace_entity, scale, color="black"):
         vec = self.tabulate([], trace_entity).squeeze()
         end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
@@ -142,9 +123,6 @@ class TrHCurl(Trace):
         # result = np.matmul(tangent, subEntityBasis)
         return subEntityBasis
         # return result
-
-    def manipulate_basis(self, basis):
-        return basis[0]
 
     def plot(self, ax, coord, trace_entity, **kwargs):
         vec = self.tabulate([], trace_entity).squeeze()

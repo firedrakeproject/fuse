@@ -666,6 +666,42 @@ class Point():
 
         return reordered_entities
 
+    def orientation_key_to_member(self, key):
+        """The symmetry of this cell that a mesh orientation key stands for.
+
+        A mesh records how a cell sees one of its entities by the order of
+        the entity's facets (its cone). The key is the Lehmer code of the
+        facets, in the order this entity lists them (its connections), within
+        the order the mesh lists them. Key 0 is the identity; key k stands
+        for the symmetry s whose images of the facets, s(f_0), s(f_1), ...,
+        have Lehmer code k within f_0, f_1, ...
+        """
+        if self.dimension == 0:
+            if key != 0:
+                raise ValueError(f"A vertex has only the orientation key 0, not {key}")
+            return self.group.identity
+        keys = self.__dict__.setdefault("_orientation_keys", {})
+        if not keys:
+            verts = self.ordered_vertices()
+            cone = [frozenset(verts.index(v) for v in c.point.ordered_vertices()) for c in self.connections]
+            for g in self.group.members():
+                s = Permutation(g.perm, size=len(verts)).array_form
+                image = [frozenset(s[i] for i in f) for f in cone]
+                keys[orientation_value(cone, image)] = g
+        return keys[key]
+
+    def extend_entity_symmetry(self, entity, o):
+        """A symmetry of this cell that maps ``entity`` onto itself and
+        induces the symmetry ``o`` on it."""
+        d = entity.dimension
+        if d == self.dimension:
+            return self.group._match([o])[0]
+        index = self.d_entities_ids(d).index(entity.id)
+        for g in self.group._match(self.entity_stabiliser(entity)):
+            if self.permute_entities(g, d)[index][1].perm == o.perm:
+                return g
+        raise ValueError(f"No symmetry of {self} induces {o} on {entity}")
+
     def entity_stabiliser(self, entity):
         """The members of this cell's symmetry group that map ``entity`` onto itself.
 
@@ -880,10 +916,12 @@ class Point():
         return J
 
     def quadrature(self, degree):
-        fiat_el = self.to_fiat()
-        Q = create_quadrature(fiat_el, degree)
-        pts, wts = Q.get_points(), Q.get_weights()
-        return pts, wts
+        cache = self.__dict__.setdefault("_quadrature", {})
+        if degree not in cache:
+            Q = create_quadrature(self.to_fiat(), degree)
+            cache[degree] = (Q.get_points(), Q.get_weights())
+        pts, wts = cache[degree]
+        return pts.copy(), wts.copy()
 
     def cartesian_to_barycentric(self, pts):
         verts = np.array(self.ordered_vertex_coords())
