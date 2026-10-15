@@ -164,7 +164,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/${{ env.FIREDRAKE_BRANCH }}
+          ref: ${{ env.FIREDRAKE_BRANCH }}
     
       - name: Make cython
         run: |
