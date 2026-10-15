@@ -76,7 +76,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/${{ env.BASE_FIREDRAKE_BRANCH }}
+          ref: ${{ env.BASE_FIREDRAKE_BRANCH }}
 
       # Check that the Dockerfile is using the latest Ubuntu version.
       # The version is hardcoded into the Dockerfile so that the OS
