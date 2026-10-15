@@ -1,8 +1,6 @@
-"""How the value of a DOF kernel transforms.
+"""The kernel action determines how the value of a DOF kernel transforms.
 
-A kernel has a support (a point, or a function on an entity), which its class
-moves, and a value, which its *action* transforms. The action is chosen with
-the kernel and can be any :class:`KernelAction`:
+The action is chosen with the kernel and can be any :class:`KernelAction`:
 
 * :class:`FormAction` is the de Rham family: the value is a k-form, read as a
   scalar or a vector through a proxy.

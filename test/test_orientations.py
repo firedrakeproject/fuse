@@ -26,8 +26,10 @@ def construct_nd2(tri=None):
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
     xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-
-    center_dofs = DOFGenerator(xs, S2, S3)
+    # the two images span the constant vectors, which every symmetry preserves,
+    # so they form one generator
+    xs = [x(s) for x in xs for s in tri.group._match(S2.add_cell(tri))]
+    center_dofs = DOFGenerator(xs, S1, S3)
     xs = [immerse(tri, int_ned1, TrHCurl)]
     tri_dofs = DOFGenerator(xs, C3, S1)
 
