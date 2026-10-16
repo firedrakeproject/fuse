@@ -41,120 +41,24 @@ class Trace():
 
 
 class TrH1(Trace):
-
-    def __init__(self, cell):
-        super(TrH1, self).__init__(cell)
-
-    def __call__(self, v, trace_entity):
-        return v
-
-    def plot(self, ax, coord, trace_entity, **kwargs):
-        ax.scatter(*coord, **kwargs)
-
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
-        return f"\\filldraw[{color}] {numpy_to_str_tuple(coord, scale)} circle (2pt) node[anchor = south] {{}};"
-
-    def tabulate(self, Qpts, trace_entity):
-        return np.ones(len(Qpts))
-        # return Qwts
-
-    def manipulate_basis(self, basis):
-        return np.array([1])
+    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
+    read from each kernel's action."""
 
     def __repr__(self):
         return "H1"
 
 
 class TrHDiv(Trace):
-
-    def __init__(self, cell):
-        super(TrHDiv, self).__init__(cell)
-
-    def __call__(self, v, trace_entity):
-        def apply(*x):
-            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
-            if isinstance(result, np.float64):
-                # todo: might always be a float
-                return (result,)
-            return tuple(result)
-        return apply
-
-    def plot(self, ax, coord, trace_entity, **kwargs):
-        # plot dofs of the type associated with this space
-        vec = self.tabulate([], trace_entity).squeeze()
-        ax.quiver(*coord, *vec, **kwargs)
-
-    def tabulate(self, Qwts, trace_entity):
-        # entityBasis = np.array(trace_entity.basis_vectors())
-        cellEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        # basis = np.matmul(entityBasis, cellEntityBasis)
-        basis = cellEntityBasis
-        if trace_entity.dimension == 1:
-            result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
-        elif trace_entity.dimension == 2:
-            result = np.cross(basis[0], basis[1])
-        else:
-            raise ValueError("Immersion of HDiv edges not defined in 3D")
-        return result
-
-    def manipulate_basis(self, basis):
-        if basis.shape[-1] == 1:
-            return basis
-        elif basis.shape == (1, 2):
-            result = np.matmul(basis, np.array([[0, -1], [1, 0]]))
-        elif basis.shape == (2, 2):
-            # Two dim cross product - pad with zeros and take z component of result
-            zeros_row = np.zeros((basis.shape[0], 1), dtype=basis.dtype)
-            basis = np.hstack([basis, zeros_row])
-            result = np.cross(basis[0], basis[1])[2]
-        elif basis.shape == (2, 3):
-            result = np.cross(basis[0], basis[1])
-        else:
-            raise ValueError("Immersion of HDiv edges not defined in 3D")
-        return result
-
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
-        vec = self.tabulate([], trace_entity).squeeze()
-        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
-        arw = "-{Stealth[length=3mm, width=2mm]}"
-        return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
+    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
+    read from each kernel's action."""
 
     def __repr__(self):
         return "HDiv"
 
 
 class TrHCurl(Trace):
-
-    def __init__(self, cell):
-        super(TrHCurl, self).__init__(cell)
-
-    def __call__(self, v, trace_entity):
-        def apply(*x):
-            result = np.dot(self.tabulate(None, trace_entity), np.array(v(*x)).squeeze())
-            if isinstance(result, np.float64):
-                return (result,)
-            return tuple(result)
-        return apply
-
-    def tabulate(self, Qwts, trace_entity):
-        # tangent = trace_entity.basis_vectors()
-        subEntityBasis = np.array(self.domain.basis_vectors(entity=trace_entity))
-        # result = np.matmul(tangent, subEntityBasis)
-        return subEntityBasis
-        # return result
-
-    def manipulate_basis(self, basis):
-        return basis[0]
-
-    def plot(self, ax, coord, trace_entity, **kwargs):
-        vec = self.tabulate([], trace_entity).squeeze()
-        ax.quiver(*coord, *vec, **kwargs)
-
-    def to_tikz(self, coord, trace_entity, scale, color="black"):
-        vec = self.tabulate([], trace_entity).squeeze()
-        end_point = [coord[i] + 0.25*vec[i] for i in range(len(coord))]
-        arw = "-{Stealth[length=3mm, width=2mm]}"
-        return f"\\draw[thick, {color}, {arw}] {numpy_to_str_tuple(coord, scale)} -- {numpy_to_str_tuple(end_point, scale)};"
+    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
+    read from each kernel's action."""
 
     def __repr__(self):
         return "HCurl"

@@ -17,18 +17,18 @@ import pytest
 def interval_dgN(deg):
     edge = polygon(3).edges()[0]
     pts = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
-    dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((p,)))], S2, S1)
+    dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((p,)))], S2)
             for p in pts[:len(pts) // 2]]
-    return ElementTriple(edge, (PolynomialSpace(deg), C0, Fid), dofs)
+    return ElementTriple(edge, (PolynomialSpace(deg), C0), dofs)
 
 
 def interval_cg1():
     cell = polygon(3)
     edge = cell.edges()[0]
     vert = cell.vertices()[0]
-    dg0 = ElementTriple(vert, (P0, C0, Fid),
-                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1, S1))
-    return ElementTriple(edge, (P1, C0, Fid), [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)])
+    dg0 = ElementTriple(vert, (P0, C0),
+                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
+    return ElementTriple(edge, (P1, C0), [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
 
 
 # The DOFs of a k-form are integrals over k-dimensional entities, so the form
@@ -111,9 +111,7 @@ def test_with_kernel_preserves_attributes(deg):
             assert copy.triple is dof.triple
         # add_entity is reapplied by DOF.__init__, so check it round trips
         assert copy.pairing.entity is dof.pairing.entity
-        assert copy.pairing.orientation is dof.pairing.orientation
-        # a non immersed DOF is always given a fresh TrH1, so compare by value
-        assert type(copy.target_space) is type(dof.target_space)
+        assert copy.target_space is dof.target_space
 
 
 def test_with_kernel_replaces_only_the_kernel():
@@ -374,10 +372,10 @@ def test_vector_triple_rejects_tensor_product(flat):
     cell = polygon(3)
     edge = cell.edges()[0]
     vert = cell.vertices()[0]
-    dg0 = ElementTriple(vert, (P0, C0, Fid),
-                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1, S1))
-    interval = ElementTriple(edge, (P1, C0, Fid),
-                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2, S1)])
+    dg0 = ElementTriple(vert, (P0, C0),
+                        DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
+    interval = ElementTriple(edge, (P1, C0),
+                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
     tp = TensorProductTriple(interval, interval)
     if flat:
         tp = tp.flatten()

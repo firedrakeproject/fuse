@@ -9,6 +9,19 @@ import numpy as np
 from functools import total_ordering
 
 
+def riesz_matrices(nodes, poly_set):
+    """The Riesz representations of FIAT ``nodes`` and the coefficients of
+    ``poly_set``, flattened to one row per node or basis function.
+
+    Their product ``A @ B.T`` is the matrix of the nodes applied to the
+    orthonormal basis of the space.
+    """
+    B = poly_set.get_coeffs()
+    B = B.reshape((B.shape[0], -1))
+    A = np.array([n.to_riesz(poly_set) for n in nodes])
+    return A.reshape((len(nodes), B.shape[1])), B
+
+
 def normalise_shape(shape):
     """Canonicalise a declared value shape to a tuple of positive ints.
 
@@ -79,6 +92,21 @@ class PolynomialSpace(object):
 
     def complete(self):
         return self.mindegree == self.maxdegree
+
+    def functional_matrix(self, cell, dofs):
+        """The DOFs, defined on ``cell``, applied to the orthonormal basis of
+        this space on ``cell``: one row per DOF.
+
+        Builds the FIAT cell and basis from the cell's geometry, and caches them.
+        """
+        cache = self.__dict__.setdefault("_fiat_on_cell", {})
+        if id(cell) not in cache:
+            ref_el = cell.to_fiat(renumber=True)
+            cache[id(cell)] = (ref_el, self.to_ON_polynomial_set(ref_el))
+        ref_el, poly_set = cache[id(cell)]
+        nodes = [d.convert_to_fiat(ref_el, self.degree() + 1, self.shape) for d in dofs]
+        A, B = riesz_matrices(nodes, poly_set)
+        return np.dot(A, np.transpose(B))
 
     def degree(self):
         return self.maxdegree
@@ -170,8 +198,7 @@ class PolynomialSpace(object):
         return "PolynomialSpace"
 
     def _from_dict(obj_dict):
-        shape = obj_dict["shape"] if "shape" in obj_dict else obj_dict["set_shape"]
-        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], shape)
+        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], obj_dict["shape"])
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):
