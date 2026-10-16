@@ -92,9 +92,9 @@ class L2Pairing(Pairing):
 
 class BaseKernel():
     """A DOF kernel.
-    
-    A kernel must be associated with an ``action``, an instance of 
-    :class:`fuse.actions.KernelAction`, that describes the transformation of 
+
+    A kernel must be associated with an ``action``, an instance of
+    :class:`fuse.actions.KernelAction`, that describes the transformation of
     the kernel value under symmetry.
 
     This class also accepts the shorthand H1, HCurl, HDiv or L2 for a form action.
@@ -135,7 +135,7 @@ class BaseKernel():
         This function verifies the given trace matches the action.
 
         To be removed when we no longer support specifying the trace type.
-        
+
         A kernel that declares no action takes
         it from the trace (deprecated, see :func:`fuse.triples.immerse`).
         """
@@ -268,7 +268,7 @@ class VectorKernel(BaseKernel):
 def evaluate_polynomial(kernel, args):
     """The value of a polynomial kernel at values ``args``.
 
-    The polynomial's symbols are replaced with the values of args. 
+    The polynomial's symbols are replaced with the values of args.
 
     Constructs a lambda function version of the polynomial on first run,
     to avoid repeated sympy substitutions.

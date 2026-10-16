@@ -109,7 +109,7 @@ class ElementTriple():
             `` matrices[dimension][entity_id][orientation_key]
         Each matrix only transforms the DOFs on the entity referred to.
 
-        The inverse matrices are also provided. 
+        The inverse matrices are also provided.
         """
         dofs = self.generate()
         n = len(dofs)
@@ -403,14 +403,14 @@ class DOFGenerator():
         return self.ls
 
     def generator_dofs(self):
-        """The generator DOFs X, with their immersion expanded through ``generate()`` 
+        """The generator DOFs X, with their immersion expanded through ``generate()``
             """
         if self._generator_dofs is None:
             raise ValueError("DOFs not generated yet")
         return self._generator_dofs
 
     def _act(self):
-        """Constructs a function from the symmetry group of the cell 
+        """Constructs a function from the symmetry group of the cell
         to DOFs evaluated on the cell transformed by that symmetry group member."""
         X = self.generator_dofs()
         G = self.cell.group
