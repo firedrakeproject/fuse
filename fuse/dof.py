@@ -157,6 +157,13 @@ class BaseKernel():
     def permute(self, g):
         return self.act(g)
 
+    def _check_serialisable(self):
+        """Serialisation does not keep a kernel's orientation yet, so refuse
+        to encode an acted on kernel rather than silently lose it."""
+        if self.orientation is not None:
+            raise NotImplementedError(f"Kernel {self} has been acted on by {self.orientation}, and serialising "
+                                      "its orientation is not supported yet. Construct the kernel explicitly instead.")
+
     def action_matrix(self, entity):
         """
         Represents the inverse transform of the entity's basis under a symmetry.
@@ -206,6 +213,7 @@ class PointKernel(BaseKernel):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
+        self._check_serialisable()
         o_dict = {"pt": self.pt, "action": self._action}
         return o_dict
 
@@ -246,6 +254,7 @@ class VectorKernel(BaseKernel):
         return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [comps for pt in Qpts]
 
     def _to_dict(self):
+        self._check_serialisable()
         o_dict = {"pt": self.pt, "action": self._action}
         return o_dict
 
@@ -322,6 +331,7 @@ class BarycentricPolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
+        self._check_serialisable()
         o_dict = {"fn": self.fn, "syms": self.syms, "action": self._action}
         return o_dict
 
@@ -373,6 +383,7 @@ class PolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
+        self._check_serialisable()
         o_dict = {"fn": self.fn, "action": self._action}
         return o_dict
 

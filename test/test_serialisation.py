@@ -2,6 +2,7 @@ from fuse import *
 from firedrake import *
 from finat.ufl import CellBackend
 from fuse.serialisation import ElementSerialiser
+from fuse.actions import HDivAction
 from test_convert_to_fiat import create_cg1
 from test_orientations import interpolate_vs_project, get_expression
 import pytest
@@ -73,6 +74,56 @@ def test_tetrahedron_example():
     for d in decoded.generate():
         dof_val = d.eval(FuseFunction(lambda *x: x))
         assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
+
+
+def round_trip(obj):
+    converter = ElementSerialiser()
+    return converter.decode(converter.encode(obj))
+
+
+# Known serialiser gaps, to be fixed with the serialiser (strict, so these flag once fixed):
+# * the serialiser shares objects that compare equal, and PolynomialSpace equality ignores
+#   the weights, so the three weighted parts of the tetrahedron ND space decode as one;
+# * groups are rebuilt from their members, which reorders them, so DOFs are generated in another order.
+_serialiser_gaps = {(0, 3, 1, 1): "weighted spaces compare equal",
+                    (0, 3, 1, 2): "weighted spaces compare equal",
+                    (1, 3, 3, 2): "decoded groups reorder their members"}
+
+
+def _round_trip_param(p):
+    if p in _serialiser_gaps:
+        return pytest.param(*p, marks=pytest.mark.xfail(reason=_serialiser_gaps[p], strict=True))
+    return p
+
+
+round_trip_params = [_round_trip_param(p) for p in
+                     [(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+                     + [(col, 2, k, deg) for deg in range(1, 7) for k in range(4) for col in (0, 1)]
+                     + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)]]
+
+
+@pytest.mark.parametrize("col,dim,k,deg", round_trip_params)
+def test_round_trip_keeps_element(col, dim, k, deg):
+    "The decoded element has the same DOFs and orientation matrices as the original."
+    elem = periodic_table(col, dim, k, deg)
+    decoded = round_trip(elem)
+    space = elem.spaces[0]
+    assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
+                       space.functional_matrix(elem.cell, decoded.generate()))
+    elem.to_fiat()
+    decoded.to_fiat()
+    for d in elem.matrices:
+        for e in elem.matrices[d]:
+            for v in elem.matrices[d][e]:
+                assert np.allclose(elem.matrices[d][e][v], decoded.matrices[d][e][v]), (d, e, v)
+
+
+def test_acted_on_kernels_are_not_serialised():
+    "Serialisation does not keep a kernel's orientation yet, so encoding one raises rather than losing it."
+    g = tri.group.members()[1]
+    kernel = VectorKernel((1, 0), action=HDivAction).act(g)
+    with pytest.raises(NotImplementedError):
+        round_trip(kernel)
 
 
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]

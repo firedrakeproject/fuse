@@ -54,19 +54,19 @@ def construct_rt2(tri=None):
     deg = 2
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    vecP1 = PolynomialSpace(1, shape=2)
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,), action=HDiv))]
     dofs = DOFGenerator(xs, S2)
-    int_rt2 = ElementTriple(edge, (vecP1, C0, Fdiv), dofs)
+    int_rt2 = ElementTriple(edge, (P1, L2, Fdiv), dofs)
 
-    xs = [immerse(tri, int_rt2, TrHDiv)]
+    xs = [immerse(tri, int_rt2)]
     tri_dofs = DOFGenerator(xs, C3)
 
+    v_0 = np.array(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-    i_dofs = DOFGenerator(i_xs, S2)
+    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2, action=HDiv)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2, action=HDiv))]
+    i_dofs = DOFGenerator(i_xs, S1)
 
     vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)

@@ -313,9 +313,10 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
             if grp.size()*vgrp.size() <= cell.group.size():
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))]
                 if grp.size() == 1:
-                    # the images under vgrp span an invariant space on their
-                    # own, so they belong together in one generator
-                    xs1 = [x(s) for x in xs1 for s in cell.group._match(vgrp)]
+                    # the directions span the constant vectors, an invariant
+                    # space, so they belong together in one generator
+                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*v*bf, symbols=symbols, action=action))
+                           for v in vector_basis]
                     dofs += [DOFGenerator(xs1, grp)]
                 else:
                     dofs += [DOFGenerator(xs1, grp*vgrp)]
@@ -353,7 +354,7 @@ def lagrange_facet_fns(cell, deg, vector=False, action=None):
                 elif grp.size() == 1:
                     # the two directions span the constant vectors, an
                     # invariant space, so they belong together in one generator
-                    xs = [x(s) for x in xs for s in cell.group._match(S2.add_cell(cell))]
+                    xs += [DOF(L2Pairing(), BarycentricPolynomialKernel(bf*(v_0 - v_1)/2, symbols=symbols, action=action))]
                     dofs += [DOFGenerator(xs, grp)]
                 else:
                     dofs += [DOFGenerator(xs, S2*grp)]
