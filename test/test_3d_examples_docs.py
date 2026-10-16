@@ -132,9 +132,9 @@ def construct_tet_cg6(cell=None, perm=True):
     # v_0 = np.array(face.get_node(face.ordered_vertices()[0], return_coords=True))
     # v_1 = np.array(face.get_node(face.ordered_vertices()[1], return_coords=True))
     # xs = [DOF(DeltaPairing(), PointKernel(tuple((2*v_0 + v_1)/2)))]
-    dg1_face1 = ElementTriple(face, (P1, C0), DOFGenerator(xs, C3), perm)
-    dg1_face2 = ElementTriple(face, (P2, C0), DOFGenerator(xs1, S3), perm)
-    dg1_face3 = ElementTriple(face, (P0, C0), DOFGenerator(xs2, S1), perm)
+    # the face points together are unisolvent on P3; the six point S3 orbit lies
+    # on a circle, so on its own it is not unisolvent on any space
+    dg_face = ElementTriple(face, (P3, C0), [DOFGenerator(xs, C3), DOFGenerator(xs1, S3), DOFGenerator(xs2, S1)], perm)
 
     xs = [DOF(DeltaPairing(), PointKernel((0.3130289641134407, 0.31302896411344056, 0.3130289641134407))),]
     # a point towards the midpoint of the first edge, generated like the edges
@@ -149,7 +149,7 @@ def construct_tet_cg6(cell=None, perm=True):
     e_xs = [immerse(tetra, dg2_int)]
     cgedges = DOFGenerator(e_xs, tet_edges)
 
-    f_xs = [immerse(tetra, dg1_face1), immerse(tetra, dg1_face2), immerse(tetra, dg1_face3)]
+    f_xs = [immerse(tetra, dg_face)]
     cgfaces1 = DOFGenerator(f_xs, tet_faces)
     P = PolynomialSpace(deg)
 

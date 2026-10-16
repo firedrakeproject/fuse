@@ -169,7 +169,7 @@ def barycentric_gradients(cell):
 
 
 def whitney_bubbles(cell, entity):
-    """The Whitney fields of the edges of ``entity`` from its first vertex, each
+    """The Whitney fields of the edges of ``entity`` starting from its first vertex, each
     times the barycentric coordinates of the other vertices of ``entity``, in
     the barycentric coordinates of ``cell``.
 
@@ -185,8 +185,7 @@ def whitney_bubbles(cell, entity):
     On a triangle (0, 1, 2) this gives l_2 W_01 and l_1 W_02; on a tetrahedron
     l_2 l_3 W_01, l_1 l_3 W_02 and l_1 l_2 W_03; on an edge just W_01.
 
-    They vanish tangentially on the boundary of ``entity``, and span the same
-    space as the fields made in this way from any of its vertices, so every
+    They vanish tangentially on the boundary of ``entity``, and every
     symmetry of ``entity`` preserves their span.
     """
     s, dl = barycentric_gradients(cell)
@@ -197,8 +196,8 @@ def whitney_bubbles(cell, entity):
 
 def nedelec_bubble_fns(cell, entity, deg, transversal=None, action=None):
     """Moments against the Nedelec (first kind) functions of degree ``deg`` that
-    vanish tangentially on the boundary of ``entity``: its Whitney bubbles times
-    the polynomials of degree ``deg - entity.dimension`` on it.
+    vanish tangentially on the boundary of ``entity``. These are the Whitney bubbles times
+    the polynomials of degree ``deg - entity.dimension`` on the entity.
 
     For a sub-entity, the polynomial in each orientation is listed and
     ``transversal`` generates the moments on the other entities like it.
@@ -220,34 +219,29 @@ def nedelec_bubble_fns(cell, entity, deg, transversal=None, action=None):
 
 
 def proxy_field_bfs(cell, rot=False):
-    symbols, dl = barycentric_gradients(cell)
-    edges = [(0, 1), (1, 2), (0, 2)]
-    bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in edges]
-    facet_syms = [[symbols[i] for i in facet] for facet in edges]
-    if cell.dimension == 2:
-        grp = [C3]
-    else:
-        bfs = [sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i]) for (i, j) in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
-        grp = [tet_edges]
-        facet_syms = [[symbols[i] for i in facet] for facet in [(1, 2), (2, 0), (0, 1), (3, 1), (2, 3), (0, 3)]]
-    if rot:
-        if cell.dimension == 2:
-            perp = lambda x: np.array([[0, -1], [1, 0]]) @ x
-            bfs = [perp(bf) for bf in bfs]
-            grp = [C3]
-        else:
-            bfs = [sp.Matrix(symbols[i]*dl[j].cross(dl[k]) + symbols[j]*dl[k].cross(dl[i]) + symbols[k]*dl[i].cross(dl[j])) for i, j, k in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
-            grp = [tet_faces]
-            facet_syms = [[symbols[i] for i in facet] for facet in [[0, 3, 1], [3, 1, 2], [0, 1, 2], [0, 2, 3]]]
-    if cell.dimension == 3:
-        # As for the immersed DOFs, the field of the first edge (face) is
-        # generated onto the others by the transversal.
-        base = cell.d_entities(2 if rot else 1)[0]
-        base_ids = {cell.ordered_vertices().index(v) for v in base.ordered_vertices()}
-        k = [i for i, fs in enumerate(facet_syms) if {symbols.index(x) for x in fs} == base_ids][0]
-        bfs, facet_syms = [bfs[k]], [facet_syms[k]]
+    """The proxy field of the first entity of ``cell`` (entity being edge other that
+    for ``rot`` on a tetrahedron, where it is the face), and the transversal that generates it onto
+    the other entities.
 
-    return bfs, grp, symbols, facet_syms
+    The first entity is the one immersed DOFs start from. The ordered vertices, 
+    give the field: l_i grad(l_j) - l_j grad(l_i) on an edge (rotated by 90 degrees
+    in 2D for ``rot``), and the cyclic sum of l_i grad(l_j) x grad(l_k) on a face.
+    """
+    symbols, dl = barycentric_gradients(cell)
+    face = cell.dimension == 3 and rot
+    entity = cell.d_entities(2 if face else 1)[0]
+    ids = [cell.ordered_vertices().index(v) for v in entity.ordered_vertices()]
+    if face:
+        i, j, k = ids
+        bf = sp.Matrix(symbols[i]*dl[j].cross(dl[k]) + symbols[j]*dl[k].cross(dl[i]) + symbols[k]*dl[i].cross(dl[j]))
+        grp = tet_faces
+    else:
+        i, j = ids
+        bf = sp.Matrix(symbols[i]*dl[j] - symbols[j]*dl[i])
+        if cell.dimension == 2 and rot:
+            bf = np.array([[0, -1], [1, 0]]) @ bf
+        grp = C3 if cell.dimension == 2 else tet_edges
+    return [bf], [grp], symbols, [[symbols[n] for n in ids]]
 
 
 def vector_basis_fns(cell, deg, rot=False, action=None):
@@ -259,10 +253,17 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
     """
     edge = cell.edges()[0]
     face = cell.d_entities(2)[0]
-    facet_cell = edge
-    if cell.dimension == 3 and rot:
-        facet_cell = face
     dofs = []
+    if not rot:
+        # the edge moments are the Whitney bubbles of the first edge, generated onto the others
+        dofs += nedelec_bubble_fns(cell, edge, deg, C3 if cell.dimension == 2 else tet_edges, action=action)
+        if cell.dimension == 3 and deg >= 2:
+            dofs += nedelec_bubble_fns(cell, face, deg, tet_faces, action=action)
+        if deg >= cell.dimension:
+            dofs += nedelec_bubble_fns(cell, cell, deg, action=action)
+        return dofs
+
+    facet_cell = face if cell.dimension == 3 else edge
     pf_basis_funcs, pf_grps, symbols, facet_syms = proxy_field_bfs(cell, rot)
     basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
     for pf_bf, pf_grp, facet_sym in zip(pf_basis_funcs, pf_grps, facet_syms):
@@ -279,13 +280,6 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
                 xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(pf_bf*new_bf(o), symbols=symbols, action=action))
                        for o in grp.members()]
                 dofs += [DOFGenerator(xs1, pf_grp)]
-
-    if not rot:
-        if cell.dimension == 3 and deg >= 2:
-            dofs += nedelec_bubble_fns(cell, face, deg, tet_faces, action=action)
-        if deg >= cell.dimension:
-            dofs += nedelec_bubble_fns(cell, cell, deg, action=action)
-        return dofs
 
     basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg - 2)
     v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
