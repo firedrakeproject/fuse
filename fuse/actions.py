@@ -50,6 +50,17 @@ class KernelAction():
         """The action on the value once it is lifted into the cell."""
         raise NotImplementedError
 
+    def pullback(self, dimension):
+        """The name of the map taking functions from the reference cell to a
+        physical cell of ``dimension`` that this (resolved) action induces."""
+        raise NotImplementedError(f"{self} has no named pullback")
+
+    def sobolev_space(self, dimension):
+        """The Sobolev space a conforming element with this (resolved) action
+        lies in, in a cell of ``dimension``, and the dimension of the entities
+        that must carry DOFs for it to conform (None for L2)."""
+        raise NotImplementedError(f"{self} has no Sobolev space")
+
     def matches(self, other):
         """Whether this action is the one ``other`` describes."""
         return self == other
@@ -131,6 +142,24 @@ class FormAction(KernelAction):
     def lifted(self):
         # the form degree and proxy are kept; only the ambient dimension changes
         return self
+
+    def pullback(self, dimension):
+        if self.k == 0:
+            return "identity"
+        if self.k == dimension:
+            return "L2 Piola"
+        if self.proxy == "flat" and self.k == 1:
+            return "covariant Piola"
+        if self.proxy == "hodge" and self.k == dimension - 1:
+            return "contravariant Piola"
+        raise ValueError(f"{self!r} has no named pullback in a {dimension}-dimensional cell")
+
+    def sobolev_space(self, dimension):
+        if self.k == dimension:
+            return "L2", None
+        if self.k == 0:
+            return "H1", 0
+        return ("HCurl" if self.proxy == "flat" else "HDiv"), self.k
 
     def act(self, A, value):
         if self.k == 0:

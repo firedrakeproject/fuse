@@ -19,9 +19,9 @@ class VectorTriple(ElementTriple):
     """
 
     def __init__(self, base, dim=None, perm=True):
-        if base.spaces[2].mapping() != "identity":
+        if base.pullback() != "identity":
             raise ValueError(
-                f"Cannot vectorise an element with the {base.spaces[2]} pullback. The components do not transform independently under the pullback.")
+                f"Cannot vectorise an element with the {base.pullback()} pullback. The components do not transform independently under the pullback.")
         if base.spaces[0].shape:
             raise ValueError("Cannot vectorise an element that is already vector valued.")
         if isinstance(base, TensorProductTriple) or base.flat:
@@ -97,9 +97,9 @@ class VectorTriple(ElementTriple):
                     "product with the identity.")
 
     def setup_matrices(self):
-        # Each component of a vector triple transforms as a scalar under the
-        # identity pullback, and an orientation acts on every component alike, so the
-        # matrices of the base element lift by a Kronecker product with the identity.
+        """Each component of a vector triple transforms as a scalar under the
+         identity pullback, and an orientation acts on every component alike, so the
+         matrices of the base element lift by a Kronecker product with the identity."""
         self._check_dof_ordering()
 
         identity = np.eye(self.N)

@@ -106,7 +106,7 @@ class ElementTriple():
         """
         Builds the orientation matrices, the transformations of the DOFs
         under a reorientation of the entity. Structure:
-            `` matrices[dimension][entity_id][orientation_key]
+        `` matrices[dimension][entity_id][orientation_key]``
         Each matrix only transforms the DOFs on the entity referred to.
 
         The inverse matrices are also provided.
@@ -191,6 +191,37 @@ class ElementTriple():
         a DOF.
         """
         return min(dof.cell_defined_on.dim() for dof in self.generate())
+
+    def pullback(self):
+        """The name of the map taking the element from the reference cell to a
+        physical cell.
+        For the currently supported elements, this is induced by the kernel action.
+        FUSE is currently restricted to standard pullbacks, where all DOFs are
+        transformed in the same way."""
+        dimension = self.cell.dim()
+        names = {dof.lifted_action().pullback(dimension) for dof in self.generate()}
+        if len(names) != 1:
+            raise ValueError(f"The DOFs of {self} need different pullbacks ({', '.join(sorted(names))}): "
+                             "elements that mix them are not supported yet")
+        name = names.pop()
+        # temporary, while the declared pullback is still accepted
+        if len(self.spaces) == 3 and self.spaces[2].mapping() != name:
+            raise ValueError(f"{self} declares the {self.spaces[2]} pullback, but its kernels induce {name}")
+        return name
+
+    def sobolev_space(self):
+        """The name of the Sobolev space the element lies in.
+
+        An element whose kernels are k-forms is in H(d^k) only if it has DOFs on
+        the k-dimensional entities (vertices for H1, edges for HCurl, facets for
+        HDiv); otherwise it is only in L2. This is necessary, not sufficient,
+        for conformity."""
+        self.pullback()
+        dofs = self.generate()
+        space, dim = dofs[0].lifted_action().sobolev_space(self.cell.dim())
+        if dim is None or not any(dof.cell_defined_on.dim() == dim for dof in dofs):
+            return "L2"
+        return space
 
     def get_dof_info(self, dof, tikz=True):
         colours = {False: {0: "b", 1: "r", 2: "g", 3: "b"},

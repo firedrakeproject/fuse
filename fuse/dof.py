@@ -518,6 +518,12 @@ class DOF():
         new_generation = self.generation.copy()
         return DOF(self.pairing, self.kernel.act(g), self.cell_defined_on, self.attachment, self.target_space, g, self.immersed, new_generation, self.sub_id, self.cell, entity_o)
 
+    def lifted_action(self):
+        """The kernel's action, resolved on the entity the DOF is defined on and,
+        for an immersed DOF, lifted into the cell."""
+        action = self.kernel.action.resolve(self.cell_defined_on, self.kernel.rank)
+        return action.lifted() if self.immersed else action
+
     def eval(self, fn, pullback=True):
         return self.pairing(self.kernel, fn, self.cell)
 

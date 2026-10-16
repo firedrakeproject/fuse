@@ -7,7 +7,7 @@ import sympy as sp
 
 from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, BarycentricPolynomialKernel,
                   DOF, L2Pairing, DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
-                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
+                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction, Fid)
 from fuse.actions import as_action
 
 x, y = sp.symbols("x y")
@@ -384,3 +384,54 @@ def test_induced_entity_symmetry(cell_fn):
                 psi_image = cell.attachment(cell.id, E_image)
                 x = tuple(0.2 * rng.standard_normal(dim))
                 assert np.allclose(np.array(g(psi_E(*x)), dtype=float), np.array(psi_image(*h(x)), dtype=float))
+
+
+# ------------------------------------------------------------------ pullback and Sobolev space
+
+pullback_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+                   + [(col, 2, k, deg) for deg in range(1, 4) for k in range(4) for col in (0, 1)]
+                   + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
+
+
+@pytest.mark.parametrize("col,dim,k,deg", pullback_params)
+def test_pullback_and_sobolev_space_are_derived(col, dim, k, deg):
+    "The kernels induce the pullback and Sobolev space each periodic table element used to declare."
+    from fuse.element_construction import periodic_table
+    elem = periodic_table(col, dim, k, deg)
+    declared = elem.spaces[2]
+    assert elem.pullback() == declared.mapping()
+    assert elem.sobolev_space() == str(declared.ufl_sobolev_space(elem.form_degree, dim))
+
+
+def test_crouzeix_raviart_is_only_in_L2():
+    "Without vertex DOFs, a scalar element is not H1 conforming."
+    from element_examples import CR_n
+    elem = CR_n(polygon(3), 3)
+    assert elem.pullback() == "identity"
+    assert elem.sobolev_space() == "L2"
+
+
+def test_mixed_pullbacks_raise(tri):
+    "Vertex values (identity) and a density moment (L2 Piola) need different pullbacks."
+    from fuse import DeltaPairing
+    v0 = tuple(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
+    vertices = DOFGenerator([DOF(DeltaPairing(), PointKernel(v0))], C3)
+    density = DOFGenerator([DOF(L2Pairing(), PolynomialKernel(1, action=L2))], S1)
+    elem = ElementTriple(tri, (PolynomialSpace(1), C0, Fid), [vertices, density])
+    with pytest.raises(ValueError, match="different pullbacks"):
+        elem.pullback()
+
+
+def test_form_action_pullbacks():
+    "On an interval a 1-form is a density; in 2D flat and hodge 1-forms map differently."
+    assert FormAction(0, "scalar").pullback(1) == "identity"
+    assert FormAction(1, "flat").pullback(1) == "L2 Piola"
+    assert FormAction(1, "flat").pullback(2) == "covariant Piola"
+    assert FormAction(1, "hodge").pullback(2) == "contravariant Piola"
+    assert FormAction(2, "hodge").pullback(3) == "contravariant Piola"
+    assert FormAction(3, "scalar").pullback(3) == "L2 Piola"
+
+
+def test_symmetric_tensor_action_has_no_pullback():
+    with pytest.raises(NotImplementedError):
+        SymmetricTensorAction().pullback(2)
