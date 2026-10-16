@@ -223,7 +223,7 @@ def proxy_field_bfs(cell, rot=False):
     for ``rot`` on a tetrahedron, where it is the face), and the transversal that generates it onto
     the other entities.
 
-    The first entity is the one immersed DOFs start from. The ordered vertices, 
+    The first entity is the one immersed DOFs start from. The ordered vertices,
     give the field: l_i grad(l_j) - l_j grad(l_i) on an edge (rotated by 90 degrees
     in 2D for ``rot``), and the cyclic sum of l_i grad(l_j) x grad(l_k) on a face.
     """

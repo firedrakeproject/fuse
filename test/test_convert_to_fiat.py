@@ -44,7 +44,7 @@ def create_dg2(cell):
 
     Pk = PolynomialSpace(2)
     dg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices()))),
-                                             DOFGenerator(center, S1)])
+                                        DOFGenerator(center, S1)])
     return dg
 
 
@@ -53,7 +53,7 @@ def create_dg1_uneven(cell):
     center = [DOF(DeltaPairing(), PointKernel((0.25,)))]
     Pk = PolynomialSpace(1)
     dg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, S1),
-                                             DOFGenerator(center, S1)])
+                                        DOFGenerator(center, S1)])
     return dg
 
 
@@ -75,7 +75,7 @@ def create_cr(cell):
 def create_cr3(cell):
     Pk = PolynomialSpace(3)
     edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2),
-                                                                            DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)])
+                                                                       DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
@@ -160,7 +160,7 @@ def create_cg2(cell=None):
 
     Pk = PolynomialSpace(deg)
     cg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices()))),
-                                             DOFGenerator(center, S1)])
+                                        DOFGenerator(center, S1)])
     return cg
 
 
@@ -177,7 +177,7 @@ def create_cg2_tri(cell=None):
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     cg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices()))),
-                                             DOFGenerator(edge_xs, C3)])
+                                        DOFGenerator(edge_xs, C3)])
     return cg
 
 
