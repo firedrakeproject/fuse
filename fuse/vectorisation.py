@@ -124,4 +124,4 @@ class VectorTriple(ElementTriple):
         return "VectorTriple"
 
     def _from_dict(o_dict):
-        return VectorTriple(o_dict["base"], o_dict.get("dim"))
+        return VectorTriple(o_dict["base"], o_dict["dim"])

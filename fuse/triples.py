@@ -367,8 +367,7 @@ class ElementTriple():
         return "Triple"
 
     def _from_dict(o_dict):
-        # dicts written before the pullback was removed store it as a third space
-        return ElementTriple(o_dict["cell"], o_dict["spaces"][:2], o_dict["dofs"])
+        return ElementTriple(o_dict["cell"], o_dict["spaces"], o_dict["dofs"])
 
 
 class DOFGenerator():
@@ -563,8 +562,7 @@ class DOFGenerator():
         return "DOFGen"
 
     def _from_dict(obj_dict):
-        # dicts written before G2 was removed store the transversal as "g1"
-        return DOFGenerator(obj_dict["x"], obj_dict["transversal"] if "transversal" in obj_dict else obj_dict["g1"])
+        return DOFGenerator(obj_dict["x"], obj_dict["transversal"])
 
 
 class ImmersedDOFs():
@@ -603,14 +601,14 @@ class ImmersedDOFs():
         return repr_str
 
     def _to_dict(self):
-        o_dict = {"target_cell": self.target_cell, "triple": self.triple, "trace": self.trace}
+        o_dict = {"target_cell": self.target_cell, "triple": self.triple, "trace": self.trace, "start_node": self.start_node}
         return o_dict
 
     def dict_id(self):
         return "ImmersedDOF"
 
     def _from_dict(obj_dict):
-        return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"])
+        return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"], obj_dict["start_node"])
 
 
 def _named_trace(action, entity):

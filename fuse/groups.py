@@ -70,12 +70,18 @@ class GroupMemberRep(object):
         return orientation_value(identity, m_array)
 
     def _to_dict(self):
+        cell = getattr(self.group, "cell", None)
+        if cell is not None:
+            # a member of a group on a cell is restored from the cell's own group
+            return {"perm": self.perm.array_form, "cell": cell}
         return {"perm": self.perm.array_form, "M": self.transform_matrix.tolist(), "group": self.group}
 
     def dict_id(self):
         return "GroupMember"
 
     def _from_dict(o_dict):
+        if "cell" in o_dict:
+            return o_dict["cell"].group.get_member(Permutation(o_dict["perm"]))
         return GroupMemberRep(Permutation(o_dict["perm"]), o_dict["M"], o_dict["group"])
 
     def __eq__(self, x):
@@ -349,14 +355,14 @@ class PermutationSetRepresentation():
         return "GS" + str(self.size())
 
     def _to_dict(self):
-        return {"members": [m.perm.array_form for m in self._members]}
+        return {"members": [p.array_form for p in self.perm_list], "name": self.name}
 
     def dict_id(self):
         return "PermutationSet"
 
     def _from_dict(o_dict):
         perm_set = [Permutation(m) for m in o_dict["members"]]
-        return PermutationSetRepresentation(perm_set)
+        return PermutationSetRepresentation(perm_set, name=o_dict["name"])
 
 
 class GroupRepresentation(PermutationSetRepresentation):
@@ -507,15 +513,15 @@ class GroupRepresentation(PermutationSetRepresentation):
     #     return res
 
     def _to_dict(self):
-        return {"members": [m.perm.array_form for m in self._members]}
+        # the generators fix the order of the members, and so the order of generation
+        return {"generators": [g.array_form for g in self.base_group.generators], "name": self.name}
 
     def dict_id(self):
         return "Group"
 
     def _from_dict(o_dict):
-        perm_group = PermutationGroup([Permutation(m) for m in o_dict["members"]])
-        # , o_dict["cell"]
-        return GroupRepresentation(perm_group)
+        return GroupRepresentation(PermutationGroup([Permutation(g) for g in o_dict["generators"]]),
+                                   name=o_dict["name"])
 
 
 def get_sym_group(n):

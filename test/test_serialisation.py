@@ -81,25 +81,9 @@ def round_trip(obj):
     return converter.decode(converter.encode(obj))
 
 
-# Known serialiser gaps, to be fixed with the serialiser (strict, so these flag once fixed):
-# * the serialiser shares objects that compare equal, and PolynomialSpace equality ignores
-#   the weights, so the three weighted parts of the tetrahedron ND space decode as one;
-# * groups are rebuilt from their members, which reorders them, so DOFs are generated in another order.
-_serialiser_gaps = {(0, 3, 1, 1): "weighted spaces compare equal",
-                    (0, 3, 1, 2): "weighted spaces compare equal",
-                    (1, 3, 3, 2): "decoded groups reorder their members"}
-
-
-def _round_trip_param(p):
-    if p in _serialiser_gaps:
-        return pytest.param(*p, marks=pytest.mark.xfail(reason=_serialiser_gaps[p], strict=True))
-    return p
-
-
-round_trip_params = [_round_trip_param(p) for p in
-                     [(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+round_trip_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
                      + [(col, 2, k, deg) for deg in range(1, 7) for k in range(4) for col in (0, 1)]
-                     + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)]]
+                     + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
 
 
 @pytest.mark.parametrize("col,dim,k,deg", round_trip_params)
@@ -107,6 +91,7 @@ def test_round_trip_keeps_element(col, dim, k, deg):
     "The decoded element has the same DOFs and orientation matrices as the original."
     elem = periodic_table(col, dim, k, deg)
     decoded = round_trip(elem)
+    assert repr(decoded) == repr(elem)
     space = elem.spaces[0]
     assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
                        space.functional_matrix(elem.cell, decoded.generate()))
@@ -118,26 +103,37 @@ def test_round_trip_keeps_element(col, dim, k, deg):
                 assert np.allclose(elem.matrices[d][e][v], decoded.matrices[d][e][v]), (d, e, v)
 
 
-def test_acted_on_kernels_are_not_serialised():
-    "Serialisation does not keep a kernel's orientation yet, so encoding one raises rather than losing it."
-    g = tri.group.members()[1]
-    kernel = VectorKernel((1, 0), action=HDivAction).act(g)
-    with pytest.raises(NotImplementedError):
-        round_trip(kernel)
-
-
-@pytest.mark.parametrize("name,params", [("cg1_triangle", (0, 2, 0, 1)), ("nd1_triangle", (0, 2, 1, 1)),
-                                         ("rt1_tetrahedron", (0, 3, 2, 1))])
-def test_dicts_with_a_pullback_still_decode(name, params):
-    "Elements serialised before the pullback was removed decode to the element built today."
-    import pathlib
-    path = pathlib.Path(__file__).parent / "data" / "serialised_with_pullback" / f"{name}.json"
-    decoded = ElementSerialiser().decode(path.read_text())
-    elem = periodic_table(*params)
-    assert decoded.pullback() == elem.pullback()
+def test_reflected_dofs_round_trip():
+    "A generator DOF given as the image of another under a symmetry keeps that symmetry."
+    v = [np.array(tri.get_node(tri.ordered_vertices()[i], return_coords=True)) for i in range(3)]
+    x = DOF(L2Pairing(), VectorKernel(tuple((v[2] - v[0]) / 2), action=HDivAction))
+    s = tri.group.get_member([1, 0, 2])
+    elem = ElementTriple(tri, (PolynomialSpace(0, shape=2), C0), DOFGenerator([x, x(s)], S1))
+    decoded = round_trip(elem)
+    assert decoded.DOFGenerator[0].x[1].kernel.orientation.perm == s.perm
     space = elem.spaces[0]
     assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
                        space.functional_matrix(elem.cell, decoded.generate()))
+
+
+def test_cell_group_round_trips():
+    "A cell built with a smaller symmetry group than its shape allows keeps that group."
+    from sympy.combinatorics import PermutationGroup, Permutation
+    vs = [Point(0) for _ in range(3)]
+    edges = [Point(1, [vs[1], vs[2]], vertex_num=2), Point(1, [vs[0], vs[2]], vertex_num=2),
+             Point(1, [vs[0], vs[1]], vertex_num=2)]
+    reflection = GroupRepresentation(PermutationGroup([Permutation([0, 2, 1])]), name="R")
+    cell = Point(2, edges, vertex_num=3, edge_orientations={1: [1, 0]}, group=reflection)
+    decoded = round_trip(cell)
+    assert repr(decoded.group) == repr(cell.group)
+    assert [m.perm for m in decoded.group.members()] == [m.perm for m in cell.group.members()]
+
+
+def test_immersion_node_round_trips():
+    "DOFs immersed on an entity other than the first keep that entity."
+    side = tri.edges(get_class=True)[0]
+    triple = ElementTriple(side, (P0, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1))
+    assert round_trip(immerse(tri, triple, node=1)).start_node == 1
 
 
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]

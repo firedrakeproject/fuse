@@ -980,6 +980,7 @@ class Point():
                   "edges": [c for c in self.connections],
                   "vertex_num": len(self.vertices()),
                   "oriented": self.oriented,
+                  "group": self.group,
                   "id": self.id}
         return o_dict
 
@@ -987,7 +988,7 @@ class Point():
         return "Cell"
 
     def _from_dict(o_dict):
-        return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
+        return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], group=o_dict["group"], cell_id=o_dict["id"])
 
 
 def _attachment_symbols(nvals):

@@ -157,12 +157,10 @@ class BaseKernel():
     def permute(self, g):
         return self.act(g)
 
-    def _check_serialisable(self):
-        """Serialisation does not keep a kernel's orientation yet, so refuse
-        to encode an acted on kernel rather than silently lose it."""
-        if self.orientation is not None:
-            raise NotImplementedError(f"Kernel {self} has been acted on by {self.orientation}, and serialising "
-                                      "its orientation is not supported yet. Construct the kernel explicitly instead.")
+    def _oriented(self, orientation):
+        """This kernel with an orientation restored (used when decoding)."""
+        self.orientation = orientation
+        return self
 
     def action_matrix(self, entity):
         """
@@ -213,15 +211,14 @@ class PointKernel(BaseKernel):
         return np.array([self.pt for _ in Qpts]).astype(np.float64), np.ones_like(Qwts), [[tuple()] for pt in Qpts]
 
     def _to_dict(self):
-        self._check_serialisable()
-        o_dict = {"pt": self.pt, "action": self._action}
+        o_dict = {"pt": self.pt, "action": self._action, "orientation": self.orientation}
         return o_dict
 
     def dict_id(self):
         return "PointKernel"
 
     def _from_dict(obj_dict):
-        return PointKernel(tuple(obj_dict["pt"]), action=obj_dict.get("action"))
+        return PointKernel(tuple(obj_dict["pt"]), action=obj_dict["action"])._oriented(obj_dict["orientation"])
 
 
 class VectorKernel(BaseKernel):
@@ -254,15 +251,14 @@ class VectorKernel(BaseKernel):
         return Qpts, np.array([wt*value for wt in Qwts]).astype(np.float64), [comps for pt in Qpts]
 
     def _to_dict(self):
-        self._check_serialisable()
-        o_dict = {"pt": self.pt, "action": self._action}
+        o_dict = {"pt": self.pt, "action": self._action, "orientation": self.orientation}
         return o_dict
 
     def dict_id(self):
         return "VectorKernel"
 
     def _from_dict(obj_dict):
-        return VectorKernel(tuple(obj_dict["pt"]), action=obj_dict.get("action"))
+        return VectorKernel(tuple(obj_dict["pt"]), action=obj_dict["action"])._oriented(obj_dict["orientation"])
 
 
 def evaluate_polynomial(kernel, args):
@@ -331,15 +327,14 @@ class BarycentricPolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
-        self._check_serialisable()
-        o_dict = {"fn": self.fn, "syms": self.syms, "action": self._action}
+        o_dict = {"fn": self.fn, "syms": self.syms, "action": self._action, "orientation": self.orientation}
         return o_dict
 
     def dict_id(self):
         return "BarycentricPolynomialKernel"
 
     def _from_dict(obj_dict):
-        return BarycentricPolynomialKernel(obj_dict["fn"], symbols=obj_dict["syms"], action=obj_dict.get("action"))
+        return BarycentricPolynomialKernel(obj_dict["fn"], symbols=obj_dict["syms"], action=obj_dict["action"])._oriented(obj_dict["orientation"])
 
 
 class PolynomialKernel(BaseKernel):
@@ -383,15 +378,14 @@ class PolynomialKernel(BaseKernel):
         return Qpts, np.array(wts).astype(np.float64), comps
 
     def _to_dict(self):
-        self._check_serialisable()
-        o_dict = {"fn": self.fn, "action": self._action}
+        o_dict = {"fn": self.fn, "action": self._action, "orientation": self.orientation}
         return o_dict
 
     def dict_id(self):
         return "PolynomialKernel"
 
     def _from_dict(obj_dict):
-        return PolynomialKernel(obj_dict["fn"], action=obj_dict.get("action"))
+        return PolynomialKernel(obj_dict["fn"], action=obj_dict["action"])._oriented(obj_dict["orientation"])
 
 
 class ComponentKernel(BaseKernel):
@@ -487,7 +481,7 @@ class ComponentKernel(BaseKernel):
         return "ComponentKernel"
 
     def _from_dict(obj_dict):
-        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict.get("base_kernel"))
+        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict["base_kernel"])
 
 
 class DOF():
@@ -610,15 +604,13 @@ class DOF():
         return DOF(self.pairing, kernel, self.cell_defined_on, self.attachment, self.target_space, self.g, self.immersed, self.generation.copy(), self.sub_id, self.cell, self.entity_o)
 
     def _to_dict(self):
-        """ almost certainly needs more things"""
-        o_dict = {"pairing": self.pairing, "kernel": self.kernel}
-        return o_dict
+        return {"pairing": self.pairing, "kernel": self.kernel, "g": self.g}
 
     def dict_id(self):
         return "DOF"
 
     def _from_dict(obj_dict):
-        return DOF(obj_dict["pairing"], obj_dict["kernel"])
+        return DOF(obj_dict["pairing"], obj_dict["kernel"], g=obj_dict["g"])
 
 
 class ImmersedDOF(DOF):

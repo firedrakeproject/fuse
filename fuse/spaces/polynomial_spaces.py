@@ -198,8 +198,7 @@ class PolynomialSpace(object):
         return "PolynomialSpace"
 
     def _from_dict(obj_dict):
-        shape = obj_dict["shape"] if "shape" in obj_dict else obj_dict["set_shape"]
-        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], shape)
+        return PolynomialSpace(obj_dict["max"], obj_dict["contains"], obj_dict["min"], obj_dict["shape"])
 
 
 class ConstructedPolynomialSpace(PolynomialSpace):
