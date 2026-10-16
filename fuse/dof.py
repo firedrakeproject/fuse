@@ -524,13 +524,13 @@ class DOF():
         action = self.kernel.action.resolve(self.cell_defined_on, self.kernel.rank)
         return action.lifted() if self.immersed else action
 
-    def eval(self, fn, pullback=True):
+    def eval(self, fn, trace=True):
         return self.pairing(self.kernel, fn, self.cell)
 
     def tabulate(self, Qpts):
         return self.kernel.tabulate(Qpts)
 
-    def add_context(self, dof_gen, cell, space, g, overall_id=None, generator_id=None):
+    def add_context(self, dof_gen, cell, g, overall_id=None, generator_id=None):
         # For some of these, we only want to store the first instance of each
         self.generation[cell.dim()] = dof_gen
         self.cell = cell
@@ -628,10 +628,10 @@ class ImmersedDOF(DOF):
         self.triple = triple
         super(ImmersedDOF, self).__init__(pairing, kernel, entity=entity, attachment=attachment, target_space=target_space, g=g, immersed=True, generation=generation, sub_id=sub_id, cell=cell, entity_o=entity_o)
 
-    def eval(self, fn, pullback=True):
+    def eval(self, fn, trace=True):
         attached_fn = fn.attach(self.attachment)
 
-        if pullback:
+        if trace:
             attached_fn = self.trace(attached_fn)
 
         return self.pairing(self.kernel, attached_fn, self.cell)

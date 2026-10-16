@@ -18,7 +18,7 @@ def test_dg_examples():
     encoded = converter.encode(vert)
     decoded = converter.decode(encoded)
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(decoded, (P0, C0, Fid), DOFGenerator(xs, S1))
+    dg0 = ElementTriple(decoded, (P0, C0), DOFGenerator(xs, S1))
 
     # [test_serialise 0]
     converter = ElementSerialiser()
@@ -30,7 +30,7 @@ def test_dg_examples():
         assert dof.eval(lambda: 1) == 1
 
     xs = [DOF(DeltaPairing(), PointKernel((-1,)))]
-    dg1 = ElementTriple(edge, (P1, C0, Fid), DOFGenerator(xs, S2))
+    dg1 = ElementTriple(edge, (P1, C0), DOFGenerator(xs, S2))
 
     converter = ElementSerialiser()
     encoded = converter.encode(dg1)
@@ -124,6 +124,20 @@ def test_acted_on_kernels_are_not_serialised():
     kernel = VectorKernel((1, 0), action=HDivAction).act(g)
     with pytest.raises(NotImplementedError):
         round_trip(kernel)
+
+
+@pytest.mark.parametrize("name,params", [("cg1_triangle", (0, 2, 0, 1)), ("nd1_triangle", (0, 2, 1, 1)),
+                                         ("rt1_tetrahedron", (0, 3, 2, 1))])
+def test_dicts_with_a_pullback_still_decode(name, params):
+    "Elements serialised before the pullback was removed decode to the element built today."
+    import pathlib
+    path = pathlib.Path(__file__).parent / "data" / "serialised_with_pullback" / f"{name}.json"
+    decoded = ElementSerialiser().decode(path.read_text())
+    elem = periodic_table(*params)
+    assert decoded.pullback() == elem.pullback()
+    space = elem.spaces[0]
+    assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
+                       space.functional_matrix(elem.cell, decoded.generate()))
 
 
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]

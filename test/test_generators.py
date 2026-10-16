@@ -15,7 +15,7 @@ def interval_moment(action):
     """The moment of v against 1 on an interval, as a single generator."""
     interval = Point(1, [Point(0), Point(0)], vertex_num=2)
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=action))]
-    triple = ElementTriple(interval, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1))
+    triple = ElementTriple(interval, (PolynomialSpace(0), C0), DOFGenerator(xs, S1))
     return triple
 
 
@@ -100,9 +100,9 @@ def test_stabiliser_without_conversion():
 def test_generator_belongs_to_one_triple():
     interval = Point(1, [Point(0), Point(0)], vertex_num=2)
     gen = DOFGenerator([DOF(L2Pairing(), PolynomialKernel(1))], S1)
-    ElementTriple(interval, (PolynomialSpace(0), C0, None), gen)
+    ElementTriple(interval, (PolynomialSpace(0), C0), gen)
     with pytest.raises(ValueError, match="already belongs"):
-        ElementTriple(interval, (PolynomialSpace(1), C0, None), gen)
+        ElementTriple(interval, (PolynomialSpace(1), C0), gen)
 
 
 def test_g2_has_been_removed():

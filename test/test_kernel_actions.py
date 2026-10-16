@@ -7,7 +7,7 @@ import sympy as sp
 
 from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, BarycentricPolynomialKernel,
                   DOF, L2Pairing, DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
-                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction, Fid)
+                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
 from fuse.actions import as_action
 
 x, y = sp.symbols("x y")
@@ -152,7 +152,7 @@ def test_hodge_needs_codimension_one():
 def edge_triple(tri, action=None):
     edge = tri.edges()[0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=action))]
-    return ElementTriple(edge, (PolynomialSpace(0), C0, None), DOFGenerator(xs, S1))
+    return ElementTriple(edge, (PolynomialSpace(0), C0), DOFGenerator(xs, S1))
 
 
 def test_trace_must_match_action(tri):
@@ -172,7 +172,7 @@ def test_declared_matches_trace(tri, action, trace):
 
     def nodes(triple):
         xs = [immerse(tri, triple, trace)]
-        dofs = ElementTriple(tri, (space, C0, None), DOFGenerator(xs, C3)).generate()
+        dofs = ElementTriple(tri, (space, C0), DOFGenerator(xs, C3)).generate()
         return [dof.to_quadrature(1, (2,)) for dof in dofs]
 
     with pytest.warns(DeprecationWarning):
@@ -270,7 +270,7 @@ def test_flat_vector_on_face_restricts_to_tangential_part():
 
 def immersed_edge_dofs(tri, triple):
     space = PolynomialSpace(1, shape=2)
-    return ElementTriple(tri, (space, C0, None), DOFGenerator([immerse(tri, triple)], C3)).generate()
+    return ElementTriple(tri, (space, C0), DOFGenerator([immerse(tri, triple)], C3)).generate()
 
 
 def test_immersed_dofs_trace_through_their_kernels(tri):
@@ -295,7 +295,7 @@ def test_mixed_actions_are_immersed_together(tri):
     is traced through its own kernel."""
     edge = tri.edges()[0]
     xs = [DOF(L2Pairing(), PolynomialKernel(1, action=HCurl)), DOF(L2Pairing(), PolynomialKernel(1, action=HDiv))]
-    triple = ElementTriple(edge, (PolynomialSpace(1), L2, None), DOFGenerator(xs, S1))
+    triple = ElementTriple(edge, (PolynomialSpace(1), L2), DOFGenerator(xs, S1))
     for dof in immersed_edge_dofs(tri, triple):
         tangent = np.array(tri.basis_vectors(entity=dof.cell_defined_on))[0]
         assert np.isclose(abs(np.dot(dof.lift_direction(), tangent)), 1 if dof.kernel.action == as_action(HCurl) else 0)
@@ -393,14 +393,23 @@ pullback_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
                    + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
 
 
+# what each column of the periodic table declared before the pullback was derived
+periodic_table_pullbacks = {0: ("identity", "H1"), 1: ("covariant Piola", "HCurl"),
+                            2: ("contravariant Piola", "HDiv"), 3: ("identity", "L2")}
+
+
 @pytest.mark.parametrize("col,dim,k,deg", pullback_params)
 def test_pullback_and_sobolev_space_are_derived(col, dim, k, deg):
     "The kernels induce the pullback and Sobolev space each periodic table element used to declare."
     from fuse.element_construction import periodic_table
     elem = periodic_table(col, dim, k, deg)
-    declared = elem.spaces[2]
-    assert elem.pullback() == declared.mapping()
-    assert elem.sobolev_space() == str(declared.ufl_sobolev_space(elem.form_degree, dim))
+    assert (elem.pullback(), elem.sobolev_space()) == periodic_table_pullbacks[k]
+
+
+def test_pullback_is_not_given(tri):
+    "The pullback is induced by the kernels, so a third space is refused."
+    with pytest.raises(TypeError, match="pullback"):
+        ElementTriple(tri, (PolynomialSpace(0), C0, None), DOFGenerator([DOF(L2Pairing(), PolynomialKernel(1))], S1))
 
 
 def test_crouzeix_raviart_is_only_in_L2():
@@ -417,7 +426,7 @@ def test_mixed_pullbacks_raise(tri):
     v0 = tuple(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
     vertices = DOFGenerator([DOF(DeltaPairing(), PointKernel(v0))], C3)
     density = DOFGenerator([DOF(L2Pairing(), PolynomialKernel(1, action=L2))], S1)
-    elem = ElementTriple(tri, (PolynomialSpace(1), C0, Fid), [vertices, density])
+    elem = ElementTriple(tri, (PolynomialSpace(1), C0), [vertices, density])
     with pytest.raises(ValueError, match="different pullbacks"):
         elem.pullback()
 

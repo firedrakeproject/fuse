@@ -51,12 +51,16 @@ class ElementTriple():
     Class to represent the three core parts of the element
 
     :param: cell: CellComplex
-    :param: spaces: Triple of spaces: (PolynomialSpace, InterpolationSpace, Pullback)
+    :param: spaces: Pair of spaces: (PolynomialSpace, InterpolationSpace). The pullback
+        is not given: it is induced by the kernels' actions (see :meth:`pullback`).
     :param: dof_gen: Generator Triple to generate the degrees of freedom.
     """
 
     def __init__(self, cell, spaces, dof_gen, perm=True):
         assert isinstance(cell, Point) or isinstance(cell, TensorProductPoint)
+        if len(spaces) != 2:
+            raise TypeError("ElementTriple takes the spaces (V, W_I): the third space (the pullback) has been removed. "
+                            "It is now induced by the kernels' actions.")
         if isinstance(dof_gen, DOFGenerator):
             dof_gen = [dof_gen]
         for d in dof_gen:
@@ -148,8 +152,8 @@ class ElementTriple():
         return matrices, reversed_matrices
 
     def __repr__(self):
-        return "FuseTriple(%s, %s, (%s, %s, %s), %s)" % (
-               repr(self.DOFGenerator), repr(self.cell), repr(self.spaces[0]), repr(self.spaces[1]), repr(self.spaces[2]), "X")
+        return "FuseTriple(%s, %s, (%s, %s), %s)" % (
+               repr(self.DOFGenerator), repr(self.cell), repr(self.spaces[0]), repr(self.spaces[1]), "X")
 
     @cache
     def generate(self):
@@ -157,7 +161,7 @@ class ElementTriple():
             self.dofs = []
             id_counter = 0
             for dof_gen in self.DOFGenerator:
-                generated = dof_gen.generate(self.cell, self.spaces[2], id_counter)
+                generated = dof_gen.generate(self.cell, id_counter)
                 self.dofs.extend(generated)
                 id_counter += len(generated)
         return self.dofs
@@ -203,11 +207,7 @@ class ElementTriple():
         if len(names) != 1:
             raise ValueError(f"The DOFs of {self} need different pullbacks ({', '.join(sorted(names))}): "
                              "elements that mix them are not supported yet")
-        name = names.pop()
-        # temporary, while the declared pullback is still accepted
-        if len(self.spaces) == 3 and self.spaces[2].mapping() != name:
-            raise ValueError(f"{self} declares the {self.spaces[2]} pullback, but its kernels induce {name}")
-        return name
+        return names.pop()
 
     def sobolev_space(self):
         """The name of the Sobolev space the element lies in.
@@ -277,7 +277,7 @@ class ElementTriple():
         for dof in dofs:
             center, color = self.get_dof_info(dof)
             if isinstance(dof.pairing, DeltaPairing):
-                coord = dof.eval(identity, pullback=False)
+                coord = dof.eval(identity, trace=False)
             elif isinstance(dof.pairing, L2Pairing):
                 coord = center
             tikz_commands += [dof_to_tikz(dof, coord, scale, color)]
@@ -302,7 +302,7 @@ class ElementTriple():
             for dof in dofs:
                 center, color = self.get_dof_info(dof)
                 if isinstance(dof.pairing, DeltaPairing) and isinstance(dof.kernel, PointKernel):
-                    coord = dof.eval(identity, pullback=False)
+                    coord = dof.eval(identity, trace=False)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
                 if len(coord) == 1:
@@ -325,7 +325,7 @@ class ElementTriple():
                 if center is None:
                     center = [0, 0, 0]
                 if isinstance(dof.pairing, DeltaPairing):
-                    coord = dof.eval(identity, pullback=False)
+                    coord = dof.eval(identity, trace=False)
                     plot_dof(ax, dof, coord, color=color)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
@@ -367,7 +367,8 @@ class ElementTriple():
         return "Triple"
 
     def _from_dict(o_dict):
-        return ElementTriple(o_dict["cell"], o_dict["spaces"], o_dict["dofs"])
+        # dicts written before the pullback was removed store it as a third space
+        return ElementTriple(o_dict["cell"], o_dict["spaces"][:2], o_dict["dofs"])
 
 
 class DOFGenerator():
@@ -409,7 +410,7 @@ class DOFGenerator():
             raise ValueError("DOFs not generated yet")
         return self.dof_numbers
 
-    def generate(self, cell, space, id_counter):
+    def generate(self, cell, id_counter):
         if self.ls is None:
             self.ls = []
             self._generator_dofs = []
@@ -422,7 +423,7 @@ class DOFGenerator():
                     if not isinstance(generated, list):
                         generated = [generated]
                     for dof in generated:
-                        dof.add_context(self, cell, space, g, id_counter, i)
+                        dof.add_context(self, cell, g, id_counter, i)
                         id_counter += 1
                         i += 1
                     self._positions_by_member[a] += range(len(self.ls), len(self.ls) + len(generated))

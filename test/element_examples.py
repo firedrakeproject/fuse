@@ -86,10 +86,10 @@ def CR_n(cell, deg):
     Pk = PolynomialSpace(deg)
     sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
     if 0 in points:
-        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2),
+        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0), [DOFGenerator(sym_points, S2),
                                                                                 DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)])
     else:
-        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0, Fid), [DOFGenerator(sym_points, S2)])
+        edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0), [DOFGenerator(sym_points, S2)])
     edge_xs = [immerse(cell, edge_dg0, TrH1)]
 
     interior_coords = triangle_coords(triangle_nums[deg - 3])
@@ -102,7 +102,7 @@ def CR_n(cell, deg):
     # each C3 point lies on a reflection axis, so it is fixed by that reflection and
     # needs its own generator: two such points together are fixed only by the identity
     c3_gens = [DOFGenerator([c], C3) for c in c3]
-    return ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(edge_xs, C3), DOFGenerator(s1, S1)] + c3_gens + [DOFGenerator(s3, S3)])
+    return ElementTriple(cell, (Pk, C0), [DOFGenerator(edge_xs, C3), DOFGenerator(s1, S1)] + c3_gens + [DOFGenerator(s3, S3)])
 
 
 # coords = triangle_coords(21)

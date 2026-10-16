@@ -40,7 +40,7 @@ class VectorTriple(ElementTriple):
         # the number of clones of each base DOF, one per component
         self.N = int(np.prod(shape))
         self.cell = base.cell
-        self.spaces = (base.spaces[0].to_vector(shape), base.spaces[1], base.spaces[2])
+        self.spaces = (base.spaces[0].to_vector(shape), base.spaces[1])
         self.DOFGenerator = base.DOFGenerator
         self.flat = False
 
