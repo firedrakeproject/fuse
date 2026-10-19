@@ -10,6 +10,7 @@ import sympy as sp
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
+from sympy.combinatorics import Permutation
 from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from FIAT.quadrature_schemes import create_quadrature
@@ -419,6 +420,18 @@ class Point():
             raise TypeError("Shape undefined for {}".format(str(self)))
 
     def get_topology(self, renumber=False):
+        """The topology handed to FIAT, which is where FUSE meets FIAT's numbering.
+
+        * Global vertex numbers are the vertices in id order (``vertices()``):
+          FIAT's vertex coordinates are listed in that order.
+        * Each entity's tuple lists its vertices in its own construction order
+          (``ordered_vertices()``), so FIAT's local vertex order of every entity,
+          the cell included, is FUSE's construction order. Orientation keys are
+          permutations of these local positions.
+
+        A cell whose external numbering differs (for example a hypercube
+        numbering) should translate here, not in the rest of FUSE.
+        """
         structure = [generation for generation in nx.topological_generations(self.graph())]
         structure.reverse()
 
@@ -618,14 +631,22 @@ class Point():
         return self.d_entities(1, get_class)
 
     def permute_entities(self, g, d):
+        """Where the symmetry ``g`` sends each ``d``-dimensional entity.
+
+        Returns, for each entity in the order of ``d_entities(d)``, the entity
+        it is sent to and the symmetry of that entity induced by ``g``. ``g``
+        is read in construction order, ``ordered_vertices()``: vertex ``i``
+        goes to vertex ``g.perm(i)``, the same map as ``g(x)``.
+        """
         # TODO something is wrong here for squares it can return [()]
-        # verts = self.ordered_vertices()
-        verts = self.vertices(get_class=False)
+        verts = self.ordered_vertices()
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
         if d == 0:
+            # listed in the order of d_entities, like the other dimensions
+            image = dict(zip(verts, reordered))
             entity_group = self.d_entities(d)[0].group
-            return list(zip(reordered, [entity_group.identity for r in reordered]))
+            return [(image[v], entity_group.identity) for v in entities]
 
         entity_dict = {}
         reordered_entity_dict = {}
@@ -639,13 +660,63 @@ class Point():
         for ent in entities:
             for ent1 in entities:
                 if set(entity_dict[ent]) == set(reordered_entity_dict[ent1]):
-                    if entity_dict[ent] != reordered_entity_dict[ent1]:
-                        o = entity_group.transform_between_perms(entity_dict[ent], reordered_entity_dict[ent1])
-                        reordered_entities[entities.index(ent1)] = (ent, o)
-                    else:
-                        reordered_entities[entities.index(ent1)] = (ent, entity_group.identity)
+                    # local vertex i of ent1 is sent to local vertex o(i) of ent
+                    o = [entity_dict[ent].index(v) for v in reordered_entity_dict[ent1]]
+                    reordered_entities[entities.index(ent1)] = (ent, entity_group.get_member(Permutation(o)))
 
         return reordered_entities
+
+    def orientation_key_to_member(self, key):
+        """The symmetry of this cell that a mesh orientation key stands for.
+
+        A mesh records how a cell sees one of its entities by the order of
+        the entity's facets (its cone). The key is the Lehmer code of the
+        facets, in the order this entity lists them (its connections), within
+        the order the mesh lists them. Key 0 is the identity; key k stands
+        for the symmetry s whose images of the facets, s(f_0), s(f_1), ...,
+        have Lehmer code k within f_0, f_1, ...
+        """
+        if self.dimension == 0:
+            if key != 0:
+                raise ValueError(f"A vertex has only the orientation key 0, not {key}")
+            return self.group.identity
+        keys = self.__dict__.setdefault("_orientation_keys", {})
+        if not keys:
+            verts = self.ordered_vertices()
+            cone = [frozenset(verts.index(v) for v in c.point.ordered_vertices()) for c in self.connections]
+            for g in self.group.members():
+                s = Permutation(g.perm, size=len(verts)).array_form
+                image = [frozenset(s[i] for i in f) for f in cone]
+                keys[orientation_value(cone, image)] = g
+        return keys[key]
+
+    def extend_entity_symmetry(self, entity, o):
+        """A symmetry of this cell that maps ``entity`` onto itself and
+        induces the symmetry ``o`` on it."""
+        d = entity.dimension
+        if d == self.dimension:
+            return self.group._match([o])[0]
+        index = self.d_entities_ids(d).index(entity.id)
+        for g in self.group._match(self.entity_stabiliser(entity)):
+            if self.permute_entities(g, d)[index][1].perm == o.perm:
+                return g
+        raise ValueError(f"No symmetry of {self} induces {o} on {entity}")
+
+    def entity_stabiliser(self, entity):
+        """The members of this cell's symmetry group that map ``entity`` onto itself.
+
+        ``entity`` is a sub-entity of this cell. Returns a permutation set on
+        this cell; it is a subgroup of ``self.group``.
+        """
+        coords = np.array([np.array(self.get_node(v, return_coords=True), dtype=float).ravel()
+                           for v in entity.ordered_vertices()])
+
+        def maps_onto_itself(g):
+            images = np.array([np.array(g(tuple(x)), dtype=float).ravel() for x in coords])
+            return all(np.min(np.linalg.norm(coords - y, axis=1)) < 1e-10 for y in images)
+
+        stab = [g.perm for g in self.group.members() if maps_onto_itself(g)]
+        return fuse_groups.PermutationSetRepresentation(stab, cell=self)
 
     def basis_vectors(self, return_coords=True, entity=None, order=False, norm=True):
         if not entity:
@@ -845,10 +916,12 @@ class Point():
         return J
 
     def quadrature(self, degree):
-        fiat_el = self.to_fiat()
-        Q = create_quadrature(fiat_el, degree)
-        pts, wts = Q.get_points(), Q.get_weights()
-        return pts, wts
+        cache = self.__dict__.setdefault("_quadrature", {})
+        if degree not in cache:
+            Q = create_quadrature(self.to_fiat(), degree)
+            cache[degree] = (Q.get_points(), Q.get_weights())
+        pts, wts = cache[degree]
+        return pts.copy(), wts.copy()
 
     def cartesian_to_barycentric(self, pts):
         verts = np.array(self.ordered_vertex_coords())
@@ -907,6 +980,7 @@ class Point():
                   "edges": [c for c in self.connections],
                   "vertex_num": len(self.vertices()),
                   "oriented": self.oriented,
+                  "group": self.group,
                   "id": self.id}
         return o_dict
 
@@ -914,7 +988,7 @@ class Point():
         return "Cell"
 
     def _from_dict(o_dict):
-        return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], cell_id=o_dict["id"])
+        return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], group=o_dict["group"], cell_id=o_dict["id"])
 
 
 def _attachment_symbols(nvals):

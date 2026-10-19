@@ -2,7 +2,6 @@ import json
 from fuse import *
 from fuse.groups import GroupMemberRep
 from fuse.spaces.polynomial_spaces import ConstructedPolynomialSpace
-from fuse.spaces.pullbacks import Pullback
 from fuse.spaces.interpolation_spaces import InterpolationSpace
 from fuse.traces import Trace
 from fuse.triples import ImmersedDOFs
@@ -26,6 +25,7 @@ class ElementSerialiser():
     def __init__(self):
         self.obj_id_counter = {}
         self.seen_objs = {}
+        self.decoded = {}
         self.obj_storage = {}
 
         self.obj_types = {"Cell": Point,
@@ -35,7 +35,6 @@ class ElementSerialiser():
                           "Group": GroupRepresentation,
                           "GroupMember": GroupMemberRep,
                           "PermutationSet": PermutationSetRepresentation,
-                          "Pullback": Pullback,
                           "InterpolationSpace": InterpolationSpace,
                           "PolynomialSpace": PolynomialSpace,
                           "ConstructedPolynomialSpace": ConstructedPolynomialSpace,
@@ -49,7 +48,9 @@ class ElementSerialiser():
                           "PolynomialKernel": PolynomialKernel,
                           "PointKernel": PointKernel,
                           "ComponentKernel": ComponentKernel,
-                          "Trace": Trace
+                          "Trace": Trace,
+                          "FormAction": FormAction,
+                          "SymmetricTensorAction": SymmetricTensorAction,
                           }
 
     def encode(self, obj):
@@ -76,8 +77,8 @@ class ElementSerialiser():
         if isinstance(obj, sp.core.containers.Tuple) or isinstance(obj, sp.Expr) or isinstance(obj, sp.Matrix) or isinstance(obj, sp.Poly):
             return "Sympy/" + sp.srepr(obj)
 
-        if obj in self.seen_objs.keys():
-            return self.seen_objs[obj]["id"]
+        if id(obj) in self.seen_objs:
+            return self.seen_objs[id(obj)]["id"]
 
         if hasattr(obj, "_to_dict"):
             for (key, val) in obj._to_dict().items():
@@ -99,7 +100,8 @@ class ElementSerialiser():
         return obj_id
 
     def store_obj(self, obj, name, obj_id, obj_dict, path):
-        self.seen_objs[obj] = {"id": name + "/" + str(obj_id), "path": path, "dict": obj_dict}
+        # keyed by identity: objects that are merely equal are stored separately
+        self.seen_objs[id(obj)] = {"obj": obj, "id": name + "/" + str(obj_id), "path": path, "dict": obj_dict}
         if name in self.obj_storage.keys():
             self.obj_storage[name][obj_id] = obj_dict
         else:
@@ -110,11 +112,12 @@ class ElementSerialiser():
         if isinstance(obj, str):
             split_str = obj.split("/")
             if split_str[0] in self.obj_types.keys():
-                name, obj_id = split_str[0], split_str[1]
-                sub_dict = obj_dict[name][obj_id]
-                for (key, value) in sub_dict.items():
-                    sub_dict[key] = self.decode_traverse(value, obj_dict)
-                return self.obj_types[name]._from_dict(sub_dict)
+                if obj not in self.decoded:
+                    name, obj_id = split_str[0], split_str[1]
+                    sub_dict = {key: self.decode_traverse(value, obj_dict)
+                                for key, value in obj_dict[name][obj_id].items()}
+                    self.decoded[obj] = self.obj_types[name]._from_dict(sub_dict)
+                return self.decoded[obj]
             elif split_str[0] == "Sympy":
                 return sp.parse_expr(" ".join(split_str[1:]))
             else:

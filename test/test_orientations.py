@@ -19,24 +19,26 @@ def construct_nd2(tri=None):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
 
-    dofs = DOFGenerator(xs, S2, S2)
-    int_ned1 = ElementTriple(edge, (PolynomialSpace(1, shape=1), C0, Fcurl), dofs)
+    dofs = DOFGenerator(xs, S2)
+    int_ned1 = ElementTriple(edge, (P1, L2), dofs)
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-
-    center_dofs = DOFGenerator(xs, S2, S3)
-    xs = [immerse(tri, int_ned1, TrHCurl)]
-    tri_dofs = DOFGenerator(xs, C3, S1)
+    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2, action=HCurl))]
+    # the two images span the constant vectors, which every symmetry preserves,
+    # so they form one generator
+    xs = [x(s) for x in xs for s in tri.group._match(S2.add_cell(tri))]
+    center_dofs = DOFGenerator(xs, S1)
+    xs = [immerse(tri, int_ned1)]
+    tri_dofs = DOFGenerator(xs, C3)
 
     vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[y, -x]])
     nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
 
-    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs, center_dofs])
+    ned = ElementTriple(tri, (nd, C0), [tri_dofs, center_dofs])
     return ned
 
 
@@ -52,71 +54,28 @@ def construct_rt2(tri=None):
     deg = 2
     x = sp.Symbol("x")
     y = sp.Symbol("y")
-    vecP1 = PolynomialSpace(1, shape=2)
 
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,)))]
-    dofs = DOFGenerator(xs, S2, S2)
-    int_rt2 = ElementTriple(edge, (vecP1, C0, Fdiv), dofs)
+    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,), action=HDiv))]
+    dofs = DOFGenerator(xs, S2)
+    int_rt2 = ElementTriple(edge, (P1, L2), dofs)
 
-    xs = [immerse(tri, int_rt2, TrHDiv)]
-    tri_dofs = DOFGenerator(xs, C3, S1)
+    xs = [immerse(tri, int_rt2)]
+    tri_dofs = DOFGenerator(xs, C3)
 
+    v_0 = np.array(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
     v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
     v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2))]
-    i_dofs = DOFGenerator(i_xs, S2, S3)
+    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2, action=HDiv)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2, action=HDiv))]
+    i_dofs = DOFGenerator(i_xs, S1)
 
     vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     M = sp.Matrix([[x, y]])
     rt_space = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
-    rt2 = ElementTriple(tri, (rt_space, C0, Fdiv), [tri_dofs, i_dofs])
+    rt2 = ElementTriple(tri, (rt_space, C0), [tri_dofs, i_dofs])
     return rt2
 
 
-def construct_nd2_for_fiat(tri=None):
-    if tri is None:
-        tri = polygon(3)
-    deg = 2
-    edge = tri.edges()[0]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-
-    xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
-          DOF(L2Pairing(), PolynomialKernel((3*x*np.sqrt(2)/np.sqrt(3)), symbols=[x]))]
-
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned1 = ElementTriple(edge, (P1, C0, Fcurl), dofs)
-
-    xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
-          DOF(L2Pairing(), PolynomialKernel((-np.sqrt(2)/np.sqrt(3))*(6*x + 3), symbols=[x]))]
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned2 = ElementTriple(tri.edges()[0], (P1, C0, Fcurl), dofs)
-
-    xs = [DOF(L2Pairing(), PolynomialKernel(np.sqrt(2))),
-          DOF(L2Pairing(), PolynomialKernel((-np.sqrt(2)/np.sqrt(3))*(6*x - 3), symbols=[x]))]
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned3 = ElementTriple(tri.edges()[0], (P1, C0, Fcurl), dofs)
-
-    xs = [DOF(L2Pairing(), ComponentKernel((0,))),
-          DOF(L2Pairing(), ComponentKernel((1,)))]
-    center_dofs = DOFGenerator(xs, S1, S3)
-    xs = [immerse(tri, int_ned2, TrHCurl, node=0)]
-    xs += [immerse(tri, int_ned1, TrHCurl, node=1)]
-    xs += [immerse(tri, int_ned3, TrHCurl, node=2)]
-    tri_dofs = DOFGenerator(xs, S1, S1)
-
-    vec_Pk = PolynomialSpace(deg - 1, shape=2)
-    Pk = PolynomialSpace(deg - 1)
-    M = sp.Matrix([[y, -x]])
-    nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
-
-    ned = ElementTriple(tri, (nd, C0, Fcurl), [tri_dofs, center_dofs])
-    return ned
-
-
-@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
-                                                    (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)

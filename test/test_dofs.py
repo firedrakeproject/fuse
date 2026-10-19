@@ -79,7 +79,7 @@ def test_permute_nd():
     for g in nd.cell.group.members():
         print("g:", g, g.numeric_rep())
         for dof in nd.generate():
-            print(dof(g).convert_to_fiat(cell.to_fiat(), 0).pt_dict)
+            print(dof(g).convert_to_fiat(cell.to_fiat(), 0, (2,)).pt_dict)
             print(dof, "->", dof(g), "eval, ", dof(g).eval(func))
 
 
@@ -124,7 +124,7 @@ def test_permute_nd_old():
         if g.numeric_rep() == 0 or g.numeric_rep() == 1:
             print(g)
             for dof in nd.generate():
-                print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1).pt_dict)
+                print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1, (2,)).pt_dict)
                 print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
 
     # reflected dofs
@@ -142,7 +142,7 @@ def test_permute_nd_old():
         if g.numeric_rep() == 0 or g.numeric_rep() == 1:
             print(g)
             for dof in nd.generate():
-                print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1).pt_dict)
+                print(dof, "->", dof(g), dof(g).convert_to_fiat(cell.to_fiat(), 1, (2,)).pt_dict)
                 print(dof, "->", dof(g), "eval p2 ", dof(g).eval(phi_2), "eval p0 ", dof(g).eval(phi_0), "eval p1 ", dof(g).eval(phi_1))
     #     # print(dof.convert_to_fiat(cell.to_fiat(), 1)(lambda x: np.array([1/3 - (np.sqrt(3)/6)*x[1], (np.sqrt(3)/6)*x[0]])))
 
