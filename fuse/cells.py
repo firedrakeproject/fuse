@@ -960,6 +960,23 @@ class Point():
         entity_name = ["v", "e", "f", "c"]
         return entity_name[self.dimension] + str(self.id)
 
+    def describe(self):
+        """What the cell is, independent of its id: the coordinates of its
+        vertices, its sub-entities as tuples of vertex positions in construction
+        order, and its symmetry group."""
+        names = {0: "vertex", 1: "interval", 2: "triangle" if len(self.vertices()) == 3 else "polygon",
+                 3: "tetrahedron" if len(self.vertices()) == 4 else "polyhedron"}
+        if self.dimension == 0:
+            return names[0]
+        verts = self.ordered_vertices()
+        coords = ", ".join("(" + ", ".join(f"{x:.6g}" for x in np.atleast_1d(v)) + ")" for v in self.ordered_vertex_coords())
+        parts = [f"vertices=[{coords}]"]
+        for d in range(1, self.dimension):
+            entities = " ".join("".join(str(verts.index(v)) for v in e.ordered_vertices()) for e in self.d_entities(d))
+            parts.append(f"{['edges', 'faces'][d - 1]}=[{entities}]")
+        parts.append(f"group={self.group.describe()}")
+        return f"{names[self.dimension]}({'; '.join(parts)})"
+
     def copy(self):
         return copy.deepcopy(self)
 
@@ -1324,7 +1341,7 @@ class CellComplexToUFL(Cell):
         return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
-        return "FUSE_" + super(CellComplexToUFL, self).__repr__()
+        return "FUSE_" + super(CellComplexToUFL, self).__repr__() + "(" + self.cell_complex.describe() + ")"
 
     def reconstruct(self, **kwargs):
         """Reconstruct this cell, overwriting properties by those in kwargs."""

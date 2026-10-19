@@ -151,8 +151,10 @@ class ElementTriple():
         return matrices, reversed_matrices
 
     def __repr__(self):
-        return "FuseTriple(%s, %s, (%s, %s), %s)" % (
-               repr(self.DOFGenerator), repr(self.cell), repr(self.spaces[0]), repr(self.spaces[1]), "X")
+        # a complete description of the element, independent of ids, so that
+        # equal elements print the same and different elements differently
+        generators = ", ".join(gen.describe() for gen in self.DOFGenerator)
+        return f"FuseTriple({self.cell.describe()}, ({self.spaces[0]!r}, {self.spaces[1]!r}), [{generators}])"
 
     @cache
     def generate(self):
@@ -558,6 +560,11 @@ class DOFGenerator():
         repr_str += str(self.transversal) + ")"
         return repr_str
 
+    def describe(self):
+        """The generator DOFs and the transversal, independent of ids."""
+        xs = ", ".join(x.describe() if hasattr(x, "describe") else repr(x) for x in self.x)
+        return f"DOFGenerator([{xs}], {self.transversal.describe()})"
+
     def _to_dict(self):
         o_dict = {"x": self.x, "transversal": self.transversal}
         return o_dict
@@ -603,6 +610,11 @@ class ImmersedDOFs():
         for dof_gen in self.E:
             repr_str += "Im_" + trace + str(self.target_cell) + "(" + str(dof_gen) + ")"
         return repr_str
+
+    def describe(self):
+        """The immersed triple and the entity it starts on, independent of ids."""
+        trace = "" if self.trace is None else f", trace={self.trace}"
+        return f"immerse(node={self.start_node}{trace}, {self.triple!r})"
 
     def _to_dict(self):
         o_dict = {"target_cell": self.target_cell, "triple": self.triple, "trace": self.trace, "start_node": self.start_node}

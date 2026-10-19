@@ -1,3 +1,5 @@
+from importlib.metadata import version, PackageNotFoundError
+
 from fuse.cells import Point, Edge, polygon, make_tetrahedron, constructCellComplex
 from fuse.groups import S1, S2, S3, D4, Z3, Z4, tet_C2, C3, C4, S4, A4, tet_edges, tet_faces, sq_edges, GroupRepresentation, PermutationSetRepresentation, Permutation, get_cyc_group, get_sym_group
 from fuse.dof import DeltaPairing, DOF, L2Pairing, FuseFunction, PointKernel, VectorKernel, BarycentricPolynomialKernel, PolynomialKernel, ComponentKernel
@@ -11,3 +13,8 @@ from fuse.spaces.polynomial_spaces import P0, P1, P2, P3, Q2, PolynomialSpace
 from fuse.spaces.interpolation_spaces import C0, L2, H1, HDiv, HCurl
 
 from fuse.element_construction import periodic_table
+
+try:
+    __version__ = version("fuse-element")
+except PackageNotFoundError:
+    __version__ = "unknown"

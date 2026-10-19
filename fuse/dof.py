@@ -49,6 +49,9 @@ class DeltaPairing(Pairing):
     def describe(self, orientation=None):
         return "{fn}({kernel})"
 
+    def kind(self):
+        return "point"
+
     def dict_id(self):
         return "Delta"
 
@@ -79,6 +82,9 @@ class L2Pairing(Pairing):
     def describe(self, orientation=None):
         entity = str(self.entity) if orientation is None else "{}({})".format(str(orientation), str(self.entity))
         return "integral_{}({{kernel}} * {{fn}}) dx) ".format(entity)
+
+    def kind(self):
+        return "moment"
 
     def dict_id(self):
         return "L2Inner"
@@ -553,6 +559,15 @@ class DOF():
 
     def __repr__(self, fn="v"):
         return self.pairing.describe(self.kernel.orientation).format(fn=fn, kernel=self.kernel)
+
+    def describe(self):
+        """What the DOF is, independent of entity ids: its pairing, its kernel,
+        the kernel's action and the symmetry it was acted on by, if any."""
+        k = self.kernel
+        entity = self.cell_defined_on
+        action = k.action if entity is None else k.action.resolve(entity, k.rank)
+        acted = "" if k.orientation is None else f", acted on by {k.orientation}"
+        return f"{self.pairing.kind()}({k!r}; {action}{acted})"
 
     def immerse(self, entity, attachment, target_space, g, triple):
         """This DOF immersed on ``entity``. ``target_space`` is a derivative

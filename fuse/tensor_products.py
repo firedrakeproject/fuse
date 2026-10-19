@@ -39,7 +39,7 @@ class TensorProductTriple(ElementTriple):
         return spaces.pop()
 
     def __repr__(self):
-        return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))
+        return "TensorProd(%s, %s, flat=%s)" % (repr(self.A), repr(self.B), self.flat)
 
     def to_ufl(self):
         if self.flat:

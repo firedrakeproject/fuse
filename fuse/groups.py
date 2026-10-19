@@ -181,6 +181,14 @@ class PermutationSetRepresentation():
     def add_cell(self, cell):
         return PermutationSetRepresentation(self.perm_list, cell=cell, name=self.name)
 
+    def describe(self):
+        """The name, if any, and the members in order, as permuted vertex positions."""
+        perms = self.members(perm=True) if getattr(self, "cell", None) is not None else self._perms()
+        return (self.name or "") + "{" + " ".join("".join(map(str, p.array_form)) for p in perms) + "}"
+
+    def _perms(self):
+        return self.perm_list
+
     def conjugacy_class(self, g):
         conj_class = set()
         for x in self.members():
@@ -511,6 +519,9 @@ class GroupRepresentation(PermutationSetRepresentation):
     #     for m in self.members():
     #         res = res and m in other.members()
     #     return res
+
+    def _perms(self):
+        return list(self.base_group.elements)
 
     def _to_dict(self):
         # the generators fix the order of the members, and so the order of generation
