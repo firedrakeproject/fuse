@@ -33,7 +33,7 @@ def test_permsets():
 
     deg = 1
     vert_dg = create_dg1(cell.vertices(get_class=True)[0])
-    xs = [immerse(cell, vert_dg, TrH1)]
+    xs = [immerse(cell, vert_dg)]
 
     Pk = PolynomialSpace(deg, deg)
     cg = ElementTriple(cell, (Pk, C0), DOFGenerator(xs, c3))
@@ -50,17 +50,17 @@ def test_permsets():
     xs = [DOF(DeltaPairing(), PointKernel(()))]
     dg0 = ElementTriple(vert, (P0, C0), DOFGenerator(xs, S1))
 
-    v_xs = [immerse(tri, dg0, TrH1)]
+    v_xs = [immerse(tri, dg0)]
     v_dofs = DOFGenerator(v_xs, c3)
 
     xs = [DOF(DeltaPairing(), PointKernel((-1/3)))]
     dg0_int = ElementTriple(edge, (P1, C0), DOFGenerator(xs, S2))
     print([d.generation for d in dg0_int.generate()])
 
-    e_xs = [immerse(tri, dg0_int, TrH1)]
+    e_xs = [immerse(tri, dg0_int)]
     e_dofs = DOFGenerator(e_xs, c3)
 
-    i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
+    i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1)
 
     cg3 = ElementTriple(tri, (P3, C0), [v_dofs, e_dofs, i_dofs])

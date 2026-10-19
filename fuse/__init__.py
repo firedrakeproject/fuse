@@ -3,7 +3,7 @@ from fuse.groups import S1, S2, S3, D4, Z3, Z4, tet_C2, C3, C4, S4, A4, tet_edge
 from fuse.dof import DeltaPairing, DOF, L2Pairing, FuseFunction, PointKernel, VectorKernel, BarycentricPolynomialKernel, PolynomialKernel, ComponentKernel
 from fuse.triples import ElementTriple, DOFGenerator, immerse
 from fuse.actions import KernelAction, FormAction, SymmetricTensorAction
-from fuse.traces import TrH1, TrGrad, TrHess, TrHCurl, TrHDiv
+from fuse.traces import TrGrad, TrHess
 from fuse.tensor_products import tensor_product
 from fuse.vectorisation import VectorTriple
 

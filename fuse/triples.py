@@ -1,6 +1,5 @@
 from fuse.cells import Point, TensorProductPoint
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
-from fuse.traces import TrH1, TrHCurl, TrHDiv
 from fuse.utils import numpy_to_str_tuple
 from fuse.spaces.polynomial_spaces import riesz_matrices
 from FIAT.dual_set import DualSet
@@ -168,8 +167,10 @@ class ElementTriple():
 
     def mapping(self, g):
         """
-        A matrix describing how the symmetry ``g`` of the cell transforms the DOFs
-        For an element triple, this is the direct sum of the generators' mappings."""
+        A matrix describing how the symmetry ``g`` of the cell transforms the DOFs.
+        For an element triple, this is the direct sum of the generators' mappings.
+        The ith column is the image of the ith DOF (in generation order) under the
+        symmetry ``g``. """
         self.generate()
         return scipy.linalg.block_diag(*[gen.mapping(g) for gen in self.DOFGenerator])
 
@@ -435,14 +436,17 @@ class DOFGenerator():
 
     def generator_dofs(self):
         """The generator DOFs X, with their immersion expanded through ``generate()``
-            """
+        """
         if self._generator_dofs is None:
             raise ValueError("DOFs not generated yet")
         return self._generator_dofs
 
     def _act(self):
         """Constructs a function from the symmetry group of the cell
-        to DOFs evaluated on the cell transformed by that symmetry group member."""
+        to the DOFs acted on by that symmetry group member.
+
+        The function is represented by the DOF values on the polynomial
+        space's orthonormal basis."""
         X = self.generator_dofs()
         G = self.cell.group
         cache = self.__dict__.setdefault("_act_cache", {})
@@ -459,7 +463,7 @@ class DOFGenerator():
         """For non immersed DOFs, the stabiliser is H_X: the symmetries of the triple's cell
         that fix the span of this DOF generator tuple.
         For immersed DOFs, the stabiliser is H_E: the symmetries that do not move the entity they
-        are immersed on."""
+        are immersed on, but can reorient it."""
         if self._stabiliser is None:
             entities = {(x.C.dim(), x.start_node) for x in self.x if isinstance(x, ImmersedDOFs)}
             if len(entities) == 1 and all(isinstance(x, ImmersedDOFs) for x in self.x):
@@ -611,39 +615,11 @@ class ImmersedDOFs():
         return ImmersedDOFs(obj_dict["target_cell"], obj_dict["triple"], obj_dict["trace"], obj_dict["start_node"])
 
 
-def _named_trace(action, entity):
-    """The trace class that names how ``action`` lifts from ``entity``, for
-    checking the deprecated trace argument of :func:`immerse`."""
-    if action.k == 0 or action.proxy == "scalar":
-        return TrH1
-    if action.proxy == "hodge":
-        return TrHDiv
-    return TrHCurl if entity.dimension == 1 else TrH1
-
-
 def immerse(target_cell, triple, target_space=None, node=0):
     """Immerse the DOFs of ``triple`` into ``target_cell``.
 
     Each DOF is lifted, and so traced, through its own kernel's action.
     ``target_space`` is only needed for the derivative traces (``TrGrad``,
-    ``TrHess``). Passing TrH1, TrHCurl or TrHDiv is deprecated: it is checked
-    against the kernels, or, for kernels that declare no action, supplies
-    their action.
+    ``TrHess``).
     """
-    if target_space is None or not issubclass(target_space, (TrH1, TrHCurl, TrHDiv)):
-        return ImmersedDOFs(target_cell, triple, target_space, node)
-    trace = target_space(target_cell)
-    undeclared = [dof.kernel for dof in triple.generate() if dof.kernel.declared_action is None]
-    if undeclared and isinstance(trace, (TrHCurl, TrHDiv)):
-        warnings.warn(f"Kernels {undeclared} declare no action and are immersed with {trace}: taking the "
-                      "action from the trace. Pass action=HCurl or action=HDiv to the kernels instead.",
-                      DeprecationWarning, stacklevel=2)
-    elif not undeclared:
-        for dof in triple.generate():
-            action = dof.kernel.action.resolve(dof.cell_defined_on, dof.kernel.rank)
-            if _named_trace(action, dof.cell_defined_on) is not target_space:
-                raise ValueError(f"The kernel {dof.kernel} of {triple} has action {action}, which does not "
-                                 f"lift with the {trace} trace")
-        warnings.warn(f"The trace is read from the kernels' actions: drop the {trace} argument to immerse.",
-                      DeprecationWarning, stacklevel=2)
     return ImmersedDOFs(target_cell, triple, target_space, node)

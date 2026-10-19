@@ -7,7 +7,7 @@ import sympy as sp
 
 from fuse import (polygon, make_tetrahedron, PointKernel, PolynomialKernel, VectorKernel, BarycentricPolynomialKernel,
                   DOF, L2Pairing, DOFGenerator, ElementTriple, immerse, PolynomialSpace, S1, C3, C0, H1, L2, HCurl, HDiv,
-                  TrH1, TrHCurl, TrHDiv, FormAction, SymmetricTensorAction)
+                  FormAction, SymmetricTensorAction)
 from fuse.actions import as_action
 
 x, y = sp.symbols("x y")
@@ -155,33 +155,6 @@ def edge_triple(tri, action=None):
     return ElementTriple(edge, (PolynomialSpace(0), C0), DOFGenerator(xs, S1))
 
 
-def test_trace_must_match_action(tri):
-    with pytest.raises(ValueError):
-        immerse(tri, edge_triple(tri, HDiv), TrHCurl)
-
-
-def test_trace_without_action_is_deprecated(tri):
-    with pytest.warns(DeprecationWarning):
-        immerse(tri, edge_triple(tri), TrHDiv)
-
-
-@pytest.mark.parametrize("action,trace", [(HCurl, TrHCurl), (HDiv, TrHDiv)])
-def test_declared_matches_trace(tri, action, trace):
-    """Declaring the action gives the same DOFs as taking it from the trace."""
-    space = PolynomialSpace(1, shape=2)
-
-    def nodes(triple):
-        xs = [immerse(tri, triple, trace)]
-        dofs = ElementTriple(tri, (space, C0), DOFGenerator(xs, C3)).generate()
-        return [dof.to_quadrature(1, (2,)) for dof in dofs]
-
-    with pytest.warns(DeprecationWarning):
-        inferred = nodes(edge_triple(tri))
-    for a, b in zip(nodes(edge_triple(tri, action)), inferred):
-        assert a.keys() == b.keys()
-        assert all(np.allclose([w for w, _ in a[p]], [w for w, _ in b[p]]) for p in a)
-
-
 # ------------------------------------------------------------------ composition of kernel symmetries
 
 def test_point_kernel_action_composes(tri):
@@ -283,11 +256,10 @@ def test_immersed_dofs_trace_through_their_kernels(tri):
             assert np.isclose(abs(np.dot(dof.lift_direction(), tangent)), 0 if normal else 1)
 
 
-def test_immerse_with_redundant_trace(tri):
-    with pytest.warns(DeprecationWarning):
-        immerse(tri, edge_triple(tri, HDiv), TrHDiv)
-    with pytest.raises(ValueError):
-        immerse(tri, edge_triple(tri, HDiv), TrH1)
+def test_named_traces_have_been_removed():
+    "The trace is read from each kernel's action, so only the derivative traces remain."
+    import fuse
+    assert not any(hasattr(fuse, name) for name in ("TrH1", "TrHCurl", "TrHDiv"))
 
 
 def test_mixed_actions_are_immersed_together(tri):

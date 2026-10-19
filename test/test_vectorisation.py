@@ -28,7 +28,7 @@ def interval_cg1():
     vert = cell.vertices()[0]
     dg0 = ElementTriple(vert, (P0, C0),
                         DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
-    return ElementTriple(edge, (P1, C0), [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
+    return ElementTriple(edge, (P1, C0), [DOFGenerator([immerse(edge, dg0)], S2)])
 
 
 # The DOFs of a k-form are integrals over k-dimensional entities, so the form
@@ -375,7 +375,7 @@ def test_vector_triple_rejects_tensor_product(flat):
     dg0 = ElementTriple(vert, (P0, C0),
                         DOFGenerator([DOF(DeltaPairing(), PointKernel(()))], S1))
     interval = ElementTriple(edge, (P1, C0),
-                             [DOFGenerator([immerse(edge, dg0, TrH1)], S2)])
+                             [DOFGenerator([immerse(edge, dg0)], S2)])
     tp = TensorProductTriple(interval, interval)
     if flat:
         tp = tp.flatten()

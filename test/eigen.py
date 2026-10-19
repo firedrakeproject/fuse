@@ -10,7 +10,7 @@ def create_cr3(cell):
     Pk = PolynomialSpace(3)
     edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0), [DOFGenerator([DOF(DeltaPairing(), PointKernel((-np.sqrt(3/5),)))], S2),
                                                                        DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)])
-    edge_xs = [immerse(cell, edge_dg0, TrH1)]
+    edge_xs = [immerse(cell, edge_dg0)]
     center = [DOF(DeltaPairing(), PointKernel((0, 0)))]
 
     return ElementTriple(cell, (Pk, C0), [DOFGenerator(edge_xs, C3), DOFGenerator(center, S1)])

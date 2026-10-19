@@ -27,41 +27,11 @@ class Trace():
     def _from_dict(obj_dict):
         # might want to actually save these as functions or something for ambiguity?
         tr_id = obj_dict["trace"]
-        if tr_id == "H1":
-            return TrH1
-        elif tr_id == "HDiv":
-            return TrHDiv
-        elif tr_id == "HCurl":
-            return TrHCurl
-        elif tr_id == "Grad":
+        if tr_id == "Grad":
             return TrGrad
         elif tr_id == "Hess":
             return TrHess
         raise ValueError("Trace not found")
-
-
-class TrH1(Trace):
-    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
-    read from each kernel's action."""
-
-    def __repr__(self):
-        return "H1"
-
-
-class TrHDiv(Trace):
-    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
-    read from each kernel's action."""
-
-    def __repr__(self):
-        return "HDiv"
-
-
-class TrHCurl(Trace):
-    """Deprecated argument of :func:`fuse.triples.immerse`: the trace is now
-    read from each kernel's action."""
-
-    def __repr__(self):
-        return "HCurl"
 
 
 class TrGrad(Trace):

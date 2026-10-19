@@ -1,7 +1,6 @@
 from FIAT.functional import Functional
 from fuse.utils import sympy_to_numpy
-from fuse.traces import TrH1, TrHCurl, TrHDiv
-from fuse.actions import as_action, H1Action, HCurlAction, HDivAction
+from fuse.actions import as_action, H1Action, HCurlAction
 import copy
 import warnings
 import numpy as np
@@ -129,24 +128,6 @@ class BaseKernel():
         res = copy.copy(self)
         res._action = as_action(action)
         return res
-
-    def action_for_trace(self, trace):
-        """
-        This function verifies the given trace matches the action.
-
-        To be removed when we no longer support specifying the trace type.
-
-        A kernel that declares no action takes
-        it from the trace (deprecated, see :func:`fuse.triples.immerse`).
-        """
-        expected = {TrHCurl: HCurlAction, TrHDiv: HDivAction}.get(type(trace))
-        if expected is None:
-            return self
-        if self.declared_action is None:
-            return self.with_action(expected)
-        if not expected.matches(self.declared_action):
-            raise ValueError(f"Kernel {self} has action {self.declared_action} but is immersed with {trace}")
-        return self
 
     def act(self, g):
         """ Transform the kernel by the symmetry ``g`` of the associated entity"""
@@ -574,15 +555,10 @@ class DOF():
         return self.pairing.describe(self.kernel.orientation).format(fn=fn, kernel=self.kernel)
 
     def immerse(self, entity, attachment, target_space, g, triple):
-        """This DOF immersed on ``entity``. ``target_space`` is an explicit
-        trace (deprecated for TrH1, TrHCurl and TrHDiv, which are checked
-        against the kernel's action), or None to trace through the action."""
+        """This DOF immersed on ``entity``. ``target_space`` is a derivative
+        trace (``TrGrad``, ``TrHess``), or None to trace through the kernel's action."""
         new_generation = self.generation.copy()
-        kernel = self.kernel
-        if isinstance(target_space, (TrH1, TrHCurl, TrHDiv)):
-            kernel = kernel.action_for_trace(target_space)
-            target_space = None
-        return ImmersedDOF(self.pairing, kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
+        return ImmersedDOF(self.pairing, self.kernel, entity, attachment, target_space, g, triple, new_generation, self.sub_id, self.cell)
 
     def lift_direction(self):
         """The direction an immersed DOF's kernel is lifted along: the tangent

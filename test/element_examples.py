@@ -90,7 +90,7 @@ def CR_n(cell, deg):
                                                                            DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)])
     else:
         edge_dg0 = ElementTriple(cell.edges(get_class=True)[0], (Pk, C0), [DOFGenerator(sym_points, S2)])
-    edge_xs = [immerse(cell, edge_dg0, TrH1)]
+    edge_xs = [immerse(cell, edge_dg0)]
 
     interior_coords = triangle_coords(triangle_nums[deg - 3])
     s1, c3, s3 = convert_to_generation(interior_coords)

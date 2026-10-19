@@ -456,7 +456,7 @@ def test_square_cg():
     e_xs = [immerse(square, dg0_int)]
     e_dofs = DOFGenerator(e_xs, sq_edges)
 
-    i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
+    i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1)
 
     cg3 = ElementTriple(square, (P3, C0),
@@ -483,8 +483,8 @@ def test_rt_second_order():
     xs = [immerse(tri, int_rt2)]
     tri_dofs = DOFGenerator(xs, C3)
 
-    i_xs = [lambda g: DOF(L2Pairing(), PointKernel(g((1, 0)))),
-            lambda g: DOF(L2Pairing(), PointKernel(g((0, 1))))]
+    i_xs = [DOF(L2Pairing(), VectorKernel((1, 0), action=HDiv)),
+            DOF(L2Pairing(), VectorKernel((0, 1), action=HDiv))]
     i_dofs = DOFGenerator(i_xs, S1)
 
     vecP3 = PolynomialSpace(3, shape=2)
