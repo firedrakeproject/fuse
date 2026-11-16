@@ -400,4 +400,3 @@ def test_square_rotations():
     """sq_rotations are symmetries of the square."""
     square = polygon(4)
     assert all(p in square.group.members(perm=True) for p in sq_rotations.perm_list)
-

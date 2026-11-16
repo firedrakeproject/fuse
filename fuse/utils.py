@@ -103,4 +103,3 @@ def orientation_value(identity_arg, perm_arg):
         identity.remove(perm[i])
         val += loc * math.factorial(len(perm) - i - 1)
     return val
-
