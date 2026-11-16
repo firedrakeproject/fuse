@@ -1,11 +1,12 @@
 """The kernel action determines how the value of a DOF kernel transforms.
 
-The action is chosen with the kernel and can be any :class:`KernelAction`:
+It is defined with the kernel, and takes the type :class:`KernelAction`:
 
-* :class:`FormAction` is the de Rham family: the value is a k-form, read as a
-  scalar or a vector through a proxy.
-* Other actions (for example a symmetric tensor action) are added by
-  implementing the same interface.
+FUSE provides :class:`FormAction`, representing the de Rham family.
+The value is a k-form, read as a scalar or a vector through a proxy.
+
+Other actions (for example a symmetric tensor action) can be added by
+implementing the same interface.
 
 The spaces ``H1``, ``HCurl``, ``HDiv`` and ``L2`` are accepted wherever an
 action is, as shorthands for form actions (see :func:`as_action`).
@@ -88,8 +89,8 @@ class FormAction(KernelAction):
     entity (a tangent), a hodge form across it (a normal), which needs
     ``k = d - 1`` for the cell it lands in.
 
-    ``k=None`` is filled in from the entity: the top degree for a scalar, one
-    less for a vector.
+    ``k=None`` means k is determined by the entity:
+        the top degree for a scalar, one less for a vector.
     """
 
     PROXIES = ("scalar", "flat", "hodge")
@@ -195,7 +196,7 @@ class FormAction(KernelAction):
 class SymmetricTensorAction(KernelAction):
     """The value is a symmetric matrix ``V``, transformed as ``A V Aᵀ``.
 
-    Not used by any element yet: it shows a non de Rham action plugging in.
+    Not currently used in any elements.
     """
 
     def __repr__(self):

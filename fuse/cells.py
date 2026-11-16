@@ -420,7 +420,7 @@ class Point():
             raise TypeError("Shape undefined for {}".format(str(self)))
 
     def get_topology(self, renumber=False):
-        """The topology handed to FIAT, which is where FUSE meets FIAT's numbering.
+        """The topology interface conforms to the requirements forFIAt.
 
         * Global vertex numbers are the vertices in id order (``vertices()``):
           FIAT's vertex coordinates are listed in that order.
@@ -633,12 +633,14 @@ class Point():
     def permute_entities(self, g, d):
         """Where the symmetry ``g`` sends each ``d``-dimensional entity.
 
-        Returns, for each entity in the order of ``d_entities(d)``, the entity
-        it is sent to and the symmetry of that entity induced by ``g``. ``g``
-        is read in construction order, ``ordered_vertices()``: vertex ``i``
-        goes to vertex ``g.perm(i)``, the same map as ``g(x)``.
+        Returns a list of tuples, each containing an entity id and symmetry group member.
+        At index ``i``, ``self.permute_entities(g, d)[i]`` returns the entity id that 
+        ``d_entities(d)[i]`` is sent to under the permutation ``g``, and the orientation
+        it is in after permutation. 
+
+        ``g`` is read through ``ordered_vertices``.
+
         """
-        # TODO something is wrong here for squares it can return [()]
         verts = self.ordered_vertices()
         entities = self.d_entities_ids(d)
         reordered = g.permute(verts)
@@ -670,11 +672,14 @@ class Point():
         """The symmetry of this cell that a mesh orientation key stands for.
 
         A mesh records how a cell sees one of its entities by the order of
-        the entity's facets (its cone). The key is the Lehmer code of the
-        facets, in the order this entity lists them (its connections), within
-        the order the mesh lists them. Key 0 is the identity; key k stands
-        for the symmetry s whose images of the facets, s(f_0), s(f_1), ...,
-        have Lehmer code k within f_0, f_1, ...
+        the entity's facets (its cone). 
+        The required orientation key is the Lehmer code of the
+        facets, computed from the order this entity lists them (its connections), against 
+        the order the mesh lists them.
+
+        Key 0 is the identity; 
+        Key k stands for the symmetry s whose images of the facets,
+        s(f_0), s(f_1), ..., have Lehmer code k within f_0, f_1, ...
         """
         if self.dimension == 0:
             if key != 0:

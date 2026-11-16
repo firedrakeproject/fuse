@@ -76,6 +76,8 @@ def construct_rt2(tri=None):
     return rt2
 
 
+@pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),
+                                                    (construct_nd2, "N1curl", 2)])
 def test_surface_const_nd(elem_gen, elem_code, deg):
     cell = polygon(3)
     elem = elem_gen(cell)
