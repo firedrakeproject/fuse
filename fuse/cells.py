@@ -634,9 +634,9 @@ class Point():
         """Where the symmetry ``g`` sends each ``d``-dimensional entity.
 
         Returns a list of tuples, each containing an entity id and symmetry group member.
-        At index ``i``, ``self.permute_entities(g, d)[i]`` returns the entity id that 
+        At index ``i``, ``self.permute_entities(g, d)[i]`` returns the entity id that
         ``d_entities(d)[i]`` is sent to under the permutation ``g``, and the orientation
-        it is in after permutation. 
+        it is in after permutation.
 
         ``g`` is read through ``ordered_vertices``.
 
@@ -672,12 +672,12 @@ class Point():
         """The symmetry of this cell that a mesh orientation key stands for.
 
         A mesh records how a cell sees one of its entities by the order of
-        the entity's facets (its cone). 
+        the entity's facets (its cone).
         The required orientation key is the Lehmer code of the
-        facets, computed from the order this entity lists them (its connections), against 
+        facets, computed from the order this entity lists them (its connections), against
         the order the mesh lists them.
 
-        Key 0 is the identity; 
+        Key 0 is the identity;
         Key k stands for the symmetry s whose images of the facets,
         s(f_0), s(f_1), ..., have Lehmer code k within f_0, f_1, ...
         """
