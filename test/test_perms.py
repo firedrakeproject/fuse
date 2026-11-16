@@ -83,7 +83,7 @@ def test_square():
                             DOFGenerator(xs, S2))
 
     e_xs = [immerse(square, dg0_int)]
-    e_dofs = DOFGenerator(e_xs, sq_rotations)
+    e_dofs = DOFGenerator(e_xs, sq_edges)
 
     # i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
     # i_dofs = DOFGenerator(i_xs, S1, S1)

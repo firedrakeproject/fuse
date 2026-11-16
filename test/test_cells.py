@@ -396,7 +396,12 @@ def test_hypercube_entity_symmetries(hypercube):
                 assert induced.perm == o.perm
 
 
-def test_square_rotations():
-    """sq_rotations are symmetries of the square."""
+def test_square_transversals():
+    """sq_rotations carry vertex 0 onto each vertex, and sq_edges carry edge 0
+    onto each edge without reorienting it."""
     square = polygon(4)
-    assert all(p in square.group.members(perm=True) for p in sq_rotations.perm_list)
+    for transversal, d in [(sq_rotations, 0), (sq_edges, 1)]:
+        members = square.group._match(transversal.add_cell(square))
+        images = [square.permute_entities(g, d)[0] for g in members]
+        assert sorted(e for e, o in images) == square.d_entities_ids(d)
+        assert all(o.perm.is_Identity for e, o in images)
