@@ -12,7 +12,6 @@ SMOKE_MODULES = {
     "test_group_utils",
     "test_kernel_actions",
     "test_generators",
-    "test_orientation_matrices",
 }
 
 
