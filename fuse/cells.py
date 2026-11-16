@@ -664,13 +664,13 @@ class Point():
 
         A mesh records how a cell sees one of its entities by the order of
         the entity's facets (its cone).
-        The required orientation key is the Lehmer code of the
+        The required orientation key is the :meth:`cone_orientation` of the
         facets, computed from the order this entity lists them (its connections), against
         the order the mesh lists them.
 
         Key 0 is the identity;
         Key k stands for the symmetry s whose images of the facets,
-        s(f_0), s(f_1), ..., have Lehmer code k within f_0, f_1, ...
+        s(f_0), s(f_1), ..., have cone orientation k against f_0, f_1, ...
         """
         if self.dimension == 0:
             if key != 0:
@@ -683,8 +683,13 @@ class Point():
             for g in self.group.members():
                 s = Permutation(g.perm, size=len(verts)).array_form
                 image = [frozenset(s[i] for i in f) for f in cone]
-                keys[orientation_value(cone, image)] = g
+                keys[self.cone_orientation(cone, image)] = g
         return keys[key]
+
+    def cone_orientation(self, cone, image):
+        """The orientation of the facets listed as ``image`` against ``cone``:
+        the Lehmer code of ``image`` within ``cone``."""
+        return orientation_value(cone, image)
 
     def extend_entity_symmetry(self, entity, o):
         """A symmetry of this cell that maps ``entity`` onto itself and
@@ -1004,6 +1009,36 @@ class HypercubePoint(Point):
     def to_fiat(self, name=None, renumber=False):
         product = CellComplexToFiatTensorProduct(TensorProductPoint(*self.axes), name)
         return CellComplexToFiatHypercube(self, product)
+
+    def axis_reordering(self, cone, image):
+        """How the facets listed as ``image`` reorder the axes of ``cone``.
+
+        Both list the facets in pairs, the two ends of each axis in turn, as
+        this cell lists its connections. Returns, for each axis i of
+        ``image``, the axis of ``cone`` its ends lie on, and whether they are
+        swapped.
+        """
+        d = self.dimension
+        pairs = [list(cone[2 * i:2 * i + 2]) for i in range(d)]
+        axes, flips = [], []
+        for i in range(d):
+            ends = list(image[2 * i:2 * i + 2])
+            j = next((j for j, pair in enumerate(pairs) if ends[0] in pair), None)
+            if j is None or set(pairs[j]) != set(ends):
+                raise ValueError(f"{image} does not reorder the axes of {cone}")
+            axes.append(j)
+            flips.append(pairs[j] != ends)
+        return axes, flips
+
+    def cone_orientation(self, cone, image):
+        """The orientation of the facets listed as ``image`` against ``cone``:
+        2**d * eo + io, where eo is the Lehmer code of the order the axes are
+        taken in, and io has bit 2**(d - 1 - i) set when the ends of axis i
+        are swapped."""
+        axes, flips = self.axis_reordering(cone, image)
+        d = self.dimension
+        io = sum(2 ** (d - 1 - i) for i, flip in enumerate(flips) if flip)
+        return 2 ** d * orientation_value(list(range(d)), axes) + io
 
     def _to_dict(self):
         o_dict = super()._to_dict()
