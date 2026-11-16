@@ -45,8 +45,6 @@ def test_repeated_objs():
     converter = ElementSerialiser()
     encoded = converter.encode(repeated_edge)
     decoded = converter.decode(encoded)
-    print(encoded)
-    print(decoded)
 
 
 def test_cg_examples():

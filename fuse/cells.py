@@ -420,7 +420,7 @@ class Point():
             raise TypeError("Shape undefined for {}".format(str(self)))
 
     def get_topology(self, renumber=False):
-        """The topology interface conforms to the requirements forFIAt.
+        """The topology interface conforms to the requirements for FIAT.
 
         * Global vertex numbers are the vertices in id order (``vertices()``):
           FIAT's vertex coordinates are listed in that order.
