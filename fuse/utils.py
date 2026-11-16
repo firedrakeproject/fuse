@@ -2,6 +2,8 @@ import numpy as np
 import sympy as sp
 import math
 
+_SYMBOLS = tuple(sp.Symbol(s) for s in ("x", "y", "z"))
+
 
 def fold_reduce(func_list, *prev):
     """
@@ -29,7 +31,7 @@ def sympy_to_numpy(array, symbols, values):
     """
     substituted = array.subs({symbols[i]: values[i] for i in range(len(values))})
 
-    if len(array.atoms(sp.Symbol)) == len(values) and all(not isinstance(v, sp.Expr) for v in values):
+    if len(array.atoms(sp.Symbol)) <= len(values) and all(not isinstance(v, sp.Expr) for v in values):
         nparray = np.array(substituted).astype(np.float64)
 
         if len(nparray.shape) > 1:
@@ -101,3 +103,4 @@ def orientation_value(identity_arg, perm_arg):
         identity.remove(perm[i])
         val += loc * math.factorial(len(perm) - i - 1)
     return val
+

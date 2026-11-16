@@ -11,11 +11,12 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from sympy.combinatorics.named_groups import SymmetricGroup
 from sympy.combinatorics import Permutation
-from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value
+from fuse.utils import sympy_to_numpy, fold_reduce, numpy_to_str_tuple, orientation_value, _SYMBOLS
 from FIAT.reference_element import Simplex, TensorProductCell as FiatTensorProductCell, Hypercube
 from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
+from collections import defaultdict
 
 
 class Arrow3D(FancyArrowPatch):
@@ -152,12 +153,23 @@ def compute_scaled_verts(d, n):
         raise ValueError("Dimension {} not supported".format(d))
 
 
+def line():
+    """
+    Constructs the default interval, [-1, 1]
+    """
+    return Point(1, [Point(0), Point(0)], vertex_num=2)
+
+
 def polygon(n):
     """
     Constructs the 2D default cell with n sides/vertices
 
+    The square is the product of two intervals, flattened.
+
     :param: n: number of vertices
     """
+    if n == 4:
+        return TensorProductPoint(line(), line()).flatten()
     vertices = []
     for i in range(n):
         vertices.append(Point(0))
@@ -180,27 +192,6 @@ def ufc_triangle():
     tri = Point(2, edges, vertex_num=3, edge_orientations={1: [1, 0]})
 
     return tri
-
-
-def ufc_quad():
-    """
-    Constructs the a quad cell that matches the firedrake default.
-    """
-    vertices = []
-    for i in range(4):
-        vertices.append(Point(0))
-    edges = []
-    # edges.append(Point(1, [vertices[0], vertices[1]], vertex_num=2))
-    # edges.append(Point(1, [vertices[1], vertices[2]], vertex_num=2))
-    # edges.append(Point(1, [vertices[3], vertices[2]], vertex_num=2))
-    # edges.append(Point(1, [vertices[0], vertices[3]], vertex_num=2))
-
-    edges.append(Point(1, [vertices[0], vertices[1]], vertex_num=2))
-    edges.append(Point(1, [vertices[1], vertices[3]], vertex_num=2))
-    edges.append(Point(1, [vertices[2], vertices[3]], vertex_num=2))
-    edges.append(Point(1, [vertices[0], vertices[2]], vertex_num=2))
-
-    return Point(2, edges, vertex_num=4, edge_orientations={2: [1, 0], 3: [1, 0]})
 
 
 def make_tetrahedron():
@@ -972,8 +963,9 @@ class Point():
         if len(self.vertices()) == self.dimension + 1:
             return CellComplexToFiatSimplex(self, name, renumber)
         if len(self.vertices()) == 2 ** self.dimension:
-            return CellComplexToFiatHypercube(self, name)
-        raise NotImplementedError("Custom shape elements/ First class quads are not yet supported")
+            raise NotImplementedError("Quadrilaterals and hexahedra must be built as products of intervals, "
+                                      "with polygon(4) or TensorProductPoint(...).flatten()")
+        raise NotImplementedError("Custom shape elements are not yet supported")
 
     def to_ufl(self, name=None):
         return CellComplexToUFL(self, name)
@@ -996,8 +988,34 @@ class Point():
         return Point(o_dict["dim"], o_dict["edges"], oriented=o_dict["oriented"], group=o_dict["group"], cell_id=o_dict["id"])
 
 
-def _attachment_symbols(nvals):
-    return tuple(sp.Symbol(s) for s in ["x", "y", "z"][:nvals])
+class HypercubePoint(Point):
+    """
+    A product of intervals: a quadrilateral, a hexahedron, or a face of a hexahedron.
+
+    It is built by :meth:`TensorProductPoint.flatten`.
+
+    :param: axes: the intervals it is the product of, in order
+    """
+
+    def __init__(self, d, edges, axes, oriented=False, group=None, cell_id=None):
+        self.axes = tuple(axes)
+        super().__init__(d, edges, oriented=oriented, group=group, cell_id=cell_id)
+
+    def to_fiat(self, name=None, renumber=False):
+        product = CellComplexToFiatTensorProduct(TensorProductPoint(*self.axes), name)
+        return CellComplexToFiatHypercube(self, product)
+
+    def _to_dict(self):
+        o_dict = super()._to_dict()
+        o_dict["axes"] = list(self.axes)
+        return o_dict
+
+    def dict_id(self):
+        return "HypercubeCell"
+
+    def _from_dict(o_dict):
+        return HypercubePoint(o_dict["dim"], o_dict["edges"], o_dict["axes"], oriented=o_dict["oriented"],
+                              group=o_dict["group"], cell_id=o_dict["id"])
 
 
 @cache
@@ -1005,18 +1023,16 @@ def _component_evaluator(expr, nvals):
     """
     Compile one scalar attachment component for numeric evaluation.
 
-    Returns None if the component cannot be evaluated numerically, in which
-    case the caller must fall back to the symbolic path. Cells are rebuilt
-    frequently from the same attachment polynomials, so this is cached on the
+    Only components fully determined by the given values are compiled;
+    everything else defers to sympy_to_numpy, which decides how partially
+    substituted expressions are represented. Cells are rebuilt frequently
+    from the same attachment polynomials, so this is cached on the
     expression rather than on the edge holding it.
     """
-    free = len(expr.atoms(sp.Symbol))
-    if free == nvals:
-        fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
+    if len(expr.atoms(sp.Symbol)) == nvals:
+        fn = sp.lambdify(_SYMBOLS[:nvals], expr, "math")
         return lambda *x: float(fn(*x))
-    if free == 0:
-        return lambda *x: expr
-    return None
+    return lambda *x: sympy_to_numpy(expr, _SYMBOLS, x)
 
 
 @cache
@@ -1026,7 +1042,7 @@ def _matrix_evaluator(expr, nvals):
     """
     if len(expr.atoms(sp.Symbol)) != nvals:
         return None
-    fn = sp.lambdify(_attachment_symbols(nvals), expr, "numpy")
+    fn = sp.lambdify(_SYMBOLS[:nvals], expr, "numpy")
 
     def evaluate(*x):
         res = np.array(fn(*x)).astype(np.float64)
@@ -1063,8 +1079,9 @@ class Edge():
         if nvals not in cache:
             if hasattr(self.attachment, '__iter__'):
                 parts = [_component_evaluator(c, nvals) for c in self.attachment]
-                built = None if any(p is None for p in parts) else \
-                    (lambda *x: tuple(p(*x) for p in parts))
+
+                def built(*x):
+                    return tuple(p(*x) for p in parts)
             else:
                 built = _matrix_evaluator(sp.ImmutableMatrix(self.attachment), nvals)
             cache[nvals] = built
@@ -1088,7 +1105,10 @@ class Edge():
             if hasattr(self.attachment, '__iter__'):
                 res = []
                 for attach_comp in self.attachment:
-                    res.append(sympy_to_numpy(attach_comp, syms, x))
+                    if len(attach_comp.atoms(sp.Symbol)) <= len(x):
+                        res.append(sympy_to_numpy(attach_comp, syms, x))
+                    else:
+                        res.append(attach_comp.subs({syms[i]: x[i] for i in range(len(x))}))
                 return tuple(res)
             return sympy_to_numpy(self.attachment, syms, x)
         return x
@@ -1120,11 +1140,11 @@ class Edge():
 
 class TensorProductPoint():
 
-    def __init__(self, A, B, flat=False):
-        self.A = A
-        self.B = B
-        self.dimension = self.A.dimension + self.B.dimension
-        self.flat = flat
+    def __init__(self, *factors):
+        self.factors = factors
+        self.A = factors[0]
+        self.B = factors[1]
+        self.dimension = sum(f.dimension for f in factors)
 
     def ordered_vertices(self):
         return self.A.ordered_vertices() + self.B.ordered_vertices()
@@ -1135,9 +1155,6 @@ class TensorProductPoint():
     def get_sub_entities(self):
         self.A.get_sub_entities()
         self.B.get_sub_entities()
-
-    def dimension(self):
-        return tuple(self.A.dimension, self.B.dimension)
 
     def d_entities(self, d, get_class=True):
         return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
@@ -1152,17 +1169,72 @@ class TensorProductPoint():
         return verts
 
     def to_ufl(self, name=None):
-        if self.flat:
-            return CellComplexToUFL(self, "quadrilateral")
-        return TensorProductCell(self.A.to_ufl(), self.B.to_ufl())
+        return TensorProductCell(*[f.to_ufl() for f in self.factors])
 
     def to_fiat(self, name=None):
-        if self.flat:
-            return CellComplexToFiatHypercube(self, CellComplexToFiatTensorProduct(self, name))
         return CellComplexToFiatTensorProduct(self, name)
 
     def flatten(self):
-        return TensorProductPoint(self.A, self.B, True)
+        """The product as a single cell, a :class:`HypercubePoint`.
+
+        Every entity is the product of one entity of each factor.
+        """
+        if not all(f.dimension == 1 for f in self.factors):
+            raise NotImplementedError("Only products of intervals can be flattened")
+        masks_by_dim = defaultdict(list)
+        for mask in itertools.product(*(range(f.dimension + 1) for f in self.factors)):
+            masks_by_dim[sum(mask)].append(mask)
+
+        points = {}
+        for d in sorted(masks_by_dim):
+            for mask in masks_by_dim[d]:
+                for entity in itertools.product(*(f.d_entities(k) for f, k in zip(self.factors, mask))):
+                    if d == 0:
+                        points[entity] = Point(0)
+                        continue
+                    edges = []
+                    for axis, factor_edge, child in self._facets(entity, mask):
+                        attachment = self._attachment(axis, factor_edge, mask, tuple(e.dimension for e in child))
+                        edges.append(Edge(points[child], attachment, factor_edge.o))
+                    if d == 1:
+                        points[entity] = Point(1, edges)
+                    else:
+                        axes = [e for e in entity if e.dimension == 1]
+                        points[entity] = HypercubePoint(d, edges, axes)
+        return points[tuple(self.factors)]
+
+    @staticmethod
+    def _facets(entity, mask):
+        """The codimension one facets of a product entity, as
+        (axis, the factor's edge to its facet, the facet)."""
+        for axis, k in enumerate(mask):
+            if k == 0:
+                continue
+            for factor_edge in entity[axis].connections:
+                child = list(entity)
+                child[axis] = factor_edge.point
+                yield axis, factor_edge, tuple(child)
+
+    @staticmethod
+    def _attachment(axis, factor_edge, mask, child_mask):
+        """The attachment of a facet into its product entity, as a tuple of
+        sympy expressions: the factor's attachment on ``axis``, the identity
+        on the other axes.
+
+        For example, for the facet (0, 1) of (1, 1) on axis 0 with the factor
+        attachment (-1,), the result is (-1, x)."""
+        child_syms = _SYMBOLS[:sum(child_mask)]
+        result = tuple()
+        offset = 0
+        for i, k in enumerate(child_mask):
+            if i == axis:
+                local = _SYMBOLS[:k]
+                subs = {old: new for old, new in zip(local, child_syms[offset:offset + k])}
+                result += tuple(sp.sympify(c).subs(subs) for c in factor_edge.attachment)
+            else:
+                result += tuple(child_syms[offset:offset + k])
+            offset += k
+        return result
 
 
 class CellComplexToFiatSimplex(Simplex):
@@ -1223,12 +1295,11 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
 
     def __init__(self, cell, name=None):
         self.fe_cell = cell
-        self.sub_cells = [cell.A.to_fiat(), cell.B.to_fiat()]
+        fiat_factors = [f.to_fiat() for f in cell.factors]
         if name is None:
-            name = " * ".join([s.name for s in self.sub_cells])
+            name = " * ".join([s.name for s in fiat_factors])
         self.name = name
-# , sub_entities=self.fe_cell.get_sub_entities()
-        super(CellComplexToFiatTensorProduct, self).__init__(cell.A.to_fiat(), cell.B.to_fiat())
+        super(CellComplexToFiatTensorProduct, self).__init__(*fiat_factors)
 
     def cellname(self):
         return self.name
@@ -1239,7 +1310,7 @@ class CellComplexToFiatTensorProduct(FiatTensorProductCell):
 
         :arg dimension: subentity dimension (integer)
         """
-        return CellComplexToFiatTensorProduct(*[c.construct_subelement(d).fe_cell for c, d in zip(self.cells, dimension)])
+        return CellComplexToFiatTensorProduct(TensorProductPoint(*[c.construct_subelement(d).fe_cell for c, d in zip(self.cells, dimension)]))
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()
@@ -1259,6 +1330,7 @@ class CellComplexToFiatHypercube(Hypercube):
 
     def __init__(self, cell, product):
         self.fe_cell = cell
+        self.name = product.name
         super(CellComplexToFiatHypercube, self).__init__(product.get_spatial_dimension(), product)
 
     def cellname(self):
@@ -1272,11 +1344,7 @@ class CellComplexToFiatHypercube(Hypercube):
         """
         if dimension == self.get_dimension():
             return self
-        # assumes symmetric tensor product
-        sub_element = self.product.construct_subelement((dimension,) + (0,)*(len(self.product.cells) - 1))
-        if isinstance(sub_element, CellComplexToFiatTensorProduct):
-            return sub_element.flatten()
-        return sub_element
+        return self.fe_cell.d_entities(dimension)[0].to_fiat()
 
     def get_facet_element(self):
         dimension = self.get_spatial_dimension()
@@ -1346,23 +1414,17 @@ def constructCellComplex(name):
     if name == "vertex":
         return Point(0).to_ufl(name)
     elif name == "interval":
-        return Point(1, [Point(0), Point(0)], vertex_num=2).to_ufl(name)
+        return line().to_ufl(name)
     elif name == "triangle":
         return polygon(3).to_ufl(name)
         # return ufc_triangle().to_ufl(name)
     elif name == "quadrilateral":
-        interval = Point(1, [Point(0), Point(0)], vertex_num=2)
-        return TensorProductPoint(interval, interval).flatten().to_ufl(name)
-        # return ufc_quad().to_ufl(name)
-        # return polygon(4).to_ufl(name)
+        return polygon(4).to_ufl(name)
     elif name == "tetrahedron":
         # return ufc_tetrahedron().to_ufl(name)
         return make_tetrahedron().to_ufl(name)
     elif name == "hexahedron":
-        import warnings
-        warnings.warn("Hexahedron unimplemented in Fuse")
-        import ufl
-        return ufl.Cell(name)
+        return TensorProductPoint(line(), line(), line()).flatten().to_ufl(name)
     elif "*" in name:
         components = [constructCellComplex(c.strip()).cell_complex for c in name.split("*")]
         return TensorProductPoint(*components).to_ufl(name)

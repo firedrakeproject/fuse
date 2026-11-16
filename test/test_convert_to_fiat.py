@@ -123,7 +123,7 @@ def create_cg1_quad():
     xs = [immerse(cell, vert_dg)]
 
     Pk = PolynomialSpace(deg, deg + 1)
-    cg = ElementTriple(cell, (Pk, C0), DOFGenerator(xs, get_cyc_group(len(cell.vertices()))))
+    cg = ElementTriple(cell, (Pk, C0), DOFGenerator(xs, sq_rotations))
 
     return cg
 

@@ -451,10 +451,10 @@ def test_square_cg():
                             DOFGenerator(xs, S1))
 
     v_xs = [immerse(square, dg0)]
-    v_dofs = DOFGenerator(v_xs, C4)
+    v_dofs = DOFGenerator(v_xs, sq_rotations)
 
     e_xs = [immerse(square, dg0_int)]
-    e_dofs = DOFGenerator(e_xs, sq_edges)
+    e_dofs = DOFGenerator(e_xs, sq_rotations)
 
     i_xs = [DOF(DeltaPairing(), PointKernel((0, 0)))]
     i_dofs = DOFGenerator(i_xs, S1)

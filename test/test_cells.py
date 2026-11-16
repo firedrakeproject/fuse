@@ -1,7 +1,7 @@
 from fuse import *
 from firedrake import *
 from finat.ufl import CellBackend
-from fuse.cells import ufc_triangle, ufc_tetrahedron
+from fuse.cells import ufc_triangle, ufc_tetrahedron, TensorProductPoint
 import pytest
 import numpy as np
 from FIAT.reference_element import default_simplex, ufc_simplex, Simplex
@@ -350,3 +350,54 @@ def test_tet_groups():
                 print()
             print([s.array_form for s in sub_group])
             print([s.array_form for s in flip_group])
+
+
+@pytest.fixture(scope="module", params=[2, 3])
+def hypercube(request):
+    if request.param == 2:
+        return polygon(4)
+    return TensorProductPoint(line(), line(), line()).flatten()
+
+
+def test_hypercube_matches_fiat(hypercube):
+    """The square and the cube list their vertices lexicographically, and
+    number their entities, and each entity's vertices, as FIAT's flattened
+    tensor-product cell does."""
+    fiat_cell = hypercube.to_fiat()
+    coords = hypercube.vertices(return_coords=True)
+    assert coords == sorted(coords)
+    assert np.allclose(fiat_cell.get_vertices(), coords)
+
+    topology = fiat_cell.get_topology()
+    min_ids = hypercube.get_starter_ids()
+    vertex_ids = hypercube.vertices(get_class=False)
+    for d in range(hypercube.dimension + 1):
+        entities = hypercube.d_entities(d)
+        assert len(entities) == len(topology[d])
+        for e in entities:
+            local_vertices = tuple(vertex_ids.index(v) for v in e.ordered_vertices())
+            assert local_vertices == topology[d][e.id - min_ids[d]]
+
+
+def test_hypercube_group(hypercube):
+    assert hypercube.group.size() == {2: 8, 3: 48}[hypercube.dimension]
+
+
+def test_hypercube_entity_symmetries(hypercube):
+    """Every symmetry o of every entity extends to a symmetry of the cell
+    that maps the entity onto itself and induces o on it."""
+    for d in range(1, hypercube.dimension + 1):
+        ids = hypercube.d_entities_ids(d)
+        for i, entity in enumerate(hypercube.d_entities(d)):
+            for o in entity.group.members():
+                g = hypercube.extend_entity_symmetry(entity, o)
+                image, induced = hypercube.permute_entities(g, d)[i]
+                assert image == ids[i]
+                assert induced.perm == o.perm
+
+
+def test_square_rotations():
+    """sq_rotations are symmetries of the square."""
+    square = polygon(4)
+    assert all(p in square.group.members(perm=True) for p in sq_rotations.perm_list)
+
