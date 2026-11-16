@@ -1,0 +1,6 @@
+fuse.dof.evaluate\_polynomial
+=============================
+
+.. currentmodule:: fuse.dof
+
+.. autofunction:: evaluate_polynomial

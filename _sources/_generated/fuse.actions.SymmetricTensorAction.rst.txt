@@ -1,0 +1,35 @@
+:tocdepth: 0
+
+SymmetricTensorAction
+=====================
+
+.. currentmodule:: fuse.actions
+
+.. autoclass:: SymmetricTensorAction
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SymmetricTensorAction.__init__
+      ~SymmetricTensorAction.act
+      ~SymmetricTensorAction.dict_id
+      ~SymmetricTensorAction.lift_matrix
+      ~SymmetricTensorAction.lifted
+      ~SymmetricTensorAction.matches
+      ~SymmetricTensorAction.pullback
+      ~SymmetricTensorAction.resolve
+      ~SymmetricTensorAction.sobolev_space
+      ~SymmetricTensorAction.trace
+   
+   
+
+   
+   
+   

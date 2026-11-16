@@ -23,12 +23,16 @@ GroupRepresentation
       ~GroupRepresentation.conjugacy_class
       ~GroupRepresentation.cosets
       ~GroupRepresentation.cosets_by_submember
+      ~GroupRepresentation.decompose
       ~GroupRepresentation.dict_id
       ~GroupRepresentation.get_member
       ~GroupRepresentation.get_member_by_val
+      ~GroupRepresentation.is_left_transversal
+      ~GroupRepresentation.is_subgroup
       ~GroupRepresentation.members
       ~GroupRepresentation.size
-      ~GroupRepresentation.transform_between_perms
+      ~GroupRepresentation.span_representation
+      ~GroupRepresentation.span_stabiliser
    
    
 

@@ -21,6 +21,7 @@ ConstructedPolynomialSpace
       ~ConstructedPolynomialSpace.complete
       ~ConstructedPolynomialSpace.degree
       ~ConstructedPolynomialSpace.dict_id
+      ~ConstructedPolynomialSpace.functional_matrix
       ~ConstructedPolynomialSpace.restrict
       ~ConstructedPolynomialSpace.to_ON_polynomial_set
       ~ConstructedPolynomialSpace.to_vector

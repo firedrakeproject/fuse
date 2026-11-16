@@ -11,6 +11,14 @@ dof
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:                                     
+   
+      
+        evaluate_polynomial
+   
    
 
    

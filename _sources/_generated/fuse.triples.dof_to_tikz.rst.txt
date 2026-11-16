@@ -1,0 +1,6 @@
+fuse.triples.dof\_to\_tikz
+==========================
+
+.. currentmodule:: fuse.triples
+
+.. autofunction:: dof_to_tikz

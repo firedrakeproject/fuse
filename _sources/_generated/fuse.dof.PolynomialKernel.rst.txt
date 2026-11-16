@@ -18,13 +18,24 @@ PolynomialKernel
    .. autosummary::
    
       ~PolynomialKernel.__init__
+      ~PolynomialKernel.act
+      ~PolynomialKernel.action_matrix
       ~PolynomialKernel.degree
       ~PolynomialKernel.dict_id
       ~PolynomialKernel.evaluate
       ~PolynomialKernel.permute
+      ~PolynomialKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~PolynomialKernel.action
+      ~PolynomialKernel.declared_action
+      ~PolynomialKernel.rank
    
    

@@ -1,0 +1,6 @@
+fuse.element\_construction.rt\_space
+====================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: rt_space

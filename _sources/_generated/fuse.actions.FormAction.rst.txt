@@ -1,0 +1,41 @@
+:tocdepth: 0
+
+FormAction
+==========
+
+.. currentmodule:: fuse.actions
+
+.. autoclass:: FormAction
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~FormAction.__init__
+      ~FormAction.act
+      ~FormAction.dict_id
+      ~FormAction.lift_matrix
+      ~FormAction.lifted
+      ~FormAction.matches
+      ~FormAction.pullback
+      ~FormAction.resolve
+      ~FormAction.sobolev_space
+      ~FormAction.trace
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~FormAction.PROXIES
+   
+   

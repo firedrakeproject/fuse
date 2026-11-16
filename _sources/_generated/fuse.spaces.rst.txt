@@ -32,5 +32,4 @@ spaces
 
    interpolation_spaces
    polynomial_spaces
-   pullbacks
 

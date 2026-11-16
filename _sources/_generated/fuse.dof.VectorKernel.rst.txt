@@ -18,13 +18,24 @@ VectorKernel
    .. autosummary::
    
       ~VectorKernel.__init__
+      ~VectorKernel.act
+      ~VectorKernel.action_matrix
       ~VectorKernel.degree
       ~VectorKernel.dict_id
       ~VectorKernel.evaluate
       ~VectorKernel.permute
+      ~VectorKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~VectorKernel.action
+      ~VectorKernel.declared_action
+      ~VectorKernel.rank
    
    

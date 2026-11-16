@@ -1,0 +1,6 @@
+fuse.element\_construction.barycentric\_gradients
+=================================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: barycentric_gradients

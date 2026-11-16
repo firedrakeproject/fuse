@@ -1,9 +1,9 @@
 :tocdepth: 0
 
-pullbacks
-=========
+actions
+=======
 
-.. automodule:: fuse.spaces.pullbacks
+.. automodule:: fuse.actions
   
    
    
@@ -17,7 +17,7 @@ pullbacks
       :toctree:                                     
    
       
-        pullback_from_name
+        as_action
    
    
 
@@ -30,13 +30,11 @@ pullbacks
       :template: custom-class-template.rst               
    
         
-        ContravariantPiola
+        FormAction
         
-        CovariantPiola
+        KernelAction
         
-        IdentityPullback
-        
-        Pullback
+        SymmetricTensorAction
    
    
 

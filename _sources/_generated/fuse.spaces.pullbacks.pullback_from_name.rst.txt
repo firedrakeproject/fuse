@@ -1,6 +1,0 @@
-fuse.spaces.pullbacks.pullback\_from\_name
-==========================================
-
-.. currentmodule:: fuse.spaces.pullbacks
-
-.. autofunction:: pullback_from_name

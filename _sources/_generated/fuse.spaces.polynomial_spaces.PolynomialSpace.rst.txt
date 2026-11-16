@@ -21,6 +21,7 @@ PolynomialSpace
       ~PolynomialSpace.complete
       ~PolynomialSpace.degree
       ~PolynomialSpace.dict_id
+      ~PolynomialSpace.functional_matrix
       ~PolynomialSpace.restrict
       ~PolynomialSpace.to_ON_polynomial_set
       ~PolynomialSpace.to_vector

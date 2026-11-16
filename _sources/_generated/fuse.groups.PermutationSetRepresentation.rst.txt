@@ -23,12 +23,16 @@ PermutationSetRepresentation
       ~PermutationSetRepresentation.conjugacy_class
       ~PermutationSetRepresentation.cosets
       ~PermutationSetRepresentation.cosets_by_submember
+      ~PermutationSetRepresentation.decompose
       ~PermutationSetRepresentation.dict_id
       ~PermutationSetRepresentation.get_member
       ~PermutationSetRepresentation.get_member_by_val
+      ~PermutationSetRepresentation.is_left_transversal
+      ~PermutationSetRepresentation.is_subgroup
       ~PermutationSetRepresentation.members
       ~PermutationSetRepresentation.size
-      ~PermutationSetRepresentation.transform_between_perms
+      ~PermutationSetRepresentation.span_representation
+      ~PermutationSetRepresentation.span_stabiliser
    
    
 

@@ -18,13 +18,24 @@ ComponentKernel
    .. autosummary::
    
       ~ComponentKernel.__init__
+      ~ComponentKernel.act
+      ~ComponentKernel.action_matrix
       ~ComponentKernel.degree
       ~ComponentKernel.dict_id
       ~ComponentKernel.evaluate
       ~ComponentKernel.permute
+      ~ComponentKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~ComponentKernel.action
+      ~ComponentKernel.declared_action
+      ~ComponentKernel.rank
    
    

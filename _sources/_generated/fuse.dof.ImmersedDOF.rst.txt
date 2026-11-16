@@ -23,8 +23,11 @@ ImmersedDOF
       ~ImmersedDOF.dict_id
       ~ImmersedDOF.eval
       ~ImmersedDOF.immerse
+      ~ImmersedDOF.lift_direction
+      ~ImmersedDOF.lifted_action
       ~ImmersedDOF.tabulate
       ~ImmersedDOF.to_quadrature
+      ~ImmersedDOF.trace
       ~ImmersedDOF.with_kernel
    
    

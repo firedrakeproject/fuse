@@ -19,6 +19,8 @@ polynomial\_spaces
       
         normalise_shape
       
+        riesz_matrices
+      
         weighted_shape
    
    

@@ -18,13 +18,24 @@ PointKernel
    .. autosummary::
    
       ~PointKernel.__init__
+      ~PointKernel.act
+      ~PointKernel.action_matrix
       ~PointKernel.degree
       ~PointKernel.dict_id
       ~PointKernel.evaluate
       ~PointKernel.permute
+      ~PointKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~PointKernel.action
+      ~PointKernel.declared_action
+      ~PointKernel.rank
    
    

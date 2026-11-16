@@ -19,8 +19,8 @@ DeltaPairing
    
       ~DeltaPairing.__init__
       ~DeltaPairing.add_entity
+      ~DeltaPairing.describe
       ~DeltaPairing.dict_id
-      ~DeltaPairing.permute
       ~DeltaPairing.tabulate
    
    

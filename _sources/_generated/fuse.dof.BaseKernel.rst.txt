@@ -18,10 +18,21 @@ BaseKernel
    .. autosummary::
    
       ~BaseKernel.__init__
+      ~BaseKernel.act
+      ~BaseKernel.action_matrix
       ~BaseKernel.permute
+      ~BaseKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BaseKernel.action
+      ~BaseKernel.declared_action
+      ~BaseKernel.rank
    
    

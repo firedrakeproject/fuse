@@ -24,12 +24,6 @@ traces
         
         TrGrad
         
-        TrH1
-        
-        TrHCurl
-        
-        TrHDiv
-        
         TrHess
         
         Trace

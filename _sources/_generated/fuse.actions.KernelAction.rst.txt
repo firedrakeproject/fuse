@@ -1,0 +1,35 @@
+:tocdepth: 0
+
+KernelAction
+============
+
+.. currentmodule:: fuse.actions
+
+.. autoclass:: KernelAction
+   :members:                                    
+   :show-inheritance:                        
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~KernelAction.__init__
+      ~KernelAction.act
+      ~KernelAction.dict_id
+      ~KernelAction.lift_matrix
+      ~KernelAction.lifted
+      ~KernelAction.matches
+      ~KernelAction.pullback
+      ~KernelAction.resolve
+      ~KernelAction.sobolev_space
+      ~KernelAction.trace
+   
+   
+
+   
+   
+   

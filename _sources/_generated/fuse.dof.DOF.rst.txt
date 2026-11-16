@@ -23,6 +23,8 @@ DOF
       ~DOF.dict_id
       ~DOF.eval
       ~DOF.immerse
+      ~DOF.lift_direction
+      ~DOF.lifted_action
       ~DOF.tabulate
       ~DOF.to_quadrature
       ~DOF.with_kernel

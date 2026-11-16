@@ -1,0 +1,6 @@
+fuse.spaces.polynomial\_spaces.riesz\_matrices
+==============================================
+
+.. currentmodule:: fuse.spaces.polynomial_spaces
+
+.. autofunction:: riesz_matrices

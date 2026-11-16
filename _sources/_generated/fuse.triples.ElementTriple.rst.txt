@@ -23,15 +23,14 @@ ElementTriple
       ~ElementTriple.generate
       ~ElementTriple.get_dof_info
       ~ElementTriple.get_value_shape
-      ~ElementTriple.make_dof_perms
-      ~ElementTriple.make_entity_dense_matrices
-      ~ElementTriple.make_overall_dense_matrices
+      ~ElementTriple.mapping
       ~ElementTriple.num_dofs
-      ~ElementTriple.orient_mat_perms
       ~ElementTriple.plot
+      ~ElementTriple.pullback
       ~ElementTriple.reverse_dof_perms
       ~ElementTriple.setup_ids_and_nodes
       ~ElementTriple.setup_matrices
+      ~ElementTriple.sobolev_space
       ~ElementTriple.to_fiat
       ~ElementTriple.to_tikz
       ~ElementTriple.to_ufl

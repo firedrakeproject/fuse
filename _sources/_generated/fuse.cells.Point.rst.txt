@@ -32,6 +32,8 @@ Point
       ~Point.dim
       ~Point.dim_of_node
       ~Point.edges
+      ~Point.entity_stabiliser
+      ~Point.extend_entity_symmetry
       ~Point.generate_facet_parameterisation
       ~Point.get_node
       ~Point.get_renumbered_topology
@@ -46,6 +48,7 @@ Point
       ~Point.ordered_vertex_coords
       ~Point.ordered_vertices
       ~Point.orient
+      ~Point.orientation_key_to_member
       ~Point.permute_entities
       ~Point.plot
       ~Point.plot3d

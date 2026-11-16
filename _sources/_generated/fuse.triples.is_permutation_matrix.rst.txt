@@ -1,0 +1,6 @@
+fuse.triples.is\_permutation\_matrix
+====================================
+
+.. currentmodule:: fuse.triples
+
+.. autofunction:: is_permutation_matrix

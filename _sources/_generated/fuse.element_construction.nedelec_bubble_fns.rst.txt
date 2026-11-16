@@ -1,0 +1,6 @@
+fuse.element\_construction.nedelec\_bubble\_fns
+===============================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: nedelec_bubble_fns

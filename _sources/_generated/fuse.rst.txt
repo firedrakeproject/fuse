@@ -30,6 +30,7 @@ fuse
    :template: custom-module-template.rst                 
    :recursive:
 
+   actions
    cells
    dof
    element_construction

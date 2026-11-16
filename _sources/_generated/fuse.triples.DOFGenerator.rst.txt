@@ -18,11 +18,16 @@ DOFGenerator
    .. autosummary::
    
       ~DOFGenerator.__init__
-      ~DOFGenerator.add_cell
+      ~DOFGenerator.add_context
+      ~DOFGenerator.check_transversal
       ~DOFGenerator.dict_id
       ~DOFGenerator.generate
+      ~DOFGenerator.generator_dofs
       ~DOFGenerator.make_entity_ids
+      ~DOFGenerator.mapping
       ~DOFGenerator.num_dofs
+      ~DOFGenerator.representation
+      ~DOFGenerator.stabiliser
    
    
 

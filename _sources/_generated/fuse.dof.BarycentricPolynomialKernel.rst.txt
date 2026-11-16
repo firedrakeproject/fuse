@@ -18,13 +18,24 @@ BarycentricPolynomialKernel
    .. autosummary::
    
       ~BarycentricPolynomialKernel.__init__
+      ~BarycentricPolynomialKernel.act
+      ~BarycentricPolynomialKernel.action_matrix
       ~BarycentricPolynomialKernel.degree
       ~BarycentricPolynomialKernel.dict_id
       ~BarycentricPolynomialKernel.evaluate
       ~BarycentricPolynomialKernel.permute
+      ~BarycentricPolynomialKernel.with_action
    
    
 
    
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BarycentricPolynomialKernel.action
+      ~BarycentricPolynomialKernel.declared_action
+      ~BarycentricPolynomialKernel.rank
    
    

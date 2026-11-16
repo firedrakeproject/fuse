@@ -17,7 +17,13 @@ triples
       :toctree:                                     
    
       
+        dof_to_tikz
+      
         immerse
+      
+        is_permutation_matrix
+      
+        plot_dof
    
    
 

@@ -1,0 +1,6 @@
+fuse.element\_construction.whitney\_bubbles
+===========================================
+
+.. currentmodule:: fuse.element_construction
+
+.. autofunction:: whitney_bubbles

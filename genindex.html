@@ -9,11 +9,11 @@
     <link rel="stylesheet" type="text/css" href="_static/bootstrap-sphinx.css?v=9f61996d" />
     <link rel="stylesheet" type="text/css" href="_static/plot_directive.css" />
     <link rel="stylesheet" type="text/css" href="_static/additional.css?v=584b47eb" />
-    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=6a604523" />
     <script src="_static/documentation_options.js?v=0e25812e"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
-    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script data-sd-tabs-storage-prefix="sphinx-design-tab-id-" src="_static/design-tabs.js?v=fcb327ea"></script>
     <link rel="author" title="About these documents" href="about.html" />
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" />
@@ -60,7 +60,12 @@
       role="menu"
       aria-labelledby="dLabelGlobalToc"><ul>
 <li class="toctree-l1"><a class="reference internal" href="manual.html">Manual</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="manual/dof.html">DOFs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="manual/dof.html">DOFs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="manual/dof.html#kernel-actions">Kernel actions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="manual/dof.html#generation">Generation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="manual/dof.html#immersion">Immersion</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="manual/examples2d.html">Examples</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="manual/examples2d.html#dg0">DG0</a></li>
 <li class="toctree-l3"><a class="reference internal" href="manual/examples2d.html#dg1-on-interval">DG1 on interval</a></li>
@@ -141,6 +146,7 @@
 
 <div class="genindex-jumpbox">
  <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
  | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
@@ -148,6 +154,7 @@
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -164,9 +171,15 @@
 <h2 id="_">_</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="_generated/fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.__init__">__init__() (fuse.cells.CellComplexToFiatHypercube method)</a>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.__init__">__init__() (fuse.actions.FormAction method)</a>
 
       <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.__init__">(fuse.actions.KernelAction method)</a>
+</li>
+        <li><a href="_generated/fuse.actions.SymmetricTensorAction.html#fuse.actions.SymmetricTensorAction.__init__">(fuse.actions.SymmetricTensorAction method)</a>
+</li>
+        <li><a href="_generated/fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.__init__">(fuse.cells.CellComplexToFiatHypercube method)</a>
+</li>
         <li><a href="_generated/fuse.cells.CellComplexToFiatSimplex.html#fuse.cells.CellComplexToFiatSimplex.__init__">(fuse.cells.CellComplexToFiatSimplex method)</a>
 </li>
         <li><a href="_generated/fuse.cells.CellComplexToFiatTensorProduct.html#fuse.cells.CellComplexToFiatTensorProduct.__init__">(fuse.cells.CellComplexToFiatTensorProduct method)</a>
@@ -221,25 +234,11 @@
 </li>
         <li><a href="_generated/fuse.spaces.polynomial_spaces.PolynomialSpace.html#fuse.spaces.polynomial_spaces.PolynomialSpace.__init__">(fuse.spaces.polynomial_spaces.PolynomialSpace method)</a>
 </li>
-        <li><a href="_generated/fuse.spaces.pullbacks.ContravariantPiola.html#fuse.spaces.pullbacks.ContravariantPiola.__init__">(fuse.spaces.pullbacks.ContravariantPiola method)</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.CovariantPiola.html#fuse.spaces.pullbacks.CovariantPiola.__init__">(fuse.spaces.pullbacks.CovariantPiola method)</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.IdentityPullback.html#fuse.spaces.pullbacks.IdentityPullback.__init__">(fuse.spaces.pullbacks.IdentityPullback method)</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.Pullback.html#fuse.spaces.pullbacks.Pullback.__init__">(fuse.spaces.pullbacks.Pullback method)</a>
-</li>
         <li><a href="_generated/fuse.tensor_products.TensorProductTriple.html#fuse.tensor_products.TensorProductTriple.__init__">(fuse.tensor_products.TensorProductTriple method)</a>
 </li>
         <li><a href="_generated/fuse.traces.Trace.html#fuse.traces.Trace.__init__">(fuse.traces.Trace method)</a>
 </li>
         <li><a href="_generated/fuse.traces.TrGrad.html#fuse.traces.TrGrad.__init__">(fuse.traces.TrGrad method)</a>
-</li>
-        <li><a href="_generated/fuse.traces.TrH1.html#fuse.traces.TrH1.__init__">(fuse.traces.TrH1 method)</a>
-</li>
-        <li><a href="_generated/fuse.traces.TrHCurl.html#fuse.traces.TrHCurl.__init__">(fuse.traces.TrHCurl method)</a>
-</li>
-        <li><a href="_generated/fuse.traces.TrHDiv.html#fuse.traces.TrHDiv.__init__">(fuse.traces.TrHDiv method)</a>
 </li>
         <li><a href="_generated/fuse.traces.TrHess.html#fuse.traces.TrHess.__init__">(fuse.traces.TrHess method)</a>
 </li>
@@ -255,12 +254,44 @@
   </ul></td>
 </tr></table>
 
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.act">act() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.act">(fuse.actions.KernelAction method)</a>
+</li>
+        <li><a href="_generated/fuse.actions.SymmetricTensorAction.html#fuse.actions.SymmetricTensorAction.act">(fuse.actions.SymmetricTensorAction method)</a>
+</li>
+        <li><a href="_generated/fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.act">(fuse.dof.BaseKernel method)</a>
+</li>
+        <li><a href="_generated/fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel.act">(fuse.dof.ComponentKernel method)</a>
+</li>
+        <li><a href="_generated/fuse.dof.PointKernel.html#fuse.dof.PointKernel.act">(fuse.dof.PointKernel method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.action_matrix">action_matrix() (fuse.dof.BaseKernel method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel.action_matrix">(fuse.dof.ComponentKernel method)</a>
+</li>
+      </ul></li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.add_context">add_context() (fuse.triples.DOFGenerator method)</a>
+</li>
+      <li><a href="_generated/fuse.actions.as_action.html#fuse.actions.as_action">as_action() (in module fuse.actions)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="_generated/fuse.element_construction.bary_tangents.html#fuse.element_construction.bary_tangents">bary_tangents() (in module fuse.element_construction)</a>
-</li>
       <li><a href="_generated/fuse.element_construction.barycentric_coords.html#fuse.element_construction.barycentric_coords">barycentric_coords() (in module fuse.element_construction)</a>
+</li>
+      <li><a href="_generated/fuse.element_construction.barycentric_gradients.html#fuse.element_construction.barycentric_gradients">barycentric_gradients() (in module fuse.element_construction)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -282,9 +313,13 @@
 </li>
       <li><a href="_generated/fuse.cells.CellComplexToUFL.html#fuse.cells.CellComplexToUFL">CellComplexToUFL (class in fuse.cells)</a>
 </li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.check_transversal">check_transversal() (fuse.triples.DOFGenerator method)</a>
+</li>
       <li><a href="_generated/fuse.cells.compare_topologies.html#fuse.cells.compare_topologies">compare_topologies() (in module fuse.cells)</a>
 </li>
       <li><a href="_generated/fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel">ComponentKernel (class in fuse.dof)</a>
+</li>
+      <li><a href="_generated/fuse.groups.GroupMemberRep.html#fuse.groups.GroupMemberRep.compose">compose() (fuse.groups.GroupMemberRep method)</a>
 </li>
       <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.compute_attachments">compute_attachments() (fuse.cells.Point method)</a>
 </li>
@@ -302,6 +337,8 @@
 </li>
       <li><a href="_generated/fuse.element_construction.construct_dgNminus.html#fuse.element_construction.construct_dgNminus">construct_dgNminus() (in module fuse.element_construction)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.construct_subelement">construct_subelement() (fuse.cells.CellComplexToFiatHypercube method)</a>
 
       <ul>
@@ -310,8 +347,6 @@
         <li><a href="_generated/fuse.cells.CellComplexToFiatTensorProduct.html#fuse.cells.CellComplexToFiatTensorProduct.construct_subelement">(fuse.cells.CellComplexToFiatTensorProduct method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.element_construction.construct_tet_bdmN.html#fuse.element_construction.construct_tet_bdmN">construct_tet_bdmN() (in module fuse.element_construction)</a>
 </li>
       <li><a href="_generated/fuse.element_construction.construct_tet_cgN.html#fuse.element_construction.construct_tet_cgN">construct_tet_cgN() (in module fuse.element_construction)</a>
@@ -338,11 +373,7 @@
 </li>
       <li><a href="_generated/fuse.spaces.interpolation_spaces.Continuous.html#fuse.spaces.interpolation_spaces.Continuous">Continuous (class in fuse.spaces.interpolation_spaces)</a>
 </li>
-      <li><a href="_generated/fuse.spaces.pullbacks.ContravariantPiola.html#fuse.spaces.pullbacks.ContravariantPiola">ContravariantPiola (class in fuse.spaces.pullbacks)</a>
-</li>
       <li><a href="_generated/fuse.element_construction.convert_to_generation.html#fuse.element_construction.convert_to_generation">convert_to_generation() (in module fuse.element_construction)</a>
-</li>
-      <li><a href="_generated/fuse.spaces.pullbacks.CovariantPiola.html#fuse.spaces.pullbacks.CovariantPiola">CovariantPiola (class in fuse.spaces.pullbacks)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -352,11 +383,15 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.d_entities">d_entities() (fuse.cells.Point method)</a>
 </li>
+      <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.decompose">decompose() (fuse.groups.PermutationSetRepresentation method)</a>
+</li>
       <li><a href="_generated/fuse.dof.DeltaPairing.html#fuse.dof.DeltaPairing">DeltaPairing (class in fuse.dof)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.dof.DOF.html#fuse.dof.DOF">DOF (class in fuse.dof)</a>
+</li>
+      <li><a href="_generated/fuse.triples.dof_to_tikz.html#fuse.triples.dof_to_tikz">dof_to_tikz() (in module fuse.triples)</a>
 </li>
       <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator">DOFGenerator (class in fuse.triples)</a>
 </li>
@@ -370,11 +405,17 @@
 </li>
       <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.edges">edges() (fuse.cells.Point method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.serialisation.ElementSerialiser.html#fuse.serialisation.ElementSerialiser">ElementSerialiser (class in fuse.serialisation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple">ElementTriple (class in fuse.triples)</a>
+</li>
+      <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.entity_stabiliser">entity_stabiliser() (fuse.cells.Point method)</a>
+</li>
+      <li><a href="_generated/fuse.dof.evaluate_polynomial.html#fuse.dof.evaluate_polynomial">evaluate_polynomial() (in module fuse.dof)</a>
+</li>
+      <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.extend_entity_symmetry">extend_entity_symmetry() (fuse.cells.Point method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -388,13 +429,24 @@
 </li>
       <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.form_degree">form_degree (fuse.triples.ElementTriple property)</a>
 </li>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction">FormAction (class in fuse.actions)</a>
+</li>
       <li><a href="_generated/fuse.element_construction.from_barycentric.html#fuse.element_construction.from_barycentric">from_barycentric() (in module fuse.element_construction)</a>
+</li>
+      <li><a href="_generated/fuse.spaces.polynomial_spaces.PolynomialSpace.html#fuse.spaces.polynomial_spaces.PolynomialSpace.functional_matrix">functional_matrix() (fuse.spaces.polynomial_spaces.PolynomialSpace method)</a>
 </li>
       <li>
     fuse
 
       <ul>
         <li><a href="_generated/fuse.html#module-fuse">module</a>
+</li>
+      </ul></li>
+      <li>
+    fuse.actions
+
+      <ul>
+        <li><a href="_generated/fuse.actions.html#module-fuse.actions">module</a>
 </li>
       </ul></li>
       <li>
@@ -425,6 +477,8 @@
         <li><a href="_generated/fuse.groups.html#module-fuse.groups">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     fuse.serialisation
 
@@ -439,8 +493,6 @@
         <li><a href="_generated/fuse.spaces.html#module-fuse.spaces">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     fuse.spaces.interpolation_spaces
 
@@ -453,13 +505,6 @@
 
       <ul>
         <li><a href="_generated/fuse.spaces.polynomial_spaces.html#module-fuse.spaces.polynomial_spaces">module</a>
-</li>
-      </ul></li>
-      <li>
-    fuse.spaces.pullbacks
-
-      <ul>
-        <li><a href="_generated/fuse.spaces.pullbacks.html#module-fuse.spaces.pullbacks">module</a>
 </li>
       </ul></li>
       <li>
@@ -507,6 +552,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.vectorisation.VectorTriple.html#fuse.vectorisation.VectorTriple.generate">generate() (fuse.vectorisation.VectorTriple method)</a>
 </li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.generator_dofs">generator_dofs() (fuse.triples.DOFGenerator method)</a>
+</li>
       <li><a href="_generated/fuse.groups.get_cyc_group.html#fuse.groups.get_cyc_group">get_cyc_group() (in module fuse.groups)</a>
 </li>
       <li><a href="_generated/fuse.cells.CellComplexToFiatHypercube.html#fuse.cells.CellComplexToFiatHypercube.get_dimension">get_dimension() (fuse.cells.CellComplexToFiatHypercube method)</a>
@@ -515,6 +562,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.get_topology">get_topology() (fuse.cells.Point method)</a>
+</li>
       <li><a href="_generated/fuse.element_construction.group_by_symmetry.html#fuse.element_construction.group_by_symmetry">group_by_symmetry() (in module fuse.element_construction)</a>
 </li>
       <li><a href="_generated/fuse.element_construction.group_with_mappings.html#fuse.element_construction.group_with_mappings">group_with_mappings() (in module fuse.element_construction)</a>
@@ -529,19 +578,35 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="_generated/fuse.spaces.pullbacks.IdentityPullback.html#fuse.spaces.pullbacks.IdentityPullback">IdentityPullback (class in fuse.spaces.pullbacks)</a>
+      <li><a href="_generated/fuse.dof.DOF.html#fuse.dof.DOF.immerse">immerse() (fuse.dof.DOF method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF.immerse">(fuse.dof.ImmersedDOF method)</a>
 </li>
-      <li><a href="_generated/fuse.triples.immerse.html#fuse.triples.immerse">immerse() (in module fuse.triples)</a>
+        <li><a href="_generated/fuse.triples.immerse.html#fuse.triples.immerse">(in module fuse.triples)</a>
 </li>
-      <li><a href="_generated/fuse.element_construction.immerse_and_generate_on_interior_face.html#fuse.element_construction.immerse_and_generate_on_interior_face">immerse_and_generate_on_interior_face() (in module fuse.element_construction)</a>
+      </ul></li>
+      <li><a href="_generated/fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF">ImmersedDOF (class in fuse.dof)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="_generated/fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF">ImmersedDOF (class in fuse.dof)</a>
-</li>
       <li><a href="_generated/fuse.triples.ImmersedDOFs.html#fuse.triples.ImmersedDOFs">ImmersedDOFs (class in fuse.triples)</a>
 </li>
       <li><a href="_generated/fuse.spaces.interpolation_spaces.InterpolationSpace.html#fuse.spaces.interpolation_spaces.InterpolationSpace">InterpolationSpace (class in fuse.spaces.interpolation_spaces)</a>
+</li>
+      <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.is_left_transversal">is_left_transversal() (fuse.groups.PermutationSetRepresentation method)</a>
+</li>
+      <li><a href="_generated/fuse.triples.is_permutation_matrix.html#fuse.triples.is_permutation_matrix">is_permutation_matrix() (in module fuse.triples)</a>
+</li>
+      <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.is_subgroup">is_subgroup() (fuse.groups.PermutationSetRepresentation method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction">KernelAction (class in fuse.actions)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -553,11 +618,29 @@
 </li>
       <li><a href="_generated/fuse.element_construction.lagrange_barycentric_basis.html#fuse.element_construction.lagrange_barycentric_basis">lagrange_barycentric_basis() (in module fuse.element_construction)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.element_construction.lagrange_facet_fns.html#fuse.element_construction.lagrange_facet_fns">lagrange_facet_fns() (in module fuse.element_construction)</a>
 </li>
       <li><a href="_generated/fuse.element_construction.lagrange_facet_pts.html#fuse.element_construction.lagrange_facet_pts">lagrange_facet_pts() (in module fuse.element_construction)</a>
+</li>
+      <li><a href="_generated/fuse.dof.DOF.html#fuse.dof.DOF.lift_direction">lift_direction() (fuse.dof.DOF method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.lift_matrix">lift_matrix() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.lift_matrix">(fuse.actions.KernelAction method)</a>
+</li>
+        <li><a href="_generated/fuse.actions.SymmetricTensorAction.html#fuse.actions.SymmetricTensorAction.lift_matrix">(fuse.actions.SymmetricTensorAction method)</a>
+</li>
+      </ul></li>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.lifted">lifted() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.lifted">(fuse.actions.KernelAction method)</a>
+</li>
+      </ul></li>
+      <li><a href="_generated/fuse.dof.DOF.html#fuse.dof.DOF.lifted_action">lifted_action() (fuse.dof.DOF method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -567,6 +650,18 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.make_tetrahedron.html#fuse.cells.make_tetrahedron">make_tetrahedron() (in module fuse.cells)</a>
 </li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.mapping">mapping() (fuse.triples.DOFGenerator method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.mapping">(fuse.triples.ElementTriple method)</a>
+</li>
+      </ul></li>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.matches">matches() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.matches">(fuse.actions.KernelAction method)</a>
+</li>
+      </ul></li>
       <li><a href="_generated/fuse.utils.max_deg_sp_mat.html#fuse.utils.max_deg_sp_mat">max_deg_sp_mat() (in module fuse.utils)</a>
 </li>
       <li>
@@ -574,6 +669,8 @@
 
       <ul>
         <li><a href="_generated/fuse.html#module-fuse">fuse</a>
+</li>
+        <li><a href="_generated/fuse.actions.html#module-fuse.actions">fuse.actions</a>
 </li>
         <li><a href="_generated/fuse.cells.html#module-fuse.cells">fuse.cells</a>
 </li>
@@ -590,8 +687,6 @@
         <li><a href="_generated/fuse.spaces.interpolation_spaces.html#module-fuse.spaces.interpolation_spaces">fuse.spaces.interpolation_spaces</a>
 </li>
         <li><a href="_generated/fuse.spaces.polynomial_spaces.html#module-fuse.spaces.polynomial_spaces">fuse.spaces.polynomial_spaces</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.html#module-fuse.spaces.pullbacks">fuse.spaces.pullbacks</a>
 </li>
         <li><a href="_generated/fuse.tensor_products.html#module-fuse.tensor_products">fuse.tensor_products</a>
 </li>
@@ -614,6 +709,8 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.element_construction.nedelec_bubble_fns.html#fuse.element_construction.nedelec_bubble_fns">nedelec_bubble_fns() (in module fuse.element_construction)</a>
+</li>
       <li><a href="_generated/fuse.cells.normalise.html#fuse.cells.normalise">normalise() (in module fuse.cells)</a>
 </li>
   </ul></td>
@@ -632,6 +729,8 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.orientation_key_to_member">orientation_key_to_member() (fuse.cells.Point method)</a>
+</li>
       <li><a href="_generated/fuse.utils.orientation_value.html#fuse.utils.orientation_value">orientation_value() (in module fuse.utils)</a>
 </li>
   </ul></td>
@@ -650,12 +749,16 @@
 </li>
       <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation">PermutationSetRepresentation (class in fuse.groups)</a>
 </li>
+      <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.permute_entities">permute_entities() (fuse.cells.Point method)</a>
+</li>
       <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point.plot">plot() (fuse.cells.Point method)</a>
 
       <ul>
         <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.plot">(fuse.triples.ElementTriple method)</a>
 </li>
       </ul></li>
+      <li><a href="_generated/fuse.triples.plot_dof.html#fuse.triples.plot_dof">plot_dof() (in module fuse.triples)</a>
+</li>
       <li><a href="_generated/fuse.cells.Point.html#fuse.cells.Point">Point (class in fuse.cells)</a>
 </li>
   </ul></td>
@@ -672,17 +775,49 @@
 </li>
       <li><a href="_generated/fuse.element_construction.proxy_field_bfs.html#fuse.element_construction.proxy_field_bfs">proxy_field_bfs() (in module fuse.element_construction)</a>
 </li>
-      <li><a href="_generated/fuse.spaces.pullbacks.Pullback.html#fuse.spaces.pullbacks.Pullback">Pullback (class in fuse.spaces.pullbacks)</a>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.pullback">pullback() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.pullback">(fuse.actions.KernelAction method)</a>
 </li>
-      <li><a href="_generated/fuse.spaces.pullbacks.pullback_from_name.html#fuse.spaces.pullbacks.pullback_from_name">pullback_from_name() (in module fuse.spaces.pullbacks)</a>
+        <li><a href="_generated/fuse.tensor_products.TensorProductTriple.html#fuse.tensor_products.TensorProductTriple.pullback">(fuse.tensor_products.TensorProductTriple method)</a>
 </li>
+        <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.pullback">(fuse.triples.ElementTriple method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.dof.BarycentricPolynomialKernel.html#fuse.dof.BarycentricPolynomialKernel.rank">rank (fuse.dof.BarycentricPolynomialKernel property)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.rank">(fuse.dof.BaseKernel property)</a>
+</li>
+        <li><a href="_generated/fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel.rank">(fuse.dof.ComponentKernel property)</a>
+</li>
+        <li><a href="_generated/fuse.dof.PolynomialKernel.html#fuse.dof.PolynomialKernel.rank">(fuse.dof.PolynomialKernel property)</a>
+</li>
+        <li><a href="_generated/fuse.dof.VectorKernel.html#fuse.dof.VectorKernel.rank">(fuse.dof.VectorKernel property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.CellComplexToUFL.html#fuse.cells.CellComplexToUFL.reconstruct">reconstruct() (fuse.cells.CellComplexToUFL method)</a>
+</li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.representation">representation() (fuse.triples.DOFGenerator method)</a>
+</li>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.resolve">resolve() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.resolve">(fuse.actions.KernelAction method)</a>
+</li>
+      </ul></li>
+      <li><a href="_generated/fuse.spaces.polynomial_spaces.riesz_matrices.html#fuse.spaces.polynomial_spaces.riesz_matrices">riesz_matrices() (in module fuse.spaces.polynomial_spaces)</a>
+</li>
+      <li><a href="_generated/fuse.element_construction.rt_space.html#fuse.element_construction.rt_space">rt_space() (in module fuse.element_construction)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -690,10 +825,34 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.setup_matrices">setup_matrices() (fuse.triples.ElementTriple method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.vectorisation.VectorTriple.html#fuse.vectorisation.VectorTriple.setup_matrices">(fuse.vectorisation.VectorTriple method)</a>
+</li>
+      </ul></li>
       <li><a href="_generated/fuse.spaces.interpolation_spaces.Sobolev.html#fuse.spaces.interpolation_spaces.Sobolev">Sobolev (class in fuse.spaces.interpolation_spaces)</a>
 </li>
+      <li><a href="_generated/fuse.actions.FormAction.html#fuse.actions.FormAction.sobolev_space">sobolev_space() (fuse.actions.FormAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.sobolev_space">(fuse.actions.KernelAction method)</a>
+</li>
+        <li><a href="_generated/fuse.tensor_products.TensorProductTriple.html#fuse.tensor_products.TensorProductTriple.sobolev_space">(fuse.tensor_products.TensorProductTriple method)</a>
+</li>
+        <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.sobolev_space">(fuse.triples.ElementTriple method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.span_representation">span_representation() (fuse.groups.PermutationSetRepresentation method)</a>
+</li>
+      <li><a href="_generated/fuse.groups.PermutationSetRepresentation.html#fuse.groups.PermutationSetRepresentation.span_stabiliser">span_stabiliser() (fuse.groups.PermutationSetRepresentation method)</a>
+</li>
+      <li><a href="_generated/fuse.triples.DOFGenerator.html#fuse.triples.DOFGenerator.stabiliser">stabiliser() (fuse.triples.DOFGenerator method)</a>
+</li>
+      <li><a href="_generated/fuse.actions.SymmetricTensorAction.html#fuse.actions.SymmetricTensorAction">SymmetricTensorAction (class in fuse.actions)</a>
+</li>
       <li><a href="_generated/fuse.utils.sympy_to_numpy.html#fuse.utils.sympy_to_numpy">sympy_to_numpy() (in module fuse.utils)</a>
 </li>
   </ul></td>
@@ -712,19 +871,19 @@
 </li>
       <li><a href="_generated/fuse.triples.ElementTriple.html#fuse.triples.ElementTriple.to_tikz">to_tikz() (fuse.triples.ElementTriple method)</a>
 </li>
-      <li><a href="_generated/fuse.cells.topo_pos.html#fuse.cells.topo_pos">topo_pos() (in module fuse.cells)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="_generated/fuse.cells.topo_pos.html#fuse.cells.topo_pos">topo_pos() (in module fuse.cells)</a>
+</li>
       <li><a href="_generated/fuse.traces.Trace.html#fuse.traces.Trace">Trace (class in fuse.traces)</a>
 </li>
+      <li><a href="_generated/fuse.actions.KernelAction.html#fuse.actions.KernelAction.trace">trace() (fuse.actions.KernelAction method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.dof.ImmersedDOF.html#fuse.dof.ImmersedDOF.trace">(fuse.dof.ImmersedDOF method)</a>
+</li>
+      </ul></li>
       <li><a href="_generated/fuse.traces.TrGrad.html#fuse.traces.TrGrad">TrGrad (class in fuse.traces)</a>
-</li>
-      <li><a href="_generated/fuse.traces.TrH1.html#fuse.traces.TrH1">TrH1 (class in fuse.traces)</a>
-</li>
-      <li><a href="_generated/fuse.traces.TrHCurl.html#fuse.traces.TrHCurl">TrHCurl (class in fuse.traces)</a>
-</li>
-      <li><a href="_generated/fuse.traces.TrHDiv.html#fuse.traces.TrHDiv">TrHDiv (class in fuse.traces)</a>
 </li>
       <li><a href="_generated/fuse.traces.TrHess.html#fuse.traces.TrHess">TrHess (class in fuse.traces)</a>
 </li>
@@ -736,22 +895,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.ufc_quad.html#fuse.cells.ufc_quad">ufc_quad() (in module fuse.cells)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.cells.ufc_tetrahedron.html#fuse.cells.ufc_tetrahedron">ufc_tetrahedron() (in module fuse.cells)</a>
 </li>
       <li><a href="_generated/fuse.cells.ufc_triangle.html#fuse.cells.ufc_triangle">ufc_triangle() (in module fuse.cells)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="_generated/fuse.spaces.pullbacks.ContravariantPiola.html#fuse.spaces.pullbacks.ContravariantPiola.ufl_sobolev_space">ufl_sobolev_space() (fuse.spaces.pullbacks.ContravariantPiola method)</a>
-
-      <ul>
-        <li><a href="_generated/fuse.spaces.pullbacks.CovariantPiola.html#fuse.spaces.pullbacks.CovariantPiola.ufl_sobolev_space">(fuse.spaces.pullbacks.CovariantPiola method)</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.IdentityPullback.html#fuse.spaces.pullbacks.IdentityPullback.ufl_sobolev_space">(fuse.spaces.pullbacks.IdentityPullback method)</a>
-</li>
-        <li><a href="_generated/fuse.spaces.pullbacks.Pullback.html#fuse.spaces.pullbacks.Pullback.ufl_sobolev_space">(fuse.spaces.pullbacks.Pullback method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -776,6 +925,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.spaces.polynomial_spaces.weighted_shape.html#fuse.spaces.polynomial_spaces.weighted_shape">weighted_shape() (in module fuse.spaces.polynomial_spaces)</a>
 </li>
+      <li><a href="_generated/fuse.element_construction.whitney_bubbles.html#fuse.element_construction.whitney_bubbles">whitney_bubbles() (in module fuse.element_construction)</a>
+</li>
+      <li><a href="_generated/fuse.dof.BaseKernel.html#fuse.dof.BaseKernel.with_action">with_action() (fuse.dof.BaseKernel method)</a>
+
+      <ul>
+        <li><a href="_generated/fuse.dof.ComponentKernel.html#fuse.dof.ComponentKernel.with_action">(fuse.dof.ComponentKernel method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="_generated/fuse.dof.DOF.html#fuse.dof.DOF.with_kernel">with_kernel() (fuse.dof.DOF method)</a>
@@ -801,7 +958,7 @@
     </p>
     <p>
         &copy; Copyright 2025, India Marsden, David A. Ham, Patrick E. Farrell.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 9.1.0.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 9.1.1.<br/>
     </p>
   </div>
 </footer>

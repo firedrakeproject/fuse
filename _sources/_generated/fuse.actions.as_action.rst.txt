@@ -1,0 +1,6 @@
+fuse.actions.as\_action
+=======================
+
+.. currentmodule:: fuse.actions
+
+.. autofunction:: as_action

@@ -17,9 +17,9 @@ element\_construction
       :toctree:                                     
    
       
-        bary_tangents
-      
         barycentric_coords
+      
+        barycentric_gradients
       
         construct_dgN
       
@@ -55,8 +55,6 @@ element\_construction
       
         group_with_mappings
       
-        immerse_and_generate_on_interior_face
-      
         lagrange_barycentric_basis
       
         lagrange_facet_fns
@@ -65,13 +63,19 @@ element\_construction
       
         multiindices
       
+        nedelec_bubble_fns
+      
         periodic_table
       
         points_close
       
         proxy_field_bfs
       
+        rt_space
+      
         vector_basis_fns
+      
+        whitney_bubbles
    
    
 

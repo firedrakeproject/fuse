@@ -1,0 +1,6 @@
+fuse.triples.plot\_dof
+======================
+
+.. currentmodule:: fuse.triples
+
+.. autofunction:: plot_dof
