@@ -76,7 +76,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/${{ env.BASE_FIREDRAKE_BRANCH }}
+          ref: ${{ env.BASE_FIREDRAKE_BRANCH }}
 
       # Check that the Dockerfile is using the latest Ubuntu version.
       # The version is hardcoded into the Dockerfile so that the OS
@@ -102,8 +102,9 @@ jobs:
 
       - name: Install PETSc
         run: |
-          git clone --depth 1 https://gitlab.com/petsc/petsc.git
+          git clone  https://gitlab.com/petsc/petsc.git
           cd petsc
+          git checkout v3.25.4
           python3 ../firedrake-repo/scripts/firedrake-configure \
             --arch ${{ matrix.arch }} --show-petsc-configure-options | \
             xargs -L1 ./configure --with-make-np=8 --download-slepc
@@ -127,6 +128,10 @@ jobs:
 
           : # Fix for petsc4py+slepc4py build
           echo 'setuptools<81' > constraints.txt
+          echo 'Cython==3.2.9' >> constraints.txt
+          echo 'firedrake-rtree==2026.2.0' >> constraints.txt
+
+          export PIP_CONSTRAINT="$PWD/constraints.txt"
           export PIP_CONSTRAINT=constraints.txt
 
           : # Install build dependencies
@@ -164,7 +169,7 @@ jobs:
         with:
           repository: firedrakeproject/firedrake
           path: firedrake-repo
-          ref: refs/heads/${{ env.FIREDRAKE_BRANCH }}
+          ref: ${{ env.FIREDRAKE_BRANCH }}
     
       - name: Make cython
         run: |

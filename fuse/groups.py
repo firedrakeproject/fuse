@@ -70,12 +70,18 @@ class GroupMemberRep(object):
         return orientation_value(identity, m_array)
 
     def _to_dict(self):
+        cell = getattr(self.group, "cell", None)
+        if cell is not None:
+            # a member of a group on a cell is restored from the cell's own group
+            return {"perm": self.perm.array_form, "cell": cell}
         return {"perm": self.perm.array_form, "M": self.transform_matrix.tolist(), "group": self.group}
 
     def dict_id(self):
         return "GroupMember"
 
     def _from_dict(o_dict):
+        if "cell" in o_dict:
+            return o_dict["cell"].group.get_member(Permutation(o_dict["perm"]))
         return GroupMemberRep(Permutation(o_dict["perm"]), o_dict["M"], o_dict["group"])
 
     def __eq__(self, x):
@@ -96,6 +102,14 @@ class GroupMemberRep(object):
     def __invert__(self):
         return self.group.get_member(~self.perm)
 
+    def compose(self, other):
+        """The composition self o other: apply ``other``, then ``self``.
+
+        Note that the product ``*`` follows sympy and applies the left factor
+        first, so ``self.compose(other)`` is ``other * self``.
+        """
+        return other * self
+
     def __repr__(self):
         string = "g"
         string += str(self.array_form)
@@ -111,48 +125,6 @@ class GroupMemberRep(object):
 
     def matrix_form(self):
         mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
-        return mat
-
-    def matrix_form_subgroup(self, group):
-        if group.size() == 1:
-            # Trivial case
-            return np.array([1])
-        if group.size() == 6 and self.group.size() == 6:
-            # horrible hack for S3
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [((m)*(~self)).numeric_rep() for m in group.members()]
-            mapping = {4: 4, 3: 0, 0: 3}
-            if (~self).numeric_rep() in mapping.keys():
-                n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                permuted_members = [((m)*(~n)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-        elif group.size() == self.perm.size:
-            if self.perm.size == 3:
-                cosets = self.group.cosets_by_submember(group)
-                members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-                permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-                mapping = {4: 3, 3: 4, 0: 0}
-                # mapping = {4: 4, 3: 0, 0: 3}
-                if (~self).numeric_rep() in mapping.keys():
-                    n = self.group.get_member_by_val(mapping[(~self).numeric_rep()])
-                    permuted_members = [cosets[(m*(~n)).array_form].numeric_rep() for m in group.members()]
-                mat = perm_list_to_matrix(members, permuted_members)
-            else:
-                mat = np.array(PermutationMatrix(self.perm).as_explicit()).astype(np.float64)
-        elif group.size() < self.group.size():
-            members = [m.numeric_rep() for m in group.members()]
-            permuted_members = [(m*(~self)).numeric_rep() for m in group.members()]
-            mat = perm_list_to_matrix(members, permuted_members)
-            # cosets = self.group.cosets_by_submember(group)
-            # members = [cosets[m.array_form].numeric_rep() for m in group.members()]
-            # permuted_members = [cosets[(m*(~self)).array_form].numeric_rep() for m in group.members()]
-            # mat = perm_list_to_matrix(members, permuted_members)
-        else:
-            raise NotImplementedError("Complex subgroups where group size is not the same as perm size are not supported")
         return mat
 
     def lin_combination_form(self):
@@ -249,14 +221,6 @@ class PermutationSetRepresentation():
             return [m.perm for m in self._members]
         return self._members
 
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return self.get_member(~Permutation(perm1)) * self.get_member(Permutation(perm2))
-
     def get_member(self, perm):
         if not isinstance(perm, Permutation):
             perm = Permutation.from_sequence(perm)
@@ -292,6 +256,90 @@ class PermutationSetRepresentation():
     def size(self):
         return len(self.perm_list)
 
+    def _match(self, members):
+        """The members of this set with the same permutations as ``members``.
+
+        ``members`` may be a permutation set or a list of group members.
+        """
+        if hasattr(members, "members"):
+            members = members.members()
+        size = max(m.perm.size for m in self.members())
+        lookup = {tuple(Permutation(m.perm, size=size).array_form): m for m in self.members()}
+        try:
+            return [lookup[tuple(Permutation(m.perm, size=size).array_form)] for m in members]
+        except KeyError as e:
+            raise ValueError(f"{e} is not a member of {self}") from None
+
+    def is_subgroup(self, H):
+        """Whether ``H``, a set of members of this group, is a subgroup of it."""
+        H = self._match(H)
+        perms = {h.perm for h in H}
+        return self.identity.perm in perms and all(a.compose(b).perm in perms for a in H for b in H)
+
+    def is_left_transversal(self, A, H):
+        """Whether ``A`` is a left transversal of the subgroup ``H``.
+
+        Every member of this group is ``a o h`` for exactly one ``a``
+        in ``A`` and ``h`` in ``H``.
+        """
+        A, H = self._match(A), self._match(H)
+        if len(A) * len(H) != self.size():
+            return False
+        return len({a.compose(h).perm for a in A for h in H}) == self.size()
+
+    def decompose(self, x, H):
+        """Write ``x = a o h`` with ``a`` in this transversal and ``h`` in ``H``.
+
+        This set must be a left transversal of the subgroup ``H`` of the group
+        containing ``x``; the decomposition is then unique. Returns ``(a, h)``
+        as members of that group: ``a`` represents the coset of ``x``.
+        """
+        G = x.group
+        Hperms = {m.perm: m for m in G._match(H)}
+        found = []
+        for a in G._match(self):
+            h = (~a).compose(x)
+            if h.perm in Hperms:
+                found.append((a, Hperms[h.perm]))
+        if len(found) != 1:
+            raise ValueError(f"No unique decomposition of {x}: this set is not a left transversal of H")
+        return found[0]
+
+    def span_stabiliser(self, act, tol=1e-10):
+        """The members ``s`` with span(act(s)) == span(act(identity)).
+
+        ``act(s)`` returns an (m, n) array whose rows are the images under ``s``
+        of m vectors (for example linear functionals evaluated on a basis), all
+        in one fixed coordinate system. Returns a permutation set on this
+        group's cell.
+        """
+        X = np.asarray(act(self.identity), dtype=float)
+        r = np.linalg.matrix_rank(X, tol=tol)
+        stab = [s for s in self.members()
+                if np.linalg.matrix_rank(np.vstack([X, np.asarray(act(s), dtype=float)]), tol=tol) == r]
+        return PermutationSetRepresentation([s.perm for s in stab], cell=self.cell)
+
+    def span_representation(self, act, tol=1e-8):
+        """The matrices of the action on the span of ``act(identity)``.
+
+        For each member ``s`` returns ``rho(s)`` with
+        ``act(s)[i] = sum_j rho(s)[j, i] * act(identity)[j]``. The rows of
+        ``act(identity)`` must be linearly independent and every member must
+        preserve their span (as for the members of :meth:`span_stabiliser`).
+        Returns ``{permutation array form: rho(s)}``.
+        """
+        X = np.asarray(act(self.identity), dtype=float)
+        if np.linalg.matrix_rank(X, tol=tol) != X.shape[0]:
+            raise ValueError("The vectors are not linearly independent")
+        rho = {}
+        for s in self.members():
+            R = np.asarray(act(s), dtype=float)
+            sol, *_ = np.linalg.lstsq(X.T, R.T, rcond=None)
+            if not np.allclose(X.T @ sol, R.T, atol=tol):
+                raise ValueError(f"{s} does not preserve the span")
+            rho[tuple(s.perm.array_form)] = sol
+        return rho
+
     def __mul__(self, other_group):
         # convert to set to remove duplicates
         # return PermutationSetRepresentation(list(set(self.perm_list + other_group.perm_list)))
@@ -307,14 +355,14 @@ class PermutationSetRepresentation():
         return "GS" + str(self.size())
 
     def _to_dict(self):
-        return {"members": [m.perm.array_form for m in self._members]}
+        return {"members": [p.array_form for p in self.perm_list], "name": self.name}
 
     def dict_id(self):
         return "PermutationSet"
 
     def _from_dict(o_dict):
         perm_set = [Permutation(m) for m in o_dict["members"]]
-        return PermutationSetRepresentation(perm_set)
+        return PermutationSetRepresentation(perm_set, name=o_dict["name"])
 
 
 class GroupRepresentation(PermutationSetRepresentation):
@@ -383,14 +431,6 @@ class GroupRepresentation(PermutationSetRepresentation):
         if perm:
             return [m.perm for m in self._members]
         return self._members
-
-    def transform_between_perms(self, perm1, perm2):
-        member_perms = self.members(perm=True)
-        perm1 = Permutation.from_sequence(perm1)
-        perm2 = Permutation.from_sequence(perm2)
-        assert perm1 in member_perms
-        assert perm2 in member_perms
-        return ~self.get_member(Permutation(perm1)) * self.get_member(Permutation(perm2))
 
     # def get_member(self, perm):
     #    if not isinstance(perm, Permutation):
@@ -473,15 +513,15 @@ class GroupRepresentation(PermutationSetRepresentation):
     #     return res
 
     def _to_dict(self):
-        return {"members": [m.perm.array_form for m in self._members]}
+        # the generators fix the order of the members, and so the order of generation
+        return {"generators": [g.array_form for g in self.base_group.generators], "name": self.name}
 
     def dict_id(self):
         return "Group"
 
     def _from_dict(o_dict):
-        perm_group = PermutationGroup([Permutation(m) for m in o_dict["members"]])
-        # , o_dict["cell"]
-        return GroupRepresentation(perm_group)
+        return GroupRepresentation(PermutationGroup([Permutation(g) for g in o_dict["generators"]]),
+                                   name=o_dict["name"])
 
 
 def get_sym_group(n):
@@ -517,13 +557,13 @@ new_S3 = PermutationSetRepresentation([Permutation([0, 1, 2]), Permutation([1, 2
                                        Permutation([0, 2, 1]), Permutation([2, 1, 0]), Permutation([1, 0, 2])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([1, 2, 0, 3]),
 #                                           Permutation([0, 3, 1, 2]), Permutation([1, 3, 2, 0]), Permutation([2, 3, 0, 1])])
-tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]),
-                                          Permutation([1, 3, 0, 2]), Permutation([2, 0, 1, 3]), Permutation([3, 0, 1, 2])])
+tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([3, 2, 0, 1]), Permutation([1, 0, 3, 2]),
+                                          Permutation([1, 2, 3, 0]), Permutation([2, 0, 1, 3]), Permutation([2, 3, 1, 0])])
 tet_edges_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2]),
                                               Permutation([1, 2, 0, 3]), Permutation([3, 1, 0, 2]), Permutation([2, 3, 0, 1])])
 # tet_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 0, 3, 1]),
 #                                           Permutation([3, 2, 0, 1]), Permutation([2, 0, 1, 3]), Permutation([0, 3, 1, 2])])
-tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 3, 2, 0]), Permutation([3, 0, 2, 1])])
+tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([3, 2, 0, 1]), Permutation([0, 2, 3, 1]), Permutation([0, 3, 1, 2])])
 tet_faces_ufc = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 3, 2, 0]), Permutation([1, 2, 3, 0]), Permutation([3, 0, 2, 1])])
 # tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([2, 3, 0, 1]), Permutation([3, 0, 1, 2])])
 tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([1, 0, 3, 2]), Permutation([3, 0, 1, 2])])

@@ -53,19 +53,19 @@ def test_nd_perms(cell):
     x = sp.Symbol("x")
     y = sp.Symbol("y")
 
-    xs = [DOF(L2Pairing(), VectorKernel(edge.basis_vectors()[0]))]
-    dofs = DOFGenerator(xs, S1, S2)
-    int_ned = ElementTriple(edge, (P1, C0, Fcurl), dofs)
+    xs = [DOF(L2Pairing(), VectorKernel(edge.basis_vectors()[0], action=HCurl))]
+    dofs = DOFGenerator(xs, S1)
+    int_ned = ElementTriple(edge, (P1, C0), dofs)
 
-    xs = [immerse(cell, int_ned, TrHCurl)]
-    tri_dofs = DOFGenerator(xs, C3, S3)
+    xs = [immerse(cell, int_ned)]
+    tri_dofs = DOFGenerator(xs, C3)
 
     M = sp.Matrix([[y, -x]])
     vec_Pk = PolynomialSpace(deg - 1, shape=2)
     Pk = PolynomialSpace(deg - 1)
     nd = vec_Pk + (Pk.restrict(deg - 2, deg - 1))*M
 
-    ned = ElementTriple(cell, (nd, C0, Fcurl), [tri_dofs])
+    ned = ElementTriple(cell, (nd, C0), [tri_dofs])
     ned.to_fiat()
     for i, mat in ned.matrices[2][0].items():
         print(i)
@@ -78,17 +78,17 @@ def test_square():
     print("testsq", square.group.size())
     edge = square.d_entities(1, get_class=True)[0]
 # edge.basis_vectors()[0]
-    xs = [DOF(L2Pairing(), PointKernel(-0.5))]
-    dg0_int = ElementTriple(edge, (P0, C0, Fid),
-                            DOFGenerator(xs, S2, S2))
+    xs = [DOF(L2Pairing(), PointKernel(-0.5, action=HDiv))]
+    dg0_int = ElementTriple(edge, (P0, C0),
+                            DOFGenerator(xs, S2))
 
-    e_xs = [immerse(square, dg0_int, TrHDiv)]
-    e_dofs = DOFGenerator(e_xs, sq_edges, S1)
+    e_xs = [immerse(square, dg0_int)]
+    e_dofs = DOFGenerator(e_xs, sq_edges)
 
     # i_xs = [lambda g: DOF(DeltaPairing(), PointKernel(g((0, 0))))]
     # i_dofs = DOFGenerator(i_xs, S1, S1)
 
-    sq = ElementTriple(square, (P3, C0, Fid), [e_dofs])
+    sq = ElementTriple(square, (P3, C0), [e_dofs])
     for dof in sq.generate():
         print(dof)
     sq.to_fiat()
