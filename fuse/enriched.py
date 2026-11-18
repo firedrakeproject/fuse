@@ -19,20 +19,20 @@ class EnrichedElement(TensorProductTriple):
             raise ValueError("EnrichedElement should only be used for Tensor product elements. Use + between triples for enrichment.")
         self.A = A
         self.B = B
-        if A.spaces[2] != B.spaces[2]:
+        if A.pullback() != B.pullback():
             raise NotImplementedError("Two FUSE triples with different pullbacks cannot be added.")
-        self.spaces = (A.spaces[0] + B.spaces[0], max(A.spaces[1], B.spaces[1]), A.spaces[2])
+        self.spaces = (A.spaces[0] + B.spaces[0], max(A.spaces[1], B.spaces[1]))
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
-        if A.cell.flat != B.cell.flat:
+        if A.flat != B.flat:
             raise ValueError("Tensor products must both be flat or both not flat for enrichment.")
         self.cell = A.cell
-        self.flat = flat or self.cell.flat
+        self.flat = flat or A.flat
         if hasattr(A, "unflat_cell"):
             self.unflat_cell = A.unflat_cell
-        if getattr(A, "trace", None) is not getattr(B, "trace", None):
-            raise ValueError("Cannot enrich elements with different traces.")
-        self.trace = getattr(A, "trace", None)
+        if getattr(A, "proxy", None) != getattr(B, "proxy", None):
+            raise ValueError("Cannot enrich elements with different proxies.")
+        self.proxy = getattr(A, "proxy", None)
         # See TensorProductTriple.__init__ for the meaning of ``symmetric``.
         self.requested_symmetric = symmetric
         self.symmetric = True if symmetric is None else symmetric
@@ -45,6 +45,12 @@ class EnrichedElement(TensorProductTriple):
     @property
     def sub_elements(self):
         return [self.A, self.B]
+
+    def pullback(self):
+        return self.A.pullback()
+
+    def sobolev_space(self):
+        return self.A.sobolev_space()
 
     def get_value_shape(self):
         if str(self.spaces[1]) in ("HDiv", "HCurl"):
@@ -81,16 +87,16 @@ class EnrichedElement(TensorProductTriple):
             if total_dim in seen_total_dims:
                 continue
             seen_total_dims.add(total_dim)
-            ents = self.entity_dofs[total_dim].keys()
+            ents = self.entity_ids[total_dim].keys()
             # comp_os = cell.component_orientations()
             for e_idx, e in enumerate(ents):
-                ent_dofs = self.entity_dofs[total_dim][e]
+                ent_dofs = self.entity_ids[total_dim][e]
                 if len(ent_dofs) >= 1:
                     sub_mat = oriented_mats_by_entity[total_dim][e_idx]
                     a_mat = self.A.generation_order_matrices()[total_dim][e_idx]
-                    a_ent_ids = self.A.entity_dofs[total_dim][e]
+                    a_ent_ids = self.A.entity_ids[total_dim][e]
                     b_mat = self.B.generation_order_matrices()[total_dim][e_idx]
-                    b_ent_ids = self.B.entity_dofs[total_dim][e]
+                    b_ent_ids = self.B.entity_ids[total_dim][e]
 
                     for o in a_mat.keys():
                         a_sub_mat = a_mat[o][np.ix_(a_ent_ids, a_ent_ids)]
@@ -114,11 +120,11 @@ class EnrichedElement(TensorProductTriple):
         a_dofs = self.A.generate()
         b_dofs = self.B.generate()
         numAdofs = len(a_dofs)
-        self.entity_dofs = {}
-        for dim in self.A.entity_dofs.keys():
-            self.entity_dofs[dim] = {}
-            for ent in self.A.entity_dofs[dim]:
-                self.entity_dofs[dim][ent] = self.A.entity_dofs[dim][ent] + [b_dof + numAdofs for b_dof in self.B.entity_dofs[dim][ent]]
+        self.entity_ids = {}
+        for dim in self.A.entity_ids.keys():
+            self.entity_ids[dim] = {}
+            for ent in self.A.entity_ids[dim]:
+                self.entity_ids[dim][ent] = self.A.entity_ids[dim][ent] + [b_dof + numAdofs for b_dof in self.B.entity_ids[dim][ent]]
         self.dofs = a_dofs + b_dofs
         return self.dofs
 

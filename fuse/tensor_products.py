@@ -1,6 +1,4 @@
 from fuse.triples import ElementTriple
-from fuse.traces import TrHCurl, TrHDiv
-from fuse.spaces.pullbacks import Fid, Fdiv, Fcurl
 from fuse.cells import TensorProductPoint
 import numpy as np
 from finat.ufl import TensorProductElement, FuseElement, HDivElement, HCurlElement
@@ -47,7 +45,7 @@ def one_dim_signature(elem):
     their DOFs differently.
     """
     entity_assoc = elem._entity_associations(elem.generate(), overall=False)[0]
-    return (str(elem.spaces[0]), str(elem.spaces[1]), str(elem.spaces[2]),
+    return (str(elem.spaces[0]), str(elem.spaces[1]), elem.pullback(),
             tuple(sorted((d, tuple(len(v) for v in ents.values()))
                          for d, ents in entity_assoc.items())))
 
@@ -96,17 +94,13 @@ class TensorProductTriple(ElementTriple):
         if len(factors) < 2:
             raise ValueError("Cannot create a tensor product with fewer than 2 factors")
         self.factors = factors
-        pullback = set(f.spaces[2] for f in factors if f.spaces[2] != Fid)
+        pullback = set(f.pullback() for f in factors) - {"identity"}
         if len(pullback) > 1:
             raise ValueError("Tensor product factors must only contain 1 type of non-identity pullback.")
-        elif len(pullback) == 0: # all are the identity
-            pullback = Fid
-        else:
-            pullback = pullback.pop()
+        self._pullback = pullback.pop() if pullback else "identity"
         larger = lambda a, b: a if a >= b else b
         self.spaces = [reduce(larger, (f.spaces[0] for f in factors)),
-                       reduce(larger, (f.spaces[1] for f in factors)),
-                       pullback]
+                       reduce(larger, (f.spaces[1] for f in factors))]
 
         self.DOFGenerator = [f.DOFGenerator for f in self.factors]
         self.cell = TensorProductPoint(*[f.cell for f in factors])
@@ -122,7 +116,7 @@ class TensorProductTriple(ElementTriple):
         self.dofs = self.generate()
 
         self.mat_transformer = getattr(self, "mat_transformer", None)
-        self.trace = getattr(self, "trace", None)
+        self.proxy = getattr(self, "proxy", None)
         self.apply_matrices = matrices
         if self.apply_matrices:
             self.setup_matrices()
@@ -132,6 +126,15 @@ class TensorProductTriple(ElementTriple):
     @property
     def sub_elements(self):
         return self.factors
+
+    def pullback(self):
+        return self._pullback
+
+    def sobolev_space(self):
+        spaces = {f.sobolev_space() for f in self.factors}
+        if len(spaces) != 1:
+            raise NotImplementedError(f"Tensor products of factors in different Sobolev spaces ({', '.join(sorted(spaces))}) are not supported yet")
+        return spaces.pop()
 
     @property
     def form_degree(self):
@@ -165,16 +168,16 @@ class TensorProductTriple(ElementTriple):
             ents = list(product(*(f_ents)))
             comp_os = cell.component_orientations()
             for e, sub_ents in enumerate(ents):
-                ent_dofs = self.entity_dofs[total_dim][self.ent_mapping[dim][sub_ents]]
+                ent_dofs = self.entity_ids[total_dim][self.ent_mapping[dim][sub_ents]]
                 if len(ent_dofs) >= 1:
                     sub_mat = oriented_mats_by_entity[dim][e]
                     mats = [f.generation_order_matrices()[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
-                    ent_ids = [f.entity_dofs[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
+                    ent_ids = [f.entity_ids[d][ent] for f, d, ent in zip(self.factors, dim, sub_ents)]
                     os = list(product(*([mat.keys() for mat in mats])))
                     for o in os:
                         sub_mats = [mat[o_f][np.ix_(ent_id, ent_id)] for mat, o_f, ent_id in zip(mats, o, ent_ids)]
                         if self.mat_transformer is not None:
-                            o_classes = [f.cell.group.get_member_by_val(o_f) for f, o_f in zip(self.factors, o)]
+                            o_classes = [f.cell.orientation_key_to_member(o_f) for f, o_f in zip(self.factors, o)]
                             combined_sub_mat = self.mat_transformer(*sub_mats, o_classes)
                         else:
                             combined_sub_mat = reduce(lambda acc, x: np.kron(acc, x), sub_mats)
@@ -215,14 +218,14 @@ class TensorProductTriple(ElementTriple):
         Reorienting an entity moves its basis vectors, and how a DOF responds
         depends on what it measures: an H(div) DOF integrates against a
         normal, an H(curl) DOF against a tangent, a scalar DOF against
-        nothing. The trace knows that, so ask it rather than special-casing
-        the family here.
+        nothing. The proxy says which (see ``_measured_direction``), so ask it
+        rather than special-casing the family here.
 
         There are exactly three ways to have no change of value, and each is a
         positive statement rather than a failure to work one out:
 
         - the element is scalar valued, so no direction moves;
-        - the trace measures nothing on an entity of this dimension (H(div)
+        - the proxy measures nothing on an entity of this dimension (H(div)
           has no normal on a cell interior);
         - the direction has been carried onto a *different* DOF's rather than
           rescaled, so the transport permutation being built alongside already
@@ -231,26 +234,25 @@ class TensorProductTriple(ElementTriple):
           opposite case: every DOF on a facet shares its normal, so the
           permutation has nowhere to put the flip and it surfaces here.
         """
-        if self.trace is None:
+        if self.proxy is None:
             return 1
-        member = entity.group.get_member_by_val(key)
-        trace = self.trace(self.cell)
+        member = entity.orientation_key_to_member(key)
 
         def spanning(ent):
             # The vectors spanning the entity, in the containing cell's frame.
             return np.array(self.cell.basis_vectors(entity=ent), dtype=float)[:ent.dimension]
 
-        # Guard the trace call alone: the shapes it declines are the second
+        # Guard the direction alone: the shapes it declines are the second
         # case above. Failures in basis_vectors are bugs and must propagate.
         try:
-            ref = np.asarray(trace.manipulate_basis(spanning(entity)), dtype=float).ravel()
-            new = np.asarray(trace.manipulate_basis(spanning(entity.orient(~member))), dtype=float).ravel()
+            ref = np.asarray(_measured_direction(self.proxy, spanning(entity)), dtype=float).ravel()
+            new = np.asarray(_measured_direction(self.proxy, spanning(entity.orient(~member))), dtype=float).ravel()
         except ValueError:
             return 1
 
         norm = ref.dot(ref)
         if norm == 0:
-            raise ValueError("%r measures a degenerate direction on %r" % (trace, entity))
+            raise ValueError("%r measures a degenerate direction on %r" % (self.proxy, entity))
         ratio = new.dot(ref) / norm
         if not np.isclose(abs(ratio), 1.0):
             return 1
@@ -286,9 +288,9 @@ class TensorProductTriple(ElementTriple):
         in that order.
         """
         grouped = [dof
-                   for total_dim in sorted(self.entity_dofs)
-                   for ent in sorted(self.entity_dofs[total_dim])
-                   for dof in self.entity_dofs[total_dim][ent]]
+                   for total_dim in sorted(self.entity_ids)
+                   for ent in sorted(self.entity_ids[total_dim])
+                   for dof in self.entity_ids[total_dim][ent]]
         n = len(grouped)
         # Kept so callers can map a generated DOF to the row it ends up in,
         # rather than reproducing this ordering and drifting out of step.
@@ -319,7 +321,7 @@ class TensorProductTriple(ElementTriple):
         ``P_axis_perm`` comes from the per-axis keys: permuting the key of a DOF
         names its image, so looking that key up gives the permutation directly,
         for any number of axes and across enriched summands. ``value_change``
-        comes from the element's trace, and is owed only for the permutation
+        comes from the element's proxy, and is owed only for the permutation
         itself since ``M[io]`` already carries the reflection's.
 
         An entity whose DOFs are not closed under some permutation is recorded
@@ -409,7 +411,7 @@ class TensorProductTriple(ElementTriple):
             top = self.unflat_cell.to_fiat().get_topology()
         else:
             top = self.cell.to_fiat().get_topology()
-        self.entity_dofs = defaultdict(dict)
+        self.entity_ids = defaultdict(dict)
         self.ent_mapping = {}
         self.entity_assocs = defaultdict(dict)
         self.dof_ids = {}
@@ -419,14 +421,14 @@ class TensorProductTriple(ElementTriple):
         for dim in top.keys():
             total_dim = sum(dim) if self.flat else dim
             ents = [ent_assoc[d].keys() for ent_assoc, d in zip(ent_assocs, dim)]
-            # if total_dim not in self.entity_dofs.keys():
-            #     self.entity_dofs[total_dim] = {}
+            # if total_dim not in self.entity_ids.keys():
+            #     self.entity_ids[total_dim] = {}
             #     self.entity_assocs[total_dim] = {}
             self.ent_mapping[dim] = {}
             ent_list = []
             for i, ent in enumerate(list(product(*ents))):
                 self.ent_mapping[dim][ent] = i + ent_counter[total_dim] if self.flat else ent
-                self.entity_dofs[total_dim][self.ent_mapping[dim][ent]] = []
+                self.entity_ids[total_dim][self.ent_mapping[dim][ent]] = []
                 ent_list += [ent]
             for es in ent_list:
                 e_dofs = [[d for dofs in ent_assoc[d][e].values() for d in dofs] for ent_assoc, d, e in zip(ent_assocs, dim, es)]
@@ -434,7 +436,7 @@ class TensorProductTriple(ElementTriple):
                 dofs += new_dofs
                 dof_gens = "(" + "*".join([",".join(list(ent_assoc[d][e].keys())) for ent_assoc, d, e in zip(ent_assocs, dim, es)]) + ")"
                 self.entity_assocs[total_dim][self.ent_mapping[dim][es]] = {dof_gens: new_dofs}
-                self.entity_dofs[total_dim][self.ent_mapping[dim][es]] += [i + dof_counter for i in range(len(new_dofs))]
+                self.entity_ids[total_dim][self.ent_mapping[dim][es]] += [i + dof_counter for i in range(len(new_dofs))]
                 for d in new_dofs:
                     self.dof_ids[d] = dof_counter
                     dof_counter += 1
@@ -463,7 +465,30 @@ class TensorProductTriple(ElementTriple):
         return TensorProductTriple(*self.factors, flat=False, symmetric=self.requested_symmetric, matrices=self.apply_matrices)
 
 
-def compute_matrix_transform(trace, cell, o):
+def _measured_direction(proxy, basis):
+    """What a DOF measures on an entity spanned by the rows of ``basis``, in
+    the containing cell's frame: a normal for a ``"hodge"`` proxy (H(div)), the
+    first tangent for a ``"flat"`` one (H(curl)).
+
+    Raises ValueError on an entity where it measures nothing.
+    """
+    basis = np.asarray(basis)
+    if proxy == "flat":
+        return basis[0]
+    if basis.shape[-1] == 1:
+        return basis
+    if basis.shape == (1, 2):
+        return np.matmul(basis, np.array([[0, -1], [1, 0]]))
+    if basis.shape == (2, 2):
+        # two dimensional cross product: pad with zeros and take the z component
+        padded = np.hstack([basis, np.zeros((2, 1), dtype=basis.dtype)])
+        return np.cross(padded[0], padded[1])[2]
+    if basis.shape == (2, 3):
+        return np.cross(basis[0], basis[1])
+    raise ValueError("Immersion of HDiv edges not defined in 3D")
+
+
+def compute_matrix_transform(proxy, cell, o):
     dim = cell.get_spatial_dimension()
     bvs = np.array(cell.basis_vectors())
     new_bvs = np.array(cell.orient(~o).basis_vectors())
@@ -484,7 +509,7 @@ def compute_matrix_transform(trace, cell, o):
     #     sub_mat = trace.manipulate_basis(basis_change)
     # else:
     # case where value change is a restriction of the full transformation of the basis
-    value_change = trace(cell).manipulate_basis(basis_change)
+    value_change = _measured_direction(proxy, basis_change)
     # sub_mat = np.kron((~o).matrix_form(), value_change)
     return value_change
 
@@ -494,9 +519,14 @@ class HDiv(TensorProductTriple):
     def __init__(self, tensor_element):
         self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hdiv_transformer(tensor_element)
-        self.trace = TrHDiv
+        self.proxy = "hodge"
         super(HDiv, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], self.spaces[1], Fdiv)
+
+    def pullback(self):
+        return "contravariant Piola"
+
+    def sobolev_space(self):
+        return "HDiv"
 
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
@@ -511,7 +541,7 @@ class HDiv(TensorProductTriple):
         assert element.sub_elements[1].cell.get_shape() == 1
         ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
-        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
+        transform = lambda cell, o: compute_matrix_transform(self.proxy, cell, o)
         if ks == (0, 1) and dims == (1, 1):
             # Both factors are 1D intervals (2D quad case).  Make the
             # scalar value the right hand rule normal on the y-aligned
@@ -533,14 +563,14 @@ class HDiv(TensorProductTriple):
             cell = element.sub_elements[0].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[0]) * m_b)
             return lambda v: [gem.Zero(), gem.Zero(), v], mats
-        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fdiv:
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].pullback() == "contravariant Piola":
             # First factor is an already H(div)-wrapped 2D element (the
             # in-plane RT part), second is a DG interval: the horizontal
             # (x, y) components of a 3D H(div) field.
             cell = element.sub_elements[1].cell
             mats = lambda m_a, m_b, o: np.kron(m_a, transform(cell, o[1]) * m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
+        elif ks == (1, 1) and dims == (2, 1) and element.sub_elements[0].pullback() == "covariant Piola":
             # First factor is an already H(curl)-wrapped 2D element,
             # second is a DG interval: rotate the tangential 2-vector 90
             # degrees anticlockwise into a 3-vector and pad.
@@ -563,9 +593,14 @@ class HCurl(TensorProductTriple):
     def __init__(self, tensor_element):
         self.base_element = tensor_element
         self.gem_transformer, self.mat_transformer = self.select_fuse_hcurl_transformer(tensor_element)
-        self.trace = TrHCurl
+        self.proxy = "flat"
         super(HCurl, self).__init__(*tensor_element.factors, flat=tensor_element.flat, symmetric=tensor_element.requested_symmetric, matrices=tensor_element.apply_matrices)
-        self.spaces = (self.spaces[0], self.spaces[1], Fcurl)
+
+    def pullback(self):
+        return "covariant Piola"
+
+    def sobolev_space(self):
+        return "HCurl"
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)
@@ -582,8 +617,8 @@ class HCurl(TensorProductTriple):
         dim = element.cell.get_spatial_dimension()
         ks = tuple(fe.form_degree for fe in element.sub_elements)
         dims = tuple(fe.cell.get_spatial_dimension() for fe in element.sub_elements)
-        transform = lambda cell, o: compute_matrix_transform(self.trace, cell, o)
-        if all(fe.spaces[2] == Fid for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
+        transform = lambda cell, o: compute_matrix_transform(self.proxy, cell, o)
+        if all(fe.pullback() == "identity" for fe in element.sub_elements) and dims == (1, 1):  # affine mapping, both factors 1D intervals (2D quad case)
             if ks == (1, 0):
                 # Can only be 2D.  Make the scalar value the
                 # tangential following the cell edge direction on the x-aligned edges.
@@ -600,12 +635,12 @@ class HCurl(TensorProductTriple):
                 return lambda v: [gem.Zero()] * (dim - 1) + [gem.Product(gem.Literal(bv), v)], mats
             else:
                 assert False
-        elif ks == (1, 0) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fcurl:
+        elif ks == (1, 0) and dims == (2, 1) and element.sub_elements[0].pullback() == "covariant Piola":
             # First factor is an already H(curl)-wrapped 2D element (an
             # in-plane tangential edge component), second is a CG interval
             mats = lambda m_a, m_b, o: np.kron(m_a, m_b)
             return lambda v: [gem.Indexed(v, (0,)), gem.Indexed(v, (1,)), gem.Zero()], mats
-        elif ks == (0, 1) and dims == (2, 1) and element.sub_elements[0].spaces[2] == Fid:
+        elif ks == (0, 1) and dims == (2, 1) and element.sub_elements[0].pullback() == "identity":
             # First factor is a plain (unwrapped) bilinear (Q1) scalar
             # element on a 2D base cell, second is a DG interval
             cell = element.sub_elements[1].cell
