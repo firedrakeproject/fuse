@@ -425,11 +425,12 @@ def test_quad_mesh_helmholtz_3d(elem_gen, elem_code, deg, conv_rate):
 def test_flattening(A, B, res):
     tensor_cell = TensorProductPoint(A, B)
     if not res:
-        with pytest.raises(AssertionError):
+        with pytest.raises(NotImplementedError):
             tensor_cell.flatten()
     else:
         cell = tensor_cell.flatten()
-        cell.construct_fuse_rep()
+        assert isinstance(cell, Point)
+        assert cell.dimension == 2 and len(cell.vertices()) == 4
 
 
 @pytest.mark.parametrize(["A", "B", "C"], [(line(), line(), line()),])
@@ -603,8 +604,9 @@ def test_transforms():
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     rev_edge = edge.orient(edge.group.members()[1])
     from fuse.tensor_products import HDiv, HCurl
-    cg1 = construct_cg1()
-    rev_cg1 = construct_cg1(rev_edge)
+    from fuse.element_construction import construct_interval_cgN
+    cg1 = construct_interval_cgN(1, edge)
+    rev_cg1 = construct_interval_cgN(1, rev_edge)
     dg0 = construct_dg0_integral()
     rev_dg0 = construct_dg0_integral(rev_edge)
     import gem

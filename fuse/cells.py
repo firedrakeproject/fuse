@@ -1536,7 +1536,7 @@ class CellComplexToUFL(Cell):
         return self.cell_complex.to_fiat(name=self.cellname)
 
     def __repr__(self):
-        return "FUSE_" + super(CellComplexToUFL, self).__repr__()
+        return "FUSE_" + super(CellComplexToUFL, self).__repr__() + repr(self.cell_complex)
 
     def reconstruct(self, **kwargs):
         """Reconstruct this cell, overwriting properties by those in kwargs."""
