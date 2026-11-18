@@ -210,4 +210,3 @@ def test_square_orientation_keys():
                 4: (0, 2, 1, 3), 5: (2, 0, 3, 1), 6: (1, 3, 0, 2), 7: (3, 1, 2, 0)}
     for k, p in expected.items():
         assert tuple(square.orientation_key_to_member(k).perm.array_form) == p
-

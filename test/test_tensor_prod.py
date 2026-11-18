@@ -20,7 +20,7 @@ def create_cg3_interval(cell=None):
 
     Pk = PolynomialSpace(deg)
     cg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices()))),
-                                                DOFGenerator(interior, S2)])
+                                        DOFGenerator(interior, S2)])
     return cg
 
 
