@@ -75,27 +75,36 @@ def test_component_kernel_wraps_point_kernel():
         assert [c for _, c in wrapped_dict[pt]] == [(1,)]
 
 
-def test_component_kernel_bare_behaviour_preserved():
-    bare = ComponentKernel((1,))
-    assert bare.permute(None) is bare
-    assert bare.degree(3) == 3
-    assert repr(bare) == "[(1,)]"
+def test_component_kernel_places_a_lifted_vector_dof():
+    """A vector valued DOF is lifted onto the cell in its own frame, then
+    placed in its block of the value."""
+    rt = construct_tri_rtN(1)
+    for dof in rt.generate():
+        wrapped = dof.with_kernel(ComponentKernel((1,), dof.kernel, shape=(2,)))
+        base_dict = dof.to_quadrature(2, (2,))
+        wrapped_dict = wrapped.to_quadrature(2, (4,))
+
+        assert list(base_dict.keys()) == list(wrapped_dict.keys())
+        for pt in base_dict:
+            assert np.allclose([w for w, _ in base_dict[pt]], [w for w, _ in wrapped_dict[pt]])
+            assert [c for _, c in wrapped_dict[pt]] == [(c[0] + 1,) for _, c in base_dict[pt]]
 
 
-def test_component_kernel_rejects_unsupported_bases():
-    """to_quadrature dispatches on kernel type and cannot see through the wrapper."""
-    x = sp.Symbol("x")
-    for bad in [BarycentricPolynomialKernel(x, symbols=[x]),
-                VectorKernel(1),
-                ComponentKernel((0,), PointKernel((0.5,)))]:
-        with pytest.raises(NotImplementedError):
-            ComponentKernel((0,), bad)
+def test_component_kernel_projects_the_function():
+    cell = polygon(3)
+    scalar = DOF(DeltaPairing(), ComponentKernel((1,), PointKernel((0.25, 0.5))),
+                 entity=cell, cell=cell)
+    assert np.isclose(scalar.eval(lambda x, y: (x, y)), 0.5)
+
+    block = DOF(DeltaPairing(), ComponentKernel((1,), PointKernel((0.25, 0.5)), shape=(2,)),
+                entity=cell, cell=cell)
+    assert np.allclose(block.eval(lambda x, y: (1.0, x, y)), (0.25, 0.5))
 
 
 def test_component_kernel_comp_is_tuple():
     """A list component would silently trigger fancy indexing in FIAT's to_riesz."""
-    assert isinstance(ComponentKernel([0]).comp, tuple)
-    assert isinstance(ComponentKernel._from_dict({"comp": [1], "base_kernel": None}).comp, tuple)
+    assert isinstance(ComponentKernel([0], PointKernel((0.5,))).comp, tuple)
+    assert isinstance(ComponentKernel._from_dict({"comp": [1], "base_kernel": PointKernel((0.5,))}).comp, tuple)
 
 
 @pytest.mark.parametrize("deg", [1, 3])
@@ -354,15 +363,10 @@ def test_vector_triple_registered_in_serialiser():
 
 def test_component_kernel_round_trip():
     converter = ElementSerialiser()
-    bare = converter.decode(converter.encode(ComponentKernel((1,))))
-    assert bare.comp == (1,)
-    assert isinstance(bare.comp, tuple)
-    assert bare.base_kernel is None
-
-    converter = ElementSerialiser()
-    wrapped = converter.decode(converter.encode(ComponentKernel((1,), PointKernel((0.25, 0.5)))))
+    wrapped = converter.decode(converter.encode(ComponentKernel((1,), PointKernel((0.25, 0.5)), shape=(2,))))
     assert wrapped.comp == (1,)
     assert isinstance(wrapped.comp, tuple)
+    assert wrapped.shape == (2,)
     assert isinstance(wrapped.base_kernel, PointKernel)
     assert wrapped.base_kernel.pt == (0.25, 0.5)
 

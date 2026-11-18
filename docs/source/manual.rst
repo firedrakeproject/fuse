@@ -10,6 +10,7 @@ Manual
     manual/groups
     manual/serialisation
     manual/triples
+    manual/mixed
     manual/spaces
 
 

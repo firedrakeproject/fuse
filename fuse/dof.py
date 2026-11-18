@@ -164,6 +164,14 @@ class BaseKernel():
     def __call__(self, *args):
         raise NotImplementedError("This method should be implemented by the subclass")
 
+    def unwrap(self, value_shape):
+        """The kernel that acts on the function, the value shape it sees, the
+        map from its components to those of the function the DOF acts on, and
+        the projection of that function onto what it sees.
+
+        Only a :class:`ComponentKernel` changes these."""
+        return self, value_shape, lambda c: c, lambda fn: fn
+
 
 class PointKernel(BaseKernel):
 
@@ -370,99 +378,94 @@ class PolynomialKernel(BaseKernel):
 
 
 class ComponentKernel(BaseKernel):
-    """Selects a component of the value of the function the DOF acts on.
+    """The kernel of a DOF composed with a projection, ``l o pi``.
 
-    Used bare, this is a moment against a single component.
-    A kernel passed as ``base_kernel`` is restricted to the given component,
-    e.g. a scalar functional can be lifted to act on one component of a
-    vector valued function.
+    The DOF acts on a function with more components than ``base_kernel``
+    sees, as in a vectorised or mixed element; ``pi`` takes that function
+    to the components ``base_kernel`` acts on.
 
-    Only ``PointKernel`` and scalar ``PolynomialKernel`` may be wrapped.
+    :param comp: where the projected components sit in the value of the
+        function the DOF acts on. With a scalar ``shape`` this is the index of
+        the single component. Otherwise the value is flat and ``comp`` is the
+        one-entry offset of the block.
+    :param base_kernel: the kernel of the DOF before projection.
+    :param shape: the value shape ``base_kernel`` acts on.
     """
 
-    def __init__(self, comp, base_kernel=None):
+    def __init__(self, comp, base_kernel, shape=()):
         self.comp = tuple(comp)
-        # The permitted types are dictated by the isinstance dispatches in
-        # DOF.to_quadrature, which cannot see through this wrapper.
-        if base_kernel is not None:
-            if isinstance(base_kernel, PointKernel):
-                pass
-            elif isinstance(base_kernel, PolynomialKernel) and base_kernel.shape == 0:
-                pass
-            else:
-                raise NotImplementedError(
-                    f"Cannot wrap {type(base_kernel).__name__} in a ComponentKernel. ")
+        self.shape = tuple(shape)
+        if self.shape and len(self.comp) != 1:
+            raise ValueError(f"A block of shape {self.shape} must be placed by a flat offset, not {self.comp}.")
         self.base_kernel = base_kernel
-        super(ComponentKernel, self).__init__()
 
     def __repr__(self):
-        if self.base_kernel is None:
-            return f"[{self.comp}]"
         return f"{self.base_kernel}[{self.comp}]"
 
     def degree(self, interpolant_degree):
-        if self.base_kernel is None:
-            return interpolant_degree
         return self.base_kernel.degree(interpolant_degree)
 
     @property
     def rank(self):
-        return 0 if self.base_kernel is None else self.base_kernel.rank
+        return self.base_kernel.rank
+
+    @property
+    def orientation(self):
+        return self.base_kernel.orientation
 
     def act(self, g):
-        if self.base_kernel is None:
-            return self
-        # The component index is unchanged by a cell symmetry, as each
-        # component transforms as a scalar under the identity pullback.
-        return ComponentKernel(self.comp, self.base_kernel.act(g))
+        # (l o pi)_g = l_g o pi: the projection is unchanged by a cell symmetry.
+        return ComponentKernel(self.comp, self.base_kernel.act(g), self.shape)
 
     def action_matrix(self, entity):
-        if self.base_kernel is None:
-            return super(ComponentKernel, self).action_matrix(entity)
         return self.base_kernel.action_matrix(entity)
 
     @property
     def declared_action(self):
-        return self._action if self.base_kernel is None else self.base_kernel.declared_action
+        return self.base_kernel.declared_action
 
     @property
     def action(self):
-        return super(ComponentKernel, self).action if self.base_kernel is None else self.base_kernel.action
+        return self.base_kernel.action
 
     def with_action(self, action):
-        if self.base_kernel is None:
-            return super(ComponentKernel, self).with_action(action)
-        return ComponentKernel(self.comp, self.base_kernel.with_action(action))
+        return ComponentKernel(self.comp, self.base_kernel.with_action(action), self.shape)
 
     def __call__(self, *args):
-        if self.base_kernel is None:
-            return tuple(args[i] if i in self.comp else 0 for i in range(len(args)))
         return self.base_kernel(*args)
 
-    def _shift(self, comp):
-        """Select ``self.comp`` of a scalar base, or offset a shaped base by it."""
-        if len(comp) == 0:
+    def embed(self, c):
+        """The component of the function the DOF acts on that component ``c``
+        of the projected value comes from."""
+        if not self.shape:
             return self.comp
-        if len(comp) != len(self.comp):
-            raise ValueError(f"Cannot offset a component of rank {len(comp)} by one of rank {len(self.comp)}.")
-        return tuple(a + b for a, b in zip(self.comp, comp))
+        return (self.comp[0] + int(np.ravel_multi_index(c, self.shape)),)
 
-    def evaluate(self, Qpts, Qwts, basis_change, action, dim, value_shape):
-        if self.base_kernel is None:
-            return Qpts, Qwts, [[self.comp] for pt in Qpts]
-        pts, wts, comps = self.base_kernel.evaluate(Qpts, Qwts, basis_change,
-                                                    action, dim, tuple())
-        return pts, wts, [[self._shift(c) for c in cs] for cs in comps]
+    def project(self, fn):
+        """``pi``: the function ``base_kernel`` acts on."""
+        def projected(*x):
+            value = np.asarray(fn(*x))
+            if not self.shape:
+                return value[self.comp]
+            start = self.comp[0]
+            return np.ravel(value)[start:start + int(np.prod(self.shape))].reshape(self.shape)
+        return projected
+
+    def unwrap(self, value_shape):
+        kernel, shape, embed, project = self.base_kernel.unwrap(self.shape)
+        return (kernel, shape,
+                lambda c: self.embed(embed(c)),
+                lambda fn: project(self.project(fn)))
 
     def _to_dict(self):
-        o_dict = {"comp": self.comp, "base_kernel": self.base_kernel}
+        o_dict = {"comp": self.comp, "base_kernel": self.base_kernel, "shape": self.shape}
         return o_dict
 
     def dict_id(self):
         return "ComponentKernel"
 
     def _from_dict(obj_dict):
-        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict["base_kernel"])
+        return ComponentKernel(tuple(obj_dict["comp"]), obj_dict["base_kernel"], tuple(obj_dict.get("shape", ())))
 
 
 class DOF():
@@ -500,7 +503,8 @@ class DOF():
         return action.lifted() if self.immersed else action
 
     def eval(self, fn, trace=True):
-        return self.pairing(self.kernel, fn, self.cell)
+        kernel, _, _, project = self.kernel.unwrap(())
+        return self.pairing(kernel, project(fn), self.cell)
 
     def tabulate(self, Qpts):
         return self.kernel.tabulate(Qpts)
@@ -523,28 +527,32 @@ class DOF():
         return Functional(ref_el, value_shape, self.to_quadrature(interpolant_degree, value_shape), {}, str(self))
 
     def to_quadrature(self, arg_degree, value_shape):
+        # the kernel is evaluated and lifted in the frame of the value it
+        # acts on, then placed in the value of the function the DOF acts on
+        kernel, value_shape, embed, _ = self.kernel.unwrap(value_shape)
         entity = self.cell_defined_on
-        Qpts, Qwts = entity.quadrature(self.kernel.degree(arg_degree))
+        Qpts, Qwts = entity.quadrature(kernel.degree(arg_degree))
         Qwts = Qwts.reshape(Qwts.shape + (1,))
-        basis_change = self.kernel.action_matrix(entity)
-        action = self.kernel.action.resolve(entity, self.kernel.rank)
+        basis_change = kernel.action_matrix(entity)
+        action = kernel.action.resolve(entity, kernel.rank)
 
-        if isinstance(self.kernel, BarycentricPolynomialKernel):
+        if isinstance(kernel, BarycentricPolynomialKernel):
             pts = [np.matmul(basis_change.T, pt) for pt in Qpts]
             bary_pts = entity.cartesian_to_barycentric(pts)
-            pts, wts, comps = self.kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, action, self.cell.dimension, value_shape)
+            pts, wts, comps = kernel.evaluate(Qpts, bary_pts, Qwts, basis_change, action, self.cell.dimension, value_shape)
         else:
-            pts, wts, comps = self.kernel.evaluate(Qpts, Qwts, basis_change, action, self.cell.dimension, value_shape)
+            pts, wts, comps = kernel.evaluate(Qpts, Qwts, basis_change, action, self.cell.dimension, value_shape)
 
         if self.immersed:
             pts = np.array([self.cell.attachment(self.cell.id, entity.id)(*pt) for pt in pts])
             if self.target_space is not None:
                 # derivative traces are not yet kernel actions
                 wts = np.outer(wts, self.target_space.tabulate(pts, entity))
-            elif not isinstance(self.kernel, (PointKernel, ComponentKernel)):
-                L = action.lift_matrix(self.cell, entity, self.kernel.rank)
+            elif not isinstance(kernel, PointKernel):
+                L = action.lift_matrix(self.cell, entity, kernel.rank)
                 if L is not None:
                     wts = np.matmul(np.reshape(wts, (len(wts), -1)), L.T)
+        comps = [[embed(c) for c in cs] for cs in comps]
         # pt dict is { pt: [(weight, component)]}
         if len(comps) > 0 and len(wts) > 0 and len(wts[0]) != len(comps[0]):
             raise ValueError(f"{self} produced {len(wts[0])} weights for {len(comps[0])} components. The kernel and the value shape disagree.")
@@ -563,7 +571,7 @@ class DOF():
     def lift_direction(self):
         """The direction an immersed DOF's kernel is lifted along: the tangent
         of a flat form on an edge or the normal of a hodge form, or None."""
-        if not self.immersed or isinstance(self.kernel, (PointKernel, ComponentKernel)):
+        if not self.immersed or isinstance(self.kernel.unwrap(())[0], PointKernel):
             return None
         entity, rank = self.cell_defined_on, self.kernel.rank
         L = self.kernel.action.resolve(entity, rank).lift_matrix(self.cell, entity, rank)
@@ -599,17 +607,20 @@ class ImmersedDOF(DOF):
     def eval(self, fn, trace=True):
         attached_fn = fn.attach(self.attachment)
 
+        kernel, _, _, project = self.kernel.unwrap(())
+        attached_fn = project(attached_fn)
         if trace:
             attached_fn = self.trace(attached_fn)
 
-        return self.pairing(self.kernel, attached_fn, self.cell)
+        return self.pairing(kernel, attached_fn, self.cell)
 
     def trace(self, fn):
-        """The trace of ``fn`` on the entity, the dual of the kernel's lift."""
+        """The trace of ``fn`` on the entity, the dual of the kernel's lift.
+        ``fn`` is already projected onto the value the kernel acts on."""
         if self.target_space is not None:
             # derivative traces are not yet kernel actions
             return self.target_space(fn, self.cell_defined_on)
-        if isinstance(self.kernel, (PointKernel, ComponentKernel)):
+        if isinstance(self.kernel.unwrap(())[0], PointKernel):
             return fn
         entity, rank = self.cell_defined_on, self.kernel.rank
         action = self.kernel.action.resolve(entity, rank)
