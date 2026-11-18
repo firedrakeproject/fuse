@@ -475,7 +475,7 @@ def construct_interval_dgN_integral(deg, cell=None):
     if cell is None:
         cell = line()
     Pk = PolynomialSpace(deg)
-    dofs = lagrange_facet_fns(cell, deg, interior=True, vector=False)
+    dofs = lagrange_facet_fns(cell, deg)
     dg = ElementTriple(cell, (Pk, C0), dofs)
     assert len(dg.generate()) == deg + 1
     return dg

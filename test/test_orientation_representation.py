@@ -36,11 +36,12 @@ def homomorphism_failures(elem, dim, ent_id):
     entity = elem.cell.d_entities(dim)[ent_id]
     mats = elem.matrices[dim][ent_id]
     members = entity.group.members()
+    key_of = {entity.orientation_key_to_member(k).perm: k for k in mats}
     bad, total = 0, 0
     for g in members:
         for h in members:
-            keys = (g.numeric_rep(), h.numeric_rep(), (g * h).numeric_rep())
-            if any(k not in mats for k in keys):
+            keys = (key_of.get(g.perm), key_of.get(h.perm), key_of.get((g * h).perm))
+            if any(k is None for k in keys):
                 continue
             total += 1
             if not np.allclose(mats[keys[0]] @ mats[keys[1]], mats[keys[2]]):
@@ -52,7 +53,7 @@ def assert_is_representation(elem):
     dim = elem.cell.get_spatial_dimension()
     checked = 0
     for d in range(dim + 1):
-        for ent_id, dofs in elem.entity_dofs[d].items():
+        for ent_id, dofs in elem.entity_ids[d].items():
             if len(dofs) == 0:
                 continue
             bad, total = homomorphism_failures(elem, d, ent_id)
@@ -65,10 +66,10 @@ def regrouped_positions(elem):
     """Where each generated DOF ends up in the reindexed matrices.
 
     Read from the element rather than recomputed here: these tests check the
-    matrices against ``entity_dofs``, and a second copy of the ordering rule
+    matrices against ``entity_ids``, and a second copy of the ordering rule
     would silently disagree the moment the real one changed.
     """
-    n = sum(len(dofs) for ents in elem.entity_dofs.values() for dofs in ents.values())
+    n = sum(len(dofs) for ents in elem.entity_ids.values() for dofs in ents.values())
     grouped = getattr(elem, "closure_order", list(range(n)))
     return {gen: pos for pos, gen in enumerate(grouped)}
 
@@ -89,10 +90,10 @@ def assert_entity_blocks(elem):
 
     Anything else means a block was written at the wrong offset -- which is
     what happens when matrices reindexed into Firedrake's closure order are
-    paired with ``entity_dofs``, still in generation order.
+    paired with ``entity_ids``, still in generation order.
     """
     positions = regrouped_positions(elem)
-    for dim, ents in elem.entity_dofs.items():
+    for dim, ents in elem.entity_ids.items():
         if dim == 0:
             continue
         for ent_id, dofs in ents.items():
@@ -136,7 +137,7 @@ def test_cell_interior_matches_fiat_tensorproduct(d, deg):
     """
     elem = periodic_table(2, d, 0, deg)
     positions = regrouped_positions(elem)
-    interior = [positions[i] for i in elem.entity_dofs[d][0]]
+    interior = [positions[i] for i in elem.entity_ids[d][0]]
     assert len(interior) == (deg - 1) ** d
 
     o_p_maps = [make_entity_permutations_simplex(1, deg - 1)] * d
@@ -201,7 +202,7 @@ def test_quad_axis_swap_crosses_enriched_components():
     """
     elem = periodic_table(2, 2, 2, 2)
     positions = regrouped_positions(elem)
-    interior = [positions[i] for i in elem.entity_dofs[2][0]]
+    interior = [positions[i] for i in elem.entity_ids[2][0]]
     assert len(interior) == 4
 
     # Key 4 is the pure axis swap: eo == 1, no reflections. Swapping two axes
