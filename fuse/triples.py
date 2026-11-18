@@ -12,6 +12,7 @@ import warnings
 import numpy as np
 import scipy
 from functools import cache
+from itertools import product
 
 
 def is_permutation_matrix(M):
@@ -365,9 +366,6 @@ class ElementTriple():
                                for dim in range(self.cell.dim() + 1)}
         cell_dim = self.cell.dim()
         cell_dict = entity_associations[cell_dim][0]
-        pure_perm = True
-        sub_pure_perm = True
-        num_dofs = {}
 
         # construct mapping of entities to the dof generators and the dofs they generate
         for d in dofs:
@@ -380,13 +378,6 @@ class ElementTriple():
                 dims = [sub_dim]
             for dim in dims:
                 dof_gen = str(d.generation[dim])
-                num_dofs[dof_gen] = (dim, d.generation[dim].transversal.size())
-
-                if not len(d.generation[dim].g2.members()) == 1:
-                    if dim == cell_dim:
-                        pure_perm = False
-                    else:
-                        sub_pure_perm = False
 
                 if dof_gen in sub_dict.keys() and (dim < cell_dim or not d.immersed):
                     sub_dict[dof_gen] += [d]
@@ -397,7 +388,7 @@ class ElementTriple():
                 elif dim == cell_dim and d.immersed:
                     cell_dict[dof_gen] = [d]
 
-        return entity_associations, pure_perm, sub_pure_perm
+        return entity_associations, None, None
 
     def _initialise_entity_dicts(self, dofs, tensor=False):
         # min_ids = self.cell.get_starter_ids()
@@ -416,18 +407,15 @@ class ElementTriple():
             ents = cell.d_entities(dim)
             for e_id, e in enumerate(ents):
                 # old_e_id = e.id - min_ids[dim]
-                members = e.group.members()
                 oriented_mats_by_entity[dim][e_id] = {}
                 flat_by_entity[dim][e_id] = {}
-                members = sorted(members, key=lambda g: g.numeric_rep())
-                for g in members:
-                    val = g.numeric_rep()
+                for val in range(e.group.size()):
                     oriented_mats_by_entity[dim][e_id][val] = dof_id_mat.copy()
                     flat_by_entity[dim][e_id][val] = []
         return oriented_mats_by_entity, flat_by_entity
 
     def generation_order_matrices(self):
-        """Orientation matrices indexed to match ``self.entity_dofs``.
+        """Orientation matrices indexed to match ``self.entity_ids``.
 
         Equal to ``self.matrices`` unless a subclass has reindexed those into
         Firedrake's dimension-grouped closure order, in which case the
@@ -445,15 +433,16 @@ class ElementTriple():
         assert self.cell == other.cell
         assert self.spaces[0].shape == other.spaces[0].shape
         assert str(self.spaces[1]) == str(other.spaces[1])
-        assert self.spaces[2] == other.spaces[2]
+        assert self.pullback() == other.pullback()
 
-        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], self.spaces[2])
+        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1])
 
         from fuse.tensor_products import TensorProductTriple
         if isinstance(other, TensorProductTriple):
             return other + self
 
-        return ElementTriple(self.cell, spaces, self.DOFGenerator + other.DOFGenerator)
+        # a generator belongs to one triple, so the sum is built from fresh ones
+        return ElementTriple(self.cell, spaces, [DOFGenerator(g.x, g.transversal) for g in self.DOFGenerator + other.DOFGenerator])
 
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
