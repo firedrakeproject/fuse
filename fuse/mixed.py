@@ -1,9 +1,8 @@
 import numpy as np
 import finat.ufl
 from FIAT.mixed import MixedElement as FIATMixedElement
-from fuse.triples import ElementTriple
+from fuse.triples import ElementTriple, plot_dof
 from fuse.dof import DeltaPairing, L2Pairing, FuseFunction, PointKernel
-from fuse.traces import Trace
 
 
 class MixedTriple():
@@ -108,17 +107,14 @@ class MixedTriple():
                 if center is None:
                     center = [0, 0, 0]
                 if isinstance(dof.pairing, DeltaPairing) and isinstance(dof.kernel, PointKernel):
-                    coord = dof.eval(identity, pullback=False)
+                    coord = dof.eval(identity, trace=False)
                 elif isinstance(dof.pairing, L2Pairing):
                     coord = center
                 else:
                     coord = center
                 if len(coord) == 1:
                     coord = (coord[0], 0)
-                if isinstance(dof.target_space, Trace):
-                    dof.target_space.plot(ax, coord, dof.cell_defined_on, color=color)
-                else:
-                    ax.scatter(*coord, color=color)
+                plot_dof(ax, dof, coord, color=color)
                 ax.text(*coord, "%d.%d" % (block, dof.id))
         plt.axis('off')
         ax.get_xaxis().set_visible(False)

@@ -84,9 +84,9 @@ A mixed element **cannot** be:
 
 * treated as a Ciarlet element -- it has no single polynomial space, nodal basis
   or well-defined single degree;
-* immersed onto a facet or passed to a trace (:class:`~fuse.traces.TrH1`,
-  :class:`~fuse.traces.TrHDiv`, ...): the sub-elements have heterogeneous Sobolev
-  spaces and no common trace. Immerse the sub-elements *before* mixing;
+* immersed onto a facet: the sub-elements have heterogeneous Sobolev spaces
+  and pullbacks, so there is no common way to restrict them. Immerse the
+  sub-elements *before* mixing;
 * enriched (added) with another element -- enrichment requires an identical value
   shape and mapping;
 * used as a factor in a tensor product.

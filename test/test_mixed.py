@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import sympy as sp
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse import *
 from FIAT.mixed import MixedElement as FIATMixedElement
 from FIAT.quadrature_schemes import create_quadrature
@@ -115,7 +116,7 @@ def test_two_tet_mixed_orientation(perm):
     cell = make_tetrahedron()
     me = MixedTriple(construct_tet_rt(cell), create_dg1_tet(cell))
 
-    mesh = TwoTetMesh(perm=perm, use_fuse=True)
+    mesh = TwoTetMesh(perm=perm, cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(mesh)
     gvec = as_vector([1.0, 2.0, 3.0])    # constant vector, reproduced by RT1
     gscal = x[0]                         # linear scalar, reproduced by DG1
@@ -148,7 +149,7 @@ def test_taylor_hood_stokes():
     is f = -div(grad(u)) + grad(p) = (1, 0). Taylor-Hood contains this solution
     exactly, so the mixed element must reproduce it to solver tolerance."""
     cell = polygon(3)
-    mesh = UnitSquareMesh(4, 4, use_fuse=True)
+    mesh = UnitSquareMesh(4, 4, cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(mesh)
     u_exact = as_vector([x[1], -x[0]])
     p_exact = x[0]
