@@ -15,12 +15,12 @@ def create_cg3_interval(cell=None):
     if cell.dim() > 1:
         raise NotImplementedError("This method is for cg3 on edges, please use construct_cg3 for triangles")
     vert_dg = create_dg0(cell.vertices()[0])
-    xs = [immerse(cell, vert_dg, TrH1)]
+    xs = [immerse(cell, vert_dg)]
     interior = [DOF(DeltaPairing(), PointKernel((-1/np.sqrt(5), )))]
 
     Pk = PolynomialSpace(deg)
-    cg = ElementTriple(cell, (Pk, C0, Fid), [DOFGenerator(xs, get_cyc_group(len(cell.vertices())), S1),
-                                                DOFGenerator(interior, S2, S1)])
+    cg = ElementTriple(cell, (Pk, C0), [DOFGenerator(xs, get_cyc_group(len(cell.vertices()))),
+                                                DOFGenerator(interior, S2)])
     return cg
 
 

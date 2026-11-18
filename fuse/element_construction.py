@@ -452,21 +452,21 @@ def construct_interval_cgN(deg, cell=None):
     vert = cell.vertices()[0]
 
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(vert, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
-    v_xs = [immerse(cell, dg0, TrH1)]
-    v_dofs = [DOFGenerator(v_xs, get_cyc_group(len(cell.vertices())), S1)]
+    dg0 = ElementTriple(vert, (P0, C0), DOFGenerator(xs, S1))
+    v_xs = [immerse(cell, dg0)]
+    v_dofs = [DOFGenerator(v_xs, get_cyc_group(len(cell.vertices())))]
 
     points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
 
     Pk = PolynomialSpace(deg)
     sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
-    sym_dofs = [DOFGenerator([pt], S2, S1) for pt in sym_points]
+    sym_dofs = [DOFGenerator([pt], S2) for pt in sym_points]
     if 0 in points:
-        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1, S1)]
+        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)]
     else:
         centre_dof = []
 
-    cg = ElementTriple(cell, (Pk, C0, Fid), v_dofs + sym_dofs + centre_dof)
+    cg = ElementTriple(cell, (Pk, C0), v_dofs + sym_dofs + centre_dof)
     assert len(cg.generate()) == deg + 1
     return cg
 
@@ -476,7 +476,7 @@ def construct_interval_dgN_integral(deg, cell=None):
         cell = line()
     Pk = PolynomialSpace(deg)
     dofs = lagrange_facet_fns(cell, deg, interior=True, vector=False)
-    dg = ElementTriple(cell, (Pk, C0, Fid), dofs)
+    dg = ElementTriple(cell, (Pk, C0), dofs)
     assert len(dg.generate()) == deg + 1
     return dg
 

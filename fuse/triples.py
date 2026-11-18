@@ -380,7 +380,7 @@ class ElementTriple():
                 dims = [sub_dim]
             for dim in dims:
                 dof_gen = str(d.generation[dim])
-                num_dofs[dof_gen] = (dim, d.generation[dim].g1.size())
+                num_dofs[dof_gen] = (dim, d.generation[dim].transversal.size())
 
                 if not len(d.generation[dim].g2.members()) == 1:
                     if dim == cell_dim:

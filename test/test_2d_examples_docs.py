@@ -34,7 +34,7 @@ def construct_dg0_integral(edge=None):
     if not edge:
         edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     xs = [DOF(L2Pairing(), VectorKernel(0.5))]
-    dg0 = ElementTriple(edge, (P0, C0, Fid), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(edge, (P0, C0), DOFGenerator(xs, S1))
     return dg0
 
 
@@ -42,7 +42,7 @@ def construct_dg1_integral(cell=None):
     edge = Point(1, [Point(0), Point(0)], vertex_num=2)
     x = sp.Symbol("x")
     xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,)))]
-    dg1 = ElementTriple(edge, (P1, C0, Fid), DOFGenerator(xs, S2, S1))
+    dg1 = ElementTriple(edge, (P1, C0), DOFGenerator(xs, S2))
     return dg1
 
 
@@ -52,8 +52,8 @@ def construct_dg2_integral(cell=None):
     xs = [DOF(L2Pairing(), PolynomialKernel((x/2)*(x + 1), symbols=(x,)))]
     centre = [DOF(L2Pairing(), PolynomialKernel((1 - x**2), symbols=(x,)))]
 
-    dofs = [DOFGenerator(xs, S2, S1), DOFGenerator(centre, S1, S1)]
-    dg2 = ElementTriple(edge, (PolynomialSpace(2), C0, Fid), dofs)
+    dofs = [DOFGenerator(xs, S2), DOFGenerator(centre, S1)]
+    dg2 = ElementTriple(edge, (PolynomialSpace(2), C0), dofs)
     return dg2
 
 
