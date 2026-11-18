@@ -64,11 +64,13 @@ def tabulate_sympy(expr, pts):
 
 
 def max_deg_sp_mat(sp_mat):
+    """Total degree of a sympy expression, or the largest over a matrix's entries."""
+    comps = sp_mat if isinstance(sp_mat, sp.Matrix) else [sp_mat]
     degs = []
-    for comp in sp_mat:
+    for comp in comps:
         # only compute degree if component is a polynomial
         if sp.sympify(comp).as_poly():
-            degs += [sp.sympify(comp).as_poly().degree()]
+            degs += [sp.sympify(comp).as_poly().total_degree()]
     return max(degs)
 
 

@@ -444,6 +444,16 @@ class TensorProductTriple(ElementTriple):
 
         return dofs
 
+    def to_fiat(self):
+        if self.flat and not self.symmetric:
+            # A flattened cell's group contains axis permutations, so every
+            # orientation must be available. Only an element whose DOFs are
+            # closed under those permutations can supply them.
+            raise NotImplementedError(
+                "%r is not symmetric, so it cannot supply the axis-permuting "
+                "orientations a flattened cell requires" % (self,))
+        return super().to_fiat()
+
     def to_ufl(self):
         ufl_sub_elements = [e.to_ufl() for e in self.sub_elements]
         if self.flat:
@@ -528,6 +538,9 @@ class HDiv(TensorProductTriple):
     def sobolev_space(self):
         return "HDiv"
 
+    def get_value_shape(self):
+        return (self.cell.get_spatial_dimension(),)
+
     def to_ufl(self):
         return HDivElement(super(HDiv, self).to_ufl(), transform=self.gem_transformer)
 
@@ -601,6 +614,9 @@ class HCurl(TensorProductTriple):
 
     def sobolev_space(self):
         return "HCurl"
+
+    def get_value_shape(self):
+        return (self.cell.get_spatial_dimension(),)
 
     def to_ufl(self):
         return HCurlElement(super(HCurl, self).to_ufl(), self.gem_transformer)

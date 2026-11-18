@@ -53,9 +53,7 @@ class EnrichedElement(TensorProductTriple):
         return self.A.sobolev_space()
 
     def get_value_shape(self):
-        if str(self.spaces[1]) in ("HDiv", "HCurl"):
-            return (self.cell.get_spatial_dimension(),)
-        return super().get_value_shape()
+        return self.A.get_value_shape()
 
     def __repr__(self):
         return "Enriched(%s, %s)" % (repr(self.A), repr(self.B))
