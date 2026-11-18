@@ -1014,6 +1014,14 @@ class HypercubePoint(Point):
         product = CellComplexToFiatTensorProduct(TensorProductPoint(*self.axes), name)
         return CellComplexToFiatHypercube(self, product)
 
+    def d_entities(self, d, get_class=True):
+        """As for a Point; the flattened cell itself can also be indexed by a
+        tuple of factor dimensions."""
+        if isinstance(d, tuple):
+            entities = self.entities_by_mask[d]
+            return entities if get_class else [e.id for e in entities]
+        return super().d_entities(d, get_class)
+
     def axis_reordering(self, cone, image):
         """How the facets listed as ``image`` reorder the axes of ``cone``.
 
@@ -1177,6 +1185,17 @@ class Edge():
         return Edge(o_dict["point"], o_dict["attachment"], o_dict["orientation"])
 
 
+def _facet_images(entity, g):
+    """Where the symmetry ``g`` of ``entity`` sends each of its facets."""
+    if entity.dimension == 0:
+        return {}
+    verts = entity.ordered_vertices()
+    s = Permutation(g.perm, size=len(verts)).array_form
+    facets = [c.point for c in entity.connections]
+    by_vertices = {frozenset(verts.index(v) for v in f.ordered_vertices()): f for f in facets}
+    return {f: by_vertices[frozenset(s[verts.index(v)] for v in f.ordered_vertices())] for f in facets}
+
+
 class TensorProductPoint():
     id_iter = itertools.count()
 
@@ -1202,32 +1221,19 @@ class TensorProductPoint():
         return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
 
     def component_orientations(self):
-        from fuse.utils import canonical_tensor_orientation_key
-        from fuse.groups import signed_axis_permutation
+        """For each tuple of entity dimensions, the orientation key of the
+        flattened entity that each tuple of the factor entities' keys stands for."""
+        flat = self.flatten()
         self.component_os_to_os = {}
         for dim in self.to_fiat().get_topology():
             self.component_os_to_os[dim] = {}
-            ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
-            active = [i for i, d in enumerate(dim) if d > 0]
-            ed = sum(dim)
-            group = list(product(*(e.group.members() for e in ents)))
-            for gs in group:
-                # Each active factor may itself be a multi-dimensional entity
-                # (e.g. a flattened quad face used as a tensor factor), so its
-                # member is decomposed into its own (axis_perm, flips) block
-                # rather than assumed to contribute a single reflection bit.
-                axis_perm = [0] * ed
-                flips = [0] * ed
-                offset = 0
-                for i in active:
-                    d_local = dim[i]
-                    local_perm, local_flips = signed_axis_permutation(gs[i], d_local)
-                    for j in range(d_local):
-                        axis_perm[offset + j] = offset + local_perm[j]
-                        flips[offset + j] = local_flips[j]
-                    offset += d_local
-                o_val = canonical_tensor_orientation_key(tuple(axis_perm), tuple(flips), ed)
-                self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
+            sub = tuple(f.d_entities(d)[0] for f, d in zip(self.factors, dim))
+            entity = flat.entities_by_tuple[sub]
+            cone = [child for _, _, child in self._facets(sub, dim)]
+            for keys in product(*(range(e.group.size()) for e in sub)):
+                images = [_facet_images(e, e.orientation_key_to_member(k)) for e, k in zip(sub, keys)]
+                image = [tuple(m.get(c, c) for m, c in zip(images, child)) for child in cone]
+                self.component_os_to_os[dim][keys] = entity.cone_orientation(cone, image) if cone else 0
         return self.component_os_to_os
 
     def compute_cell_group(self):
@@ -1302,6 +1308,9 @@ class TensorProductPoint():
 
         Every entity is the product of one entity of each factor.
         """
+        if getattr(self, "_flat", None) is not None:
+            # built once, so that everything using this product shares one flattened cell
+            return self._flat
         if not all(f.dimension == 1 or isinstance(f, HypercubePoint) for f in self.factors):
             raise NotImplementedError("Only products of intervals and of flattened products can be flattened")
         masks_by_dim = defaultdict(list)
@@ -1309,9 +1318,11 @@ class TensorProductPoint():
             masks_by_dim[sum(mask)].append(mask)
 
         points = {}
+        by_mask = {}
         for d in sorted(masks_by_dim):
             for mask in masks_by_dim[d]:
-                for entity in itertools.product(*(f.d_entities(k) for f, k in zip(self.factors, mask))):
+                by_mask[mask] = list(itertools.product(*(f.d_entities(k) for f, k in zip(self.factors, mask))))
+                for entity in by_mask[mask]:
                     if d == 0:
                         points[entity] = Point(0)
                         continue
@@ -1324,7 +1335,12 @@ class TensorProductPoint():
                     else:
                         axes = sum((e.axes if isinstance(e, HypercubePoint) else (e,) for e in entity if e.dimension > 0), ())
                         points[entity] = HypercubePoint(d, edges, axes)
-        return points[tuple(self.factors)]
+        top = points[tuple(self.factors)]
+        top.factors = self.factors
+        top.entities_by_tuple = points
+        top.entities_by_mask = {mask: [points[e] for e in ents] for mask, ents in by_mask.items()}
+        self._flat = top
+        return top
 
     @staticmethod
     def _facets(entity, mask):
