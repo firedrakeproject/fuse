@@ -17,6 +17,7 @@ from FIAT.quadrature_schemes import create_quadrature
 from ufl.cell import Cell, TensorProductCell
 from functools import cache
 from collections import defaultdict
+from itertools import product
 
 
 class Arrow3D(FancyArrowPatch):
@@ -385,6 +386,9 @@ class Point():
 
     def dim(self):
         return self.dimension
+
+    def dimensions(self):
+        return [i for i in range(self.dimension + 1)]
 
     def get_shape(self):
         num_verts = len(self.vertices())
@@ -1174,48 +1178,132 @@ class Edge():
 
 
 class TensorProductPoint():
+    id_iter = itertools.count()
 
     def __init__(self, *factors):
-        self.factors = factors
+        self.id = next(self.id_iter)
         self.A = factors[0]
         self.B = factors[1]
+        self.factors = factors
         self.dimension = sum(f.dimension for f in factors)
+        self.flat = False
+        self.fiat_elem = None
+        self.group = self.compute_cell_group()
+        self.entities = {}
+
+        for d in self.dimensions()[:-1]:
+            self.entities[d] = [TensorProductPoint(*entities) for entities in product(*(f.d_entities(degree, True) for f, degree in zip(factors, d)))]
+        self.entities[self.dim()] = [self]
 
     def ordered_vertices(self):
-        return self.A.ordered_vertices() + self.B.ordered_vertices()
+        return self.entities[0]
+
+    def ordered_vertex_coords(self):
+        return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
+
+    def component_orientations(self):
+        from fuse.utils import canonical_tensor_orientation_key
+        from fuse.groups import signed_axis_permutation
+        self.component_os_to_os = {}
+        for dim in self.to_fiat().get_topology():
+            self.component_os_to_os[dim] = {}
+            ents = [f.d_entities(d)[0] for f, d in zip(self.factors, dim)]
+            active = [i for i, d in enumerate(dim) if d > 0]
+            ed = sum(dim)
+            group = list(product(*(e.group.members() for e in ents)))
+            for gs in group:
+                # Each active factor may itself be a multi-dimensional entity
+                # (e.g. a flattened quad face used as a tensor factor), so its
+                # member is decomposed into its own (axis_perm, flips) block
+                # rather than assumed to contribute a single reflection bit.
+                axis_perm = [0] * ed
+                flips = [0] * ed
+                offset = 0
+                for i in active:
+                    d_local = dim[i]
+                    local_perm, local_flips = signed_axis_permutation(gs[i], d_local)
+                    for j in range(d_local):
+                        axis_perm[offset + j] = offset + local_perm[j]
+                        flips[offset + j] = local_flips[j]
+                    offset += d_local
+                o_val = canonical_tensor_orientation_key(tuple(axis_perm), tuple(flips), ed)
+                self.component_os_to_os[dim][tuple(g.numeric_rep() for g in gs)] = o_val
+        return self.component_os_to_os
+
+    def compute_cell_group(self):
+        """
+        Systematically work out the symmetry group of the tensor product cell.
+        """
+        verts = self.vertices()
+        group = list(product(*(f.group.members() for f in self.factors)))
+        # group = [(g_a, g_b) for g_a in self.A.group.members() for g_b in self.B.group.members()]
+        perms = []
+        for gs in group:
+            new_verts = list(product(*(g.permute(f.vertices()) for g, f in zip(gs, self.factors))))
+            # new_verts = [(v_a, v_b) for v_a in g_a.permute(self.A.vertices()) for v_b in g_b.permute(self.B.vertices())]
+            perm = [verts.index(v) for v in new_verts]
+            perms += [fuse_groups.Permutation(perm)]
+
+        grp = fuse_groups.PermutationSetRepresentation(perms).add_cell(self)
+        return grp
+
+    def get_starter_ids(self):
+        # this doesn't actually make sense - remove when confirmed all changes to eliminate min ids from triple is done
+        raise NotImplementedError
+        a_starts = self.A.get_starter_ids()
+        b_starts = self.B.get_starter_ids()
+        ids = []
+        for a, b in zip(a_starts, b_starts):
+            ids += [max(a, b)]
+        return ids
 
     def get_spatial_dimension(self):
         return self.dimension
 
     def get_sub_entities(self):
-        self.A.get_sub_entities()
-        self.B.get_sub_entities()
+        return self.to_fiat().sub_entities
+
+    def dim(self):
+        return self.dimensions()[-1]
+
+    def dimensions(self):
+        return list(product(*(f.dimensions() for f in self.factors)))
 
     def d_entities(self, d, get_class=True):
-        return self.A.d_entities(d, get_class) + self.B.d_entities(d, get_class)
+        if isinstance(d, tuple):
+            if get_class:
+                return self.entities[d]
+            return [e.id for e in self.entities[d]]
+        raise NotImplementedError("Tensor Product point must be indexed by a tuple of dimensions")
 
     def vertices(self, get_class=True, return_coords=False):
         # TODO maybe refactor with get_node
-        verts = self.d_entities(0, get_class)
         if return_coords:
-            a_verts = self.A.vertices(return_coords=return_coords)
-            b_verts = self.B.vertices(return_coords=return_coords)
-            return [a + b for a in a_verts for b in b_verts]
-        return verts
+            # a_verts = self.A.vertices(return_coords=return_coords)
+            # b_verts = self.B.vertices(return_coords=return_coords)
+            # return [a + b for a in a_verts for b in b_verts]
+            return [sum(verts, ()) for verts in product(*(f.vertices(return_coords=True) for f in self.factors))]
+        # return [(a, b) for a in self.A.vertices() for b in self.B.vertices()]
+        return list(product(*(f.vertices() for f in self.factors)))
+
+    def __repr__(self):
+        return "*".join([str(f) for f in self.factors])
 
     def to_ufl(self, name=None):
         return TensorProductCell(*[f.to_ufl() for f in self.factors])
 
     def to_fiat(self, name=None):
-        return CellComplexToFiatTensorProduct(self, name)
+        if self.fiat_elem is None:
+            self.fiat_elem = CellComplexToFiatTensorProduct(self, name)
+        return self.fiat_elem
 
     def flatten(self):
         """The product as a single cell, a :class:`HypercubePoint`.
 
         Every entity is the product of one entity of each factor.
         """
-        if not all(f.dimension == 1 for f in self.factors):
-            raise NotImplementedError("Only products of intervals can be flattened")
+        if not all(f.dimension == 1 or isinstance(f, HypercubePoint) for f in self.factors):
+            raise NotImplementedError("Only products of intervals and of flattened products can be flattened")
         masks_by_dim = defaultdict(list)
         for mask in itertools.product(*(range(f.dimension + 1) for f in self.factors)):
             masks_by_dim[sum(mask)].append(mask)
@@ -1234,7 +1322,7 @@ class TensorProductPoint():
                     if d == 1:
                         points[entity] = Point(1, edges)
                     else:
-                        axes = [e for e in entity if e.dimension == 1]
+                        axes = sum((e.axes if isinstance(e, HypercubePoint) else (e,) for e in entity if e.dimension > 0), ())
                         points[entity] = HypercubePoint(d, edges, axes)
         return points[tuple(self.factors)]
 

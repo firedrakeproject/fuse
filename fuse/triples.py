@@ -360,6 +360,101 @@ class ElementTriple():
         return {dim: {e: {k: np.linalg.inv(M) for k, M in by_key.items()} for e, by_key in by_entity.items()}
                 for dim, by_entity in matrices.items()}
 
+    def _entity_associations(self, dofs, overall=True):
+        entity_associations = {dim: {i: {} for i, e in enumerate(self.cell.d_entities(dim))}
+                               for dim in range(self.cell.dim() + 1)}
+        cell_dim = self.cell.dim()
+        cell_dict = entity_associations[cell_dim][0]
+        pure_perm = True
+        sub_pure_perm = True
+        num_dofs = {}
+
+        # construct mapping of entities to the dof generators and the dofs they generate
+        for d in dofs:
+            sub_dim = d.cell_defined_on.dim()
+            cell_defined_on_id = self.cell.d_entities_ids(sub_dim).index(d.cell_defined_on.id)
+            sub_dict = entity_associations[sub_dim][cell_defined_on_id]
+            if overall:
+                dims = set([sub_dim, cell_dim])
+            else:
+                dims = [sub_dim]
+            for dim in dims:
+                dof_gen = str(d.generation[dim])
+                num_dofs[dof_gen] = (dim, d.generation[dim].g1.size())
+
+                if not len(d.generation[dim].g2.members()) == 1:
+                    if dim == cell_dim:
+                        pure_perm = False
+                    else:
+                        sub_pure_perm = False
+
+                if dof_gen in sub_dict.keys() and (dim < cell_dim or not d.immersed):
+                    sub_dict[dof_gen] += [d]
+                elif dim < cell_dim or not d.immersed:
+                    sub_dict[dof_gen] = [d]
+                if dof_gen in cell_dict.keys() and dim == cell_dim and d.immersed:
+                    cell_dict[dof_gen] += [d]
+                elif dim == cell_dim and d.immersed:
+                    cell_dict[dof_gen] = [d]
+
+        return entity_associations, pure_perm, sub_pure_perm
+
+    def _initialise_entity_dicts(self, dofs, tensor=False):
+        # min_ids = self.cell.get_starter_ids()
+        dof_id_mat = np.eye(len(dofs))
+        oriented_mats_by_entity = {}
+        flat_by_entity = {}
+        cell = self.cell
+        if tensor:
+            dims = list(product(*(f.dimensions() for f in cell.factors)))
+        else:
+            dims = [i for i in range(cell.dimension + 1)]
+        for dim in dims:
+            oriented_mats_by_entity[dim] = {}
+            flat_by_entity[dim] = {}
+
+            ents = cell.d_entities(dim)
+            for e_id, e in enumerate(ents):
+                # old_e_id = e.id - min_ids[dim]
+                members = e.group.members()
+                oriented_mats_by_entity[dim][e_id] = {}
+                flat_by_entity[dim][e_id] = {}
+                members = sorted(members, key=lambda g: g.numeric_rep())
+                for g in members:
+                    val = g.numeric_rep()
+                    oriented_mats_by_entity[dim][e_id][val] = dof_id_mat.copy()
+                    flat_by_entity[dim][e_id][val] = []
+        return oriented_mats_by_entity, flat_by_entity
+
+    def generation_order_matrices(self):
+        """Orientation matrices indexed to match ``self.entity_dofs``.
+
+        Equal to ``self.matrices`` unless a subclass has reindexed those into
+        Firedrake's dimension-grouped closure order, in which case the
+        generation-order copy taken before reindexing is returned.
+        """
+        return getattr(self, "_gen_order_matrices", self.matrices)
+
+    def __add__(self, other):
+        """ Construct a new element triple by combining the degrees of freedom
+        This implementation does not make assertions about the properties
+        of the resulting element.
+
+        Elements being adding must be defined over the same cell and have the same
+        value shape and mapping"""
+        assert self.cell == other.cell
+        assert self.spaces[0].shape == other.spaces[0].shape
+        assert str(self.spaces[1]) == str(other.spaces[1])
+        assert self.spaces[2] == other.spaces[2]
+
+        spaces = (self.spaces[0] + other.spaces[0], self.spaces[1], self.spaces[2])
+
+        from fuse.tensor_products import TensorProductTriple
+        if isinstance(other, TensorProductTriple):
+            return other + self
+
+        return ElementTriple(self.cell, spaces, self.DOFGenerator + other.DOFGenerator)
+
     def _to_dict(self):
         o_dict = {"cell": self.cell, "spaces": self.spaces, "dofs": self.DOFGenerator}
         return o_dict
