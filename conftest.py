@@ -8,7 +8,10 @@ SMOKE_MODULES = {
     "test_perms",
     "test_plotting",
     "test_polynomial_space",
-    "test_sobolev_space",
+    "test_interpolation_space",
+    "test_group_utils",
+    "test_kernel_actions",
+    "test_generators",
 }
 
 

@@ -1,6 +1,8 @@
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 from fuse.serialisation import ElementSerialiser
+from fuse.actions import HDivAction
 from test_convert_to_fiat import create_cg1
 from test_orientations import interpolate_vs_project, get_expression
 import pytest
@@ -16,7 +18,7 @@ def test_dg_examples():
     encoded = converter.encode(vert)
     decoded = converter.decode(encoded)
     xs = [DOF(DeltaPairing(), PointKernel(()))]
-    dg0 = ElementTriple(decoded, (P0, CellL2, C0), DOFGenerator(xs, S1, S1))
+    dg0 = ElementTriple(decoded, (P0, C0), DOFGenerator(xs, S1))
 
     # [test_serialise 0]
     converter = ElementSerialiser()
@@ -28,7 +30,7 @@ def test_dg_examples():
         assert dof.eval(lambda: 1) == 1
 
     xs = [DOF(DeltaPairing(), PointKernel((-1,)))]
-    dg1 = ElementTriple(edge, (P1, CellL2, C0), DOFGenerator(xs, S2, S1))
+    dg1 = ElementTriple(edge, (P1, C0), DOFGenerator(xs, S2))
 
     converter = ElementSerialiser()
     encoded = converter.encode(dg1)
@@ -43,7 +45,6 @@ def test_repeated_objs():
     converter = ElementSerialiser()
     encoded = converter.encode(repeated_edge)
     decoded = converter.decode(encoded)
-    print(encoded)
     print(decoded)
 
 
@@ -74,6 +75,66 @@ def test_tetrahedron_example():
         assert any([np.allclose(dof_val, dof_val2) for dof_val2 in dofs])
 
 
+def round_trip(obj):
+    converter = ElementSerialiser()
+    return converter.decode(converter.encode(obj))
+
+
+round_trip_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+                     + [(col, 2, k, deg) for deg in range(1, 7) for k in range(4) for col in (0, 1)]
+                     + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
+
+
+@pytest.mark.parametrize("col,dim,k,deg", round_trip_params)
+def test_round_trip_keeps_element(col, dim, k, deg):
+    "The decoded element has the same DOFs and orientation matrices as the original."
+    elem = periodic_table(col, dim, k, deg)
+    decoded = round_trip(elem)
+    assert repr(decoded) == repr(elem)
+    space = elem.spaces[0]
+    assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
+                       space.functional_matrix(elem.cell, decoded.generate()))
+    elem.to_fiat()
+    decoded.to_fiat()
+    for d in elem.matrices:
+        for e in elem.matrices[d]:
+            for v in elem.matrices[d][e]:
+                assert np.allclose(elem.matrices[d][e][v], decoded.matrices[d][e][v]), (d, e, v)
+
+
+def test_reflected_dofs_round_trip():
+    "A generator DOF given as the image of another under a symmetry keeps that symmetry."
+    v = [np.array(tri.get_node(tri.ordered_vertices()[i], return_coords=True)) for i in range(3)]
+    x = DOF(L2Pairing(), VectorKernel(tuple((v[2] - v[0]) / 2), action=HDivAction))
+    s = tri.group.get_member([1, 0, 2])
+    elem = ElementTriple(tri, (PolynomialSpace(0, shape=2), C0), DOFGenerator([x, x(s)], S1))
+    decoded = round_trip(elem)
+    assert decoded.DOFGenerator[0].x[1].kernel.orientation.perm == s.perm
+    space = elem.spaces[0]
+    assert np.allclose(space.functional_matrix(elem.cell, elem.generate()),
+                       space.functional_matrix(elem.cell, decoded.generate()))
+
+
+def test_cell_group_round_trips():
+    "A cell built with a smaller symmetry group than its shape allows keeps that group."
+    from sympy.combinatorics import PermutationGroup, Permutation
+    vs = [Point(0) for _ in range(3)]
+    edges = [Point(1, [vs[1], vs[2]], vertex_num=2), Point(1, [vs[0], vs[2]], vertex_num=2),
+             Point(1, [vs[0], vs[1]], vertex_num=2)]
+    reflection = GroupRepresentation(PermutationGroup([Permutation([0, 2, 1])]), name="R")
+    cell = Point(2, edges, vertex_num=3, edge_orientations={1: [1, 0]}, group=reflection)
+    decoded = round_trip(cell)
+    assert repr(decoded.group) == repr(cell.group)
+    assert [m.perm for m in decoded.group.members()] == [m.perm for m in cell.group.members()]
+
+
+def test_immersion_node_round_trips():
+    "DOFs immersed on an entity other than the first keep that entity."
+    side = tri.edges(get_class=True)[0]
+    triple = ElementTriple(side, (P0, C0), DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1))
+    assert round_trip(immerse(tri, triple, node=1)).start_node == 1
+
+
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
@@ -92,7 +153,7 @@ def test_post_serialisation_convergence(col, k, deg, conv_rate):
     scale_range = range(3, 6)
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem_decoded.to_ufl())
         x, y = SpatialCoordinate(mesh)

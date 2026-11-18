@@ -14,9 +14,12 @@ class TensorProductTriple(ElementTriple):
     def __init__(self, A, B, flat=False):
         self.A = A
         self.B = B
-        self.spaces = []
-        for (a, b) in zip(self.A.spaces, self.B.spaces):
-            self.spaces.append(a if a >= b else b)
+        (poly_a, wi_a) = A.spaces
+        (poly_b, wi_b) = B.spaces
+        if A.pullback() != B.pullback():
+            raise ValueError("Tensor product factors must share the same pullback.")
+        self.spaces = [poly_a if poly_a >= poly_b else poly_b,
+                       wi_a if wi_a >= wi_b else wi_b]
 
         self.DOFGenerator = [A.DOFGenerator, B.DOFGenerator]
         self.cell = TensorProductPoint(A.cell, B.cell)
@@ -25,6 +28,15 @@ class TensorProductTriple(ElementTriple):
 
     def sub_elements(self):
         return [self.A, self.B]
+
+    def pullback(self):
+        return self.A.pullback()
+
+    def sobolev_space(self):
+        spaces = {self.A.sobolev_space(), self.B.sobolev_space()}
+        if len(spaces) != 1:
+            raise NotImplementedError(f"Tensor products of factors in different Sobolev spaces ({', '.join(sorted(spaces))}) are not supported yet")
+        return spaces.pop()
 
     def __repr__(self):
         return "TensorProd(%s, %s)" % (repr(self.A), repr(self.B))

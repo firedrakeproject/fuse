@@ -4,6 +4,7 @@ from test_orientations import interpolate_vs_project, get_expression
 from test_convert_to_fiat import project as project_test
 from fuse.element_construction import periodic_table
 from firedrake import *
+from finat.ufl import CellBackend
 
 
 @pytest.mark.parametrize("col,k,deg", [(col, 3, 0) for col in [0, 1]] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
@@ -32,7 +33,7 @@ def test_convergence(col, k, deg, conv_rate):
     scale_range = range(3, 6)
     diff_inte = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitSquareMesh(2**n, 2**n, use_fuse=True)
+        mesh = UnitSquareMesh(2**n, 2**n, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y = SpatialCoordinate(mesh)
@@ -66,7 +67,7 @@ def test_convergence3d(col, k, deg, conv_rate):
     diff_proj = [0 for i in scale_range]
     # diff_proj2 = [0 for i in scale_range]
     for n in scale_range:
-        mesh = UnitCubeMesh(2**n, 2**n, 2**n, use_fuse=True)
+        mesh = UnitCubeMesh(2**n, 2**n, 2**n, cell_backend=CellBackend.FUSE)
 
         V = FunctionSpace(mesh, elem.to_ufl())
         x, y, z = SpatialCoordinate(mesh)
@@ -89,7 +90,7 @@ def test_polynomial_poisson_solve(deg):
     """Constructs a polynomial of order deg and the manufactured soln of poissons eqn,
     ensures it is solved exactly. """
     # Create mesh and define function space
-    m = UnitCubeMesh(1, 1, 1, use_fuse=True)
+    m = UnitCubeMesh(1, 1, 1, cell_backend=CellBackend.FUSE)
     x = SpatialCoordinate(m)
     elem = periodic_table(0, 3, 0, deg)
     V = FunctionSpace(m, elem.to_ufl())

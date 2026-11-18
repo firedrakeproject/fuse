@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 from fuse import *
 from firedrake import *
+from finat.ufl import CellBackend
 from test_2d_examples_docs import construct_cg1, construct_dg1
 # from test_convert_to_fiat import create_cg1
 
@@ -37,7 +38,7 @@ def mass_solve(U):
 @pytest.mark.xfail(reason="tensor prod issues")
 @pytest.mark.parametrize("generator, code, deg", [(construct_cg1, "CG", 1), (construct_dg1, "DG", 1)])
 def test_tensor_product_ext_mesh(generator, code, deg):
-    m = UnitIntervalMesh(2, use_fuse=True)
+    m = UnitIntervalMesh(2, cell_backend=CellBackend.FUSE)
     mesh = ExtrudedMesh(m, 2)
 
     # manual method of creating tensor product elements
@@ -61,7 +62,7 @@ def test_helmholtz():
     vals = range(3, 6)
     res = []
     for r in vals:
-        m = UnitIntervalMesh(2**r, use_fuse=True)
+        m = UnitIntervalMesh(2**r, cell_backend=CellBackend.FUSE)
         mesh = ExtrudedMesh(m, 2**r)
 
         A = construct_cg1()
@@ -81,7 +82,7 @@ def test_helmholtz():
 def test_on_quad_mesh():
     quadrilateral = True
     r = 3
-    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
+    m = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
     A = construct_cg1()
     B = construct_cg1()
     elem = tensor_product(A, B)
@@ -100,7 +101,7 @@ def test_quad_mesh_helmholtz():
     res_fuse = []
     res_fire = []
     for r in vals:
-        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, use_fuse=True)
+        mesh_fuse = UnitSquareMesh(2 ** r, 2 ** r, quadrilateral=quadrilateral, cell_backend=CellBackend.FUSE)
 
         A = construct_cg1()
         B = construct_cg1()
