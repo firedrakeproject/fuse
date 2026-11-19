@@ -23,7 +23,7 @@ class Pairing():
 
 class DeltaPairing(Pairing):
     """
-    The delta pairing allows evaluation at point
+    The delta pairing allows evaluation at a given point
 
     :param: kernel: Normally a PointKernel
     """
@@ -243,7 +243,7 @@ class VectorKernel(BaseKernel):
 
 
 def evaluate_polynomial(kernel, args):
-    """The value of a polynomial kernel at values ``args``.
+    """The value of a polynomial kernel at ``args``.
 
     The polynomial's symbols are replaced with the values of args.
 
