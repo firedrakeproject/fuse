@@ -1246,6 +1246,101 @@ def test_two_hex_one_form_orientation_invariance(k, deg):
     assert spread < 1e-10
 
 
+# DMPlex's local vertex order for a hexahedron, as corners of the unit cube:
+# the bottom face, then the top face, where bottom position i sits below top
+# position [0, 3, 2, 1][i] (see TwoHexMesh).
+_HEX_CORNERS = [(0, 0, 0), (0, 1, 0), (1, 1, 0), (1, 0, 0),
+                (0, 0, 1), (1, 0, 1), (1, 1, 1), (0, 1, 1)]
+
+
+def _cube_symmetries():
+    """The cube's symmetries as permutations of a hexahedron's local vertex
+    positions. Applied to a cell's vertex list they reorient the cell while
+    keeping its geometry valid."""
+    from itertools import permutations, product
+    index = {c: i for i, c in enumerate(_HEX_CORNERS)}
+    return [[index[tuple(c[axes[i]] ^ flips[i] for i in range(3))] for c in _HEX_CORNERS]
+            for axes in permutations(range(3)) for flips in product((0, 1), repeat=3)]
+
+
+def _reoriented_hex_mesh(n, seed=0):
+    """The unit cube split into n x n x n hexahedra, each with its vertex list
+    reoriented by a random cube symmetry, so that the faces and edges between
+    cells meet in every relative orientation, with edges shared by up to four
+    differently oriented cells."""
+    from itertools import product
+    from firedrake.mesh import plex_from_cell_list
+    rng = np.random.default_rng(seed)
+    symmetries = _cube_symmetries()
+
+    def vertex(x, y, z):
+        return (x*(n + 1) + y)*(n + 1) + z
+
+    coords = np.array(list(product(range(n + 1), repeat=3)), dtype=float) / n
+    cells = []
+    for i, j, k in product(range(n), repeat=3):
+        cell = [vertex(i + a, j + b, k + c) for a, b, c in _HEX_CORNERS]
+        cells.append([cell[q] for q in symmetries[rng.integers(len(symmetries))]])
+    plex = plex_from_cell_list(3, cells, coords, COMM_WORLD)
+    return Mesh(plex, reorder=False, cell_backend=CellBackend.FUSE)
+
+
+@pytest.mark.parametrize("k,deg", [
+    pytest.param(0, 1, id="CG-1"),
+    pytest.param(0, 2, id="CG-2"),
+    pytest.param(0, 3, id="CG-3"),
+    pytest.param(1, 1, id="N1curl-1"),
+    pytest.param(1, 2, id="N1curl-2"),
+    pytest.param(2, 1, id="RT-1"),
+    pytest.param(2, 2, id="RT-2"),
+])
+def test_reoriented_hex_mesh_conformity(k, deg):
+    # A random member of each space must have no jump across any interior
+    # face of the trace its Sobolev space keeps: the whole value for H1, the
+    # tangential part for H(curl), the normal part for H(div). Random
+    # coefficients make every shared DOF matter, so any orientation matrix
+    # that is wrong for some face or edge orientation shows up as a jump.
+    mesh = _reoriented_hex_mesh(3)
+    V = FunctionSpace(mesh, periodic_table(2, 3, k, deg).to_ufl())
+    u = Function(V)
+    rng = np.random.default_rng(1)
+    u.dat.data_wo[...] = rng.standard_normal(u.dat.data_wo.shape)
+
+    n = FacetNormal(mesh)
+    if k == 0:
+        jump_sq = jump(u)**2
+    elif k == 1:
+        tangential = cross(u('+'), n('+')) + cross(u('-'), n('-'))
+        jump_sq = inner(tangential, tangential)
+    else:
+        jump_sq = jump(u, n)**2
+    jump_norm = sqrt(assemble(jump_sq * dS))
+    u_norm = sqrt(assemble(inner(u, u) * dx))
+    assert jump_norm < 1e-10 * u_norm
+
+
+@pytest.mark.parametrize("deg", [1, 2, 3])
+def test_reoriented_hex_mesh_interior_facet_assembly(deg):
+    # Interior facet forms pack both cells of a facet, and each needs its own
+    # orientation transform. The CG basis sums to one, so the facet 1-form of
+    # an interpolated linear function sums to that function's facet integral,
+    # and the matching matrix applied to it reproduces the 1-form.
+    mesh = _reoriented_hex_mesh(2)
+    V = FunctionSpace(mesh, periodic_table(2, 3, 0, deg).to_ufl())
+    x = SpatialCoordinate(mesh)
+    exact = x[0] + 2*x[1] + 3*x[2]
+    f = Function(V).interpolate(exact)
+    u, v = TrialFunction(V), TestFunction(V)
+
+    L = assemble(avg(f) * avg(v) * dS)
+    A = assemble(avg(u) * avg(v) * dS)
+    with f.dat.vec_ro as f_vec, L.dat.vec_ro as L_vec:
+        A_f = A.petscmat.createVecLeft()
+        A.petscmat.mult(f_vec, A_f)
+        assert np.isclose(L_vec.sum(), assemble(exact * dS))
+        assert np.allclose(A_f.array_r, L_vec.array_r)
+
+
 _TET_ONE_FORM_PERMS = [
     Permutation([0, 1, 2, 3]),
     Permutation([0, 2, 3, 1]),
