@@ -149,9 +149,7 @@ class PolynomialSpace(object):
         the sympy object on the right. This is due to Sympy's implementation of __mul__ not
         passing to this handler as it should.
         """
-        if isinstance(x, sp.Symbol):
-            return ConstructedPolynomialSpace([x], [self])
-        elif isinstance(x, sp.Matrix):
+        if isinstance(x, (sp.Expr, sp.Matrix)):
             return ConstructedPolynomialSpace([x], [self])
         else:
             raise TypeError(f'Cannot multiply a PolySpace with {type(x)}')
@@ -245,25 +243,31 @@ class ConstructedPolynomialSpace(PolynomialSpace):
 
         # otherwise have to work on this through tabulation
 
-        Q = create_quadrature(ref_el, 2 * (k + 1))
+        w_degs = [max_deg_sp_mat(w) if isinstance(w, (sp.Expr, sp.Matrix)) else 0 for w in self.weights]
+        # exact for the products of weighted members with the projection basis
+        Q = create_quadrature(ref_el, 2 * (k + max(w_degs) + 1))
         Qpts, Qwts = Q.get_points(), Q.get_weights()
         weighted_sets = []
 
-        for (space, w) in zip(space_poly_sets, self.weights):
+        for (s, space, w, w_deg) in zip(self.spaces, space_poly_sets, self.weights, w_degs):
             if not (isinstance(w, sp.Expr) or isinstance(w, sp.Matrix)):
                 weighted_sets.append(space)
             else:
-                w_deg = max_deg_sp_mat(w)
                 Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, scale="orthonormal")
-                vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, self.shape, scale="orthonormal")
+                vec_Pkpw = ONPolynomialSet(ref_el, space.degree + w_deg, weighted_shape(w, s), scale="orthonormal")
 
                 space_at_Qpts = space.tabulate(Qpts)[(0,) * sd]
                 Pkpw_at_Qpts = Pkpw.tabulate(Qpts)[(0,) * sd]
 
-                tabulated_expr = tabulate_sympy(w, Qpts).T
-                if tabulated_expr.shape[0] != int(np.prod(self.shape)):
-                    raise ValueError(f"Weight {w} has {tabulated_expr.shape[0]} components but the space has value shape {self.shape}.")
-                scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                if isinstance(w, sp.Matrix):
+                    tabulated_expr = tabulate_sympy(w, Qpts).T
+                    if tabulated_expr.shape[0] != int(np.prod(self.shape)):
+                        raise ValueError(f"Weight {w} has {tabulated_expr.shape[0]} components but the space has value shape {self.shape}.")
+                    scaled_at_Qpts = space_at_Qpts[:, None, :] * tabulated_expr[None, :, :]
+                else:
+                    # a scalar weight scales every component of the space alike
+                    w_at_Qpts = sp.lambdify(sp.symbols("x y z")[:sd], w, "numpy")(*Qpts.T)
+                    scaled_at_Qpts = space_at_Qpts * np.broadcast_to(w_at_Qpts, Qpts.shape[:1])
                 PkHw_coeffs = np.dot(np.multiply(scaled_at_Qpts, Qwts), Pkpw_at_Qpts.T)
                 weighted_sets.append(polynomial_set.PolynomialSet(ref_el,
                                                                   space.degree + w_deg,

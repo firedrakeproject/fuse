@@ -570,4 +570,11 @@ tet_faces2 = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutatio
 # tet_faces = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([0, 2, 3, 1]), Permutation([0, 3, 1, 2]),
 #                                           Permutation([3, 2, 0, 1])])
 
-sq_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([1, 2, 3, 0]), Permutation([3, 0, 1, 2]), Permutation([2, 3, 0, 1])])
+# Transversals for the square polygon(4), whose vertices are (-1, -1), (-1, 1), (1, -1), (1, 1).
+# Vertex i goes to vertex p[i].
+# The rotations; [2, 0, 3, 1] is (x, y) -> (-y, x). They carry vertex 0 onto each vertex.
+sq_rotations = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([2, 0, 3, 1]),
+                                             Permutation([3, 2, 1, 0]), Permutation([1, 3, 0, 2])])
+# Symmetries carrying edge 0, from (-1, -1) to (-1, 1), onto each edge without reversing it.
+sq_edges = PermutationSetRepresentation([Permutation([0, 1, 2, 3]), Permutation([2, 3, 0, 1]),
+                                         Permutation([0, 2, 1, 3]), Permutation([1, 3, 0, 2])])

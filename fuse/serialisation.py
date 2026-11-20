@@ -1,6 +1,7 @@
 import json
 from fuse import *
 from fuse.groups import GroupMemberRep
+from fuse.cells import HypercubePoint
 from fuse.spaces.polynomial_spaces import ConstructedPolynomialSpace
 from fuse.spaces.interpolation_spaces import InterpolationSpace
 from fuse.traces import Trace
@@ -29,6 +30,7 @@ class ElementSerialiser():
         self.obj_storage = {}
 
         self.obj_types = {"Cell": Point,
+                          "HypercubeCell": HypercubePoint,
                           "Edge": Edge,
                           "Triple": ElementTriple,
                           "VectorTriple": VectorTriple,
