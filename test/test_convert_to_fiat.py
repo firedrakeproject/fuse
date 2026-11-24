@@ -1341,6 +1341,43 @@ def test_reoriented_hex_mesh_interior_facet_assembly(deg):
         assert np.allclose(A_f.array_r, L_vec.array_r)
 
 
+def _reoriented_tet_mesh(n, seed=0):
+    """The unit cube split into n x n x n cubes of six tetrahedra each, with
+    each tetrahedron's vertex list randomly permuted, so that the faces
+    between cells meet in every relative orientation."""
+    from itertools import product
+    from firedrake.mesh import plex_from_cell_list
+    rng = np.random.default_rng(seed)
+
+    def vertex(x, y, z):
+        return (x*(n + 1) + y)*(n + 1) + z
+
+    coords = np.array(list(product(range(n + 1), repeat=3)), dtype=float) / n
+    cells = []
+    for i, j, k in product(range(n), repeat=3):
+        cube = [vertex(i + a, j + b, k + c) for a, b, c in product((0, 1), repeat=3)]
+        for tet in [(0, 1, 3, 7), (0, 1, 5, 7), (0, 2, 3, 7), (0, 2, 6, 7), (0, 4, 5, 7), (0, 4, 6, 7)]:
+            cells.append(list(rng.permutation([cube[q] for q in tet])))
+    plex = plex_from_cell_list(3, cells, coords, COMM_WORLD)
+    return Mesh(plex, reorder=False, cell_backend=CellBackend.FUSE)
+
+
+@pytest.mark.parametrize("deg", [1, 2, 3])
+def test_reoriented_tet_mesh_conformity(deg):
+    # The cells sharing a face must evaluate a CG function at the same
+    # physical points, so a random member of the space has no jump across
+    # any interior face.
+    mesh = _reoriented_tet_mesh(2)
+    V = FunctionSpace(mesh, periodic_table(1, 3, 0, deg).to_ufl())
+    u = Function(V)
+    rng = np.random.default_rng(1)
+    u.dat.data_wo[...] = rng.standard_normal(u.dat.data_wo.shape)
+
+    jump_norm = sqrt(assemble(jump(u)**2 * dS))
+    u_norm = sqrt(assemble(u**2 * dx))
+    assert jump_norm < 1e-10 * u_norm
+
+
 _TET_ONE_FORM_PERMS = [
     Permutation([0, 1, 2, 3]),
     Permutation([0, 2, 3, 1]),

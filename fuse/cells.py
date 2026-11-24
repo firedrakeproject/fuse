@@ -1420,6 +1420,30 @@ class CellComplexToFiatSimplex(Simplex):
         dimension = self.get_spatial_dimension()
         return self.construct_subelement(dimension - 1)
 
+    def orientation_point_permutations(self, points):
+        """How each orientation of this cell permutes ``points``.
+
+        Row ``o`` gives, for each point, the point that the symmetry with
+        orientation key ``o`` sends to it. The symmetry acts through the
+        vertex permutation the key stands for. Returns ``None`` if ``points``
+        are not closed under the cell's symmetries.
+        """
+        verts = np.array(self.get_vertices())
+        points = np.asarray(points)
+        bary = np.linalg.solve(np.vstack([verts.T, np.ones(len(verts))]),
+                               np.vstack([points.T, np.ones(len(points))])).T
+        group = self.fe_cell.group
+        perms = np.empty((group.size(), len(points)), dtype=int)
+        for key in range(group.size()):
+            vertex_perm = Permutation(self.fe_cell.orientation_key_to_member(key).perm, size=len(verts)).array_form
+            images = np.empty_like(bary)
+            images[:, vertex_perm] = bary
+            dist = np.linalg.norm(images[:, None, :] - bary[None, :, :], axis=-1)
+            if not np.allclose(dist.min(axis=1), 0):
+                return None
+            perms[key, dist.argmin(axis=1)] = np.arange(len(points))
+        return perms
+
 
 class CellComplexToFiatTensorProduct(FiatTensorProductCell):
     """
