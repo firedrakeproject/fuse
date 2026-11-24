@@ -8,7 +8,8 @@ symmetries Firedrake means by them. So it is enough to check that
 * ``mapping(g)`` is the action of ``g`` on the DOFs, and is a representation;
 * each entity's matrices form a representation of its symmetry group, start
   from the identity, and are inverted by ``reversed_matrices``;
-* ``orientation_key_to_member`` follows Firedrake's key formula.
+* ``orientation_key_to_member`` follows Firedrake's key formulas, for
+  simplices and for products of intervals.
 
 No Firedrake import: this module is a smoke module.
 """
@@ -19,8 +20,8 @@ import numpy as np
 import pytest
 from sympy.combinatorics import Permutation
 
-from fuse import polygon, make_tetrahedron
-from fuse.cells import ufc_triangle, ufc_tetrahedron
+from fuse import polygon, make_tetrahedron, line
+from fuse.cells import ufc_triangle, ufc_tetrahedron, TensorProductPoint
 from fuse.element_construction import periodic_table
 
 PARAMS = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
@@ -103,10 +104,37 @@ def firedrake_key(fiat_cone, plex_cone):
     return sum(factorial(n - 1 - i) * inds[i] for i in range(n))
 
 
-def key_reorientations(ref_el, dim, e_id):
+def firedrake_tensor_key(fiat_cone, plex_cone, dim):
+    """Firedrake's ``_compute_orientation_interval_tensor_product``: both
+    cones list the facets in pairs, the two ends of each axis in turn."""
+    plex = list(plex_cone)
+    dim1 = dim
+    eo = io = 0
+    for i in range(dim):
+        for j in range(dim1):
+            if plex[2 * j] == fiat_cone[2 * i] or plex[2 * j + 1] == fiat_cone[2 * i]:
+                if plex[2 * j] == fiat_cone[2 * i] and plex[2 * j + 1] == fiat_cone[2 * i + 1]:
+                    pass
+                elif plex[2 * j + 1] == fiat_cone[2 * i] and plex[2 * j] == fiat_cone[2 * i + 1]:
+                    io += 2 ** (dim - 1 - i)
+                else:
+                    raise RuntimeError("Found inconsistent fiat_cone and plex_cone")
+                eo += factorial(dim - 1 - i) * j
+                del plex[2 * j:2 * j + 2]
+                dim1 -= 1
+                break
+        else:
+            raise RuntimeError("Found inconsistent fiat_cone and plex_cone")
+    return 2 ** dim * eo + io
+
+
+def key_reorientations(ref_el, dim, e_id, tensor=False):
     """{Firedrake key k: the reorientation it stands for} for an entity of the
     FIAT cell ``ref_el``, as a permutation of the entity's local vertex
-    positions, worked out from the key formula alone."""
+    positions, worked out from the key formula alone.
+
+    ``tensor`` selects the formula for products of intervals, which only
+    accepts the reorderings that are symmetries."""
     top, conn = ref_el.get_topology(), ref_el.connectivity
     loc = list(top[dim][e_id])
     nv = len(loc)
@@ -118,7 +146,14 @@ def key_reorientations(ref_el, dim, e_id):
     by_key = {}
     plex_cone = global_cone(tuple(range(nv)))
     for s in itertools.permutations(range(nv)):
-        by_key.setdefault(firedrake_key(global_cone(s), plex_cone), []).append(s)
+        if tensor:
+            try:
+                key = firedrake_tensor_key(global_cone(s), plex_cone, dim)
+            except RuntimeError:
+                continue
+        else:
+            key = firedrake_key(global_cone(s), plex_cone)
+        by_key.setdefault(key, []).append(s)
     s0 = by_key[0][0]
     return {k: tuple((~Permutation([ss[0].index(s0[i]) for i in range(nv)])).array_form) for k, ss in by_key.items()}
 
@@ -140,3 +175,38 @@ def test_orientation_keys_follow_firedrake(make_cell):
         for e_id, entity in enumerate(cell.d_entities(dim)):
             for k, h in key_reorientations(ref_el, dim, e_id).items():
                 assert tuple(entity.orientation_key_to_member(k).perm.array_form) == h
+
+
+def flattened_cube():
+    return TensorProductPoint(line(), line(), line()).flatten()
+
+
+def test_firedrake_tensor_key_rejects_inconsistent_cones():
+    with pytest.raises(RuntimeError):
+        firedrake_tensor_key([0, 2, 1, 3], [0, 1, 2, 3], 2)
+
+
+@pytest.mark.parametrize("make_cell", [lambda: polygon(4), flattened_cube], ids=["square", "cube"])
+def test_hypercube_orientation_keys_follow_firedrake(make_cell):
+    """Each entity of dimension 2 or more converts Firedrake's orientation keys
+    to the symmetries Firedrake's key formula stands for on the FIAT cell, and
+    its keys are exactly 0, ..., |G| - 1."""
+    cell = make_cell()
+    ref_el = cell.to_fiat()
+    for dim in range(2, cell.dimension + 1):
+        for e_id, entity in enumerate(cell.d_entities(dim)):
+            reorientations = key_reorientations(ref_el, dim, e_id, tensor=True)
+            assert sorted(reorientations) == list(range(entity.group.size()))
+            for k, h in reorientations.items():
+                assert tuple(entity.orientation_key_to_member(k).perm.array_form) == h
+
+
+def test_square_orientation_keys():
+    """The square's keys: 0-3 reflect its axes, 4 swaps them, and the two
+    rotations are 5, (x, y) -> (-y, x), and its inverse 6. Vertex i goes to
+    vertex p[i]; the vertices are (-1, -1), (-1, 1), (1, -1), (1, 1)."""
+    square = polygon(4)
+    expected = {0: (0, 1, 2, 3), 1: (1, 0, 3, 2), 2: (2, 3, 0, 1), 3: (3, 2, 1, 0),
+                4: (0, 2, 1, 3), 5: (2, 0, 3, 1), 6: (1, 3, 0, 2), 7: (3, 1, 2, 0)}
+    for k, p in expected.items():
+        assert tuple(square.orientation_key_to_member(k).perm.array_form) == p
