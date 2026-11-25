@@ -7,7 +7,8 @@ from basix import MapType, SobolevSpace, create_custom_element, PolysetType, Cel
 
 
 basix_elements = {"interval": CellType.interval,
-                  "triangle": CellType.triangle}
+                  "triangle": CellType.triangle,
+                  "tetrahedron": CellType.tetrahedron}
 
 # Keyed on ElementTriple.pullback().
 # FUSE doesn't yet support doubleContravariantPiola or doubleCovariantPiola.
@@ -32,19 +33,12 @@ def _lookup(table, key, what):
         raise NotImplementedError(f"{what} {key!r} has no Basix equivalent")
 
 
-def check_vertex_correspondence(triple, cell_type):
-    """Check that FUSE vertex i is sent to Basix reference vertex i.
-
-    :func:`transform_to_basix_cell` relies on this, and so does matching
-    entities by their vertices."""
-    mapped = transform_to_basix_cell(triple.cell, triple.cell.vertices(return_coords=True))
-    if not np.allclose(np.array(mapped, dtype=np.float64), basix.geometry(cell_type)):
-        raise ValueError(f"The vertices of {triple.cell} do not correspond to the Basix reference {cell_type.name}")
-
-
 def basix_to_fuse_affine_map(triple, cell_type):
     """The affine map ``x_fuse = J @ x_basix + b`` from the Basix reference
-    cell onto the FUSE cell, sending Basix vertex i to FUSE vertex i."""
+    cell onto the FUSE cell, sending Basix vertex i to FUSE vertex i.
+
+    Raises if no such map exists, since both moving the DOFs and matching
+    entities by their vertices rely on it."""
     v_basix = basix.geometry(cell_type)
     v_fuse = np.array(triple.cell.vertices(return_coords=True), dtype=np.float64)
     A = np.c_[v_basix, np.ones(len(v_basix))]
@@ -154,9 +148,9 @@ def compute_points_and_matrices(triple, cell_type, K=None):
         ``(tdim, entity, dof, value, point, derivative)``.
     """
     triple.to_ufl()  # ensures ref_el, entity_ids and nodes are set up
-    check_vertex_correspondence(triple, cell_type)
+    # also checks that FUSE vertex i corresponds to Basix vertex i
+    J, b = basix_to_fuse_affine_map(triple, cell_type)
     if K is None:
-        J, _ = basix_to_fuse_affine_map(triple, cell_type)
         K = reference_value_map(triple, J)
     # A DOF sum_p w_p . v(x_p) equals sum_p (K^-T w_p) . v_basix(x_p)
     weight_map = np.linalg.inv(K).T
@@ -190,7 +184,7 @@ def compute_points_and_matrices(triple, cell_type, K=None):
                 M = np.einsum("ij,j...->i...", T, M)
 
             if pts:
-                x = np.array(transform_to_basix_cell(triple.cell, pts), dtype=np.float64)
+                x = np.linalg.solve(J, (np.array(pts, dtype=np.float64) - b).T).T
             else:
                 x = np.zeros((0, spdim))
             xs[dim].append(np.ascontiguousarray(x))
@@ -275,5 +269,12 @@ def transform_points(cell_a, cell_b, points):
 
 
 def transform_to_basix_cell(fuse_cell, x):
-    basix_cell = basix_fuse_cell(fuse_cell.to_ufl().cellname)
-    return transform_points(fuse_cell, basix_cell, x)
+    """Map points on a FUSE cell to the Basix reference cell, sending FUSE
+    vertex i to Basix vertex i."""
+    cell_type = _lookup(basix_elements, fuse_cell.to_ufl().cellname, "Cell")
+    v_a = np.array(fuse_cell.vertices(return_coords=True), dtype=np.float64)
+    v_b = basix.geometry(cell_type)
+    A = np.r_[v_a.T, np.ones((1, len(v_a)))]
+    B = np.r_[v_b.T, np.ones((1, len(v_b)))]
+    res = (B @ np.linalg.inv(A) @ np.r_[np.array(x, dtype=np.float64).T, np.ones((1, len(x)))])[:-1]
+    return [tuple(p) for p in res.T]
