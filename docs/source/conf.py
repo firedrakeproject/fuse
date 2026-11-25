@@ -65,9 +65,9 @@ intersphinx_mapping = {
     'FIAT': ('https://firedrakeproject.org/fiat', None),
     'matplotlib': ('https://matplotlib.org/stable/', None),
     'python': ('https://docs.python.org/3/', None),
+    'basix': ('https://docs.fenicsproject.org/basix/main/python', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'networkx': ("https://networkx.org/documentation/stable/", None)}
-
 
 remove_from_toctrees = ["_generated/fuse.cells.Arrow3D.rst"]
 

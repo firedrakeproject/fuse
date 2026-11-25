@@ -51,8 +51,11 @@ dev = [
   "pytest-timeout",
   "coverage",
   "flake8",
+  "fenics-basix",
 ]
 
+[tool.setuptools]
+packages = ["fuse", "fuse_basix"]
 
 [tool.pytest.ini_options]
 testpaths = [

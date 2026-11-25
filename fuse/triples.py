@@ -287,6 +287,13 @@ class ElementTriple():
             return "\n".join(tikz_commands)
         return tikz_commands
 
+    def to_basix(self):
+        try:
+            from fuse_basix.basix_interface import convert_to_basix_element
+            return convert_to_basix_element(self)
+        except ImportError:
+            raise ImportError("Basix needs to be installed to convert FUSE to Basix")
+
     def plot(self, filename="temp.png"):
         """
         Generates Matplotlib code for the element diagrams."""
