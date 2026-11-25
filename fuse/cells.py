@@ -215,7 +215,7 @@ class Point():
 
         if d == 0:
             assert (edges == [])
-        if vertex_num:
+        if vertex_num and vertex_num > 1:
             edges = self.compute_attachments(vertex_num, edges, edge_orientations, variant)
 
         self.oriented = oriented
@@ -917,7 +917,10 @@ def _component_evaluator(expr, nvals):
         fn = sp.lambdify(_attachment_symbols(nvals), expr, "math")
         return lambda *x: float(fn(*x))
     if free == 0:
-        return lambda *x: expr
+        # Return a float, matching the branch above: a sympy constant here
+        # would make mixed object arrays that numpy cannot compare.
+        value = float(expr)
+        return lambda *x: value
     return None
 
 

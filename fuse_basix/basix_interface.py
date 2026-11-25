@@ -1,3 +1,4 @@
+from functools import cache
 from fuse import *
 import numpy as np
 from basix import MapType, SobolevSpace, create_custom_element, PolysetType, CellType
@@ -119,8 +120,25 @@ def ufc_triangle():
     return tri
 
 
-basix_elements_fuserep = { "interval": Point(1, [Point(0), Point(0)], vertex_num=2, variant="ufc", group=S2),
-                           "triangle": ufc_triangle()}
+def ufc_interval():
+    return Point(1, [Point(0), Point(0)], vertex_num=2, variant="ufc", group=S2)
+
+
+basix_cell_constructors = {"interval": ufc_interval,
+                           "triangle": ufc_triangle}
+
+
+@cache
+def basix_fuse_cell(cellname):
+    """FUSE representation of the Basix reference cell with this name.
+
+    Built on first use rather than at import, so that importing this
+    module does not depend on cell construction succeeding."""
+    try:
+        constructor = basix_cell_constructors[cellname]
+    except KeyError:
+        raise NotImplementedError(f"Fuse cell {cellname} doesn't have a Basix equivalent")
+    return constructor()
 
 
 def transform_points(cell_a, cell_b, points):
@@ -136,9 +154,5 @@ def transform_points(cell_a, cell_b, points):
     return res
 
 def transform_to_basix_cell(fuse_cell, x):
-    try:
-        basix_cell = basix_elements_fuserep[fuse_cell.to_ufl().cellname()] 
-    except KeyError:
-        raise NotImplementedError(f"Fuse cell {fuse_cell.to_ufl().cellname()} doesn't have a Basix equivalent")
-    
+    basix_cell = basix_fuse_cell(fuse_cell.to_ufl().cellname())
     return transform_points(fuse_cell, basix_cell, x)
