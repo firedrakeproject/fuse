@@ -13,7 +13,7 @@ docs:
 
 lint:
 	@echo "    Linting FUSE codebase"
-	@python3 -m flake8 $(FLAKE8_FORMAT) fuse
+	@python3 -m flake8 $(FLAKE8_FORMAT) fuse fuse_basix conftest.py
 	@echo "    Linting FUSE test suite"
 	@python3 -m flake8 $(FLAKE8_FORMAT) test
 

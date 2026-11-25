@@ -158,26 +158,15 @@ def test_continuity_check_detects_missing_realignment(monkeypatch):
 
 
 @pytest.mark.skipbasix
-def test_ufc_cells_match_basix_geometry():
-    import basix
-    from fuse_basix.basix_interface import basix_fuse_cell, transform_points
-
-    for name, cell_type in [("interval", basix.CellType.interval), ("triangle", basix.CellType.triangle)]:
-        ufc = basix_fuse_cell(name)
-        assert np.allclose(np.array(ufc.vertices(return_coords=True), dtype=float), basix.geometry(cell_type))
-
-    tri_fuse = polygon(3)
-    mapped = transform_points(tri_fuse, basix_fuse_cell("triangle"), tri_fuse.vertices(return_coords=True))
-    assert np.allclose(np.array(mapped, dtype=float), basix.geometry(basix.CellType.triangle))
-
-
-@pytest.mark.skipbasix
-def test_tet_vertices_map_to_basix():
+@pytest.mark.parametrize("make_cell,cell_name", [(lambda: Point(1, [Point(0), Point(0)], vertex_num=2), "interval"),
+                                                 (lambda: polygon(3), "triangle"),
+                                                 (make_tetrahedron, "tetrahedron")])
+def test_vertices_map_to_basix(make_cell, cell_name):
     import basix
     from fuse_basix.basix_interface import transform_to_basix_cell
-    tet = make_tetrahedron()
-    mapped = transform_to_basix_cell(tet, tet.vertices(return_coords=True))
-    assert np.allclose(np.array(mapped, dtype=float), basix.geometry(basix.CellType.tetrahedron))
+    cell = make_cell()
+    mapped = transform_to_basix_cell(cell, cell.vertices(return_coords=True))
+    assert np.allclose(np.array(mapped, dtype=float), basix.geometry(getattr(basix.CellType, cell_name)))
 
 
 def _tet_elements():

@@ -8,6 +8,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 from finat.ufl import FuseElement
+import importlib.util
 import warnings
 import numpy as np
 import scipy
@@ -306,11 +307,11 @@ class ElementTriple():
         return tikz_commands
 
     def to_basix(self):
-        try:
-            from fuse_basix.basix_interface import convert_to_basix_element
-            return convert_to_basix_element(self)
-        except ImportError:
+        """Convert this element to a Basix custom element (requires Basix)."""
+        if importlib.util.find_spec("basix") is None:
             raise ImportError("Basix needs to be installed to convert FUSE to Basix")
+        from fuse_basix.basix_interface import convert_to_basix_element
+        return convert_to_basix_element(self)
 
     def plot(self, filename="temp.png"):
         """

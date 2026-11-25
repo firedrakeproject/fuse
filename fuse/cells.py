@@ -204,7 +204,7 @@ class Point():
 
     id_iter = itertools.count()
 
-    def __init__(self, d, edges=[], vertex_num=None, variant="equilateral", oriented=False, group=None, edge_orientations=None, cell_id=None):
+    def __init__(self, d, edges=[], vertex_num=None, oriented=False, group=None, edge_orientations=None, cell_id=None):
         if cell_id is None:
             cell_id = next(self.id_iter)
         self.id = cell_id
@@ -216,7 +216,7 @@ class Point():
         if d == 0:
             assert (edges == [])
         if vertex_num and vertex_num > 1:
-            edges = self.compute_attachments(vertex_num, edges, edge_orientations, variant)
+            edges = self.compute_attachments(vertex_num, edges, edge_orientations)
 
         self.oriented = oriented
         self.G = nx.DiGraph()
@@ -230,13 +230,11 @@ class Point():
 
         self.group = group
         if not group:
-            if variant != "equilateral":
-                raise ValueError("Group discovery only supported for equilateral elements")
             self.group = self.compute_cell_group()
 
         self.group = self.group.add_cell(self)
 
-    def compute_attachments(self, n, points, orientations=None, variant="equilateral"):
+    def compute_attachments(self, n, points, orientations=None):
         """
         Compute the attachment function between two nodes
 
@@ -248,11 +246,11 @@ class Point():
             orientations = {}
 
         if self.dimension == 1:
-            attachments = compute_attachment_1d(n, variant)
+            attachments = compute_attachment_1d(n)
         if self.dimension == 2:
-            attachments = compute_attachment_2d(n, variant)
+            attachments = compute_attachment_2d(n)
         if self.dimension == 3:
-            attachments = compute_attachment_3d(n, variant)
+            attachments = compute_attachment_3d(n)
         edges = []
         for i in range(n):
             if i in orientations.keys():

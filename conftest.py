@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import pytest
 
@@ -24,6 +25,7 @@ def pytest_addoption(parser):
         help="Run tests that require a cleared cache",
     )
 
+
 def _skip_test_dependency(dependency):
     """
     Returns whether to skip tests with a certain dependency.
@@ -31,30 +33,22 @@ def _skip_test_dependency(dependency):
     Usually, this will return True if the dependency is not available.
     However, on CI we never want to skip tests because we should
     test all functionality there, so if the environment variable
-    FIREDRAKE_CI=1 then this will always return False.
+    FUSE_CI=1 then this will always return False.
     """
-    skip = True
-
     if os.getenv("FUSE_CI") == "1":
-        return not skip
+        return False
+    return importlib.util.find_spec(dependency) is None
 
-    if dependency == "basix":
-        try:
-            import basix # noqa: F401
-            del basix
-            return not skip
-        except ImportError:
-            return skip
 
 dependency_skip_markers_and_reasons = (
     ("basix", "skipbasix", "Basix not installed"),)
 
+
 def pytest_configure(config):
-    """Register an additional marker."""
-    config.addinivalue_line(
-        "markers",
-        "skipbasix: mark as skipped unless Basix is installed"
-    )
+    """Register the dependency markers."""
+    for dependency, marker, _ in dependency_skip_markers_and_reasons:
+        config.addinivalue_line("markers", f"{marker}: mark as skipped unless {dependency} is installed")
+
 
 def pytest_collection_modifyitems(session, config, items):
     for item in items:

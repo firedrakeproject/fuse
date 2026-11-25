@@ -1,5 +1,3 @@
-from functools import cache
-from fuse import Point, S1, S2
 from sympy.combinatorics import Permutation
 import numpy as np
 import basix
@@ -218,54 +216,6 @@ def convert_to_basix_element(triple):
                                  triple.spaces[0].maxdegree,
                                  PolysetType.standard,  # don't yet support macro elements
                                  )
-
-
-def ufc_triangle():
-    vertices = []
-    for i in range(3):
-        vertices.append(Point(0))
-    edges = []
-
-    edges.append(Point(1, [vertices[0], vertices[1]], vertex_num=2))
-    edges.append(Point(1, [vertices[1], vertices[2]], vertex_num=2))
-    edges.append(Point(1, [vertices[0], vertices[2]], vertex_num=2))
-
-    tri = Point(2, edges, vertex_num=3, variant="ufc", group=S1, edge_orientations={2: [1, 0]})
-    return tri
-
-
-def ufc_interval():
-    return Point(1, [Point(0), Point(0)], vertex_num=2, variant="ufc", group=S2)
-
-
-basix_cell_constructors = {"interval": ufc_interval,
-                           "triangle": ufc_triangle}
-
-
-@cache
-def basix_fuse_cell(cellname):
-    """FUSE representation of the Basix reference cell with this name.
-
-    Built on first use rather than at import, so that importing this
-    module does not depend on cell construction succeeding."""
-    try:
-        constructor = basix_cell_constructors[cellname]
-    except KeyError:
-        raise NotImplementedError(f"Fuse cell {cellname} doesn't have a Basix equivalent")
-    return constructor()
-
-
-def transform_points(cell_a, cell_b, points):
-    v_a = np.array(cell_a.vertices(return_coords=True))
-    v_b = np.array(cell_b.vertices(return_coords=True))
-
-    A = np.r_[v_a.T, np.ones((1, len(v_a)))]
-    B = np.r_[v_b.T, np.ones((1, len(v_b)))]
-    transform = B @ np.linalg.inv(A)
-
-    res = (transform @ np.r_[np.array(points).T, np.ones((1, len(points)))])[:-1]
-    res = [tuple(res.T[i]) for i in range(res.shape[1])]
-    return res
 
 
 def transform_to_basix_cell(fuse_cell, x):

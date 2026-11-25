@@ -1,6 +1,5 @@
 import numpy as np
 import sympy as sp
-import itertools
 
 
 def construct_attach_2d(a, b, c, d):
@@ -90,59 +89,22 @@ def compute_equilateral_verts(d, n):
         raise ValueError("Dimension {} not supported".format(d))
 
 
-def compute_ufc_verts(d, n):
+def compute_attachment_1d(n):
     """
-    Construct UFC cell vertices
+    Constructs sympy functions for attaching the two vertices of an interval.
 
-    :param: d: dimension of cell
-    :param: n: number of vertices
-
-    sorts the list for a consistent ordering.
-    """
-    if d + 1 == n:
-        values = [1] + [0 for _ in range(d)]
-    elif 2**d == n:
-        values = [1 for _ in range(d)] + [0 for _ in range(d)]
-    else:
-        raise NotImplementedError(f"Not able to construct cell in {d} dimensions with {n} vertices.")
-
-    # remove duplicates, sort starting with first element, convert to np float
-    vertices = np.array(sorted(list(set(itertools.permutations(values, d))), key=lambda x: x[::-1]), dtype=np.float64)
-
-    if d == 3:
-        raise NotImplementedError("Need to construct UFC faces in 3D")
-        if n == 4:
-            faces = set(itertools.permutations(vertices, 3))
-            print(faces)
-        elif n == 8:
-            faces = set(itertools.permutations(vertices, 4))
-        return vertices
-    return vertices
-
-
-coord_variants = {"equilateral": compute_equilateral_verts,
-                  "ufc": compute_ufc_verts}
-
-
-def compute_attachment_1d(n, variant="equilateral"):
-    """
-    Constructs sympy functions for attaching the points of
-    n vertices and coordinates determined by variant.
-
-    :param: n: number of vertices
-    :param: variant: vertex type"""
-    coords = coord_variants[variant](1, n)
+    :param: n: number of vertices"""
+    coords = compute_equilateral_verts(1, n)
     return [sp.sympify(tuple(c)) for c in coords]
 
 
-def compute_attachment_2d(n, variant="equilateral"):
+def compute_attachment_2d(n):
     """
     Constructs sympy functions for attaching the edges of a
-    polygon with n vertices and coordinates determined by variant.
+    regular polygon with n vertices.
 
-    :param: n: number of vertices
-    :param: variant: vertex type"""
-    coords = coord_variants[variant](2, n)
+    :param: n: number of vertices"""
+    coords = compute_equilateral_verts(2, n)
     attachments = []
 
     for i in range(n):
@@ -153,7 +115,12 @@ def compute_attachment_2d(n, variant="equilateral"):
     return attachments
 
 
-def compute_attachment_3d(n, variant="equilateral"):
+def compute_attachment_3d(n):
+    """
+    Constructs sympy functions for attaching the faces of a
+    polyhedron with n vertices.
+
+    :param: n: number of vertices"""
     coords, faces = compute_equilateral_verts(3, n)
     coords_2d = np.c_[np.ones(len(faces[0])), compute_equilateral_verts(2, len(faces[0]))]
     res = []
