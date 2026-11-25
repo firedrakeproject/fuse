@@ -41,7 +41,8 @@ def _skip_test_dependency(dependency):
 
 
 dependency_skip_markers_and_reasons = (
-    ("basix", "skipbasix", "Basix not installed"),)
+    ("basix", "skipbasix", "Basix not installed"),
+    ("dolfinx", "skipdolfinx", "DOLFINx not installed"),)
 
 
 def pytest_configure(config):

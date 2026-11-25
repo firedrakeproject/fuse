@@ -3,7 +3,7 @@ from firedrake import *
 from finat.ufl import CellBackend
 from fuse.serialisation import ElementSerialiser
 from fuse.actions import HDivAction
-from test_convert_to_fiat import create_cg1
+from element_examples import create_cg1
 from test_orientations import interpolate_vs_project, get_expression
 import pytest
 import numpy as np

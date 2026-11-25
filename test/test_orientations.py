@@ -4,76 +4,15 @@ from finat.ufl import CellBackend
 from fuse import *
 from fuse.element_construction import periodic_table
 import numpy as np
-import sympy as sp
 from test_2d_examples_docs import construct_cg3, construct_nd, construct_rt, construct_nd_2nd_kind, construct_nd2_2nd_kind, construct_bdm, construct_bdm2, construct_bdm2_bary, construct_bdm_bary
-from test_convert_to_fiat import create_cg1, create_cg2_tri, create_dg1
+from element_examples import create_cg1, create_cg2_tri, create_dg1, construct_nd2, construct_rt2
 
 np.set_printoptions(linewidth=90, precision=4, suppress=True)
-
-
-def construct_nd2(tri=None):
-    if tri is None:
-        tri = polygon(3)
-    deg = 2
-    edge = tri.edges()[0]
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(x + 1), symbols=(x,), action=HCurl))]
-
-    dofs = DOFGenerator(xs, S2)
-    int_ned1 = ElementTriple(edge, (P1, L2), dofs)
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2, action=HCurl))]
-    # the two images span the constant vectors, which every symmetry preserves,
-    # so they form one generator
-    xs = [x(s) for x in xs for s in tri.group._match(S2.add_cell(tri))]
-    center_dofs = DOFGenerator(xs, S1)
-    xs = [immerse(tri, int_ned1)]
-    tri_dofs = DOFGenerator(xs, C3)
-
-    vec_Pk = PolynomialSpace(deg - 1, shape=2)
-    Pk = PolynomialSpace(deg - 1)
-    M = sp.Matrix([[y, -x]])
-    nd = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
-
-    ned = ElementTriple(tri, (nd, C0), [tri_dofs, center_dofs])
-    return ned
 
 
 def test_nd2():
     elem = construct_nd2()
     elem.to_fiat()
-
-
-def construct_rt2(tri=None):
-    if tri is None:
-        tri = polygon(3)
-    edge = tri.d_entities(1, get_class=True)[0]
-    deg = 2
-    x = sp.Symbol("x")
-    y = sp.Symbol("y")
-
-    xs = [DOF(L2Pairing(), PolynomialKernel((1/2)*(1 + x), symbols=(x,), action=HDiv))]
-    dofs = DOFGenerator(xs, S2)
-    int_rt2 = ElementTriple(edge, (P1, L2), dofs)
-
-    xs = [immerse(tri, int_rt2)]
-    tri_dofs = DOFGenerator(xs, C3)
-
-    v_0 = np.array(tri.get_node(tri.ordered_vertices()[0], return_coords=True))
-    v_2 = np.array(tri.get_node(tri.ordered_vertices()[2], return_coords=True))
-    v_1 = np.array(tri.get_node(tri.ordered_vertices()[1], return_coords=True))
-    i_xs = [DOF(L2Pairing(), VectorKernel((v_2 - v_1)/2, action=HDiv)), DOF(L2Pairing(), VectorKernel((v_2 - v_0)/2, action=HDiv))]
-    i_dofs = DOFGenerator(i_xs, S1)
-
-    vec_Pk = PolynomialSpace(deg - 1, shape=2)
-    Pk = PolynomialSpace(deg - 1)
-    M = sp.Matrix([[x, y]])
-    rt_space = vec_Pk + (Pk.restrict(deg-2, deg-1))*M
-    rt2 = ElementTriple(tri, (rt_space, C0), [tri_dofs, i_dofs])
-    return rt2
 
 
 @pytest.mark.parametrize("elem_gen,elem_code,deg", [(construct_nd, "N1curl", 1),

@@ -1,6 +1,7 @@
 from fuse import *
-from test_convert_to_fiat import create_cg1, create_dg1, construct_cg3, construct_rt, construct_nd
-from test_orientations import construct_nd2
+from element_examples import create_cg1, create_dg1
+from test_2d_examples_docs import construct_cg3, construct_rt, construct_nd
+from element_examples import construct_nd2
 
 import sympy as sp
 import numpy as np

@@ -5,7 +5,7 @@ from fuse import *
 import numpy as np
 import pytest
 from test_2d_examples_docs import construct_cg3
-from test_convert_to_fiat import create_cg2, create_cg2_tri
+from element_examples import create_cg2, create_cg2_tri
 
 
 @pytest.mark.xfail(reason="Needs updated FIAT tensor branch")

@@ -1,7 +1,7 @@
 import pytest
 from fuse import *
 import numpy as np
-from test_convert_to_fiat import create_cg1, create_cg2, create_cg2_tri
+from element_examples import create_cg1, create_cg2, create_cg2_tri
 from test_2d_examples_docs import construct_cg3
 
 
@@ -47,7 +47,7 @@ def test_basix_conversion(elem_gen, deg):
 
 def _vector_elements():
     from test_2d_examples_docs import construct_nd, construct_rt
-    from test_orientations import construct_nd2, construct_rt2
+    from element_examples import construct_nd2, construct_rt2
     import basix
     N1E, RT = basix.ElementFamily.N1E, basix.ElementFamily.RT
     return [(construct_nd, N1E, 1), (construct_rt, RT, 1),
@@ -133,7 +133,7 @@ def test_continuity_across_reoriented_edges(name):
     an edge, for every local numbering of both cells (so every local edge,
     reflected or not), the shared edge's basis functions agree."""
     from test_2d_examples_docs import construct_nd, construct_rt
-    from test_orientations import construct_nd2, construct_rt2
+    from element_examples import construct_nd2, construct_rt2
     elem_gen = {"cg2": create_cg2_tri, "cg3": construct_cg3, "nd": construct_nd,
                 "rt": construct_rt, "nd2": construct_nd2, "rt2": construct_rt2}[name]
     element = elem_gen(polygon(3)).to_basix()
@@ -170,7 +170,7 @@ def test_vertices_map_to_basix(make_cell, cell_name):
 
 
 def _tet_elements():
-    from test_convert_to_fiat import create_cg1_tet, create_cg2_tet, create_cg3_tet
+    from element_examples import create_cg1_tet, create_cg2_tet, create_cg3_tet
     from test_3d_examples_docs import (construct_tet_cg4, construct_tet_rt, construct_tet_rt2,
                                        construct_tet_ned, construct_tet_ned2)
     import basix

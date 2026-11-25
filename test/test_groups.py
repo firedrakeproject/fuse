@@ -2,7 +2,7 @@ from pytest import *
 from fuse import *
 from fuse.groups import perm_matrix_to_perm_array
 from sympy.combinatorics import Permutation
-from test_convert_to_fiat import create_dg1
+from element_examples import create_dg1
 import numpy as np
 
 

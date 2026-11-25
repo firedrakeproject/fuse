@@ -2,7 +2,10 @@ from fuse import *
 import sympy as sp
 import numpy as np
 
-np.set_printoptions(legacy="1.25")
+# NumPy 2 prints scalars as np.float64(...); "1.25" restores the 1.x style.
+# NumPy 1.x already prints that way and rejects the option.
+if int(np.__version__.split(".")[0]) >= 2:
+    np.set_printoptions(legacy="1.25")
 
 
 def construct_dg0():
