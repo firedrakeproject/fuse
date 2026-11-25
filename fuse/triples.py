@@ -114,19 +114,7 @@ class ElementTriple():
 
         The inverse matrices are also provided.
         """
-        dofs = self.generate()
-        n = len(dofs)
-        to_fiat = np.zeros((n, n))
-        for i, d in enumerate(dofs):
-            to_fiat[self.dof_id_to_fiat_id[d.id], i] = 1
-        actions = {}
-
-        def action(g):
-            # row p: the image of DOF p under g, in FIAT order
-            if g.perm not in actions:
-                actions[g.perm] = to_fiat @ self.mapping(g).T @ to_fiat.T
-            return actions[g.perm]
-
+        n = len(self.generate())
         min_ids = self.cell.get_starter_ids()
         matrices, reversed_matrices = {}, {}
         for dim in range(self.cell.dim() + 1):
@@ -138,8 +126,7 @@ class ElementTriple():
                 for key in range(entity.group.size()):
                     M, R = np.eye(n), np.eye(n)
                     if rows:
-                        g = self.cell.extend_entity_symmetry(entity, entity.orientation_key_to_member(key))
-                        block = action(g)[np.ix_(rows, rows)]
+                        _, block = self.entity_dof_action(entity, entity.orientation_key_to_member(key))
                         M[np.ix_(rows, rows)] = block
                         R[np.ix_(rows, rows)] = np.linalg.inv(block)
                     matrices[dim][e_id][key] = M
@@ -149,6 +136,37 @@ class ElementTriple():
         self.apply_matrices = True
         self.entity_perms = None
         return matrices, reversed_matrices
+
+    def _fiat_action(self, g):
+        """How the cell symmetry ``g`` transforms the DOFs, in FIAT order.
+
+        Row p is the image of DOF p under ``g``. Requires the FIAT numbering
+        from :meth:`setup_ids_and_nodes`."""
+        actions = self.__dict__.setdefault("_fiat_actions", {})
+        if g.perm not in actions:
+            dofs = self.generate()
+            n = len(dofs)
+            to_fiat = np.zeros((n, n))
+            for i, d in enumerate(dofs):
+                to_fiat[self.dof_id_to_fiat_id[d.id], i] = 1
+            actions[g.perm] = to_fiat @ self.mapping(g).T @ to_fiat.T
+        return actions[g.perm]
+
+    def entity_dof_action(self, entity, o):
+        """How the symmetry ``o`` of a sub-entity transforms the DOFs on it.
+
+        :param: entity: a sub-entity of ``self.cell``
+        :param: o: a member of ``entity.group``
+        :returns: ``(rows, block)``: ``rows`` are the entity's DOFs in FIAT
+            order, and ``block[i, j]`` is the coefficient of DOF ``rows[j]``
+            in the image of DOF ``rows[i]`` under ``o``.
+        """
+        dim = entity.dim()
+        rows = self.entity_ids[dim][entity.id - self.cell.get_starter_ids()[dim]]
+        if not rows:
+            return rows, np.zeros((0, 0))
+        g = self.cell.extend_entity_symmetry(entity, o)
+        return rows, self._fiat_action(g)[np.ix_(rows, rows)]
 
     def __repr__(self):
         return "FuseTriple(%s, %s, (%s, %s), %s)" % (
