@@ -7,13 +7,13 @@ from firedrake import *
 from finat.ufl import CellBackend
 
 
-@pytest.mark.parametrize("col,k,deg", [(col, 3, 0) for col in [0, 1]] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
+@pytest.mark.parametrize("col,k,deg", [(1, 3, 0)] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
 def test_construction(col, k, deg):
     elem = periodic_table(col, 2, k, deg)
     elem.to_fiat()
 
 
-@pytest.mark.parametrize("col,k,deg", [(col, 3, 0) for col in [0, 1]] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
+@pytest.mark.parametrize("col,k,deg", [(1, 3, 0)] + [(col, k, deg) for deg in range(1, 7) for k in [0, 1, 2, 3] for col in [0, 1]])
 def test_construction3d(col, k, deg):
     elem = periodic_table(col, 3, k, deg)
     elem.to_fiat()
@@ -22,7 +22,7 @@ def test_construction3d(col, k, deg):
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 7))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 7))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 7))]
-dg_params = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 3))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+dg_params = [(0, 3, deg, deg - 0.25) for deg in list(range(1, 4))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
 nd2_params = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 7))]
 bdm_params = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 7))]
 
@@ -54,7 +54,7 @@ def test_convergence(col, k, deg, conv_rate):
 cg_params3d = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 4))]
 nd_params3d = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 4))]
 rt_params3d = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 4))]
-dg_params3d = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 4))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+dg_params3d = [(0, 3, deg, deg - 0.25) for deg in list(range(1, 5))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
 nd2_params3d = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 5))]
 bdm_params3d = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 5))]
 

@@ -23,13 +23,18 @@ from fuse import polygon, make_tetrahedron
 from fuse.cells import ufc_triangle, ufc_tetrahedron
 from fuse.element_construction import periodic_table
 
-PARAMS = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+PARAMS = ([(1, dim, 3, 0) for dim in (2, 3)]
           + [(col, 2, k, deg) for deg in range(1, 7) for k in range(4) for col in (0, 1)]
           + [(col, 3, k, deg) for deg in range(1, 5) for k in range(4) for col in (0, 1)])
+# CG and DG with their other point variant (the default is "equi")
+PARAMS += [(0, 2, 0, 4, "lgl"), (0, 3, 0, 4, "lgl"), (1, 2, 3, 3, "lgl"), (1, 3, 3, 2, "lgl")]
+# the moment elements with their other basis (the default is "lagrange")
+PARAMS += [(0, 2, 1, 3, "equi", "bernstein"), (1, 2, 2, 3, "equi", "bernstein"),
+           (0, 3, 1, 3, "equi", "bernstein"), (1, 3, 2, 2, "equi", "bernstein")]
 
 
 def _id(p):
-    return "c{}-d{}-k{}-deg{}".format(*p)
+    return "c{}-d{}-k{}-deg{}".format(*p[:4]) + "".join(f"-{v}" for v in p[4:])
 
 
 _elements = {}

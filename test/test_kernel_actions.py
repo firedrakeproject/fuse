@@ -360,7 +360,7 @@ def test_induced_entity_symmetry(cell_fn):
 
 # ------------------------------------------------------------------ pullback and Sobolev space
 
-pullback_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+pullback_params = ([(1, dim, 3, 0) for dim in (2, 3)]
                    + [(col, 2, k, deg) for deg in range(1, 4) for k in range(4) for col in (0, 1)]
                    + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
 

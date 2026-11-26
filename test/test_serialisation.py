@@ -80,7 +80,7 @@ def round_trip(obj):
     return converter.decode(converter.encode(obj))
 
 
-round_trip_params = ([(col, dim, 3, 0) for dim in (2, 3) for col in (0, 1)]
+round_trip_params = ([(1, dim, 3, 0) for dim in (2, 3)]
                      + [(col, 2, k, deg) for deg in range(1, 7) for k in range(4) for col in (0, 1)]
                      + [(col, 3, k, deg) for deg in range(1, 3) for k in range(4) for col in (0, 1)])
 
@@ -138,7 +138,7 @@ def test_immersion_node_round_trips():
 cg_params = [(0, 0, deg, deg + 0.75) for deg in list(range(1, 3))] + [(1, 0, deg, deg + 0.75) for deg in list(range(1, 3))]
 nd_params = [(0, 1, deg, deg - 0.2) for deg in list(range(1, 3))]
 rt_params = [(0, 2, deg, deg - 0.2) for deg in list(range(1, 3))]
-dg_params = [(0, 3, deg, deg + 0.75) for deg in list(range(0, 3))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
+dg_params = [(0, 3, deg, deg - 0.25) for deg in list(range(1, 4))] + [(1, 3, deg, deg + 0.75) for deg in list(range(0, 3))]
 nd2_params = [(1, 1, deg, deg + 0.75) for deg in list(range(1, 3))]
 bdm_params = [(1, 2, deg, deg + 0.75) for deg in list(range(1, 3))]
 
