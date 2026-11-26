@@ -206,7 +206,7 @@ def nedelec_bubble_fns(cell, entity, deg, transversal=None, action=None):
     fields = whitney_bubbles(cell, entity)
     pos = [cell.ordered_vertices().index(v) for v in entity.ordered_vertices()]
     basis_funcs, groups, lg_symbols = bernstein_barycentric_basis(entity.dimension, entity.ordered_vertex_coords(),
-                                                                 deg - entity.dimension)
+                                                                  deg - entity.dimension)
     dofs = []
     for bf, grp in zip(basis_funcs, groups):
         grp = grp.add_cell(entity)
