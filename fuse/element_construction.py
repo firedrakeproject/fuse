@@ -312,7 +312,7 @@ def vector_basis_fns(cell, deg, rot=False, action=None, moments="lagrange"):
         if cell.dimension == 3:
             # the three directions span the constant vectors, which every
             # symmetry preserves, so they belong together in one generator
-            xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))
+            xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(vec_bf*bf, symbols=symbols, action=action))
                    for vec_bf in vector_basis]
             dofs += [DOFGenerator(xs1, grp.add_cell(cell))]
             continue
@@ -323,17 +323,17 @@ def vector_basis_fns(cell, deg, rot=False, action=None, moments="lagrange"):
             vgrp = vgrp.add_cell(cell)
             grp = grp.add_cell(cell)
             if grp.size()*vgrp.size() <= cell.group.size():
-                xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))]
+                xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(vec_bf*bf, symbols=symbols, action=action))]
                 if grp.size() == 1:
                     # the directions span the constant vectors, an invariant
                     # space, so they belong together in one generator
-                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*v*bf, symbols=symbols, action=action))
+                    xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(v*bf, symbols=symbols, action=action))
                            for v in vector_basis]
                     dofs += [DOFGenerator(xs1, grp)]
                 else:
                     dofs += [DOFGenerator(xs1, grp*vgrp)]
             else:
-                xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(np.prod(symbols)*vec_bf*bf, symbols=symbols, action=action))]
+                xs1 = [DOF(L2Pairing(), BarycentricPolynomialKernel(vec_bf*bf, symbols=symbols, action=action))]
                 dofs += [DOFGenerator(xs1, grp)]
     return dofs
 
