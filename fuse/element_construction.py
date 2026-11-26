@@ -138,7 +138,7 @@ def multiindices(k, n):
                 yield (i,) + tail
 
 
-def lagrange_barycentric_basis(dim, verts, deg):
+def bernstein_barycentric_basis(dim, verts, deg):
     symbols = []
     for i in range(dim + 1):
         symbols += [sp.Symbol(f"s_{i}")]
@@ -205,7 +205,7 @@ def nedelec_bubble_fns(cell, entity, deg, transversal=None, action=None):
     symbols, _ = barycentric_gradients(cell)
     fields = whitney_bubbles(cell, entity)
     pos = [cell.ordered_vertices().index(v) for v in entity.ordered_vertices()]
-    basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(entity.dimension, entity.ordered_vertex_coords(),
+    basis_funcs, groups, lg_symbols = bernstein_barycentric_basis(entity.dimension, entity.ordered_vertex_coords(),
                                                                  deg - entity.dimension)
     dofs = []
     for bf, grp in zip(basis_funcs, groups):
@@ -265,7 +265,7 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
 
     facet_cell = face if cell.dimension == 3 else edge
     pf_basis_funcs, pf_grps, symbols, facet_syms = proxy_field_bfs(cell, rot)
-    basis_funcs, groups, lg_symbols = lagrange_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
+    basis_funcs, groups, lg_symbols = bernstein_barycentric_basis(facet_cell.dimension, facet_cell.ordered_vertex_coords(), deg - 1)
     for pf_bf, pf_grp, facet_sym in zip(pf_basis_funcs, pf_grps, facet_syms):
         for bf, grp in zip(basis_funcs, groups):
             grp = grp.add_cell(facet_cell)
@@ -281,7 +281,7 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
                        for o in grp.members()]
                 dofs += [DOFGenerator(xs1, pf_grp)]
 
-    basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg - 2)
+    basis_funcs, groups, symbols = bernstein_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg - 2)
     v_0 = np.array(cell.get_node(cell.ordered_vertices()[0], return_coords=True))
     v_1 = np.array(cell.get_node(cell.ordered_vertices()[1], return_coords=True))
     v_2 = np.array(cell.get_node(cell.ordered_vertices()[2], return_coords=True))
@@ -322,7 +322,7 @@ def vector_basis_fns(cell, deg, rot=False, action=None):
 
 def lagrange_facet_fns(cell, deg, vector=False, action=None):
     dofs = []
-    basis_funcs, groups, symbols = lagrange_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg)
+    basis_funcs, groups, symbols = bernstein_barycentric_basis(cell.dimension, cell.ordered_vertex_coords(), deg)
     for bf, grp in zip(basis_funcs, groups):
         if not vector:
             xs = [DOF(L2Pairing(), BarycentricPolynomialKernel(bf, symbols=symbols, action=action))]
@@ -356,18 +356,31 @@ def lagrange_facet_fns(cell, deg, vector=False, action=None):
     return dofs
 
 
-def lagrange_facet_pts(cell, deg):
-    from recursivenodes.nodes import _recursive, _decode_family
-    from FIAT.reference_element import multiindex_equal
-    get_pt = lambda alpha: np.dot(_recursive(cell.dimension, deg, alpha, _decode_family("lgl")), np.array(cell.vertices(return_coords=True)))
-    interior_coords = [tuple(pt) for pt in list(map(get_pt, multiindex_equal(cell.dimension + 1, deg, 1)))]
-    coords_grps = convert_to_generation(interior_coords, cell.ordered_vertex_coords())
-    int_dofs = []
+def lagrange_pts(cell, deg, variant="equi", interior=0):
+    """Point evaluations at the degree ``deg`` nodes of ``cell``, one generator
+    per orbit of the cell's symmetry group.
+
+    The nodes are recursivenodes' ``recursive_nodes`` for the 1D family
+    ``variant`` (e.g. ``"equi"`` for equispaced, ``"lgl"`` for
+    Lobatto-Gauss-Legendre). ``interior`` removes that many layers of nodes
+    from the boundary: ``interior=1`` keeps the nodes strictly inside ``cell``,
+    as CG needs for each entity. Degree 0 is the centroid.
+    """
+    if deg < interior*(cell.dimension + 1):
+        # no node has every barycentric index >= interior
+        bary = np.zeros((0, cell.dimension + 1))
+    elif deg == 0:
+        bary = np.full((1, cell.dimension + 1), 1 / (cell.dimension + 1))
+    else:
+        bary = recursive_nodes(cell.dimension, deg, family=variant, domain="barycentric", interior=interior)
+    verts = np.array(cell.vertices(return_coords=True))
+    coords = [tuple(np.dot(b, verts)) for b in bary]
+    coords_grps = convert_to_generation(coords, cell.ordered_vertex_coords())
+    dofs = []
     for grp in coords_grps.keys():
-        dofs = [DOF(DeltaPairing(), PointKernel(c)) for c in coords_grps[grp]]
-        if len(dofs) > 0:
-            int_dofs += [DOFGenerator([d], grp) for d in dofs]
-    return int_dofs
+        dofs += [DOFGenerator([DOF(DeltaPairing(), PointKernel(c))], grp) for c in coords_grps[grp]]
+    return dofs
+
 
 
 def rt_space(dim, deg):
@@ -378,7 +391,20 @@ def rt_space(dim, deg):
     return PolynomialSpace(deg - 1, shape=dim) + Pd.restrict(deg - 2, deg - 1)*sp.Matrix([x])
 
 
-def construct_tri_cgN(deg):
+def edge_pts(deg, variant="equi"):
+    """The point evaluations in the interior of the reference interval [-1, 1]
+    at the degree ``deg`` nodes of the 1D family ``variant``: one S2 generator
+    per symmetric pair, and an S1 generator for the midpoint when ``deg`` is even."""
+    points = np.sort(recursive_nodes(1, deg, family=variant, domain="equilateral").flatten())[1:-1]
+    sym_dofs = [DOFGenerator([DOF(DeltaPairing(), PointKernel((pt,)))], S2) for pt in points[:len(points)//2]]
+    centre_dof = []
+    if len(points) % 2 == 1:
+        assert np.isclose(points[len(points)//2], 0)
+        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)]
+    return sym_dofs, centre_dof
+
+
+def construct_tri_cgN(deg, variant="equi"):
     cell = polygon(3)
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -388,25 +414,18 @@ def construct_tri_cgN(deg):
     v_xs = [immerse(cell, dg0)]
     v_dofs = [DOFGenerator(v_xs, C3)]
 
-    points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
-
     Pk = PolynomialSpace(deg)
-    sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
-    sym_dofs = [DOFGenerator([pt], S2) for pt in sym_points]
-    if 0 in points:
-        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)]
-    else:
-        centre_dof = []
+    sym_dofs, centre_dof = edge_pts(deg, variant)
     edge_dofs = []
     if deg >= 2:
         edge_dg0 = ElementTriple(edge, (PolynomialSpace(deg - 2), C0), sym_dofs + centre_dof)
         edge_dofs = [DOFGenerator([immerse(cell, edge_dg0)], C3)]
 
-    int_dofs = lagrange_facet_pts(cell, deg)
+    int_dofs = lagrange_pts(cell, deg, variant, interior=1)
     return ElementTriple(cell, (Pk, C0), v_dofs + edge_dofs + int_dofs)
 
 
-def construct_tet_cgN(deg):
+def construct_tet_cgN(deg, variant="equi"):
     cell = make_tetrahedron()
     vert = cell.vertices()[0]
     edge = cell.edges()[0]
@@ -417,15 +436,8 @@ def construct_tet_cgN(deg):
     v_xs = [immerse(cell, dg0)]
     v_dofs = [DOFGenerator(v_xs, C4)]
 
-    points = recursive_nodes(1, deg, domain="equilateral")[1:-1].flatten()
-
     Pk = PolynomialSpace(deg)
-    sym_points = [DOF(DeltaPairing(), PointKernel((pt,))) for pt in points[:len(points)//2]]
-    sym_dofs = [DOFGenerator([pt], S2) for pt in sym_points]
-    if 0 in points:
-        centre_dof = [DOFGenerator([DOF(DeltaPairing(), PointKernel((0,)))], S1)]
-    else:
-        centre_dof = []
+    sym_dofs, centre_dof = edge_pts(deg, variant)
     edge_dofs = []
     if deg >= 2:
         edge_dg0 = ElementTriple(edge, (PolynomialSpace(deg - 2), C0), sym_dofs + centre_dof)
@@ -433,10 +445,10 @@ def construct_tet_cgN(deg):
 
     face_dofs = []
     if deg >= 3:
-        face_trp = ElementTriple(face, (PolynomialSpace(deg - 3), C0), lagrange_facet_pts(face, deg))
+        face_trp = ElementTriple(face, (PolynomialSpace(deg - 3), C0), lagrange_pts(face, deg, variant, interior=1))
         face_dofs = [DOFGenerator([immerse(cell, face_trp)], tet_faces)]
 
-    int_dofs = lagrange_facet_pts(cell, deg)
+    int_dofs = lagrange_pts(cell, deg, variant, interior=1)
 
     cg = ElementTriple(cell, (Pk, C0), v_dofs + edge_dofs + face_dofs + int_dofs)
     assert len(cg.generate()) == (deg + 1)*(deg + 2)*(deg + 3)/6
@@ -618,25 +630,23 @@ def construct_tet_bdmN(deg):
 
 
 def construct_dgN(dim):
-    def construct_dim_dgN(deg):
-        return construct_dgNminus(dim)(deg + 1)
+    def construct_dim_dgN(deg, variant="equi"):
+        return construct_dgNminus(dim)(deg + 1, variant)
     return construct_dim_dgN
 
 
 def construct_dgNminus(dim):
     if dim == 2:
         cell = polygon(3)
-        inc = 3
     elif dim == 3:
         cell = make_tetrahedron()
-        inc = 4
     else:
         raise NotImplementedError(f"Cell of dimension {dim} not implemented for DG")
 
-    def construct_dim_dgNminus(deg):
+    def construct_dim_dgNminus(deg, variant="equi"):
+        # every node of the degree deg lattice, boundary included, belongs to the cell
         Pk = PolynomialSpace(deg)
-        int_dofs = lagrange_facet_pts(cell, deg + inc)
-        dgN = ElementTriple(cell, (Pk, C0), int_dofs)
+        dgN = ElementTriple(cell, (Pk, C0), lagrange_pts(cell, deg, variant))
         assert len(dgN.generate()) == reduce(mul, [(deg + i)/i for i in range(1, dim + 1)])
         return dgN
     return construct_dim_dgNminus
@@ -675,5 +685,15 @@ constructors = {
 }
 
 
-def periodic_table(col, dim, k, deg):
+def periodic_table(col, dim, k, deg, variant="equi"):
+    """The element in column ``col`` (0: the P^- family, 1: the P family) of
+    the periodic table on the ``dim``-dimensional simplex, in Sobolev space ``k``
+    (0: H1, 1: HCurl, 2: HDiv, 3: L2), of degree ``deg``.
+
+    ``variant`` is the recursivenodes 1D family (e.g. ``"equi"``, ``"lgl"``)
+    giving the points of the point evaluation elements (``k`` = 0 and 3). The
+    integral moment elements (``k`` = 1 and 2) do not depend on it yet.
+    """
+    if k in (0, 3):
+        return constructors[col][dim][k](deg, variant)
     return constructors[col][dim][k](deg)
