@@ -393,7 +393,7 @@ def test_vector_cg_matches_firedrake_vector_cg(deg):
                            SpatialCoordinate, as_vector, assemble, dot, dx, project)
 
     mesh = UnitSquareMesh(4, 4, cell_backend=CellBackend.FUSE)
-    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg)).to_ufl())
+    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg, points="lgl")).to_ufl())
     W = VectorFunctionSpace(mesh, "CG", deg)
     assert V.dim() == W.dim()
 
