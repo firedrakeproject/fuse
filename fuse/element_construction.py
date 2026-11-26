@@ -356,23 +356,27 @@ def lagrange_facet_fns(cell, deg, vector=False, action=None):
     return dofs
 
 
-def lagrange_pts(cell, deg, variant="equi", interior=0):
+def lagrange_pts(cell, deg, variant="equi", interior=False):
     """Point evaluations at the degree ``deg`` nodes of ``cell``, one generator
     per orbit of the cell's symmetry group.
 
     The nodes are recursivenodes' ``recursive_nodes`` for the 1D family
     ``variant`` (e.g. ``"equi"`` for equispaced, ``"lgl"`` for
-    Lobatto-Gauss-Legendre). ``interior`` removes that many layers of nodes
-    from the boundary: ``interior=1`` keeps the nodes strictly inside ``cell``,
-    as CG needs for each entity. Degree 0 is the centroid.
+    Lobatto-Gauss-Legendre). With ``interior=True`` only the nodes strictly
+    inside ``cell`` are kept, as CG needs for each entity. Degree 0 is the
+    centroid.
     """
-    if deg < interior*(cell.dimension + 1):
-        # no node has every barycentric index >= interior
-        bary = np.zeros((0, cell.dimension + 1))
-    elif deg == 0:
-        bary = np.full((1, cell.dimension + 1), 1 / (cell.dimension + 1))
+    dim = cell.dimension
+    if deg == 0:
+        bary = np.full((0 if interior else 1, dim + 1), 1 / (dim + 1))
     else:
-        bary = recursive_nodes(cell.dimension, deg, family=variant, domain="barycentric", interior=interior)
+        bary = recursive_nodes(dim, deg, family=variant, domain="barycentric")
+    if interior and deg > 0:
+        # The released recursivenodes has no ``interior`` argument. For a family
+        # with endpoints the boundary nodes lie exactly on the facets, so they
+        # are the nodes with a zero barycentric coordinate.
+        bary = bary[np.all(bary > 1e-10, axis=1)]
+        assert len(bary) == math.comb(deg - 1, dim), f"recursivenodes family {variant} has no nodes on the boundary"
     verts = np.array(cell.vertices(return_coords=True))
     coords = [tuple(np.dot(b, verts)) for b in bary]
     coords_grps = convert_to_generation(coords, cell.ordered_vertex_coords())
@@ -380,7 +384,6 @@ def lagrange_pts(cell, deg, variant="equi", interior=0):
     for grp in coords_grps.keys():
         dofs += [DOFGenerator([DOF(DeltaPairing(), PointKernel(c))], grp) for c in coords_grps[grp]]
     return dofs
-
 
 
 def rt_space(dim, deg):
@@ -421,7 +424,7 @@ def construct_tri_cgN(deg, variant="equi"):
         edge_dg0 = ElementTriple(edge, (PolynomialSpace(deg - 2), C0), sym_dofs + centre_dof)
         edge_dofs = [DOFGenerator([immerse(cell, edge_dg0)], C3)]
 
-    int_dofs = lagrange_pts(cell, deg, variant, interior=1)
+    int_dofs = lagrange_pts(cell, deg, variant, interior=True)
     return ElementTriple(cell, (Pk, C0), v_dofs + edge_dofs + int_dofs)
 
 
@@ -445,10 +448,10 @@ def construct_tet_cgN(deg, variant="equi"):
 
     face_dofs = []
     if deg >= 3:
-        face_trp = ElementTriple(face, (PolynomialSpace(deg - 3), C0), lagrange_pts(face, deg, variant, interior=1))
+        face_trp = ElementTriple(face, (PolynomialSpace(deg - 3), C0), lagrange_pts(face, deg, variant, interior=True))
         face_dofs = [DOFGenerator([immerse(cell, face_trp)], tet_faces)]
 
-    int_dofs = lagrange_pts(cell, deg, variant, interior=1)
+    int_dofs = lagrange_pts(cell, deg, variant, interior=True)
 
     cg = ElementTriple(cell, (Pk, C0), v_dofs + edge_dofs + face_dofs + int_dofs)
     assert len(cg.generate()) == (deg + 1)*(deg + 2)*(deg + 3)/6
