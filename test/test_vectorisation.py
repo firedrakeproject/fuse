@@ -1,7 +1,7 @@
 from fuse import *
 from fuse.element_construction import (construct_tri_cgN, construct_tri_ndN, construct_tri_rtN,
                                        construct_tet_cgN, construct_tet_ndN, construct_tet_rtN,
-                                       construct_dgNminus)
+                                       construct_dgN)
 from fuse.dof import ImmersedDOF
 from fuse.serialisation import ElementSerialiser
 from fuse.tensor_products import TensorProductTriple
@@ -37,11 +37,11 @@ def interval_cg1():
     ("tri cg2", lambda: construct_tri_cgN(2), 0),
     ("tri nd1", lambda: construct_tri_ndN(1), 1),
     ("tri rt1", lambda: construct_tri_rtN(1), 1),
-    ("tri dg1", lambda: construct_dgNminus(2)(1), 2),
+    ("tri dg1", lambda: construct_dgN(2)(1), 2),
     ("tet cg2", lambda: construct_tet_cgN(2), 0),
     ("tet nd1", lambda: construct_tet_ndN(1), 1),
     ("tet rt1", lambda: construct_tet_rtN(1), 2),
-    ("tet dg1", lambda: construct_dgNminus(3)(1), 3),
+    ("tet dg1", lambda: construct_dgN(3)(1), 3),
     ("interval cg1", interval_cg1, 0),
     ("interval dg3", lambda: interval_dgN(3), 1),
 ])
@@ -393,7 +393,7 @@ def test_vector_cg_matches_firedrake_vector_cg(deg):
                            SpatialCoordinate, as_vector, assemble, dot, dx, project)
 
     mesh = UnitSquareMesh(4, 4, cell_backend=CellBackend.FUSE)
-    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg)).to_ufl())
+    V = FunctionSpace(mesh, VectorTriple(construct_tri_cgN(deg, points="lgl")).to_ufl())
     W = VectorFunctionSpace(mesh, "CG", deg)
     assert V.dim() == W.dim()
 
