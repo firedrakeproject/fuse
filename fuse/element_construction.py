@@ -141,7 +141,7 @@ def multiindices(k, n):
 def barycentric_basis(dim, verts, deg, moments="lagrange"):
     """A basis of the polynomials of degree ``deg`` on the simplex with
     vertices ``verts``, in the barycentric coordinates ``s_i``, with one
-    function for each multi-index alpha (|alpha| = ``deg``):
+    function for each multi-index alpha (\|alpha| = ``deg``):
 
     - ``"lagrange"``: the Lagrange basis on the equispaced nodes alpha / deg,
       prod_i prod_{j < alpha_i} (deg s_i - j) / (alpha_i - j);
