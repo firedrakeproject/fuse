@@ -196,8 +196,8 @@ def write_gmsh(path, nodes, cells):
 
 
 def main():
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
-        "nonorientable_hex_ring.msh"
+    path = Path(sys.argv[1]) if len(sys.argv) > 1 else (
+        Path(__file__).resolve().parent / "test" / "nonorientable_hex_ring.msh"
     )
 
     nodes, cells = make_mesh()
